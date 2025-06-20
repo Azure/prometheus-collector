@@ -31,6 +31,7 @@ func parseConfigMap() string {
 		}
 	}()
 
+	fmt.Println("Starting to parse prometheus configmap", configMapMountPath)
 	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
 		shared.EchoWarning("Custom prometheus config does not exist, using only default scrape targets if they are enabled")
 		return ""

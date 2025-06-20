@@ -50,11 +50,12 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
 				//"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":         "linux",
-				"MODE":            "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE":   "kube-system",
-				"MAC":             "true",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                     "",
@@ -115,22 +116,23 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			isDefaultConfig := true
 
-			checkResults(true, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath)
+			checkResults(true, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
 			setEnvVars(map[string]string{
-				"AZMON_OPERATOR_ENABLED":   "true",
-				"CONTAINER_TYPE":           "",
-				"CONTROLLER_TYPE":          "DaemonSet",
-				"OS_TYPE":                  "linux",
-				"MODE":                     "advanced",
-				"KUBE_STATE_NAME":          "ama-metrics-ksm",
-				"POD_NAMESPACE":            "kube-system",
-				"MAC":                      "true",
-				"NODE_NAME":                "test-node",
-				"NODE_IP":                  "192.168.1.1",
-				"NODE_EXPORTER_TARGETPORT": "9100",
+				"AZMON_OPERATOR_ENABLED":    "true",
+				"CONTAINER_TYPE":            "",
+				"CONTROLLER_TYPE":           "DaemonSet",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"NODE_NAME":                 "test-node",
+				"NODE_IP":                   "192.168.1.1",
+				"NODE_EXPORTER_TARGETPORT":  "9100",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "",
@@ -191,7 +193,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			isDefaultConfig := true
 			expectedContentsFilePath := "./testdata/default-linux-ds.yaml"
 
-			checkResults(true, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath)
+			checkResults(true, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Windows DaemonSet", func() {
@@ -208,11 +210,12 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
 				//"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":         "linux",
-				"MODE":            "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE":   "kube-system",
-				"MAC":             "true",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "",
@@ -273,7 +276,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			isDefaultConfig := false
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 
-			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath)
+			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
@@ -300,12 +303,13 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
-				"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":                "linux",
-				"MODE":                   "advanced",
-				"KUBE_STATE_NAME":        "ama-metrics-ksm",
-				"POD_NAMESPACE":          "kube-system",
-				"MAC":                    "true",
+				//"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
@@ -359,6 +363,8 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				networkobservabilityRetina = true
 				networkobservabilityHubble = true
 				networkobservabilityCilium = true
+				acstor-capacity-provisioner = true
+				acstor-metrics-exporter = true
 				prometheuscollectorhealth = true
 			`)
 			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
@@ -377,6 +383,9 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				networkobservabilityRetina = "test.*|test2"
 				networkobservabilityHubble = "test.*|test2"
 				networkobservabilityCilium = "test.*|test2"
+				acstor-capacity-provisioner = "test.*|test2"
+    			acstor-metrics-exporter = "test.*|test2"
+				prometheuscollectorhealth = "test.*|test2"
 				acstor-capacity-provisioner = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
@@ -412,7 +421,6 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			for jobName, job := range shared.DefaultScrapeJobs {
 				expectedKeepListHashMap[fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))] = fmt.Sprintf("test.*|test2|%s", job.MinimalKeepListRegex)
 			}
-
 			expectedScrapeIntervalHashMap := map[string]string{
 				"KUBELET_SCRAPE_INTERVAL":                     "15s",
 				"COREDNS_SCRAPE_INTERVAL":                     "15s",
@@ -433,7 +441,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"ACSTOR-METRICS-EXPORTER_SCRAPE_INTERVAL":     "15s",
 			}
 
-			checkResults(false, false, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-linux-rs.yaml")
+			checkResults(false, false, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-linux-rs.yaml", "")
 		})
 
 		It("should process the config for the Linux Daemonset", func() {
@@ -455,11 +463,12 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
 				//"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":         "linux",
-				"MODE":            "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE":   "kube-system",
-				"MAC":             "true",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedKeepListHashMap := map[string]string{
 				"ACSTOR-CAPACITY-PROVISIONER_METRICS_KEEP_LIST_REGEX": "test.*|test2",
@@ -530,7 +539,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 
-			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-linux-rs.yaml")
+			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-linux-rs.yaml", "")
 		})
 
 		It("should handle it being set to false with no keeplist regex values", func() {
@@ -538,11 +547,12 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
 				//"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":         "linux",
-				"MODE":            "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE":   "kube-system",
-				"MAC":             "true",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
 			})
 			expectedKeepListHashMap := map[string]string{
 				"KUBELET_METRICS_KEEP_LIST_REGEX":                     "",
@@ -596,12 +606,91 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 
-			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-no-keeplist-rs.yaml")
+			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-no-keeplist-rs.yaml", "")
+		})
+	})
+
+	Context("when the custom configmap exists", Label("custom-config"), func() {
+		Context("and the settings configmap sections do not exist", func() {
+			It("should process the config with defaults for the Linux ReplicaSet", func() {
+				setEnvVars(map[string]string{
+					"AZMON_OPERATOR_ENABLED": "true",
+					"CONTAINER_TYPE":         "ConfigReaderSidecar",
+					//"CONTROLLER_TYPE":        "ReplicaSet",
+					"OS_TYPE":                   "linux",
+					"MODE":                      "advanced",
+					"KUBE_STATE_NAME":           "ama-metrics-ksm",
+					"POD_NAMESPACE":             "kube-system",
+					"MAC":                       "true",
+					"AZMON_SET_GLOBAL_SETTINGS": "true",
+				})
+				expectedEnvVars := map[string]string{
+					"AZMON_AGENT_CFG_SCHEMA_VERSION":                     "",
+					"AZMON_AGENT_CFG_FILE_VERSION":                       "",
+					"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":   "",
+					"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                  "",
+					"AZMON_CLUSTER_LABEL":                                "",
+					"AZMON_CLUSTER_ALIAS":                                "",
+					"AZMON_OPERATOR_ENABLED_CHART_SETTING":               "false",
+					"AZMON_OPERATOR_ENABLED":                             "true",
+					"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":             "",
+					"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":          "true",
+					"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":          "false",
+					"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":         "true",
+					"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":        "false",
+					"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":        "false",
+					"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":        "true",
+					"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":     "true",
+					"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "",
+					"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
+					"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
+					"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
+					//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
+					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
+					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
+					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
+					"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
+					"DEBUG_MODE_ENABLED": "",
+					//"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":                       "false",
+					//"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                            "true",
+					//"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":                          "true",
+				}
+				expectedKeepListHashMap := make(map[string]string)
+				for jobName, job := range shared.DefaultScrapeJobs {
+					expectedKeepListHashMap[fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))] = fmt.Sprintf("|%s", job.MinimalKeepListRegex)
+				}
+				expectedScrapeIntervalHashMap := map[string]string{
+					"ACSTOR-CAPACITY-PROVISIONER_SCRAPE_INTERVAL": "30s",
+					"ACSTOR-METRICS-EXPORTER_SCRAPE_INTERVAL":     "30s",
+					"KUBELET_SCRAPE_INTERVAL":                     "30s",
+					"COREDNS_SCRAPE_INTERVAL":                     "30s",
+					"CADVISOR_SCRAPE_INTERVAL":                    "30s",
+					"KUBEPROXY_SCRAPE_INTERVAL":                   "30s",
+					"APISERVER_SCRAPE_INTERVAL":                   "30s",
+					"KUBESTATE_SCRAPE_INTERVAL":                   "30s",
+					"NODEEXPORTER_SCRAPE_INTERVAL":                "30s",
+					"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "30s",
+					"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "30s",
+					//"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "30s",
+					//"POD_ANNOTATION_SCRAPE_INTERVAL":              "30s",
+					"PODANNOTATIONS_SCRAPE_INTERVAL":             "30s",
+					"PROMETHEUSCOLLECTORHEALTH_SCRAPE_INTERVAL":  "30s",
+					"KAPPIEBASIC_SCRAPE_INTERVAL":                "30s",
+					"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "30s",
+					"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "30s",
+					"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "30s",
+				}
+				expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
+				isDefaultConfig := true
+				configMapMountPath = "./testdata/custom-prometheus-config.yaml"
+
+				checkResults(true, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-and-defaults-rs.yaml")
+			})
 		})
 	})
 })
 
-func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map[string]string, expectedKeepListHashMap map[string]string, expectedScrapeIntervalHashMap map[string]string, expectedContentsFilePath string) {
+func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map[string]string, expectedKeepListHashMap map[string]string, expectedScrapeIntervalHashMap map[string]string, expectedDefaultContentsFilePath string, expectedMergedContentsFilePath string) {
 	if useConfigFiles {
 		setupConfigFiles(isDefaultConfig)
 	}
@@ -612,44 +701,55 @@ func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map
 	Expect(err).NotTo(HaveOccurred())
 
 	checkHashMaps(configMapKeepListEnvVarPath, expectedKeepListHashMap)
-
 	checkHashMaps(scrapeIntervalEnvVarPath, expectedScrapeIntervalHashMap)
 
 	mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
 	Expect(err).NotTo(HaveOccurred())
 	fmt.Println(string(mergedFileContents))
-	expectedFileContents, err := ioutil.ReadFile(expectedContentsFilePath)
+	expectedDefaultFileContents, err := ioutil.ReadFile(expectedDefaultContentsFilePath)
 	Expect(err).NotTo(HaveOccurred())
 
-	var mergedConfig, expectedConfig map[string]interface{}
+	var customMergedConfigFileContents, expectedCustomMergedConfigFileContents []byte
+	if expectedMergedContentsFilePath != "" {
+		customMergedConfigFileContents, err = ioutil.ReadFile(promMergedConfigPath)
+		Expect(err).NotTo(HaveOccurred())
+		fmt.Println(string(customMergedConfigFileContents))
+
+		expectedCustomMergedConfigFileContents, err = ioutil.ReadFile(expectedMergedContentsFilePath)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	var mergedConfig, expectedConfig, customMergedConfig, expectedCustomConfig map[string]interface{}
 
 	err = yaml.Unmarshal(mergedFileContents, &mergedConfig)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = yaml.Unmarshal(expectedFileContents, &expectedConfig)
+	err = yaml.Unmarshal(expectedDefaultFileContents, &expectedConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = yaml.Unmarshal(customMergedConfigFileContents, &customMergedConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = yaml.Unmarshal(expectedCustomMergedConfigFileContents, &expectedCustomConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Order the scrape_configs by job_name for consistent comparison
-	if scrapeConfigs, ok := mergedConfig["scrape_configs"].([]interface{}); ok {
-		sort.Slice(scrapeConfigs, func(i, j int) bool {
-			iConfig := scrapeConfigs[i].(map[interface{}]interface{})
-			jConfig := scrapeConfigs[j].(map[interface{}]interface{})
-			return iConfig["job_name"].(string) < jConfig["job_name"].(string)
-		})
-		mergedConfig["scrape_configs"] = scrapeConfigs
-	}
-
-	if scrapeConfigs, ok := expectedConfig["scrape_configs"].([]interface{}); ok {
-		sort.Slice(scrapeConfigs, func(i, j int) bool {
-			iConfig := scrapeConfigs[i].(map[interface{}]interface{})
-			jConfig := scrapeConfigs[j].(map[interface{}]interface{})
-			return iConfig["job_name"].(string) < jConfig["job_name"].(string)
-		})
-		expectedConfig["scrape_configs"] = scrapeConfigs
+	for _, config := range []map[string]interface{}{mergedConfig, expectedConfig, customMergedConfig, expectedCustomConfig} {
+		if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
+			sort.Slice(scrapeConfigs, func(i, j int) bool {
+				iConfig := scrapeConfigs[i].(map[interface{}]interface{})
+				jConfig := scrapeConfigs[j].(map[interface{}]interface{})
+				return iConfig["job_name"].(string) < jConfig["job_name"].(string)
+			})
+			config["scrape_configs"] = scrapeConfigs
+		}
 	}
 
 	// Use BeEquivalentTo which compares content without requiring same order
 	Expect(mergedConfig).To(BeEquivalentTo(expectedConfig), "Prometheus config content doesn't match")
+	if expectedMergedContentsFilePath != "" {
+		Expect(customMergedConfig).To(BeEquivalentTo(expectedCustomConfig), "Expected Custom Prometheus config content doesn't match")
+	}
 }
 
 func createTempFile(dir string, name string, content string) string {
@@ -706,6 +806,7 @@ func setEnvVars(envVars map[string]string) {
 
 func setupConfigFiles(defaultPath bool) {
 	if defaultPath {
+		configMapDebugMountPath = "/etc/config/settings/debug-mode"
 		configMapDebugMountPath = "/etc/config/settings/debug-mode"
 		replicaSetCollectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 		defaultSettingsMountPath = "/etc/config/settings/default-scrape-settings"
@@ -773,6 +874,7 @@ func setupProcessedFiles() {
 
 	scrapeConfigDefinitionPathPrefix = "../../../configmapparser/default-prom-configs/test/"
 	mergedDefaultConfigPath = createTempFile(configSettingsPrefix, "merged-default-config", "")
+	promMergedConfigPath = createTempFile(configSettingsPrefix, "merged-default-and-custom-scrape-configs", "")
 	regexHashFile = configMapKeepListEnvVarPath
 	intervalHashFile = scrapeIntervalEnvVarPath
 }
@@ -786,6 +888,9 @@ func cleanupEnvVars() {
 		"KUBE_STATE_NAME",
 		"POD_NAMESPACE",
 		"MAC",
+		"NODE_NAME",
+		"NODE_IP",
+		"NODE_EXPORTER_TARGETPORT",
 		"AZMON_AGENT_CFG_SCHEMA_VERSION",
 		"AZMON_AGENT_CFG_FILE_VERSION",
 		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX",

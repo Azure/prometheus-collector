@@ -21,7 +21,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	case shared.SchemaVersion.V1:
 		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
 		if err != nil {
-			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s, %s", err.Error())
+			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", err.Error())
 		}
 		minimalProfileEnabled = minimalProfileEnabledBool
 		fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
