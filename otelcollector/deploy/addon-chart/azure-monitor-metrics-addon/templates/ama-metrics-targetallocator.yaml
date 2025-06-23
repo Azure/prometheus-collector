@@ -75,6 +75,16 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+        - mountPath: /etc/operator-targets/server/certs
+          name: ama-metrics-operator-targets-server-tls-secret-volume
+          readOnly: true
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+{{- end }}
         livenessProbe:
           httpGet:
             path: /health-ta
@@ -152,6 +162,8 @@ spec:
           value: "true" # only supported value is the string "true"
         - name: AGENT_VERSION
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
+        - name: OPERATOR_TARGETS_HTTPS_ENABLED
+          value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config
@@ -164,6 +176,14 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+          - mountPath: /etc/operator-targets/client/certs
+            name: ama-metrics-operator-targets-client-tls-secret-volume
+            readOnly: true
+          - mountPath: /etc/operator-targets/server/certs
+            name: ama-metrics-operator-targets-server-tls-secret-volume
+            readOnly: true
+{{- end }}
         securityContext:
           capabilities:
             drop:
@@ -172,7 +192,7 @@ spec:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 60
+          initialDelaySeconds: 100
           periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
@@ -235,6 +255,16 @@ spec:
         secret:
           secretName: ama-metrics-mtls-secret
           optional: true
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+      - name: ama-metrics-operator-targets-server-tls-secret-volume
+        secret:
+          secretName: ama-metrics-operator-targets-server-tls-secret
+          optional: true
+      - name: ama-metrics-operator-targets-client-tls-secret-volume
+        secret:
+          secretName: ama-metrics-operator-targets-client-tls-secret
+          optional: true
+{{- end }}
       - name: ta-config-shared
         emptyDir: {}
 {{- end }}
