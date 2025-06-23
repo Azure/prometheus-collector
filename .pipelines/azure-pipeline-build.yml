@@ -3,7 +3,6 @@ trigger:
     include:
     - feature/otlpmain
     - main
-    - grace/mdsd-mariner-3
 pr:
   autoCancel: true
   branches:
