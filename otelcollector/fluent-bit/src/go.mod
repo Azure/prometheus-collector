@@ -1,6 +1,6 @@
 module Docker-Provider/source/plugins/go/src
 
-replace github.com/prometheus-collector/shared => ../shared
+replace github.com/prometheus-collector/shared => ../../shared
 
 go 1.23.0
 
