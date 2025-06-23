@@ -1,11 +1,11 @@
 ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as fluent-bit-builder
 WORKDIR /src
-COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
+COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum ./fluent-bit/src/
 COPY ./shared/go.mod ./shared/go.sum ./shared/
 RUN go version
 RUN go mod download
-COPY ./fluent-bit/src/ .
+COPY ./fluent-bit/src/ ./
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
