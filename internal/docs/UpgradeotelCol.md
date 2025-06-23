@@ -21,108 +21,10 @@ Get latest release version and latest prometheusreceiver code:
 * delete testdata directory
 
 #### go.mod 
-* remove replacements at the end
+* remove replacements at the end of the file
 
 ### Prometheus version
 * Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
-
-## web handler changes
-### metrics_receiver.go: web handler changes to be added 
-* Add extra import packages at the top - 
-	```
-	"github.com/prometheus/common/version"
-	"github.com/prometheus/prometheus/web"
-	```
-
-* Add constants at the top
-	```
-	// Use same settings as Prometheus web server
-	maxConnections     = 512
-	readTimeoutMinutes = 10
-	```
-* In **type pReceiver struct** - add 
-	```
-	webHandler        *web.Handler
-	```
-* Pass in the web handler argument to the target allocator's **Start()** function
-	```
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager, r.webHandler)
-	```
-
-* Add webhandler code in initPrometheusComponents() or Start() function
-
-	```
-	// Setup settings and logger and create Prometheus web handler
-		webOptions := web.Options{
-			ScrapeManager: r.scrapeManager,
-			Context:       ctx,
-			ListenAddress: ":9090",
-			ExternalURL: &url.URL{
-				Scheme: "http",
-				Host:   "localhost:9090",
-				Path:   "",
-			},
-			RoutePrefix: "/",
-			ReadTimeout: time.Minute * readTimeoutMinutes,
-			PageTitle:   "Prometheus Receiver",
-			Version: &web.PrometheusVersion{
-				Version:   version.Version,
-				Revision:  version.Revision,
-				Branch:    version.Branch,
-				BuildUser: version.BuildUser,
-				BuildDate: version.BuildDate,
-				GoVersion: version.GoVersion,
-			},
-			Flags:          make(map[string]string),
-			MaxConnections: maxConnections,
-			IsAgent:        true,
-			Gatherer:       prometheus.DefaultGatherer,
-		}
-		go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-		r.webHandler = web.New(go_kit_logger, &webOptions)
-		listener, err := r.webHandler.Listener()
-		if err != nil {
-			return err
-		}
-		// Pass config and let the web handler know the config is ready.
-		// These are needed because Prometheus allows reloading the config without restarting.
-		r.webHandler.ApplyConfig((*promconfig.Config)(r.cfg.PrometheusConfig))
-		r.webHandler.SetReady(true)
-		// Uses the same context as the discovery and scrape managers for shutting down
-		go func() {
-			if err := r.webHandler.Run(ctx, listener, ""); err != nil {
-				r.settings.Logger.Error("Web handler failed", zap.Error(err))
-				componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-			}
-		}()
-	``` 
-
-### targetallocator/manager.go: web handler changes to be added 
-* Add extra import package at the top - 
-	```
-	"github.com/prometheus/prometheus/web"
-	```
-
-* In **type Manager struct** - add 
-	```
-	webHandler             *web.Handler
-	```
-* Pass in web handler parameter to the **Start** function
-	```
-	func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager, wh *web.Handler) error {
-	```
-
-* Add this in **Start()** function below m.scrapeManager = sm and m.discoveryManager = dm - 
-	```
-	m.webHandler = wh
-	```
-* Add webhandler code in **applyCfg()** function below m.scrapeManager.ApplyConfig(m.promCfg) - 
-
-	```
-	if err := m.webHandler.ApplyConfig(m.promCfg); err != nil {
-		return err
-	}
-	```
 
 ## opentelemetry-collector-builder - 
 * go mod tidy
@@ -149,7 +51,7 @@ Get latest release version and latest prometheusreceiver code:
 go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com' -o main . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com'
 ```
 6. Update main.go to include ARC EULA (lines 69-73)
-7. In the file - otelcollector/otel-allocator/config/flags.go add the below in the import section.
+7. In the file - otelcollector/otel-allocator/internal/config/flags.go add the below in the import section.
 ```
 uberzap "go.uber.org/zap"
 ```
@@ -160,10 +62,11 @@ and add the below after *zapCmdLineOpts.BindFlags(zapFlagSet)* in the getFlagSet
 ```
 
 8. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
-9. Run go mod tidy from the otel-allocator directory and then run make.
+9. Replace the module as module `github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator`
+10. Run go mod tidy from the otel-allocator directory and then run make.
 
 ## Configuration Reader Builder
-1. Update the version of operator in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
+1. Update the version of prometheus/common in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
 2. Run go mod tidy from configuration-reader-builder directory and then run make
 
 

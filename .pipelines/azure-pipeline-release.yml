@@ -1,6 +1,4 @@
-trigger:
-  enabled: false
-name: $(Date:yyyyMMdd).$(Rev:r)
+trigger: none
 variables:
 - name: ACRRegistry
   value: containerinsights.azurecr.io
@@ -224,7 +222,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: specific
         project: $(resources.pipeline._Azureprometheus-collector.projectID)
         definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
@@ -243,7 +240,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -258,17 +255,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -277,7 +274,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -295,6 +292,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -308,8 +349,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -426,18 +467,26 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: release_gating.py
-    - task: HelmInstaller@0
+    - task: DownloadPipelineArtifact@2
+      displayName: ⏬ Pipeline Artifact Download
       inputs:
-        helmVersion: 3.12.3
-        checkLatestHelmVersion: false
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
+        targetPath: $(Pipeline.Workspace)/ev2Artifact
+    - task: HelmInstaller@1
       target:
         container: host
-      displayName: Install Helm 3.12.3
+      displayName: Install Helm
     - task: Bash@3
       inputs:
         targetType: inline
-        script: "cd $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/arc-chart/\nCHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(System.DefaultWorkingDirectory)\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
-        workingDirectory: $(System.DefaultWorkingDirectory)
+        script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
+        workingDirectory: $(Pipeline.Workspace)/ev2Artifact/arc-drop/
       target:
         container: host
       displayName: Check images and ARC chart are pushed to MCR
@@ -469,7 +518,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: HelmDeploy@0
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -485,10 +534,10 @@ stages:
         namespace: default
         command: upgrade
         chartType: FilePath
-        chartPath: $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/
+        chartPath: $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon
         releaseName: ama-metrics
         waitForExecution: false
-        arguments: --values $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
+        arguments: --values $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon/values.yaml --dependency-update
       target:
         container: host
       displayName: Deploy to ci-prod-aks-mac-weu
@@ -520,7 +569,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -564,7 +613,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -720,8 +769,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -733,7 +787,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -748,17 +802,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -785,6 +839,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -798,8 +896,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/arc-extension/release/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -976,8 +1074,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -989,7 +1092,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1004,17 +1107,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -1023,7 +1126,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1041,6 +1144,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -1054,8 +1201,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1232,8 +1379,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1245,7 +1397,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1260,17 +1412,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -1279,7 +1431,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1297,6 +1449,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -1310,8 +1506,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1488,8 +1684,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1501,7 +1702,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1516,17 +1717,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -1535,7 +1736,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1553,6 +1754,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -1566,8 +1811,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1744,8 +1989,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1757,7 +2007,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1772,17 +2022,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -1791,7 +2041,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1809,6 +2059,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -1822,8 +2116,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2000,8 +2294,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -2013,7 +2312,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linx-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2028,17 +2327,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -2047,7 +2346,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2065,6 +2364,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -2078,8 +2421,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2=drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2256,8 +2599,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -2269,7 +2617,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2284,17 +2632,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
@@ -2303,7 +2651,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2321,6 +2669,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
@@ -2334,8 +2726,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus

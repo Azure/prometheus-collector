@@ -1,22 +1,12 @@
-# CRITICAL
-# kube-state-metrics
-CVE-2024-45337 # golang.org/x/crypto
-CVE-2024-24790 # stdlib
-# HIGH
-# kube-state-metrics
-CVE-2024-45338 # golang.org/x/net
-CVE-2024-34156 # stdlib
-# MEDIUM
-# kube-state-metrics
-CVE-2023-45288 # stdlib
-CVE-2024-24789 # stdlib
-CVE-2024-24791 # stdlib
-CVE-2024-34155 # stdlib
-CVE-2024-34158 # stdlib
-CVE-2024-45336 # stdlib
-CVE-2024-45341 # stdlib
-# prometheus-collector
-# targetallocator
-# config-reader
-CVE-2025-22866 # stdlib
+# This file contains CVEs to be ignored by Trivy
+# Auto-generated on Thu Jun 12 21:11:07 UTC 2025
 
+# CRITICAL
+
+# HIGH
+
+# MEDIUM
+# prometheusui
+CVE-2025-22872 # golang.org/x/net
+
+# LOW

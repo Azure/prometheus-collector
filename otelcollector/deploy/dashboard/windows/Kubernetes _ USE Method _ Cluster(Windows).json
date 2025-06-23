@@ -420,7 +420,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]))\n              ) / scalar(count (\n                windows_system_system_up_time{cluster=\"$cluster\", job=\"windows-exporter\"}\n              ))",
+          "expr": " avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]))\n              ) / scalar(count (\n                windows_system_boot_time_timestamp_seconds{cluster=\"$cluster\", job=\"windows-exporter\"}\n              ))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -819,7 +819,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(windows_system_system_up_time, cluster)",
+        "definition": "label_values(windows_system_boot_time_timestamp_seconds, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -829,7 +829,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(windows_system_system_up_time, cluster)",
+          "query": "label_values(windows_system_boot_time_timestamp_seconds, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

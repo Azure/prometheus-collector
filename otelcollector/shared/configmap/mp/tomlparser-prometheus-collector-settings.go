@@ -7,60 +7,56 @@ import (
 	"strings"
 )
 
-func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
-	config := make(map[string]string)
-
-	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
-		fmt.Println("configmapprometheus-collector-configmap for prometheus collector settings not mounted, using defaults")
-		return config, nil
-	}
-
-	content, err := os.ReadFile(fcl.ConfigMapMountPath)
-	if err != nil {
-		fmt.Printf("Error reading config map file: %s, using defaults, please check config map for errors\n", err)
-		return nil, err
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			config[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
+	// Populate default metric account name
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["default_metric_account_name"]; ok {
+			cp.DefaultMetricAccountName = value
+			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
 		}
 	}
 
-	return config, nil
-}
-
-func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[string]string) {
-	if value, ok := parsedConfig["default_metric_account_name"]; ok {
-		cp.DefaultMetricAccountName = value
-		fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
-	}
-
-	if value, ok := parsedConfig["cluster_alias"]; ok {
-		cp.ClusterAlias = strings.TrimSpace(value)
-		fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
-		// Only perform the replacement if cp.ClusterAlias is not an empty string
-		if cp.ClusterAlias != "" {
-			cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
-			cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_") // Trim underscores from the beginning and end (since cluster_alias is being passed in as "" which are being replaced with _)
-			fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
+	// Populate cluster alias
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["cluster_alias"]; ok {
+			cp.ClusterAlias = strings.TrimSpace(value)
+			fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
+			if cp.ClusterAlias != "" {
+				cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
+				cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")
+				fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
+			}
 		}
 	}
 
+	// Populate operator settings
 	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
 		cp.IsOperatorEnabledChartSetting = true
-		if value, ok := parsedConfig["operator_enabled"]; ok {
-			if value == "true" {
-				cp.IsOperatorEnabled = true
-			} else {
-				cp.IsOperatorEnabled = false
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+			if value, ok := settings["operator_enabled"]; ok {
+				cp.IsOperatorEnabled = value == "true"
+				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
 			}
-			fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
 		}
 	} else {
 		cp.IsOperatorEnabledChartSetting = false
+	}
+
+	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
+		cp.TargetallocatorHttpsEnabledChartSetting = true
+		cp.TargetallocatorHttpsEnabled = true
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+			if value, ok := settings["https_config"]; ok {
+				if strings.ToLower(value) == "false" {
+					cp.TargetallocatorHttpsEnabled = false
+				}
+				fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
+			}
+			fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
+		}
+	} else {
+		cp.TargetallocatorHttpsEnabledChartSetting = false
+		cp.TargetallocatorHttpsEnabled = false
 	}
 }
 
@@ -70,6 +66,7 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 		return fmt.Errorf("exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}
 	defer file.Close()
+
 	file.WriteString(fmt.Sprintf("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", configParser.DefaultMetricAccountName))
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
@@ -78,17 +75,18 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))
 	}
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING=%t\n", configParser.TargetallocatorHttpsEnabledChartSetting))
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	return nil
 }
-func (c *Configurator) Configure() {
+
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	fmt.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", configSchemaVersion)
 
-	fmt.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
-
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		configMapSettings, err := c.ConfigLoader.ParseConfigMap()
-		if err == nil && len(configMapSettings) > 0 {
-			c.ConfigParser.PopulateSettingValuesFromConfigMap(configMapSettings)
+	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
+		if len(metricsConfigBySection) > 0 {
+			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
 	} else {
 		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
@@ -116,16 +114,21 @@ func (c *Configurator) Configure() {
 		fmt.Printf("%v\n", err)
 		return
 	}
-
 }
 
-func parseConfigAndSetEnvInFile() {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+
+	operatorHttpsEnabled := false
+	if strings.ToLower(os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")) == "true" {
+		operatorHttpsEnabled = true
+	}
+
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
-		ConfigParser:   &ConfigProcessor{},
+		ConfigParser:   &ConfigProcessor{TargetallocatorHttpsEnabled: operatorHttpsEnabled},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
-	configurator.Configure()
+	configurator.Configure(metricsConfigBySection)
 }
