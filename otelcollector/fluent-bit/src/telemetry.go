@@ -837,7 +837,7 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if os.Getenv(envControllerType) == "ReplicaSet" {
 
 				for jobName, job := range shared.DefaultScrapeJobs {
-					metric.Properties[fmt.Sprintf(%sEnabled)] = job.Enabled
+					metric.Properties[fmt.Sprintf("%sEnabled", jobName)] = strconv.FormatBool(job.Enabled)
 					if job.KeepListRegex != "" {
 						metric.Properties[fmt.Sprintf("%sKeepListRegex", jobName)] = job.KeepListRegex
 					}

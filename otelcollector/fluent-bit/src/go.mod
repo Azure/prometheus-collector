@@ -4,14 +4,12 @@ replace github.com/prometheus-collector/shared => ../../shared
 
 go 1.23.0
 
-toolchain go1.24.1
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
-	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
-	github.com/prometheus/client_golang v1.18.0
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
 	github.com/shirou/gopsutil/v4 v4.25.5
 	github.com/ugorji/go/codec v1.2.14
@@ -72,6 +70,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
