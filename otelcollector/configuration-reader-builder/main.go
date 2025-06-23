@@ -471,7 +471,7 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 	_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Printf("Secret %s not found, retrying after 10 seconds...", secretName
+			log.Printf("Secret %s not found, retrying after 10 seconds...", secretName)
 			time.Sleep(10 * time.Second)
 			_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 			if err != nil && apierrors.IsNotFound(err) {
