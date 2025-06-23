@@ -27,7 +27,7 @@ sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing mdsd..."
-sudo tdnf install -y azure-mdsd-1.33.3
+sudo tdnf install -y azure-mdsd-1.35.7
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs

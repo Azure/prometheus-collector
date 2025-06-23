@@ -3,7 +3,7 @@ trigger:
     include:
     - feature/otlpmain
     - main
-    - ngotina/linux-3.0-upgrade
+    - grace/mdsd-mariner-3
 pr:
   autoCancel: true
   branches:
