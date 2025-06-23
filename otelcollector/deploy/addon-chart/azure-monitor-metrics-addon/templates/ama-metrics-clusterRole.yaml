@@ -30,7 +30,7 @@ rules:
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "create", "update"]
+    verbs: ["get", "update"]
 {{- end }}
   - apiGroups: [""]
     resources: ["events"]
