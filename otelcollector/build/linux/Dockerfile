@@ -2,6 +2,7 @@ ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
+COPY ./shared/go.mod ./shared/go.sum ./shared/
 RUN go version
 RUN go mod download
 COPY ./fluent-bit/src/ .
