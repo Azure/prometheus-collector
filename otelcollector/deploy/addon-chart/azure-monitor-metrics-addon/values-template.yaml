@@ -54,6 +54,7 @@ AzureMonitorMetrics:
   ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
+  OperatorTargetsHttpsEnabled: false
   DeploymentReplicas: 2
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
@@ -73,9 +74,9 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.250224.1"
-    ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
-    ImageTagWin: "master.250224.1"
+    ImageTag: "master.250423.2"
+    ImageRepositoryWin: "/aks/msi/addon-token-adapter"
+    ImageTagWin: "master.250423.2"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous

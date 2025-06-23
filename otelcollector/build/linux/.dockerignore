@@ -1,1 +1,2 @@
 shared/process_utilities_windows.go
+shared/bootstrap_certificates_windows.go

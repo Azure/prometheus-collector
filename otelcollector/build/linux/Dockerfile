@@ -10,6 +10,22 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
 
 ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prometheus-ui
+WORKDIR /src
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go version > goversion.txt
+COPY ./prometheus-ui/go.mod ./prometheus-ui/go.sum ./prometheus-ui/
+WORKDIR /src/prometheus-ui
+RUN go mod download
+COPY ./prometheus-ui /src/prometheus-ui
+ARG TARGETOS TARGETARCH PROMETHEUS_VERSION
+RUN echo $PROMETHEUS_VERSION
+RUN wget https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
+RUN tar -xvzf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
+RUN rm -rf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; fi
+
+ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
@@ -31,13 +47,17 @@ WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./shared/go.mod ./shared/go.sum ./shared/
 WORKDIR /src/prometheusreceiver
 RUN go version
+RUN go mod download
+WORKDIR /src/shared
 RUN go mod download
 WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./shared/ /src/shared/
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
@@ -132,6 +152,7 @@ COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcolle
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=prometheus-ui /src/prometheus-ui/prometheusui $tmpdir/microsoft/otelcollector/
 COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
@@ -141,7 +162,6 @@ COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
-COPY ./react-app /static/react-app
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
@@ -189,7 +209,6 @@ ENV OS_TYPE "linux"
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /busybin /busybin
-COPY --from=builder /static/react-app /static/react-app
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate

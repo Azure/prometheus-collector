@@ -4,14 +4,13 @@
 package main
 
 import (
+	"strings"
 	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"strings"
 
-	gokitlog "github.com/go-kit/log"
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -54,14 +53,12 @@ func main() {
 		interrupts      = make(chan os.Signal, 1)
 		errChan         = make(chan error)
 	)
-
 	// EULA statement is required for Arc extension
 	clusterResourceId := os.Getenv("CLUSTER")
 	if strings.EqualFold(clusterResourceId, "connectedclusters") {
-		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
+	setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
 	}
-
-	cfg, err := config.Load()
+	cfg, err := config.Load(os.Args)
 	if err != nil {
 		fmt.Printf("Failed to load config: %v", err)
 		os.Exit(1)
@@ -101,7 +98,7 @@ func main() {
 		setupLog.Error(err, "Unable to register metrics for Prometheus service discovery")
 		os.Exit(1)
 	}
-	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger(), prometheus.DefaultRegisterer, sdMetrics)
+	discoveryManager = discovery.NewManager(discoveryCtx, config.NopLogger, prometheus.DefaultRegisterer, sdMetrics)
 
 	targetDiscoverer = target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv, allocator.SetTargets)
 	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, cfg.ClusterConfig, cfg.CollectorNotReadyGracePeriod)

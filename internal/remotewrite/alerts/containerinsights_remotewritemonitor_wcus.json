@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "apiVersion": "2021-07-22-preview",
+      "name": "containerinsights_remotewritemonitor-wcus_alerts",
+      "location": "westcentralus",
+      "properties": {
+        "description": "",
+        "enabled": true,
+        "interval": "PT1M",
+        "scopes": [
+          "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-amw/providers/microsoft.monitor/accounts/remotewritemonitor-wcus",
+          "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-eus2euap"
+        ],
+        "clusterName": "monitoring-metrics-prod-aks-eus2euap",
+        "rules": [
+          {
+            "alert": "up metric missing for target = remote-write-ama-sidecar-k-operator in cluster monitoring-metrics-prod-aks-eus2euap for remotewritemonitor-wcus workspace",
+            "enabled": true,
+            "expression": "absent_over_time(up{job=\"remote-write-ama-sidecar-k-operator\"}[30m]) == 1 or count(up{job=\"remote-write-ama-sidecar-k-operator\"} == 1) == 0",
+            "severity": 4,
+            "labels": {},
+            "annotations": {},
+            "actions": [
+              {
+                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourcegroups/containerinsightsprometheuscollector-prod/providers/microsoft.insights/actiongroups/ama-prometheuscollectoralertgroup",
+                "actionProperties": {}
+              }
+            ],
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            }
+          },
+          {
+            "alert": "Remote write samples ingestion rate dropped below 80% of normal in cluster monitoring-metrics-prod-aks-eus2euap for remotewritemonitor-wcus workspace",
+            "enabled": true,
+            "expression": "sum(increase(prometheus_remote_storage_samples_total{job=\"remote-write-ama-sidecar-k-prometheus\"}[1h])) < 0.8 * (sum(increase(prometheus_remote_storage_samples_total{job=\"remote-write-ama-sidecar-k-prometheus\"}[6h])) / 6)",
+            "severity": 3,
+            "labels": {
+              "category": "Performance"
+            },
+            "annotations": {
+              "summary": "Remote write ingestion rate decreased significantly",
+              "description": "The samples ingestion rate for job remote-write-ama-sidecar-k-prometheus has dropped below 80% of its average over the last 6 hours."
+            },
+            "actions": [
+              {
+                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourcegroups/containerinsightsprometheuscollector-prod/providers/microsoft.insights/actiongroups/ama-prometheuscollectoralertgroup",
+                "actionProperties": {}
+              }
+            ],
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

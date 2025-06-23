@@ -5,6 +5,31 @@ schedules:
   branches:
     include:
     - main
+parameters:
+- name: subscriptionName
+  displayName: 'Subscription Name'
+  type: string
+  default: 'ContainerInsights_Build_Subscription'
+- name: subscriptionID
+  displayName: 'Subscription ID'
+  type: string
+  default: '9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb'
+- name: clusterName
+  displayName: 'AKS Cluster Name'
+  type: string
+  default: 'ci-dev-aks-tests'
+- name: clusterResourceGroup
+  displayName: 'AKS Cluster Resource Group'
+  type: string
+  default: 'ci-dev-aks-tests'
+- name: AMW_QUERY_ENDPOINT
+  displayName: 'AMW Query Endpoint'
+  type: string
+  default: 'https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com'
+- name: AZURE_CLIENT_ID
+  displayName: 'Azure Client ID'
+  type: string
+  default: 'f8b1889c-310c-4913-93c5-3faf0f594f34'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -58,13 +83,13 @@ stages:
           - task: AzureCLI@1
             displayName: Get kubeconfig
             inputs:
-              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g ci-dev-aks-tests -n ci-dev-aks-tests'
+                azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az aks get-credentials -g ${{ parameters.clusterResourceGroup }} -n ${{ parameters.clusterName }}'
           
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
@@ -86,7 +111,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-no-configmaps --verbose
+              kubectl testkube run testsuite config-tests-no-configmaps --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-no-configmaps --limit 1 | grep config-tests-no-configmaps | awk '{print $1}')
@@ -119,12 +144,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for no configmaps"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs.yaml > ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
@@ -142,7 +167,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-all-targets-disabled --verbose
+              kubectl testkube run testsuite config-tests-all-targets-disabled --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-all-targets-disabled --limit 1 | grep config-tests-all-targets-disabled | awk '{print $1}')
@@ -175,12 +200,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all targets disabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-crs.yaml > ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
@@ -198,7 +223,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-def-targets-on-configmap --verbose
+              kubectl testkube run testsuite config-tests-def-targets-on-configmap --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-def-targets-on-configmap --limit 1 | grep config-tests-def-targets-on-configmap | awk '{print $1}')
@@ -231,12 +256,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all default targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-rs-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -254,7 +279,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-all-rs-targets-enabled --verbose
+              kubectl testkube run testsuite config-tests-all-rs-targets-enabled --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-all-rs-targets-enabled --limit 1 | grep config-tests-all-rs-targets-enabled | awk '{print $1}')
@@ -287,12 +312,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all rs targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-ds-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -310,7 +335,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-all-ds-targets-enabled --verbose
+              kubectl testkube run testsuite config-tests-all-ds-targets-enabled --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-all-ds-targets-enabled --limit 1 | grep config-tests-all-ds-targets-enabled | awk '{print $1}')
@@ -343,12 +368,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all ds targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -366,7 +391,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-all-targets-enabled --verbose
+              kubectl testkube run testsuite config-tests-all-targets-enabled --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-all-targets-enabled --limit 1 | grep config-tests-all-targets-enabled | awk '{print $1}')
@@ -399,12 +424,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
@@ -426,7 +451,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-custom-configmap-all-actions --verbose
+              kubectl testkube run testsuite config-tests-custom-configmap-all-actions --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-custom-configmap-all-actions --limit 1 | grep config-tests-custom-configmap-all-actions | awk '{print $1}')
@@ -459,12 +484,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for custom configmap with all actions enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
@@ -482,7 +507,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-global-ext-labels --verbose
+              kubectl testkube run testsuite config-tests-global-ext-labels --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-global-ext-labels --limit 1 | grep config-tests-global-ext-labels | awk '{print $1}')
@@ -515,12 +540,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for global ext labels enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
@@ -539,7 +564,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-node-configmaps --verbose
+              kubectl testkube run testsuite config-tests-node-configmaps --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-node-configmaps --limit 1 | grep config-tests-node-configmaps | awk '{print $1}')
@@ -572,12 +597,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for custom node configmap enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-settings-error-crs.yaml > ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
@@ -598,7 +623,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-error-settings-configmap --verbose
+              kubectl testkube run testsuite config-tests-error-settings-configmap --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-error-settings-configmap --limit 1 | grep config-tests-error-settings-configmap | awk '{print $1}')
@@ -631,12 +656,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone settings configmap"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-configmap-error-crs.yaml > ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
@@ -656,7 +681,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-tests-custom-configmap-error --verbose
+              kubectl testkube run testsuite config-tests-custom-configmap-error --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-custom-configmap-error --limit 1 | grep config-tests-custom-configmap-error | awk '{print $1}')
@@ -689,12 +714,12 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone custom configmap"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-ext-labels-error-crs.yaml > ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
@@ -713,7 +738,7 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite config-global-ext-labels-error --verbose
+              kubectl testkube run testsuite config-global-ext-labels-error --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
               execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-global-ext-labels-error --limit 1 | config-global-ext-labels-error | awk '{print $1}')
@@ -746,5 +771,5 @@ stages:
               fi
 
               exit 0
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone global ext labels"
