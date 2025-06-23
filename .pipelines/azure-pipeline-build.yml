@@ -3,7 +3,7 @@ trigger:
     include:
     - feature/otlpmain
     - main
-
+    - ngotina/linux-3.0-upgrade
 pr:
   autoCancel: true
   branches:
@@ -28,8 +28,8 @@ variables:
   IS_OTLP_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'otlpmain')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.23.8'
-  TESTKUBE_GOLANG_VERSION: '1.23.8'
+  GOLANG_VERSION: '1.23.10'
+  TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
 resources:
