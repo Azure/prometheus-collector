@@ -80,6 +80,7 @@ resources:
   - pipeline: '_Azureprometheus-collector'
     project: 'azure'
     source: 'Azure.prometheus-collector'
+    branch: 'main'
   repositories:
   - repository: 1ESPipelineTemplates
     type: git
@@ -186,6 +187,7 @@ extends:
           os: windows
         templateContext:
           type: releaseJob
+          isProduction: true
           workflow: ev2-ra
           inputs:
           - input: pipelineArtifact
@@ -318,7 +320,7 @@ extends:
                   }
                 ]
               }
-    - stage: Stage_2
+    - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
       trigger: manual
       pool:
@@ -330,72 +332,8 @@ extends:
         condition: succeeded()
         timeoutInMinutes: '0'
         variables:
-        - name: OneESPT.JobType
-          value: releaseJob
-          readonly: true
-        - name: OneESPT
-          value: true
-          readonly: true
-        - name: OneESPT.BuildType
-          value: Official
-          readonly: true
-        - name: OneESPT.OS
-          value: windows
-          readonly: true
-        - name: runCodesignValidationInjection
-          value: false
-        - name: Codeql.SkipTaskAutoInjection
-          value: true
         - name: skipComponentGovernanceDetection
           value: true
-        - name: skipNugetSecurityAnalysis
-          value: true
-        - name: OneES_targetName
-          value: host
-        steps:
-        - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-          condition: false
-          inputs:
-            repository: none
-        - task: 1ESGPTRunTask@3.0.314
-          displayName: Validate Hosted Pool Information (1ES PT)
-          continueOnError: false
-          target:
-            container: host
-          env:
-            HOST_ARCHITECTURE: amd64
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-            SYSTEM_DEFINITIONID: $(System.DefinitionId)
-            SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-            SYSTEM_TEAMPROJECT: $(System.TeamProject)
-            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-            BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-            BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-            PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-            PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-            BUILD_REASON: $(Build.Reason)
-          inputs:
-            repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-            path: validateHostedPool.ps1
-            arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-        - task: 1ESGPTRunTask@3.0.314
-          displayName: Branch Validation (1ES PT)
-          continueOnError: true
-          target:
-            container: host
-          env:
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-            SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-            BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-            BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-            BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-            BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-            BUILD_SOURCEVERSION: $(Build.SourceVersion)
-            TASK_MODE: audit
-          inputs:
-            repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-            path: release_gating.py
         - task: DownloadPipelineArtifact@2
           displayName: ⏬ Pipeline Artifact Download
           inputs:
