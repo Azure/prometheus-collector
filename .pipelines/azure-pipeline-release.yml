@@ -173,7 +173,7 @@ extends:
           inputs:
           - input: pipelineArtifact
             pipeline:  _Azureprometheus-collector
-            targetPath: $(Pipeline.Workspace)/ev2Artifact
+            //targetPath: $(Pipeline.Workspace)/ev2Artifact
           ev2:
             serviceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
             rolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
