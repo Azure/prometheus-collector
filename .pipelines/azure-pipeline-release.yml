@@ -331,9 +331,7 @@ extends:
         displayName: Deploy to Prod Clusters
         condition: succeeded()
         timeoutInMinutes: '0'
-        variables:
-        - name: skipComponentGovernanceDetection
-          value: true
+        steps:
         - task: DownloadPipelineArtifact@2
           displayName: ⏬ Pipeline Artifact Download
           inputs:
