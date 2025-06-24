@@ -1,6 +1,6 @@
 trigger: none
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
+  template: v1/1ES.Official.PipelineTemplate.yml@template
   parameters:
     variables:
     - name: ACRRegistry
