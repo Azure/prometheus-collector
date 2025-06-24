@@ -26,6 +26,7 @@ type Config struct {
 	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
 	PrometheusCR       PrometheusCRConfig     `yaml:"prometheus_cr,omitempty"`
 	FilterStrategy     string                 `yaml:"filter_strategy,omitempty"`
+	HTTPS              HTTPSServerConfig      `yaml:"https,omitempty"`
 }
 
 type OtelConfig struct {
@@ -35,7 +36,7 @@ type OtelConfig struct {
 	Receivers  struct {
 		Prometheus struct {
 			Config          map[string]interface{} `yaml:"config"`
-			TargetAllocator interface{}            `yaml:"target_allocator"`
+			TargetAllocator map[string]interface{} `yaml:"target_allocator,omitempty"`
 			APIServer       interface{}            `yaml:"api_server"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
@@ -60,4 +61,12 @@ type OtelConfig struct {
 			} `yaml:"logs"`
 		} `yaml:"telemetry"`
 	} `yaml:"service"`
+}
+
+type HTTPSServerConfig struct {
+	Enabled         bool   `yaml:"enabled,omitempty"`
+	ListenAddr      string `yaml:"listen_addr,omitempty"`
+	CAFilePath      string `yaml:"ca_file_path,omitempty"`
+	TLSCertFilePath string `yaml:"tls_cert_file_path,omitempty"`
+	TLSKeyFilePath  string `yaml:"tls_key_file_path,omitempty"`
 }

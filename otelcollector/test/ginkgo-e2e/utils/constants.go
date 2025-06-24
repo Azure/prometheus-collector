@@ -15,6 +15,8 @@ var (
 		"Objects listed",
 		// Target allocator
 		"client connection lost",
+		// Config reader
+		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 	}
 )
 

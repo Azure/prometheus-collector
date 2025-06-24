@@ -85,19 +85,50 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 }
 
 func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
-	debugSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
-	if !ok {
-		fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
+	debugSettings := "false"
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+
+	if configSchemaVersion == "" {
+		fmt.Println("AZMON_AGENT_CFG_SCHEMA_VERSION environment variable is not set. Using default value: false")
 		return false
 	}
 
-	val, ok := debugSettings["debug-mode"]
-	if !ok {
-		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+	configSchemaVersion = strings.TrimSpace(configSchemaVersion)
+
+	if configSchemaVersion == "v1" {
+		debugModeSection, ok := metricsConfigBySection["debug-mode"]
+		if !ok {
+			fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+			return false
+		}
+
+		val, ok := debugModeSection["enabled"]
+		if !ok {
+			fmt.Println("The 'enabled' field in 'debug-mode' section is not present in the parsed data. Using default value: false")
+			return false
+		}
+		debugSettings = val
+
+	} else if configSchemaVersion == "v2" {
+		prometheusSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
+		if !ok {
+			fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
+			return false
+		}
+
+		val, ok := prometheusSettings["debug-mode"]
+		if !ok {
+			fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+			return false
+		}
+		debugSettings = val
+
+	} else {
+		fmt.Printf("Unsupported config schema version: %s. Using default value: false\n", configSchemaVersion)
 		return false
 	}
 
-	enabled := strings.ToLower(val) == "true"
+	enabled := strings.ToLower(debugSettings) == "true"
 	fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
 	return enabled
 }
