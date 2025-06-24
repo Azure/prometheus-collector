@@ -102,7 +102,6 @@ stages:
         definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
         buildVersionToDownload: specific
         pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
-        artifactName: ev2Artifact
         targetPath: $(Pipeline.Workspace)/ev2Artifact
     - task: Bash@3
       displayName: Set Tags
@@ -170,7 +169,6 @@ stages:
       inputs:
       - input: pipelineArtifact
         pipeline:  _Azureprometheus-collector
-        artifactName: ev2Artifact
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       ev2:
         serviceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
