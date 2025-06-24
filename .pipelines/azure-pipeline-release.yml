@@ -88,211 +88,19 @@ resources:
 stages:
 - stage: Stage_1
   displayName: Push Images
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
+  templateContext:
+    cloud: Public
+    isProduction: true
+    approval:
+      workflow: approvalService
   jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Push to Prod ACR Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        buildType: specific
-        project: $(resources.pipeline._Azureprometheus-collector.projectID)
-        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
-        allowFailedBuilds: false
-        buildVersionToDownload: specific
-        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
-        pipeline: _Azureprometheus-collector
+  - job: SetTags
+    inputs:
+      - input: pipelineArtifact
+        pipeline:  _Azureprometheus-collector
+        artifactName: ev2Artifact
         targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    # - task: 1ESGPTRunTask@3.0.314
-    #   displayName: Validate Source Build (1ES PT)
-    #   continueOnError: false
-    #   target:
-    #     container: host
-    #   env:
-    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
-    #     IsProduction: True
-    #   inputs:
-    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-    #     path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - bash: |
+    bash: |
         LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
         echo $LINUX_TAG
         
@@ -334,61 +142,25 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
-      displayName: 'Set Tags'
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Global",           "bindings": [                       {                   "find": "__ACR_REGISTRY__",                   "replaceWith": "$(ACRRegistry)"               },                           {                   "find": "__PROD_ACR_AGENT_REPOSITORY__",                   "replaceWith": "$(ProdACRAgentRepository)"               },               {                 "find": "__PROD_ACR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdACRChartRepository)"               },               {                 "find": "__PROD_ACR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdACRKSMRepository)"               },               {                 "find": "__PROD_ACR_NE_REPOSITORY__",                 "replaceWith": "$(ProdACRNERepository)"               },               {                 "find": "__MANAGED_IDENTITY__",                 "replaceWith": "$(ManagedIdentity)"               },               {                 "find": "__MCR_REGISTRY__",                 "replaceWith": "$(MCRRegistry)"               },               {                 "find": "__DEV_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(DevMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(DevMCRKSMRepository)"               },               {                 "find": "__DEV_MCR_NE_REPOSITORY__",                 "replaceWith": "$(DevMCRNERepository)"               },               {                   "find": "__LINUX_TAG__",                   "replaceWith": "$(LinuxTag)"               }, {           "find": "__LINUX_CCP_TAG__",           "replaceWith": "$(LinuxCCPTag)"         },               {                   "find": "__WINDOWS_TAG__",                   "replaceWith": "$(WindowsTag)"               },               {                 "find": "__TARGETALLOCATOR_TAG__",                 "replaceWith": "$(TargetAllocatorTag)"               },               {                 "find": "__CONFIGREADER_TAG__",                 "replaceWith": "$(ConfigReaderTag)"               },               {                 "find": "__PROD_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(ProdMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(DevMCRChartRepository)"               },               {                 "find": "__PROD_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdMCRChartRepository)"               },               {                 "find": "__PROD_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdMCRKSMRepository)"               },               {                 "find": "__PROD_MCR_NE_REPOSITORY__",                 "replaceWith": "$(ProdMCRNERepository)"               },               {                 "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",                 "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"               },               {                 "find": "__CHART_TAG__",                 "replaceWith": "$(ChartTag)"               },               {                 "find": "__PUSH_NEW_KSM_CHART__",                 "replaceWith": "$(PushNewKSMChart)"               },               {                 "find": "__PUSH_NEW_NE_CHART__",                 "replaceWith": "$(PushNewNEChart)"               },               {                 "find": "__KSM_CHART_TAG__",                 "replaceWith": "$(KSMChartTag)"               },               {                 "find": "__NE_CHART_TAG__",                 "replaceWith": "$(NEChartTag)"               },               {                 "find": "__HELM_CHART_NAME__",                 "replaceWith": "$(HelmChartName)"               },               {                 "find": "__ARC_HELM_CHART_NAME__",                 "replaceWith": "$(ARCHelmChartName)"               }           ]       }                                                                                                                                                   ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Push to Prod ACR Ev2 Monitoring
+    workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+    displayName: 'Set Tags'
+  - job: ev2_image_rollout
+    displayName: Push to Prod ACR Ev2 Rollout
     pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
+      name: Azure-Pipelines-Windows-CI-Test-EO
+      os: windows
+    templateContext:
+      type: releaseJob
+      workflow: ev2-ra
       inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
+      - input: pipelineArtifact
+        pipeline:  _Azureprometheus-collector
+        artifactName: ev2Artifact
+        targetPath: $(Pipeline.Workspace)/ev2Artifact
+      ev2:
+        serviceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
+        rolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
+        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Global",           "bindings": [                       {                   "find": "__ACR_REGISTRY__",                   "replaceWith": "$(ACRRegistry)"               },                           {                   "find": "__PROD_ACR_AGENT_REPOSITORY__",                   "replaceWith": "$(ProdACRAgentRepository)"               },               {                 "find": "__PROD_ACR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdACRChartRepository)"               },               {                 "find": "__PROD_ACR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdACRKSMRepository)"               },               {                 "find": "__PROD_ACR_NE_REPOSITORY__",                 "replaceWith": "$(ProdACRNERepository)"               },               {                 "find": "__MANAGED_IDENTITY__",                 "replaceWith": "$(ManagedIdentity)"               },               {                 "find": "__MCR_REGISTRY__",                 "replaceWith": "$(MCRRegistry)"               },               {                 "find": "__DEV_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(DevMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(DevMCRKSMRepository)"               },               {                 "find": "__DEV_MCR_NE_REPOSITORY__",                 "replaceWith": "$(DevMCRNERepository)"               },               {                   "find": "__LINUX_TAG__",                   "replaceWith": "$(LinuxTag)"               }, {           "find": "__LINUX_CCP_TAG__",           "replaceWith": "$(LinuxCCPTag)"         },               {                   "find": "__WINDOWS_TAG__",                   "replaceWith": "$(WindowsTag)"               },               {                 "find": "__TARGETALLOCATOR_TAG__",                 "replaceWith": "$(TargetAllocatorTag)"               },               {                 "find": "__CONFIGREADER_TAG__",                 "replaceWith": "$(ConfigReaderTag)"               },               {                 "find": "__PROD_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(ProdMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(DevMCRChartRepository)"               },               {                 "find": "__PROD_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdMCRChartRepository)"               },               {                 "find": "__PROD_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdMCRKSMRepository)"               },               {                 "find": "__PROD_MCR_NE_REPOSITORY__",                 "replaceWith": "$(ProdMCRNERepository)"               },               {                 "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",                 "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"               },               {                 "find": "__CHART_TAG__",                 "replaceWith": "$(ChartTag)"               },               {                 "find": "__PUSH_NEW_KSM_CHART__",                 "replaceWith": "$(PushNewKSMChart)"               },               {                 "find": "__PUSH_NEW_NE_CHART__",                 "replaceWith": "$(PushNewNEChart)"               },               {                 "find": "__KSM_CHART_TAG__",                 "replaceWith": "$(KSMChartTag)"               },               {                 "find": "__NE_CHART_TAG__",                 "replaceWith": "$(NEChartTag)"               },               {                 "find": "__HELM_CHART_NAME__",                 "replaceWith": "$(HelmChartName)"               },               {                 "find": "__ARC_HELM_CHART_NAME__",                 "replaceWith": "$(ARCHelmChartName)"               }           ]       }                                                                                                                                                   ] }'
 - stage: Stage_2
   displayName: Deploy to Prod Clusters
   trigger: manual

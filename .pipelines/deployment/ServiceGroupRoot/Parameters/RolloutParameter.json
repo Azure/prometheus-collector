@@ -1,0 +1,478 @@
+{
+  "$schema": "http://schema.express.azure.com/schemas/2022-01-01/RolloutParameters.json",
+  "contentVersion": "1.0.0.0",
+  "shellExtensions": [
+    {
+      "name": "PushLinuxImage",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__LINUX_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushLinuxCCPImage",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__LINUX_CCP_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushWindowsImage",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__WINDOWS_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushTargetAllocatorImage",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__TARGETALLOCATOR_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushConfigReaderImage",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__CONFIGREADER_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushArcHelmChart",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushChartToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_CHART_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "MCR_REPOSITORY",
+            "value": "__PROD_MCR_CHART_REPOSITORY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_CHART_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REPOSITORY_HELM_DEPENDENCIES",
+            "value": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__LINUX_TAG__"
+          },
+          {
+            "name": "IMAGE_TAG_WINDOWS",
+            "value": "__WINDOWS_TAG__"
+          },
+          {
+            "name": "HELM_SEMVER",
+            "value": "__CHART_TAG__"
+          },
+          {
+            "name": "HELM_CHART_NAME",
+            "value": "__ARC_HELM_CHART_NAME__"
+          },
+          {
+            "name": "PROD_MCR_KSM_REPOSITORY",
+            "value": "__PROD_MCR_KSM_REPOSITORY__"
+          },
+          {
+            "name": "KSM_CHART_TAG",
+            "value": "__KSM_CHART_TAG__"
+          },
+          {
+            "name": "PROD_MCR_NE_REPOSITORY",
+            "value": "__PROD_MCR_NE_REPOSITORY__"
+          },
+          {
+            "name": "NE_CHART_TAG",
+            "value": "__NE_CHART_TAG__"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushKSMChart",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_KSM_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_KSM_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_KSM_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__KSM_CHART_TAG__"
+          },
+          {
+            "name": "PUSH_NEW_KSM_CHART",
+            "value": "__PUSH_NEW_KSM_CHART__"
+          },
+          {
+            "name": "STEP_NAME",
+            "value": "PushKSMChart"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PushNodeExporterChart",
+      "type": "ShellExtensionType",
+      "properties": {
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": false,
+        "skipDeleteAfterExecution": false
+      },
+      "package": {
+        "reference": {
+          "path": "artifacts.tar.gz"
+        }
+      },
+      "launch": {
+        "command": [
+          "/bin/bash",
+          "pushAgentToAcr.sh"
+        ],
+        "environmentVariables": [
+          {
+            "name": "ACR_REGISTRY",
+            "value": "__ACR_REGISTRY__"
+          },
+          {
+            "name": "PROD_ACR_REPOSITORY",
+            "value": "__PROD_ACR_NE_REPOSITORY__"
+          },
+          {
+            "name": "MCR_REGISTRY",
+            "value": "__MCR_REGISTRY__"
+          },
+          {
+            "name": "PROD_MCR_REPOSITORY",
+            "value": "__PROD_MCR_NE_REPOSITORY__"
+          },
+          {
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_NE_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
+            "value": "__NE_CHART_TAG__"
+          },
+          {
+            "name": "PUSH_NEW_NE_CHART",
+            "value": "__PUSH_NEW_NE_CHART__"
+          },
+          {
+            "name": "STEP_NAME",
+            "value": "PushNEChart"
+          }
+        ],
+        "identity": {
+          "type": "userAssigned",
+          "userAssignedIdentities": [
+            "__MANAGED_IDENTITY__"
+          ]
+        }
+      }
+    }
+  ],
+  "wait": [
+    {
+      "name": "waitSdpBakeTime",
+      "properties": {
+        "duration": "PT24H"
+      }
+    }
+  ]
+}

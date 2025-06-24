@@ -1,0 +1,46 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/RegionAgnosticServiceModel.json",
+  "contentVersion": "1.0.0.0",
+  "serviceMetadata": {
+    "serviceGroup": "ContainerInsightsAgent",
+    "serviceIdentifier": "3170cdd2-19f0-4027-912b-1027311691a2",
+    "tenantId": "$config(tenantid)",
+    "environment": "$config(environment)",
+    "displayName": "ManagedPrometheus",
+    "buildout": {
+      "isForAutomatedBuildout": "True"
+    }
+  },
+  "serviceResourceGroupDefinitions": [
+    {
+      "name": "PrometheusCollector-ServiceResourceGroupDefinition",
+      "azureResourceGroupName": "PrometheusCollector-Release",
+      "scopeTags": [
+        {
+          "name": "Global"
+        }
+      ],
+      "subscriptionKey": "30c56c3a-54da-46ea-b004-06eb33432687",
+      "serviceResourceDefinitions": [
+        {
+          "name": "ShellExtension",
+          "composedOf": {
+            "extension": {
+              "rolloutParametersPath": "Parameters\\RolloutParameter.json",
+              "shell": [
+                {
+                  "type": "ShellExtensionType",
+                  "properties": {
+                    "imageName": "adm-ubuntu-2004-l",
+                    "imageVersion": "v8"
+                  }
+                }
+              ]
+            }
+          },
+          "scopeTags": []
+        }
+      ]
+    }
+  ]
+}
