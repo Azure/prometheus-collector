@@ -91,6 +91,9 @@ extends:
     serviceTreeId: $(ServiceTreeGUID)
     stages:
     - stage: Setup
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
       jobs:
       - job: SetTags
         displayName: Set Tags
