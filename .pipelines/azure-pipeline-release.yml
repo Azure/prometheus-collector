@@ -106,8 +106,8 @@ stages:
         targetPath: $(Pipeline.Workspace)/ev2Artifact
     - task: Bash@3
       displayName: Set Tags
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       inputs:
+        workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
         targetType: inline
         script: |
           LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
