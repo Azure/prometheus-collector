@@ -11,7 +11,7 @@ data:
     cluster_alias = ""
     https_config = true
   opentelemetry-metrics: |-
-      enabled = false
+    enabled = false
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false
