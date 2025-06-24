@@ -159,6 +159,9 @@ extends:
               set -x
     - stage: Push_Images
       displayName: Push Images
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
       templateContext:
         cloud: Public
         isProduction: true
