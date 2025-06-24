@@ -1,4 +1,6 @@
 trigger: none
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
 variables:
 - name: ACRRegistry
   value: containerinsights.azurecr.io
