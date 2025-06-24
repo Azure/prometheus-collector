@@ -88,6 +88,7 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    serviceTreeId: $(ServiceTreeGUID)
     stages:
     - stage: Setup
       jobs:
