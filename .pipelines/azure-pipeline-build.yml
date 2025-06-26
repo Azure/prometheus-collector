@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/managed-sdp-ev2
 pr:
   autoCancel: true
   branches:

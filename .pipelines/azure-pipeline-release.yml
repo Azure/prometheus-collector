@@ -322,7 +322,7 @@ extends:
               }
     - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
-      trigger: manual
+      dependsOn: Push_Images
       pool:
         name: Azure-Pipelines-Windows-CI-Test-EO
         os: windows
@@ -343,6 +343,18 @@ extends:
             pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
             pipeline: _Azureprometheus-collector
             targetPath: $(Pipeline.Workspace)/ev2Artifact
+        - task: Bash@3
+          displayName: Sleep for 5 minutes
+          inputs:
+            targetType: inline
+            script: |
+              echo "Starting sleep for 5 minutes..."
+              for i in {1..5}
+              do
+                echo "Minute $i of 5 elapsed..."
+                sleep 60
+              done
+              echo "Sleep completed."
         - task: HelmInstaller@1
           target:
             container: host
