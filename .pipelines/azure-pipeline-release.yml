@@ -80,7 +80,7 @@ resources:
   - pipeline: '_Azureprometheus-collector'
     project: 'azure'
     source: 'Azure.prometheus-collector'
-    branch: 'main'
+    #branch: 'main'
   repositories:
   - repository: 1ESPipelineTemplates
     type: git
