@@ -19,16 +19,11 @@ This document explains how to use the ARM API to update the data ingestion limit
 - An Azure subscription with one or more Azure Monitor Workspaces
 - A command-line tool to run the ARM template commands, such as Azure PowerShell, or Azure CLI
 
-
-### Step 1: Share the subscription ID
-
-Submit the form [here](https://forms.microsoft.com/r/8P9F2GS7k4) to share the subscription ID with us in order to enable the feature for your subscription. It will take a while for the feature to be enabled, and we will follow up via email as soon as it is ready for your subscription. After the feature is enabled, you can try the preview for any Azure Monitor Workspace instance in that subscription.
-
-### Step 2: Download the ARM templates and update the parameters
+### Step 1: Download the ARM templates and update the parameters
 
 Download the ARM template files ([AMWLimitIncrease-Template.json](./AMWLimitIncrease-Template.json) and [AMWLimitIncrease-Parameters.json](./AMWLimitIncrease-Parameters.json) ) and update the Parameters.json file with the AMW name, location and required ingestion limits (maximum is 20 Mn).
 
-### Step 3: Execute the ARM update
+### Step 2: Execute the ARM update
 
 Run the below commands from the downloaded ARM templates folder:
 
@@ -47,7 +42,7 @@ Connect-AzAccount
 New-AzResourceGroupDeployment -Name AmwLimits -ResourceGroupName  <resourceGroupName> -TemplateFile AMWLimitIncrease-Template.json -TemplateParameterFile AMWLimitIncrease-Parameters.json
 ```
 
-### Step 4: Verify if the limits are updated
+### Step 3: Verify if the limits are updated
 
 To verify if the limits are updated successfully, you can go to the Azure portal, navigate to the Azure Monitor Workspace -> Metrics explorer and then verify if the updated limits are applied to the “Active Time Series Limit” and “Events per minute Ingested Limit”.
 
