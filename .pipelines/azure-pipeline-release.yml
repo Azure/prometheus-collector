@@ -511,7 +511,7 @@ extends:
           target:
             container: host
           displayName: Install extension on ci-prod-arc-wcus
-    - stage: Arc Release
+    - stage: Stage_3
       displayName: ARC Small Region Release
       trigger: manual
       pool:
