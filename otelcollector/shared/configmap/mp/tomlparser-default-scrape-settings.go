@@ -20,6 +20,7 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 	settings, ok := metricsConfigBySection[configSectionName]
 	if !ok {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::No default-targets-scrape-enabled section found, using defaults")
+		NoDefaultsEnabled = false
 		return nil
 	}
 
@@ -70,6 +71,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	for jobName, job := range shared.DefaultScrapeJobs {
 		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(jobName), job.Enabled))
 	}
+	fmt.Println("No default scrape configs enabled:", NoDefaultsEnabled)
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", NoDefaultsEnabled))
 
 	return nil
