@@ -196,10 +196,10 @@ extends:
           inputs:
           - input: pipelineArtifact
             pipeline:  _Azureprometheus-collector
-            artifactName: ev2Artifact
+            artifactName: ev2-drop
           ev2:
-            serviceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
-            rolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
+            serviceRootPath: $(Pipeline.Workspace)/ev2-drop/deploy/ServiceGroupRoot
+            rolloutSpecPath: $(Pipeline.Workspace)/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
             InlineDynamicBindingOverrides: |-
               {
                 "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",
