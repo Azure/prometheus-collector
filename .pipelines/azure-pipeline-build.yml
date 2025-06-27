@@ -220,7 +220,7 @@ extends:
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
 
-      - job: Run Unit Tests
+      - job: Run_Unit_Tests
         displayName: "Test: Run unit tests"
         pool:
           name: Azure-Pipelines-CI-Test-EO
