@@ -180,9 +180,9 @@ extends:
         os: windows
       templateContext:
         cloud: Public
-        isProduction: false
-        # approval:
-        #   workflow: approvalService
+        isProduction: true
+        approval:
+          workflow: approvalService
       jobs:
       - job: ev2_image_rollout
         displayName: Push to Prod ACR Ev2 Rollout
@@ -191,14 +191,13 @@ extends:
           os: windows
         templateContext:
           type: releaseJob
-          isProduction: false
+          isProduction: true
           workflow: ev2-ra
           inputs:
           - input: pipelineArtifact
             pipeline:  _Azureprometheus-collector
             artifactName: ev2-drop
           ev2:
-            serviceConnection: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
             serviceRootPath: $(Pipeline.Workspace)/ev2-drop/deploy/ServiceGroupRoot
             rolloutSpecPath: $(Pipeline.Workspace)/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
             InlineDynamicBindingOverrides: |-
