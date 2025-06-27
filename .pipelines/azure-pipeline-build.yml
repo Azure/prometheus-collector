@@ -219,6 +219,27 @@ extends:
             SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
+
+      - job: Run Unit Tests
+        displayName: "Test: Run unit tests"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        variables:
+          skipComponentGovernanceDetection: true
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: GoTool@0
+          displayName: "Test: specify golang version"
+          inputs:
+            version: $(GOLANG_VERSION)
+        - bash: |
+            go test -v .
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/shared/configmap/mp
+          displayName: "Test: run configmap processing unit tests"
+
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
