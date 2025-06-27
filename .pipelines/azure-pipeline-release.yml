@@ -90,7 +90,9 @@ extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     settings:
-      oneESTagStagePool: Azure-Pipelines-CI-Test-EO
+      oneESTagStagePool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-ubuntu-2204
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
