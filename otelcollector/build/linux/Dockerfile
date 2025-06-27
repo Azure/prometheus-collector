@@ -3,6 +3,7 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLAN
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum ./fluent-bit/src/
 COPY ./shared/go.mod ./shared/go.sum ./shared/
+WORKDIR /src/fluent-bit/src/
 RUN go version
 RUN go mod download
 COPY ./fluent-bit/src/ ./
