@@ -14,46 +14,6 @@ const (
 	defaultConfigFileVersion   = "ver1"
 )
 
-func setConfigSchemaVersionEnv() {
-	fileInfo, err := os.Stat(schemaVersionFile)
-	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
-		return
-	}
-	content, err := os.ReadFile(schemaVersionFile)
-	if err != nil {
-		shared.EchoError("Error reading schema version file:" + err.Error())
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
-		return
-	}
-	trimmedContent := strings.TrimSpace(string(content))
-	configSchemaVersion := strings.ReplaceAll(trimmedContent, " ", "")
-	if len(configSchemaVersion) > 10 {
-		configSchemaVersion = configSchemaVersion[:10]
-	}
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
-}
-
-func setConfigFileVersionEnv() {
-	fileInfo, err := os.Stat(configVersionFile)
-	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
-		return
-	}
-	content, err := os.ReadFile(configVersionFile)
-	if err != nil {
-		shared.EchoError("Error reading config version file:" + err.Error())
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
-		return
-	}
-	trimmedContent := strings.TrimSpace(string(content))
-	configFileVersion := strings.ReplaceAll(trimmedContent, " ", "")
-	if len(configFileVersion) > 10 {
-		configFileVersion = configFileVersion[:10]
-	}
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
-}
-
 func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
 	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
@@ -113,9 +73,9 @@ func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings(metricsConfigBySection)
+	tomlparserDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
@@ -124,7 +84,6 @@ func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string)
 	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
 	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
-		return
 	}
 	handleEnvFileError(debugModeEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
@@ -137,41 +96,47 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func Configmapparser() {
-	setConfigFileVersionEnv()
-	setConfigSchemaVersionEnv()
+func processConfigFiles() {
+	shared.ProcessConfigFile(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION")
+	shared.ProcessConfigFile(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
-	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
+	switch schemaVersion {
+	case shared.SchemaVersion.V2:
+		filePaths := []string{configSettingsPrefix + "metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			fmt.Printf("Using defaults as error parsing files: %v\n", err)
+			fmt.Printf("Error parsing files: %v\n", err)
+			return
 		}
-	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		configDir := "/etc/config/settings"
+	case shared.SchemaVersion.V1:
+		configDir := configSettingsPrefix
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			fmt.Printf("Using defaults as error parsing config: %v\n", err)
+			fmt.Printf("Error parsing config: %v\n", err)
+			return
 		}
-	} else {
-		fmt.Println("Invalid schema version. Using defaults.")
+	default:
+		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
+	fmt.Println(metricsConfigBySection)
+
 	// Check if /etc/config/settings/config-version exists
-  if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
-	  metricsConfigBySection = nil
-	  fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
-  }
+	if _, err := os.Stat(configVersionFile); os.IsNotExist(err) {
+		metricsConfigBySection = nil
+		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	}
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
-	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	parseDebugModeSettings(metricsConfigBySection)
 
-	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
-	tomlparserScrapeInterval(metricsConfigBySection)
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
+	tomlparserScrapeInterval(metricsConfigBySection, schemaVersion)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")
@@ -184,6 +149,11 @@ func Configmapparser() {
 
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+}
+
+func Configmapparser() {
+
+	processConfigFiles()
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {
