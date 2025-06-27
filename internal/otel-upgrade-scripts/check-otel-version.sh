@@ -98,10 +98,10 @@ if [[ "$COLLECTOR_RELEASE_NAME" =~ (v?[0-9]+\.[0-9]+\.[0-9]+)/(v?[0-9]+\.[0-9]+\
     
     # Run upgrade.sh with the parsed versions
     echo -e "\nRunning upgrade.sh with the parsed versions..."
-    if [ -f "upgrade.sh" ]; then
-        ./upgrade.sh "$BETA_VERSION" "$STABLE_VERSION"
+    if [ -f "./internal/otel-upgrade-scripts/upgrade.sh" ]; then
+        ./internal/otel-upgrade-scripts/upgrade.sh "$BETA_VERSION" "$STABLE_VERSION"
     else
-        echo "Warning: script.sh not found in the current directory"
+        echo "Warning: upgrade.sh not found in the current directory"
         exit 1
     fi
 else

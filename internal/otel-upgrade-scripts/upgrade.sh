@@ -13,6 +13,18 @@ STABLE_TAG=$2
 BRANCH_NAME="${TAG}"
 CURRENT_DIR=$(pwd)
 
+# Function to extract version numbers from git tags
+get_current_otel_version() {
+	cd otelcollector/opentelemetry-collector-builder
+	CURRENT_VERSION=$(grep -m 1 "go.opentelemetry.io/collector " go.mod | awk '{print $2}')
+	cd "$CURRENT_DIR"
+	echo "$CURRENT_VERSION"
+}
+
+# Get current OTel version for reference
+CURRENT_OTEL_VERSION=$(get_current_otel_version)
+echo "Current OTel version: $CURRENT_OTEL_VERSION"
+
 echo "Starting Otel Collector upgrade to ${STABLE_TAG}/${TAG}..."
 
 # Step 1: Clone OpenTelemetry Collector Contrib
@@ -144,6 +156,14 @@ else
 	echo "Golang major.minor version unchanged, keeping current version in pipeline"
 fi
 
+# Get CHANGELOG.md from opentelemetry-collector-contrib
+echo "Fetching CHANGELOG.md from opentelemetry-collector-contrib..."
+if [ -f "opentelemetry-collector-contrib/CHANGELOG.md" ]; then
+	./internal/otel-upgrade-scripts/changelogsummary.sh -f ${CURRENT_OTEL_VERSION} -t ${TAG} -c opentelemetry-collector-contrib/CHANGELOG.md -o PrometheusReceiverCHANGELOG.md --name "prometheusreceiver"
+else
+	echo "CHANGELOG.md not found in opentelemetry-collector-contrib, skipping summary generation"
+fi
+
 # Step 6: Clean up - remove opentelemetry-collector-contrib repo
 echo "Cleaning up: removing opentelemetry-collector-contrib repo..."
 if [ -d "opentelemetry-collector-contrib" ]; then
@@ -226,6 +246,14 @@ go mod tidy
 #make
 #rm -f configurationreader
 cd "$CURRENT_DIR"
+
+# Get CHANGELOG.md from opentelemetry-operator
+echo "Fetching CHANGELOG.md from opentelemetry-operator..."
+if [ -f "opentelemetry-operator/CHANGELOG.md" ]; then
+	./internal/otel-upgrade-scripts/changelogsummary.sh -f ${CURRENT_OTEL_VERSION} -t ${TAG} -c opentelemetry-operator/CHANGELOG.md -o TargetAllocatorCHANGELOG.md --name "target-allocator"
+else
+	echo "CHANGELOG.md not found in opentelemetry-operator, skipping summary generation"
+fi
 
 # Step 6: Clean up - remove opentelemetry-collector-contrib repo
 echo "Cleaning up: removing opentelemetry-operator repo..."
