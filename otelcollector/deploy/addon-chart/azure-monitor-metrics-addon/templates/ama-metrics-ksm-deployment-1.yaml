@@ -1,140 +1,142 @@
-{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ama-metrics-ksm-1
-  # name: ama-metrics-ksm
-  namespace: kube-system
-  labels:
-    app.kubernetes.io/component: ama-metrics
-    app.kubernetes.io/name: ama-metrics-ksm
-    app.kubernetes.io/part-of: ama-metrics-ksm
-    app.kubernetes.io/version: 2.12.0
-    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ama-metrics-ksm
-  replicas: 1
-  revisionHistoryLimit: 2
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/component: ama-metrics
-        app.kubernetes.io/name: ama-metrics-ksm
-        app.kubernetes.io/part-of: ama-metrics-ksm
-        app.kubernetes.io/version: 2.12.0
-        helm.sh/chart: azure-monitor-metrics-addon-0.1.0
-      annotations:
-        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
-    spec:
-      priorityClassName: system-node-critical
-      hostNetwork: false
-      serviceAccountName: ama-metrics-ksm
-      securityContext:
-        fsGroup: 65534
-        runAsGroup: 65534
-        runAsUser: 65534
-      dnsPolicy: ClusterFirst
-      containers:
-      - name: ama-metrics-ksm
-        env:
-          - name: AZMON_COLLECT_ENV
-            value: "false"
-        args:
-        - --port=8080
-        - --shard=0
-        - --total-shards=2
-        {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
-        - --resources={{ .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors | join "," }}
-            {{-  end  }}
-          {{-  end  }}
-        {{-  end  }}
-        {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist | join "," }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-        {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
-        - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList | join "," }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-        - --telemetry-port=8081
-        imagePullPolicy: IfNotPresent
-        {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-        image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-          {{-  end  }}
-        {{-  end  }}
-        resources:
-          limits:
-            cpu: 1
-            memory: 5Gi
-          requests:
-            cpu: 5m
-            memory: 50Mi
-        securityContext:
-          capabilities:
-            drop:
-              - ALL
-        ports:
-        - containerPort: 8080
-          name: "http"
-        livenessProbe:
-          httpGet:
-            path: /livez
-            port: 8080
-            scheme: HTTP
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-            scheme: HTTP
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-      nodeSelector:
-        kubernetes.io/os: linux
-      {{- if not $arcExtensionSettings.isArcExtension }}
-      affinity:
-        nodeAffinity:
-          # affinity to schedule on to ephemeral os node if its available
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.azure.com/mode
-                operator: In
-                values:
-                - system
-          {{- if not $arcExtensionSettings.isArcExtension }}
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/os
-                    operator: In
-                    values:
-                      - linux
-                  - key: type
-                    operator: NotIn
-                    values:
-                      - virtual-kubelet
-                  - key: kubernetes.azure.com/cluster
-                    operator: Exists
-          {{- end }}
-      tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - operator: "Exists"
-          effect: NoExecute
-        - operator: "Exists"
-          effect: NoSchedule
-      {{- end }}
+# {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: ama-metrics-ksm-1
+#   # name: ama-metrics-ksm
+#   namespace: kube-system
+#   labels:
+#     app.kubernetes.io/component: ama-metrics
+#     app.kubernetes.io/name: ama-metrics-ksm
+#     app.kubernetes.io/part-of: ama-metrics-ksm
+#     app.kubernetes.io/version: 2.12.0
+#     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+# spec:
+#   selector:
+#     matchLabels:
+#       app.kubernetes.io/name: ama-metrics-ksm
+#   replicas: 1
+#   revisionHistoryLimit: 2
+#   template:
+#     metadata:
+#       labels:
+#         app.kubernetes.io/component: ama-metrics
+#         app.kubernetes.io/name: ama-metrics-ksm
+#         app.kubernetes.io/part-of: ama-metrics-ksm
+#         app.kubernetes.io/version: 2.12.0
+#         helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+#       annotations:
+#         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+#     spec:
+#       priorityClassName: system-node-critical
+#       hostNetwork: false
+#       serviceAccountName: ama-metrics-ksm
+#       securityContext:
+#         fsGroup: 65534
+#         runAsGroup: 65534
+#         runAsUser: 65534
+#       dnsPolicy: ClusterFirst
+#       containers:
+#       - name: ama-metrics-ksm
+#         env:
+#           - name: AZMON_COLLECT_ENV
+#             value: "false"
+#         args:
+#         - --port=8080
+#         - --shard=0
+#         - --total-shards=2
+#         - --use-apiserver-cache
+#         {{- if .Values.AzureMonitorMetrics }}
+#           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+#             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+#         - --resources={{ .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors | join "," }}
+#             {{-  end  }}
+#           {{-  end  }}
+#         {{-  end  }}
+#         {{- if .Values.AzureMonitorMetrics }}
+#           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+#             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+#         - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist | join "," }}
+#             {{- end }}
+#           {{- end }}
+#         {{- end }}
+#         {{- if .Values.AzureMonitorMetrics }}
+#           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+#             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+#         - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList | join "," }}
+#             {{- end }}
+#           {{- end }}
+#         {{- end }}
+#         - --telemetry-port=8081
+#         imagePullPolicy: IfNotPresent
+#         {{- if .Values.AzureMonitorMetrics }}
+#           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+#         image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+#           {{-  end  }}
+#         {{-  end  }}
+#         resources:
+#           limits:
+#             cpu: 1
+#             memory: 5Gi
+#           requests:
+#             cpu: 5m
+#             memory: 50Mi
+#         securityContext:
+#           capabilities:
+#             drop:
+#               - ALL
+#         ports:
+#         - containerPort: 8080
+#           name: "http"
+#         livenessProbe:
+#           httpGet:
+#             path: /livez
+#             port: 8080
+#             scheme: HTTP
+#           initialDelaySeconds: 5
+#           timeoutSeconds: 5
+#         readinessProbe:
+#           httpGet:
+#             path: /readyz
+#             port: 8081
+#             scheme: HTTP
+#           initialDelaySeconds: 5
+#           timeoutSeconds: 5
+#       nodeSelector:
+#         kubernetes.io/os: linux
+#         shard-test: shard-test
+#       {{- if not $arcExtensionSettings.isArcExtension }}
+#       affinity:
+#         nodeAffinity:
+#           # affinity to schedule on to ephemeral os node if its available
+#           preferredDuringSchedulingIgnoredDuringExecution:
+#           - weight: 100
+#             preference:
+#               matchExpressions:
+#               - key: kubernetes.azure.com/mode
+#                 operator: In
+#                 values:
+#                 - system
+#           {{- if not $arcExtensionSettings.isArcExtension }}
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             nodeSelectorTerms:
+#               - matchExpressions:
+#                   - key: kubernetes.io/os
+#                     operator: In
+#                     values:
+#                       - linux
+#                   - key: type
+#                     operator: NotIn
+#                     values:
+#                       - virtual-kubelet
+#                   - key: kubernetes.azure.com/cluster
+#                     operator: Exists
+#           {{- end }}
+#       tolerations:
+#         - key: CriticalAddonsOnly
+#           operator: Exists
+#         - operator: "Exists"
+#           effect: NoExecute
+#         - operator: "Exists"
+#           effect: NoSchedule
+#       {{- end }}
