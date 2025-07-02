@@ -48,6 +48,11 @@ extends:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
         os: windows
+      componentgovernance: 
+        ignoreDirectories:
+        - ${Build.SourcesDirectory}/mixins
+        - ${Build.SourcesDirectory}/internal
+        - ${Build.SourcesDirectory}/tools
     customBuildTags:
     - ES365AIMigrationTooling
 
