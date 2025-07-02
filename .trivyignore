@@ -8,5 +8,6 @@
 # MEDIUM
 # prometheusui
 CVE-2025-22872 # golang.org/x/net
+GHSA-fv92-fjc5-jj9h # github.com/go-viper/mapstructure/v2
 
 # LOW
