@@ -16,20 +16,24 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
 
 	minimalProfileEnabled := true
-	var err error
 	switch configSchemaVersion {
 	case shared.SchemaVersion.V1:
 		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
 		if err != nil {
-			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", err.Error())
+			fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", err.Error())
+			metricsConfigBySection = map[string]map[string]string{}
+		} else {
+			minimalProfileEnabled = minimalProfileEnabledBool
+			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 		}
-		minimalProfileEnabled = minimalProfileEnabledBool
-		fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 	case shared.SchemaVersion.V2:
-		minimalProfileEnabled, err = strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+		minimalProfileEnabledBool, err := strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 		if err != nil {
 			fmt.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 			metricsConfigBySection = map[string]map[string]string{}
+		} else {
+			minimalProfileEnabled = minimalProfileEnabledBool
+			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 		}
 	default:
 		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchemaVersion)

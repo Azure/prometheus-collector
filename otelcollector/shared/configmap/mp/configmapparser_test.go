@@ -39,6 +39,7 @@ func setupTest() {
 	BeforeEach(func() {
 		cleanupEnvVars()
 		configSettingsPrefix = "/tmp/settings/"
+		configMapMountPath = ""
 		os.RemoveAll(configSettingsPrefix)
 		// Save a copy of the original DefaultScrapeJobs for restoring later
 		originalDefaultScrapeJobs = make(map[string]shared.DefaultScrapeJob)
@@ -258,9 +259,8 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(false, "")
+			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
 			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
-
 			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
 			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
 			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
@@ -391,7 +391,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				for key, value := range extraEnvVars {
 					expectedEnvVars[key] = value
 				}
-				expectedKeepListHashMap := getExpectedKeepListMap(false, "")
+				expectedKeepListHashMap := getExpectedKeepListMap(true, "")
 				expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
 
 				schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
@@ -423,11 +423,20 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 		})
 	})
 
-	Context("when the settings configmap uses v2 and the sections exist but are empty", Label("v2"), func() {
+	Context("when the settings configmap uses v2 and the sections exist but are empty", func() {
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
 			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
 
 			expectedEnvVars := getDefaultExpectedEnvVars()
+			// Add the expected environment variables for v2
+			extraEnvVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
+				"DEBUG_MODE_ENABLED":             "false",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
 			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
 			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
@@ -442,6 +451,15 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
 
 			expectedEnvVars := getDefaultExpectedEnvVars()
+			// Add the expected environment variables for v2
+			extraEnvVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
+				"DEBUG_MODE_ENABLED":             "false",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
 			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
 			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
 			expectedContentsFilePath := "./testdata/default-linux-ds.yaml"

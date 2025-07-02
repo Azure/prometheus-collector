@@ -92,18 +92,22 @@ func setupConfigFiles(defaultPath bool) {
 		configMapKeepListMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
 		configMapMountPathForPodAnnotation = "/etc/config/settings/pod-annotation-based-scraping"
 		collectorSettingsMountPath = "/etc/config/settings/prometheus-collector-settings"
-		schemaVersionFile = "/etc/config/settings/schema-version"
-		configVersionFile = "/etc/config/settings/config-version"
+		//schemaVersionFile = "/etc/config/settings/schema-version"
+		//configVersionFile = "/etc/config/settings/config-version"
 		configMapScrapeIntervalMountPath = "/etc/config/settings/default-targets-scrape-interval-settings"
+		createTempFile(configSettingsPrefix, "metrics", "")
+		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 	} else {
-		schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-		configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+		//schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
+		//configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
 		configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
 		collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 		defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
 		configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", "")
 		configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", "")
 		configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", "")
+		createTempFile(configSettingsPrefix, "metrics", "")
+		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 		replicaSetCollectorConfig = "./testdata/collector-config-replicaset.yml"
 	}
 }

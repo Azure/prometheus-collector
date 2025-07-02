@@ -1,12 +1,12 @@
 ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as fluent-bit-builder
 WORKDIR /src
-COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum ./fluent-bit/src/
-COPY ./shared/go.mod ./shared/go.sum ./shared/
-WORKDIR /src/fluent-bit/src/
-RUN go version
+COPY ./fluent-bit/src/ ./fluent-bit/src/
+COPY ./shared/ ./shared/
+WORKDIR /src/shared/
 RUN go mod download
-COPY ./fluent-bit/src/ ./
+WORKDIR /src/fluent-bit/src/
+RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
@@ -160,7 +160,7 @@ COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
 COPY ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.yaml ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
-COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY --from=fluent-bit-builder /src/fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
