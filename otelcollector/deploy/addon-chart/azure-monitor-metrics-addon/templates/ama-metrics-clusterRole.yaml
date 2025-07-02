@@ -30,7 +30,8 @@ rules:
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "create", "update"]
+    resourceNames: ["ama-metrics-operator-targets-client-tls-secret", "ama-metrics-operator-targets-server-tls-secret"]
+    verbs: ["get", "update"]
 {{- end }}
   - apiGroups: [""]
     resources: ["events"]
