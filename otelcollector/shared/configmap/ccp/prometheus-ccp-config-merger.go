@@ -306,7 +306,7 @@ func writeDefaultScrapeTargetsFile() {
 func setDefaultFileScrapeInterval(scrapeInterval string) {
 	defaultFilesArray := []string{
 		controlplaneApiserverDefaultFile, controlplaneKubeSchedulerDefaultFile, controlplaneKubeControllerManagerFile,
-		controlplaneClusterAutoscalerFile, controlplaneEtcdDefaultFile,
+		controlplaneClusterAutoscalerFile, controlplaneNodeAutoProvisioningFile, controlplaneEtcdDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {
