@@ -49,7 +49,7 @@ extends:
         image: ci-1es-managed-windows-2022
         os: windows
       componentgovernance: 
-        ignoreDirectories: "/mixins,/internal,/tools"
+        ignoreDirectories: 'mixins,internal,tools'
     customBuildTags:
     - ES365AIMigrationTooling
 
