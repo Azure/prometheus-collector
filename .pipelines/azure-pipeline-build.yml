@@ -26,6 +26,7 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.10'
+  FLUENTBIT_GOLANG_VERSION: '1.24.4'
   TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
@@ -47,6 +48,8 @@ extends:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
         os: windows
+      componentgovernance: 
+        ignoreDirectories: 'mixins,internal,tools'
     customBuildTags:
     - ES365AIMigrationTooling
 
@@ -686,7 +689,7 @@ extends:
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -719,7 +722,7 @@ extends:
   
             docker system prune --all -f
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -1395,7 +1398,15 @@ extends:
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+          displayName: "Build: build otelcollector and promconfigvalidator"
+        - task: GoTool@0
+          displayName: "Build: specify fluent-bit golang version"
+          inputs:
+            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
         - powershell: |
             docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -1555,7 +1566,15 @@ extends:
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+          displayName: "Build: build otelcollector and promconfigvalidator"
+        - task: GoTool@0
+          displayName: "Build: specify fluent-bit golang version"
+          inputs:
+            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
         - powershell: |
             docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
