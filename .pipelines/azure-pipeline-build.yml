@@ -188,6 +188,7 @@ extends:
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
 
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
+            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - bash: |
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
