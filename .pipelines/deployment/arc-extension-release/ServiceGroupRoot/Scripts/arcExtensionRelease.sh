@@ -1,57 +1,96 @@
 #!/bin/bash
 export HELM_EXPERIMENTAL_OCI=1
 
-IS_CUSTOMER_HIDDEN="${IS_CUSTOMER_HIDDEN:-true}"
-CHART_VERSION="${CHART_VERSION}"
-PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-Microsoft.AzureMonitor.Containers.Metrics-Prom041823}"
-API_VERSION="${API_VERSION:-2021-05-01}"
-METHOD="${METHOD:-put}"
-REGISTRY_PATH="${REGISTRY_PATH:-mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc}"
-SUBSCRIPTION="${ADMIN_SUBSCRIPTION_ID:-b9842c7c-1a38-4385-8f39-a51314758bcf}"
-RESOURCE_AUDIENCE="${RESOURCE_AUDIENCE:-c699bf69-fb1d-4eaf-999b-99e6b2ae4d85}"
-SPN_CLIENT_ID="${SPN_CLIENT_ID:-9a4c55e9-576a-450a-88bd-53bd634db38d}"
-SPN_TENANT_ID="${SPN_TENANT_ID:-72f988bf-86f1-41af-91ab-2d7cd011db47}"
-ARC_API_URL="${ARC_API_URL:-https://eastus2euap.dp.kubernetesconfiguration.azure.com}"
-EXTENSION_NAME="${EXTENSION_NAME:-microsoft.azuremonitor.containers.metrics}"
+# Define regions
+REGION1='"centraluseuap","eastus2euap"'
+REGION2='"westcentralus","francecentral"'
+REGION3='"uksouth"'
+REGION4='"westeurope"'
+BATCH1='"westus2","centralus","southeastasia","southcentralus","australiaeast","japaneast","koreacentral"'
+BATCH2='"eastus2","northeurope","westus","eastasia","westus3","northcentralus"'
+BATCH3='"eastus","canadacentral","centralindia","canadaeast","norwayeast","germanywestcentral","australiasoutheast","switzerlandnorth","francesouth","swedencentral","germanynorth"'
+BATCH4='"southindia","ukwest","southafricanorth","japanwest","koreasouth","brazilsouth","uaenorth","jioindiawest","norwaywest"'
+BATCH5='"italynorth","israelcentral","polandcentral","australiacentral","australiacentral2","southafricawest","westindia","switzerlandwest","spaincentral","indonesiacentral","taiwannorth","mexicocentral","newzealandnorth","brazilsoutheast"'
+BATCH6='"chilecentral","malaysiawest","austriaeast","belgiumcentral","denmarkeast","israelnorthwest","malaysiasouth"'
+FAIRFAX='"usgovvirginia","usgovtexas","usgovarizona"'
+MOONCAKE='"chinaeast2","chinanorth2","chinaeast3","chinanorth3"'
 
-CANARY_BATCH="\"eastus2euap\",\"centraluseuap\""
-SMALL_REGION="$CANARY_BATCH,\"westcentralus\""
-MEDIUM_REGION="$SMALL_REGION,\"eastus2\""
-LARGE_REGION="$MEDIUM_REGION,\"eastus\""
-BATCH_1_REGIONS="$LARGE_REGION,\"westus2\",\"southcentralus\",\"southeastasia\",\"koreacentral\",\"centralus\",\"japaneast\",\"australiaeast\""
-BATCH_2_REGIONS="$BATCH_1_REGIONS,\"northeurope\",\"uksouth\",\"francecentral\",\"westus\",\"northcentralus\",\"eastasia\",\"westus3\",\"usgovvirginia\""
-BATCH_3_REGIONS="$BATCH_2_REGIONS,\"westeurope\",\"canadacentral\",\"canadaeast\",\"australiasoutheast\",\"centralindia\",\"switzerlandnorth\",\"germanywestcentral\",\"norwayeast\",\"germanynorth\""
-BATCH_4_REGIONS="$BATCH_3_REGIONS,\"japanwest\",\"ukwest\",\"koreasouth\",\"southafricanorth\",\"southindia\",\"brazilsouth\",\"uaenorth\",\"norwaywest\",\"swedensouth\""
-
-RELEASE_TRAIN_PIPELINE="\"pipeline\""
-RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_PIPELINE,\"staging\""
-RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
-RELEASE_TRAINS="$RELEASE_TRAIN_STABLE"
-
-if [ "$REGIONS_BATCH_NAME" == "canary" ]; then
-  REGIONS_BATCH=$CANARY_BATCH
-elif [ "$REGIONS_BATCH_NAME" == "small" ]; then
-  REGIONS_BATCH=$SMALL_REGION
-elif [ "$REGIONS_BATCH_NAME" == "medium" ]; then
-  REGIONS_BATCH=$MEDIUM_REGION
-elif [ "$REGIONS_BATCH_NAME" == "large" ]; then
-  REGIONS_BATCH=$LARGE_REGION
-elif [ "$REGIONS_BATCH_NAME" == "batch1" ]; then
-  REGIONS_BATCH=$BATCH_1_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch2" ]; then
-  REGIONS_BATCH=$BATCH_2_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch3" ]; then
-  REGIONS_BATCH=$BATCH_3_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch4" ]; then
-  REGIONS_BATCH=$BATCH_4_REGIONS
+# Determine the location
+if [ "$LOCATION" = "centraluseuap" ]; then
+    echo "Registering in centraluseuap, eastus2euap"
+    REGIONS_LIST="$REGION1"
+elif [ "$LOCATION" = "westcentralus" ]; then
+    echo "Registering in westcentralus, francecentral"
+    REGIONS_LIST="$REGION2"
+elif [ "$LOCATION" = "uksouth" ]; then
+    echo "Registering in uksouth"
+    REGIONS_LIST="$REGION3"
+elif [ "$LOCATION" = "westeurope" ]; then
+    echo "Registering in westeurope"
+    REGIONS_LIST="$REGION4"
+elif [ "$LOCATION" = "westus2" ]; then
+    echo "Registering in batch1"
+    REGIONS_LIST="$BATCH1"
+elif [ "$LOCATION" = "eastus2" ]; then
+    echo "Registering in batch2"
+    REGIONS_LIST="$BATCH2"
+elif [ "$LOCATION" = "eastus" ]; then
+    echo "Registering in batch3"
+    REGIONS_LIST="$BATCH3"
+elif [ "$LOCATION" = "southindia" ]; then
+    echo "Registering in all batch4"
+    REGIONS_LIST="$BATCH4"
+elif [ "$LOCATION" = "italynorth" ]; then
+    echo "Registering in all batch5"
+    REGIONS_LIST="$BATCH5"
+elif [ "$LOCATION" = "chilecentral" ]; then
+    echo "Registering in all batch6"
+    REGIONS_LIST="$BATCH6"
+elif [ "$LOCATION" = "usgovvirginia" ]; then
+    echo "Registering in Fairfax regions"
+    REGIONS_LIST="$FAIRFAX"
+elif [ "$LOCATION" = "chinaeast2" ]; then
+    echo "Registering in Mooncake regions"
+    REGIONS_LIST="$MOONCAKE"
+else
+    echo "Invalid location, not part of SDP regions. Exiting."
+    exit 1
 fi
 
-if [ -z "$REGIONS_BATCH" ]; then
+if [ -z "$REGIONS_LIST" ]; then
     echo "-e error release regions must be provided "
+    exit 1
+fi
+if [ -z $EXTENSION_NAME ]; then
+    echo "-e error extension name must be provided "
+    exit 1
+fi
+if [ -z "$PACKAGE_CONFIG_NAME" ]; then
+    echo "-e error package config name must be provided "
+    exit 1
+fi
+if [ -z "$HELM_CHART_ENDPOINT" ]; then
+    echo "-e error helm chart endpoint must be provided "
     exit 1
 fi
 if [ -z "$IS_CUSTOMER_HIDDEN" ]; then
     echo "-e error is_customer_hidden must be provided "
+    exit 1
+fi
+if [ -z "$ARC_API_URL" ]; then
+    echo "-e error arc api url must be provided "
+    exit 1
+fi
+if [ -z "$API_VERSION" ]; then
+    echo "-e error api version must be provided "
+    exit 1
+fi
+if [ -z "$SUBSCRIPTION" ]; then
+    echo "-e error subscription must be provided "
+    exit 1
+fi
+if [ -z "$RELEASE_TRAIN" ]; then
+    echo "-e error release train must be provided "
     exit 1
 fi
 if [ -z "$CHART_VERSION" ]; then
@@ -59,38 +98,54 @@ if [ -z "$CHART_VERSION" ]; then
     exit 1
 fi
 
-echo "Pulling chart from MCR:${REGISTRY_PATH}"
-helm pull oci://${REGISTRY_PATH} --version ${CHART_VERSION}
+# NEED TO ADD:
+if [ -z "$METHOD" ]; then
+    echo "-e error method must be provided "
+    exit 1
+fi
+if [ -z "$RESOURCE_AUDIENCE" ]; then
+    echo "-e error resource audience must be provided "
+    exit 1
+fi
+
+RELEASE_TRAIN_PIPELINE="\"pipeline\""
+RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_PIPELINE,\"staging\""
+RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
+RELEASE_TRAINS="$RELEASE_TRAIN_STABLE"
+
+echo "Pulling chart from MCR:${HELM_CHART_ENDPOINT} with version ${CHART_VERSION}"
+helm pull oci://${HELM_CHART_ENDPOINT} --version ${CHART_VERSION}
 if [ $? -eq 0 ]; then
-  echo "Pulling chart from ${REGISTRY_PATH}:${CHART_VERSION} completed successfully."
+  echo "Pulling chart from ${HELM_CHART_ENDPOINT}:${CHART_VERSION} completed successfully."
 else
-  echo "-e error Pulling chart from ${REGISTRY_PATH}:${CHART_VERSION} failed. Please review Ev2 pipeline logs for more details on the error."
+  echo "-e error Pulling chart from ${HELM_CHART_ENDPOINT}:${CHART_VERSION} failed. Please review Ev2 pipeline logs for more details on the error."
   exit 1
 fi
 
-echo "Start arc extension release. REGISTER_REGIONS is $REGIONS_BATCH, RELEASE_TRAINS are $RELEASE_TRAINS, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
+echo "Start arc extension release. REGISTER_REGIONS is $REGIONS_LIST, RELEASE_TRAINS are $RELEASE_TRAINS, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
+
 
 # Create JSON request body
 cat <<EOF > "request.json"
-{
-    "artifactEndpoints": [
-        {
-            "Regions": [
-                $REGIONS_BATCH
-            ],
-            "Releasetrains": [
-                $RELEASE_TRAINS
-            ],
-            "FullPathToHelmChart": "https://${REGISTRY_PATH}",
-            "ExtensionUpdateFrequencyInMinutes": 60,
-            "IsCustomerHidden": $IS_CUSTOMER_HIDDEN,
-            "ReadyforRollout": true,
-            "RollbackVersion": null,
-            "PackageConfigName": "$PACKAGE_CONFIG_NAME"
-        }
-    ]
-}
+[
+    {
+        "Regions": [$REGIONS_LIST],
+        "Releasetrains": [
+            "$RELEASE_TRAINS"
+        ],
+        "FullPathToHelmChart": "$HELM_CHART_ENDPOINT",
+        "ExtensionUpdateFrequencyInMinutes": 60,
+        "autoUpdateImagePath": null,
+        "IsCustomerHidden": $IS_CUSTOMER_HIDDEN,
+        "ReadyforRollout": true,
+        "RollbackVersion": null,
+        "PackageConfigName": "$PACKAGE_CONFIG_NAME"
+    }
+]
 EOF
+
+echo "Request JSON:"
+cat request.json
 
 # Send Request
 echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $CHART_VERSION"
