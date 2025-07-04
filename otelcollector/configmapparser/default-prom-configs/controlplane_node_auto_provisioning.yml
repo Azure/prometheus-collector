@@ -19,24 +19,17 @@ scrape_configs:
     - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
       action: keep
       regex: karpenter;controller # pod: karpenter, container: controller
-    - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_scrape ]
-      action: keep
-      regex: true
+    # Note: Using container port discovery instead of annotations
     - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_path ]
       action: replace
       target_label: __metrics_path__
       regex: (.+)
-    - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
+    - source_labels: [ __meta_kubernetes_pod_container_port_name ]
+      action: keep
+      regex: http-metrics
+    - source_labels: [ __address__, __meta_kubernetes_pod_container_port_number ]
       action: replace
       separator: ":"
-      target_label: __address__
-      regex: ^([^:]+)(?::\d+)?;(.+)$
-      replacement: ${1}:${2}
-    # Fallback: if annotation is wrong (8888), override with correct port (8000)
-    - source_labels: [ __address__ ]
-      action: replace
-      regex: ^([^:]+):8888$
-      replacement: ${1}:8000
       target_label: __address__
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
