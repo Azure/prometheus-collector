@@ -86,6 +86,7 @@ type ConfigProcessor struct {
 	ControlplaneKubeScheduler               string
 	ControlplaneApiserver                   string
 	ControlplaneClusterAutoscaler           string
+	ControlplaneNodeAutoProvisioning        string
 	ControlplaneEtcd                        string
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool

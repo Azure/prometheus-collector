@@ -68,12 +68,14 @@ data:
     default-targets-scrape-enabled: |-
       apiserver = true
       cluster-autoscaler = false
+      node-auto-provisioning = false
       kube-scheduler = false
       kube-controller-manager = false
       etcd = true
     default-targets-metrics-keep-list: |-
       apiserver = ""
       cluster-autoscaler = ""
+      node-auto-provisioning = ""
       kube-scheduler = ""
       kube-controller-manager = ""
       etcd = ""
