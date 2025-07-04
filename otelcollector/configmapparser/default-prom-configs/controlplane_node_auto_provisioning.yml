@@ -30,6 +30,14 @@ scrape_configs:
       action: replace
       separator: ":"
       target_label: __address__
+      regex: ^([^:]+)(?::\d+)?;(.+)$
+      replacement: ${1}:${2}
+    # Fallback: if annotation is wrong (8888), override with correct port (8000)
+    - source_labels: [ __address__ ]
+      action: replace
+      regex: ^([^:]+):8888$
+      replacement: ${1}:8000
+      target_label: __address__
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
       target_label: instance # TODO: check if this is correct
