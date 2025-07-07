@@ -270,7 +270,7 @@ while IFS= read -r line; do
     VERSION_CHANGES_FOUND=0
     
     # Check if we're in the desired version range
-    if (( VERSION_INT <= TO_INT && VERSION_INT >= FROM_INT )); then
+    if (( VERSION_INT <= TO_INT && VERSION_INT > FROM_INT )); then
       IN_RANGE=1
       CURRENT_VERSION="$VERSION"
     else
