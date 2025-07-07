@@ -8,17 +8,7 @@ variables:
   value: ama-metrics-arc
 - name: ARCResourceAudience
   value: c699bf69-fb1d-4eaf-999b-99e6b2ae4d85
-- name: ARCSPNClientID
-  value: 9a4c55e9-576a-450a-88bd-53bd634db38d
-- name: ARCSPNSecret
-  value: ''
-- name: ARCSPNTenant
-  value: 72f988bf-86f1-41af-91ab-2d7cd011db47
 - name: ChartTag
-  value: ''
-- name: CI_PROMETHEUS_KV_CLIENTID
-  value: 865cdca2-d064-4340-b445-434a01d6436f
-- name: CI_PROMETHEUS_KV_CLIENTSECRET
   value: ''
 - name: ConfigReaderTag
   value: ''
@@ -26,14 +16,8 @@ variables:
   value: /azuremonitor/containerinsights/cidev/prometheus-collector/images
 - name: DevMCRChartRepository
   value: /azuremonitor/containerinsights/cidev/prometheus-collector
-- name: DevMCRKSMRepository
-  value: /azuremonitor/containerinsights/cidev/kube-state-metrics
 - name: DevMCRNERepository
   value: /azuremonitor/containerinsights/cidev/prometheus-node-exporter
-- name: HelmChartName
-  value: prometheus-collector
-- name: KSMChartTag
-  value: 5.10.1
 - name: LinuxCCPTag
   value: ''
 - name: LinuxTag
@@ -198,8 +182,9 @@ extends:
             pipeline:  _Azureprometheus-collector
             artifactName: ev2-drop
           ev2:
+            rolloutInfra: Prod
             serviceRootPath: ev2-drop/deploy/ServiceGroupRoot
-            rolloutSpecPath: ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs.json
+            rolloutSpecPath: RolloutSpec.json
             InlineDynamicBindingOverrides: |-
               {
                 "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",

@@ -14,13 +14,13 @@
   "serviceResourceGroupDefinitions": [
     {
       "name": "PrometheusCollector-ServiceResourceGroupDefinition",
-      "azureResourceGroupName": "PrometheusCollector-Release",
+      "azureResourceGroupName": "$config(azureResourceGroup)",
       "scopeTags": [
         {
           "name": "Global"
         }
       ],
-      "subscriptionKey": "30c56c3a-54da-46ea-b004-06eb33432687",
+      "subscriptionKey": "$config(subscriptionKey)",
       "serviceResourceDefinitions": [
         {
           "name": "ShellExtension",

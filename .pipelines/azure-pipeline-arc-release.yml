@@ -162,9 +162,9 @@ extends:
             pipeline:  _Azureprometheus-collector
             artifactName: ev2-drop
           ev2:
-            rolloutInfra: "Prod"
+            rolloutInfra: Prod
             serviceRootPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
-            rolloutSpecPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpecs.json
+            rolloutSpecPath: RolloutSpec.json
             configurationOverrides:
               settings:
                 chartVersion: "$(stageDependencies.Setup.SetTags.outputs[\"Set_Tags.ChartTag\"])"

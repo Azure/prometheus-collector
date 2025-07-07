@@ -7,7 +7,7 @@
     "name": "PrometheusCollectorExtension-Stable",
     "configuration": {
       "serviceGroupScope": {
-        "specPath": "Configurations.$rolloutinfra().json"
+        "specPath": "Configuration.$rolloutinfra().json"
       }
     },
     "rolloutType": "Major",

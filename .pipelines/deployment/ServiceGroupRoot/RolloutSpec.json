@@ -7,7 +7,7 @@
     "name": "PrometheusCollectorAgent",
     "configuration": {
       "serviceGroupScope": {
-        "specPath": "Configurations.Public.Prod.json"
+        "specPath": "Configuration.$rolloutinfra().json"
       }
     },
     "rolloutType": "Major",
@@ -42,9 +42,7 @@
         "shell/PushNodeExporterChart",
         "shell/PushKSMChart"
       ],
-      "dependsOn": [
-        "Rollout.Push"
-      ]
+      "dependsOn": []
     }
   ]
 }

@@ -7,115 +7,91 @@
       "bindings": [
         {
           "find": "__ACR_REGISTRY__",
-          "replaceWith": "$(ACRRegistry)"
+          "replaceWith": "$config(acrRegistry)"
         },
         {
           "find": "__PROD_ACR_AGENT_REPOSITORY__",
-          "replaceWith": "$(ProdACRAgentRepository)"
+          "replaceWith": "$config(prodACRAgentRepository)"
         },
         {
           "find": "__PROD_ACR_CHART_REPOSITORY__",
-          "replaceWith": "$(ProdACRChartRepository)"
-        },
-        {
-          "find": "__PROD_ACR_KSM_REPOSITORY__",
-          "replaceWith": "$(ProdACRKSMRepository)"
+          "replaceWith": "$config(prodACRChartRepository)"
         },
         {
           "find": "__PROD_ACR_NE_REPOSITORY__",
-          "replaceWith": "$(ProdACRNERepository)"
+          "replaceWith": "$config(prodACRNodeExporterRepository)"
         },
         {
           "find": "__MANAGED_IDENTITY__",
-          "replaceWith": "$(ManagedIdentity)"
+          "replaceWith": "$config(managedIdentity)"
         },
         {
           "find": "__MCR_REGISTRY__",
-          "replaceWith": "$(MCRRegistry)"
+          "replaceWith": "$config(mcrRegistry)"
         },
         {
           "find": "__DEV_MCR_AGENT_REPOSITORY__",
-          "replaceWith": "$(DevMCRAgentRepository)"
-        },
-        {
-          "find": "__DEV_MCR_KSM_REPOSITORY__",
-          "replaceWith": "$(DevMCRKSMRepository)"
+          "replaceWith": "$config(devMCRAgentRepository)"
         },
         {
           "find": "__DEV_MCR_NE_REPOSITORY__",
-          "replaceWith": "$(DevMCRNERepository)"
+          "replaceWith": "$config(devMCRNodeExporterRepository)"
         },
         {
           "find": "__LINUX_TAG__",
-          "replaceWith": "$(LinuxTag)"
+          "replaceWith": "$config(linuxTag)"
         },
         {
           "find": "__LINUX_CCP_TAG__",
-          "replaceWith": "$(LinuxCCPTag)"
+          "replaceWith": "$config(linuxCCPTag)"
         },
         {
           "find": "__WINDOWS_TAG__",
-          "replaceWith": "$(WindowsTag)"
+          "replaceWith": "$config(windowsTag)"
         },
         {
           "find": "__TARGETALLOCATOR_TAG__",
-          "replaceWith": "$(TargetAllocatorTag)"
+          "replaceWith": "$config(targetAllocatorTag)"
         },
         {
           "find": "__CONFIGREADER_TAG__",
-          "replaceWith": "$(ConfigReaderTag)"
+          "replaceWith": "$config(configReaderTag)"
         },
         {
           "find": "__PROD_MCR_AGENT_REPOSITORY__",
-          "replaceWith": "$(ProdMCRAgentRepository)"
+          "replaceWith": "$config(prodMCRAgentRepository)"
         },
         {
           "find": "__DEV_MCR_CHART_REPOSITORY__",
-          "replaceWith": "$(DevMCRChartRepository)"
+          "replaceWith": "$config(devMCRChartRepository)"
         },
         {
           "find": "__PROD_MCR_CHART_REPOSITORY__",
-          "replaceWith": "$(ProdMCRChartRepository)"
-        },
-        {
-          "find": "__PROD_MCR_KSM_REPOSITORY__",
-          "replaceWith": "$(ProdMCRKSMRepository)"
+          "replaceWith": "$config(prodMCRChartRepository)"
         },
         {
           "find": "__PROD_MCR_NE_REPOSITORY__",
-          "replaceWith": "$(ProdMCRNERepository)"
+          "replaceWith": "$config(prodMCRNodeExporterRepository)"
         },
         {
           "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",
-          "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"
+          "replaceWith": "$config(mcrRepositoryHelmDependencies)"
         },
         {
           "find": "__CHART_TAG__",
-          "replaceWith": "$(ChartTag)"
-        },
-        {
-          "find": "__PUSH_NEW_KSM_CHART__",
-          "replaceWith": "$(PushNewKSMChart)"
+          "replaceWith": "$config(chartTag)"
         },
         {
           "find": "__PUSH_NEW_NE_CHART__",
-          "replaceWith": "$(PushNewNEChart)"
-        },
-        {
-          "find": "__KSM_CHART_TAG__",
-          "replaceWith": "$(KSMChartTag)"
+          "replaceWith": "$config(pushNewNEChart)"
         },
         {
           "find": "__NE_CHART_TAG__",
-          "replaceWith": "$(NEChartTag)"
-        },
-        {
-          "find": "__HELM_CHART_NAME__",
-          "replaceWith": "$(HelmChartName)"
+          "replaceWith": "$config(NEChartTag)"
         },
         {
           "find": "__ARC_HELM_CHART_NAME__",
-          "replaceWith": "$(ARCHelmChartName)"
+          "replaceWith": "$config(arcHelmChartName)"
         }
       ]
     }
