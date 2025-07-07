@@ -9,6 +9,14 @@ else
     echo "No existing version file found. Will create one."
 fi
 
+CURRENT_TA_VERSION=""
+if [ -f "TARGETALLOCATOR_VERSION" ]; then
+    CURRENT_TA_VERSION=$(cat TARGETALLOCATOR_VERSION)
+    echo "Current OpenTelemetry TA version: $CURRENT_TA_VERSION"
+else
+    echo "No existing TA version file found. Will create one."
+fi
+
 # Script to check the latest released version of opentelemetry-collector-operator
 
 # GitHub API URL for the repository releases
@@ -54,9 +62,26 @@ if [ $? -ne 0 ]; then
     echo "Error: Failed to fetch opentelemetry-collector release information"
     exit 1
 fi
+# Extract major.minor part of the version tag
+MAJOR_MINOR=$(echo "$VERSION_TAG" | grep -o 'v[0-9]\+\.[0-9]\+')
 
-# Look for the matching version tag
-MATCHING_RELEASE=$(echo "$COLLECTOR_RESPONSE" | grep -A 100 "\"tag_name\": \"$VERSION_TAG\"" | grep -m 1 -B 100 -A 100 "}")
+if [ -z "$MAJOR_MINOR" ]; then
+    echo "Error: Could not extract major.minor version from $VERSION_TAG"
+    exit 1
+fi
+
+echo "Writing TARGETALLOCATOR_VERSION to TARGETALLOCATOR_VERSION file..."
+echo "$VERSION_TAG" > TARGETALLOCATOR_VERSION
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to write TARGETALLOCATOR_VERSION to file"
+    exit 1
+fi
+TA_VERSION=$(cat TARGETALLOCATOR_VERSION)
+echo "TARGETALLOCATOR_VERSION set to: $TA_VERSION"
+
+# Look for a matching major.minor version (ignoring patch version)
+echo "Looking for releases matching major.minor version: $MAJOR_MINOR"
+MATCHING_RELEASE=$(echo "$COLLECTOR_RESPONSE" | grep -A 100 "\"tag_name\": \"$MAJOR_MINOR" | grep -m 1 -B 100 -A 100 "}")
 
 if [ -z "$MATCHING_RELEASE" ]; then
     echo "No matching release found with tag $VERSION_TAG in opentelemetry-collector repository"
@@ -99,7 +124,7 @@ if [[ "$COLLECTOR_RELEASE_NAME" =~ (v?[0-9]+\.[0-9]+\.[0-9]+)/(v?[0-9]+\.[0-9]+\
     # Run upgrade.sh with the parsed versions
     echo -e "\nRunning upgrade.sh with the parsed versions..."
     if [ -f "./internal/otel-upgrade-scripts/upgrade.sh" ]; then
-        ./internal/otel-upgrade-scripts/upgrade.sh "$BETA_VERSION" "$STABLE_VERSION"
+        ./internal/otel-upgrade-scripts/upgrade.sh "$BETA_VERSION" "$STABLE_VERSION" "$TA_VERSION" "$CURRENT_VERSION" "$CURRENT_TA_VERSION"
     else
         echo "Warning: upgrade.sh not found in the current directory"
         exit 1

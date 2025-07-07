@@ -2,28 +2,23 @@
 set -e
 
 # Display usage
-if [ $# -ne 2 ]; then
-	echo "Usage: $0 <collector_tag_version> [stable_tag_version]"
-	echo "Example: $0 v0.123.0 v1.29.0"
+if [ $# -ne 5 ]; then
+	echo "Usage: $0 <collector_tag_version> [stable_tag_version] [target_allocator_tag_version] [current_otel_version] [current_target_allocator_version]"
+	echo "Example: $0 v0.123.0 v1.29.0 v0.123.1"
 	exit 1
 fi
 
 TAG=$1
 STABLE_TAG=$2
+TA_TAG=$3
+CURRENT_OTEL_VERSION=$4
+CURRENT_TA_VERSION=$5
 BRANCH_NAME="${TAG}"
 CURRENT_DIR=$(pwd)
 
-# Function to extract version numbers from git tags
-get_current_otel_version() {
-	cd otelcollector/opentelemetry-collector-builder
-	CURRENT_VERSION=$(grep -m 1 "go.opentelemetry.io/collector " go.mod | awk '{print $2}')
-	cd "$CURRENT_DIR"
-	echo "$CURRENT_VERSION"
-}
 
-# Get current OTel version for reference
-CURRENT_OTEL_VERSION=$(get_current_otel_version)
 echo "Current OTel version: $CURRENT_OTEL_VERSION"
+echo "Current Target Allocator version: $CURRENT_TA_VERSION"
 
 echo "Starting Otel Collector upgrade to ${STABLE_TAG}/${TAG}..."
 
@@ -58,6 +53,10 @@ cd "$CURRENT_DIR"
 # Step 2: Update opentelemetry-collector-builder
 echo "Updating opentelemetry-collector-builder..."
 cd otelcollector/opentelemetry-collector-builder
+
+# Remove indirect dependencies from go.mod
+echo "Removing indirect dependencies from go.mod..."
+grep -v "// indirect" go.mod > go.mod.tmp && mv go.mod.tmp go.mod
 
 # Update go.mod to new collector version
 # Replace stable packages with stable version and beta packages with beta version
@@ -158,8 +157,10 @@ fi
 
 # Get CHANGELOG.md from opentelemetry-collector-contrib
 echo "Fetching CHANGELOG.md from opentelemetry-collector-contrib..."
+echo "Current OTel version: $CURRENT_OTEL_VERSION"
 if [ -f "opentelemetry-collector-contrib/CHANGELOG.md" ]; then
-	./internal/otel-upgrade-scripts/changelogsummary.sh -f ${CURRENT_OTEL_VERSION} -t ${TAG} -c opentelemetry-collector-contrib/CHANGELOG.md -o PrometheusReceiverCHANGELOG.md --name "prometheusreceiver"
+	echo "Getting CHANGELOG.md from opentelemetry-collector-contrib for version $CURRENT_OTEL_VERSION to $TAG..."
+	./internal/otel-upgrade-scripts/changelogsummary.sh -f $CURRENT_OTEL_VERSION -t $TAG -c opentelemetry-collector-contrib/CHANGELOG.md -o PrometheusReceiverCHANGELOG.md --name "prometheusreceiver"
 else
 	echo "CHANGELOG.md not found in opentelemetry-collector-contrib, skipping summary generation"
 fi
@@ -175,6 +176,10 @@ fi
 
 # Step 8: Update Target Allocator
 echo "Updating Target Allocator..."
+echo "Using tag for the TA: $TA_TAG"
+TAG=${TA_TAG:-$TAG}
+BRANCH_NAME="${TAG}"
+echo "TAG is now set to: $TAG"
 if [ ! -d "opentelemetry-operator" ]; then
 	git clone --depth 1 --branch $TAG https://github.com/open-telemetry/opentelemetry-operator.git
 else
@@ -191,13 +196,15 @@ echo "Changing into directory"
 git branch | grep -q "$BRANCH_NAME" || true
 RETURN_CODE=$?
 echo "Return code: $RETURN_CODE"
+echo "Checking if branch $BRANCH_NAME exists for tag $TAG"
 if [ $RETURN_CODE -ne 0 ]; then
 	# Branch doesn't exist, safe to create it
+	echo "Creating new branch $BRANCH_NAME for tag $TAG"
 	git checkout tags/$TAG -b $BRANCH_NAME
 else
 	# Branch exists, just check out the existing branch
-	git checkout $BRANCH_NAME
 	echo "Branch $BRANCH_NAME already exists, using existing branch"
+	git checkout $BRANCH_NAME
 fi
 cd "$CURRENT_DIR"
 
@@ -250,7 +257,7 @@ cd "$CURRENT_DIR"
 # Get CHANGELOG.md from opentelemetry-operator
 echo "Fetching CHANGELOG.md from opentelemetry-operator..."
 if [ -f "opentelemetry-operator/CHANGELOG.md" ]; then
-	./internal/otel-upgrade-scripts/changelogsummary.sh -f ${CURRENT_OTEL_VERSION} -t ${TAG} -c opentelemetry-operator/CHANGELOG.md -o TargetAllocatorCHANGELOG.md --name "target-allocator"
+	./internal/otel-upgrade-scripts/changelogsummary.sh -f ${CURRENT_TA_VERSION} -t ${TAG} -c opentelemetry-operator/CHANGELOG.md -o TargetAllocatorCHANGELOG.md --name "target-allocator"
 else
 	echo "CHANGELOG.md not found in opentelemetry-operator, skipping summary generation"
 fi

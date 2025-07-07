@@ -247,7 +247,7 @@ while IFS= read -r line; do
         fi
         
         # Output the entry with appropriate category
-        output_text "[$ENTRY_CATEGORY] $CURRENT_ENTRY"
+        output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
         
         # Increment the appropriate counter
         case "$ENTRY_CATEGORY" in
@@ -328,7 +328,7 @@ while IFS= read -r line; do
         fi
         
         # Output the entry with appropriate category
-        output_text "[$ENTRY_CATEGORY] $CURRENT_ENTRY"
+        output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
         
         # Increment the appropriate counter
         case "$ENTRY_CATEGORY" in
@@ -370,7 +370,7 @@ while IFS= read -r line; do
       fi
       
       # Output the entry with appropriate category
-      output_text "[$ENTRY_CATEGORY] $CURRENT_ENTRY"
+      output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
       
       # Increment the appropriate counter
       case "$ENTRY_CATEGORY" in
@@ -395,7 +395,7 @@ while IFS= read -r line; do
       fi
       
       # Output the entry with appropriate category
-      output_text "[$ENTRY_CATEGORY] $CURRENT_ENTRY"
+      output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
       
       # Increment the appropriate counter
       case "$ENTRY_CATEGORY" in
@@ -423,8 +423,8 @@ if [[ "$IN_MULTI_LINE" -eq 1 && -n "$CURRENT_ENTRY" && "$IN_RANGE" -eq 1 ]]; the
       TOTAL_CHANGES_FOUND=1
     fi
     
-    # Output the entry with appropriate category
-    output_text "[$ENTRY_CATEGORY] $CURRENT_ENTRY"
+    # Output the entry with appropriate category in format "- [CATEGORY] description"
+    output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
     
     # Increment the appropriate counter
     case "$ENTRY_CATEGORY" in
