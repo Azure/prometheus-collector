@@ -163,7 +163,7 @@ extends:
             artifactName: ev2-drop
           ev2:
             rolloutInfra: Prod
-            serviceRootPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+            serviceRootPath: deploy/arc-extension-release/ServiceGroupRoot
             rolloutSpecPath: RolloutSpec.json
             configurationOverrides:
               settings:
