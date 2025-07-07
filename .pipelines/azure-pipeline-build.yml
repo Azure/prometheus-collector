@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/managed-sdp-ev2
 pr:
   autoCancel: true
   branches:
@@ -750,7 +749,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Ev2: Publish image artifacts'
-            #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)'
             artifactName: linux-drop
         steps:
@@ -914,7 +913,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Ev2: Publish image artifacts'
-            #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
             artifactName: linuxccp-drop
         steps:
@@ -1045,7 +1044,7 @@ extends:
             ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
         - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
           displayName: "Ev2: Generate image artifacts"
-          #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+          condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
           inputs:
             BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
             DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
@@ -1719,7 +1718,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Ev2: publish image artifacts'
-            #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
@@ -1787,7 +1786,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: Windows multi-arch manifest"
         - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-          #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+          condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
           displayName: "Ev2: generate image artifacts"
           inputs:
             BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
@@ -1883,7 +1882,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Ev2: publish helm chart artifacts'
-            #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)/arc-chart'
             artifactName: arc-drop
         steps:
