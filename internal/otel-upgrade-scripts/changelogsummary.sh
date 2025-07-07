@@ -21,6 +21,8 @@ function show_usage {
   echo "  -o, --output FILE     Output file to write results in markdown format (default: stdout)"
   echo "  -n, --name STRING     Component name to search for (default: prometheusreceiver)"
   echo "  -p, --pattern REGEX   Custom regex pattern to search for (overrides --name)"
+  echo "  -r, --repo URL       GitHub repository URL for PR links (default: opentelemetry-collector-contrib)"
+
   echo "  -h, --help            Show this help message"
   echo
   echo "Examples:"
@@ -36,6 +38,9 @@ TO_VERSION=""
 OUTPUT_FILE=""
 COMPONENT_NAME="prometheusreceiver"
 PATTERN=""
+# Default GitHub repository URL for PR links
+PR_REPO_URL="https://github.com/open-telemetry/opentelemetry-collector-contrib/pull"
+
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -62,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -p|--pattern)
       PATTERN="$2"
+      shift 2
+      ;;
+    -r|--repo)
+      PR_REPO_URL="$2"
       shift 2
       ;;
     -h|--help)
@@ -131,6 +140,7 @@ else
   if [[ "$COMPONENT_NAME_LOWER" == "target-allocator" ]]; then
     # Special case for target-allocator with extended patterns
     SEARCH_PATTERN="target-allocator|target allocator|targetallocator|\`target allocator\`|\`target-allocator\`|Target Allocator"
+    PR_REPO_URL="https://github.com/open-telemetry/opentelemetry-operator/pull"
   elif [[ "$COMPONENT_NAME_LOWER" == "prometheusreceiver" ]]; then
     SEARCH_PATTERN="prometheusreceiver|receiver/prometheus|receiver/prometheusreceiver"
   else
@@ -162,6 +172,13 @@ function version_to_int {
   
   # Calculate a single integer value (allowing for versions up to 999.999.999)
   echo "$((major * 1000000 + minor * 1000 + patch))"
+}
+
+# Function to convert PR references (#1234) to markdown links
+function convert_pr_refs {
+  local text="$1"
+  # Find PR references in the format #1234 and convert to [#1234](repo_url/1234)
+  echo "$text" | sed -E "s|#([0-9]+)|[#\1](${PR_REPO_URL}/\1)|g"
 }
 
 # Function to handle output (to file or stdout)
@@ -247,7 +264,7 @@ while IFS= read -r line; do
         fi
         
         # Output the entry with appropriate category
-        output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
+        output_text "- [**$ENTRY_CATEGORY**] ${CURRENT_ENTRY#- }"
         
         # Increment the appropriate counter
         case "$ENTRY_CATEGORY" in
@@ -328,7 +345,7 @@ while IFS= read -r line; do
         fi
         
         # Output the entry with appropriate category
-        output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
+        output_text "- [**$ENTRY_CATEGORY**] ${CURRENT_ENTRY#- }"
         
         # Increment the appropriate counter
         case "$ENTRY_CATEGORY" in
@@ -370,7 +387,7 @@ while IFS= read -r line; do
       fi
       
       # Output the entry with appropriate category
-      output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
+      output_text "- [**$ENTRY_CATEGORY**] ${CURRENT_ENTRY#- }"
       
       # Increment the appropriate counter
       case "$ENTRY_CATEGORY" in
@@ -395,7 +412,7 @@ while IFS= read -r line; do
       fi
       
       # Output the entry with appropriate category
-      output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
+      output_text "- [**$ENTRY_CATEGORY**] ${CURRENT_ENTRY#- }"
       
       # Increment the appropriate counter
       case "$ENTRY_CATEGORY" in
@@ -424,7 +441,7 @@ if [[ "$IN_MULTI_LINE" -eq 1 && -n "$CURRENT_ENTRY" && "$IN_RANGE" -eq 1 ]]; the
     fi
     
     # Output the entry with appropriate category in format "- [CATEGORY] description"
-    output_text "- [$ENTRY_CATEGORY] ${CURRENT_ENTRY#- }"
+    output_text "- [**$ENTRY_CATEGORY**] ${CURRENT_ENTRY#- }"
     
     # Increment the appropriate counter
     case "$ENTRY_CATEGORY" in
@@ -458,4 +475,10 @@ fi
 # Display success message if output was written to a file
 if [[ -n "$OUTPUT_FILE" ]]; then
   echo "Results written to $OUTPUT_FILE"
+fi
+
+# Convert PR references in the output file if one was specified
+if [[ -n "$OUTPUT_FILE" ]]; then
+  # Replace PR references with Markdown links
+  sed -i -E "s|#([0-9]+)|[#\1](${PR_REPO_URL}/\1)|g" "$OUTPUT_FILE"
 fi
