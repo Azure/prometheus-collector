@@ -24,12 +24,10 @@ scrape_configs:
       action: replace
       target_label: __metrics_path__
       regex: (.+)
-    - source_labels: [ __meta_kubernetes_pod_container_port_name ]
-      action: keep
-      regex: http-metrics
-    - source_labels: [ __address__, __meta_kubernetes_pod_container_port_number ]
+    - source_labels: [ __address__ ]
       action: replace
-      separator: ":"
+      regex: (.+)
+      replacement: ${1}:8000
       target_label: __address__
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
