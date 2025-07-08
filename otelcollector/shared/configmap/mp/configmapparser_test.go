@@ -55,10 +55,11 @@ func setupTest() {
 		for key, job := range originalDefaultScrapeJobs {
 			shared.DefaultScrapeJobs[key] = &job
 		}
+		os.RemoveAll("../../../configmapparser/default-prom-configs/test/")
 	})
 }
 
-var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
+var _ = Describe("Configmapparser", Ordered, func() {
 	setupTest()
 
 	Context("when the settings configmap does not exist", func() {
@@ -146,7 +147,7 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-				"DEBUG_MODE_ENABLED": "false",
+				"DEBUG_MODE_ENABLED": "true",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
