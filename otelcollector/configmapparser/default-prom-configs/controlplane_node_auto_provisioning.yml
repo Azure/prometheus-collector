@@ -10,25 +10,10 @@ scrape_configs:
       namespaces:
         names:
           - $$POD_NAMESPACE$$
-  tls_config:
-    ca_file: /etc/kubernetes/secrets/ca.pem
-    cert_file: /etc/kubernetes/secrets/client.pem
-    key_file: /etc/kubernetes/secrets/client-key.pem
-    insecure_skip_verify: true
   relabel_configs:
-    - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
+    - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name, __meta_kubernetes_pod_container_port_number ]
       action: keep
-      regex: karpenter;controller # pod: karpenter, container: controller
-    # Note: Using container port discovery instead of annotations
-    - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_path ]
-      action: replace
-      target_label: __metrics_path__
-      regex: (.+)
-    - source_labels: [ __address__ ]
-      action: replace
-      regex: (.+)
-      replacement: ${1}:8000
-      target_label: __address__
+      regex: karpenter;controller;8000 # pod: karpenter, container: controller, metrics port: 8000
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
       target_label: instance 
