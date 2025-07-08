@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ConfigurationSpecification.json",
+  "Settings": {
+    "environment": "Prod",
+    "tenantid": "$(aad.tenants.AME.id)",
+    "resourceAudience": "c699bf69-fb1d-4eaf-999b-99e6b2ae4d85",
+    "azureResourceGroup": "PrometheusCollector-Release-Stable",
+    "subscriptionKey": "30c56c3a-54da-46ea-b004-06eb33432687",
+    "acrRegistry": "containerinsights.azurecr.io",
+    "prodACRAgentRepository": "/public/azuremonitor/containerinsights/ciprod/prometheus-collector/images",
+    "prodACRChartRepository": "/public/azuremonitor/containerinsights/ciprod",
+    "mcrRegistry": "mcr.microsoft.com",
+    "devMCRAgentRepository": "/azuremonitor/containerinsights/cidev/prometheus-collector/images",
+    "prodMCRAgentRepository": "/azuremonitor/containerinsights/ciprod/prometheus-collector/images",
+    "devMCRChartRepository": "/azuremonitor/containerinsights/cidev/ama-metrics-arc",
+    "prodMCRChartRepository": "/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
+    "managedIdentity": "/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release",
+    "mcrRepositoryHelmDependencies": "/azuremonitor/containerinsights/ciprod",
+    "arcHelmChartName": "ama-metrics-arc",
+    "prodMCRNodeExporterRepository": "/azuremonitor/containerinsights/ciprod/prometheus-node-exporter",
+    "devMCRNodeExporterRepository": "/azuremonitor/containerinsights/cidev/prometheus-node-exporter",
+    "linuxTag": "",
+    "linuxCCPTag": "",
+    "windowsTag": "",
+    "targetAllocatorTag": "",
+    "configReaderTag": "",
+    "chartTag": "",
+    "NEChartTag": "4.39.0",
+    "pushNewNEChart": "false"
+  }
+}

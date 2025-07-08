@@ -1,0 +1,244 @@
+trigger: none
+
+parameters:
+- name: "deployTo"
+  displayName: "Select Region"
+  type: string
+  default: "AllRegions"
+  values:
+    - "AllRegions"
+    - "Production"
+    - "Fairfax"
+    - "Mooncake"
+    - "centraluseuap"
+    - "westcentralus"
+    - "uksouth"
+    - "westeurope"
+    - "westus2"
+    - "eastus2"
+    - "eastus"
+    - "southindia"
+    - "italynorth"
+    - "chilecentral"
+
+- name: 'releaseTrain'
+  displayName: 'Release Train'
+  type: string
+  default: 'stable'
+  values:
+    - stable
+    - staging
+    - pipeline
+
+- name: 'isCustomerHidden'
+  displayName: 'Is Customer Hidden?'
+  type: boolean
+  default: false
+
+- name: rolloutType
+  displayName: Rollout type (normal, emergency or globaloutage)
+  type: string
+  default: normal
+  values:
+  - normal
+  - emergency
+  - globaloutage
+
+- name: managedValidationOverrideDuration
+  displayName: Managed Validation Override Duration(in ISO 8601 format)
+  type: string
+  default: PT24H
+
+- name: icmIncidentId
+  displayName: IcM Incident Id (required when rollout type is globaloutage)
+  type: number
+  default: 0
+
+variables:
+- name: ServiceTreeGUID
+  value: 3170cdd2-19f0-4027-912b-1027311691a2
+- name: deployToProd
+  value: ${{ and(ne(parameters.deployTo, 'Fairfax'), ne(parameters.deployTo, 'Mooncake')) }}
+- name: deployToFairfax
+  value: ${{ or(eq(parameters.deployTo, 'AllRegions'), eq(parameters.deployTo, 'Fairfax')) }}
+- name: deployToMooncake
+  value: ${{ or(eq(parameters.deployTo, 'AllRegions'), eq(parameters.deployTo, 'Mooncake')) }}
+- name: useSelectInProd
+  value: ${{ and(ne(parameters.deployTo, 'Production'), ne(parameters.deployTo, 'AllRegions')) }}
+
+resources:
+  containers: []
+  pipelines:
+  - pipeline: '_Azureprometheus-collector'
+    project: 'azure'
+    source: 'Azure.prometheus-collector'
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    sdp:
+      ev2ManagedSdpRolloutConfig:
+        rolloutType: ${{ parameters.rolloutType }}
+        managedValidationOverrideDuration: ${{ parameters.managedValidationOverrideDuration }}
+        icmIncidentId: ${{ parameters.icmIncidentId }}
+    settings:
+      oneESTagStagePool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-ubuntu-2204
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
+        os: windows
+    serviceTreeId: $(ServiceTreeGUID)
+
+    stages:
+    - stage: Setup
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
+      jobs:
+      - job: SetTags
+        displayName: Set Tags
+        pool:
+          name: Azure-Pipelines-Windows-CI-Test-EO
+          os: windows
+        steps:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Pipeline Artifact
+          inputs:
+            buildType: specific
+            project: $(resources.pipeline._Azureprometheus-collector.projectID)
+            definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+            buildVersionToDownload: specific
+            pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+            targetPath: $(Pipeline.Workspace)/ev2Artifact
+        - task: Bash@3
+          name: Set_Tags
+          displayName: Set Tags
+          inputs:
+            workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
+            targetType: inline
+            script: |
+              CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+              echo $CHART_TAG
+              
+              set +x
+              echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+              set -x
+
+    - stage: PROD_Managed_SDP
+      displayName: "PROD: Managed SDP"
+      condition: ${{ variables.deployToProd }}
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: PROD_Managed_SDP
+        displayName: "PROD: Managed SDP"
+        pool:
+          name: Azure-Pipelines-Windows-CI-Test-EO
+          os: windows
+        templateContext:
+          type: releaseJob
+          isProduction: true
+          workflow: ev2-ra
+          inputs:
+          - input: pipelineArtifact
+            pipeline:  _Azureprometheus-collector
+            artifactName: ev2-drop
+          ev2:
+            rolloutInfra: Prod
+            serviceRootPath: deploy/arc-extension-release/ServiceGroupRoot
+            rolloutSpecPath: RolloutSpec.json
+            configurationOverrides:
+              settings:
+                chartVersion: "$(stageDependencies.Setup.SetTags.outputs[\"Set_Tags.ChartTag\"])"
+                releaseTrain: ${{parameters.releaseTrain}}
+                isCustomerHidden: ${{parameters.isCustomerHidden}}
+ 
+    - stage: FF_Managed_SDP
+      displayName: "FF: Managed SDP"
+      dependsOn: PROD_Managed_SDP
+      condition: and(not(failed()), ${{ variables.deployToFairfax }})
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: FF_Managed_SDP
+        displayName: "FF: Managed SDP"
+        pool:
+          name: Azure-Pipelines-Windows-CI-Test-EO
+          os: windows
+        templateContext:
+          type: releaseJob
+          isProduction: true
+          workflow: ev2-ra
+          inputs:
+          - input: pipelineArtifact
+            pipeline:  _Azureprometheus-collector
+            artifactName: ev2-drop
+          ev2:
+            rolloutInfra: "Fairfax"
+            serviceRootPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+            rolloutSpecPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpecs.json
+            configurationOverrides:
+              settings:
+                chartVersion: "$(stageDependencies.Setup.SetTags.outputs[\"Set_Tags.ChartTag\"])"
+                releaseTrain: ${{parameters.releaseTrain}}
+                isCustomerHidden: ${{parameters.isCustomerHidden}}
+
+    - stage: MC_Managed_SDP
+      displayName: "MC: Managed SDP"
+      dependsOn: PROD_Managed_SDP
+      condition: and(not(failed()), ${{ variables.deployToMooncake }})
+      pool:
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: MC_Managed_SDP
+        displayName: "MC: Managed SDP"
+        pool:
+          name: Azure-Pipelines-Windows-CI-Test-EO
+          os: windows
+        templateContext:
+          type: releaseJob
+          isProduction: true
+          workflow: ev2-ra
+          inputs:
+          - input: pipelineArtifact
+            pipeline:  _Azureprometheus-collector
+            artifactName: ev2-drop
+          ev2:
+            rolloutInfra: "Mooncake"
+            serviceRootPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+            rolloutSpecPath: ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpecs.json
+            configurationOverrides:
+              settings:
+                chartVersion: "$(stageDependencies.Setup.SetTags.outputs[\"Set_Tags.ChartTag\"])"
+                releaseTrain: ${{parameters.releaseTrain}}
+                isCustomerHidden: ${{parameters.isCustomerHidden}}
