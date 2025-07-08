@@ -33,7 +33,7 @@ scrape_configs:
       target_label: __address__
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
-      target_label: instance # TODO: check if this is correct
+      target_label: instance 
       action: replace
   metric_relabel_configs:
     # Generate host alias

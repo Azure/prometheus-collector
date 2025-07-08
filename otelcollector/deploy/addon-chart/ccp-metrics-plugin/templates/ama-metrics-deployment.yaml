@@ -44,8 +44,6 @@ spec:
               value: "true"
             - name: CCP_METRICS_ENABLED
               value: "true"
-            - name: AZMON_OPERATOR_ENABLED
-              value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
