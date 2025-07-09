@@ -1,0 +1,116 @@
+scrape_configs:
+- job_name: controlplane-apiserver
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - kube-system
+    role: endpoints
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: hashmod
+    modulus: 10000000000000000000
+    regex: (.+)
+    source_labels:
+    - host
+    target_label: hostalias
+  - regex: ^(localhost|\[::1\]):443$
+    replacement: kube-apiserver
+    source_labels:
+    - host
+    target_label: hostalias
+  - action: replace
+    regex: ^(.+);(.+)$
+    source_labels:
+    - hostalias
+    - host
+    target_label: host
+  - action: drop
+    regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    source_labels:
+    - __name__
+  - action: labeldrop
+    regex: hostalias
+  - action: keep
+    regex: test.*|test2
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-apiserver;kube-apiserver
+    source_labels:
+    - __meta_kubernetes_pod_label_k8s_app
+    - __meta_kubernetes_pod_container_name
+  - action: replace
+    regex: (.*)
+    source_labels:
+    - __meta_kubernetes_pod_name
+    target_label: instance
+  scheme: https
+  scrape_interval: 30s
+  tls_config:
+    ca_file: /etc/kubernetes/secrets/ca.pem
+    cert_file: /etc/kubernetes/secrets/client.pem
+    insecure_skip_verify: true
+    key_file: /etc/kubernetes/secrets/client-key.pem
+- follow_redirects: false
+  job_name: controlplane-etcd
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - kube-system
+    role: endpoints
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: hashmod
+    modulus: 10000000000000000000
+    regex: ^(.+)$
+    source_labels:
+    - host
+    target_label: hostalias
+  - regex: ^hcp-kubernetes.*.svc.cluster.local:443$
+    replacement: kube-apiserver
+    source_labels:
+    - host
+    target_label: hostalias
+  - action: replace
+    regex: ^(.+);(.+)$
+    source_labels:
+    - hostalias
+    - host
+    target_label: host
+  - action: drop
+    regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    source_labels:
+    - __name__
+  - action: labeldrop
+    regex: hostalias
+  - action: keep
+    regex: test.*|test2
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: etcd;2379
+    source_labels:
+    - __meta_kubernetes_service_label_app
+    - __meta_kubernetes_pod_container_port_number
+  - action: replace
+    regex: (.*)
+    source_labels:
+    - __meta_kubernetes_pod_name
+    target_label: instance
+  - action: drop
+    regex: (etcd2-.*)
+    source_labels:
+    - __meta_kubernetes_pod_name
+  scheme: https
+  scrape_interval: 30s
+  tls_config:
+    ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
+    cert_file: /etc/kubernetes/secrets/etcd-client.crt
+    insecure_skip_verify: true
+    key_file: /etc/kubernetes/secrets/etcd-client.key

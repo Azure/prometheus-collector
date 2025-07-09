@@ -12,7 +12,8 @@ import (
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Extract the prometheus-collector-settings section
-	if settings, ok := metricsConfigBySection["cluster_alias"]; ok {
+	fmt.Println("metricsConfigBySection:", metricsConfigBySection)
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
@@ -104,10 +105,11 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		//TODO: does this account for v2 schema?
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
+		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
 	configurator.Configure(metricsConfigBySection, schemaVersion)

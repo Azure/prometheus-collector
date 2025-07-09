@@ -8,15 +8,11 @@ import (
 	"github.com/prometheus-collector/shared"
 )
 
-func Configmapparserforccp() {
-	fmt.Printf("in configmapparserforccp")
-	fmt.Printf("waiting for 30 secs...")
-	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+func processAndMergeConfigFiles() {
+	configVersionPath := configVersionFile
+	configSchemaPath := schemaVersionFile
 
-	configVersionPath := "/etc/config/settings/config-version"
-	configSchemaPath := "/etc/config/settings/schema-version"
-
-	entries, er := os.ReadDir("/etc/config/settings")
+	entries, er := os.ReadDir(configSettingsPrefix)
 	if er != nil {
 		fmt.Println("error listing /etc/config/settings", er)
 	}
@@ -36,14 +32,14 @@ func Configmapparserforccp() {
 	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	switch schemaVersion {
 	case shared.SchemaVersion.V2:
-		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		filePaths := []string{configSettingsPrefix + "controlplane-metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
 		}
 	case shared.SchemaVersion.V1:
-		configDir := "/etc/config/settings"
+		configDir := configSettingsPrefix
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
@@ -55,24 +51,32 @@ func Configmapparserforccp() {
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
 	parseConfigAndSetEnvInFile(metricsConfigBySection, schemaVersion)
-	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
+	filename := collectorSettingsEnvVarPath
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
-		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
+		fmt.Printf("Error when settinng env for %s: %v\n", collectorSettingsEnvVarPath, err)
 	}
 
 	// Parse the settings for default scrape configs
 	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
-	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
+	filename = defaultSettingsEnvVarPath
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
-		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
+		fmt.Printf("Error when settinng env for %s: %v\n", defaultSettingsEnvVarPath, err)
 	}
 
 	// Parse the settings for default targets metrics keep list config
 	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
 
 	prometheusCcpConfigMerger()
+}
+
+func Configmapparserforccp() {
+	fmt.Printf("in configmapparserforccp")
+	fmt.Printf("waiting for 30 secs...")
+	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+
+	processAndMergeConfigFiles()
 
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)

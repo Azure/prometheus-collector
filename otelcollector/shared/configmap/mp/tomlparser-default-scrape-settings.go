@@ -38,8 +38,8 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 
 	// Check if no defaults are enabled
 	controllerType := os.Getenv("CONTROLLER_TYPE")
-	containerType := strings.ToLower(os.Getenv("CONTAINER_TYPE"))
-	if containerType == "configreadersidecar" {
+	containerType := os.Getenv("CONTAINER_TYPE")
+	if containerType == shared.ControllerType.ConfigReaderSidecar {
 		controllerType = shared.ControllerType.ReplicaSet
 	}
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))

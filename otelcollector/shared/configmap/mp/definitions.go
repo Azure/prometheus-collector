@@ -26,26 +26,6 @@ var (
 	intervalHashFile                   = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 )
 
-type RegexValues struct {
-	kubelet                    string
-	coredns                    string
-	cadvisor                   string
-	kubeproxy                  string
-	apiserver                  string
-	kubestate                  string
-	nodeexporter               string
-	kappiebasic                string
-	windowsexporter            string
-	windowskubeproxy           string
-	networkobservabilityretina string
-	networkobservabilityhubble string
-	networkobservabilitycilium string
-	podannotations             string
-	minimalingestionprofile    string
-	acstorcapacityprovisioner  string
-	acstormetricsexporter      string
-}
-
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
 type FilesystemConfigLoader struct {
 	ConfigMapMountPath string
@@ -66,24 +46,6 @@ type ConfigProcessor struct {
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
-
-	Kubelet                    string
-	Coredns                    string
-	Cadvisor                   string
-	Kubeproxy                  string
-	Apiserver                  string
-	Kubestate                  string
-	NodeExporter               string
-	PrometheusCollectorHealth  string
-	PodAnnotation              string
-	Windowsexporter            string
-	Windowskubeproxy           string
-	Kappiebasic                string
-	NetworkObservabilityRetina string
-	NetworkObservabilityHubble string
-	NetworkObservabilityCilium string
-	AcstorCapacityProvisioner  string
-	AcstorMetricsExporter      string
 }
 
 // ConfigParser is an interface for parsing configurations.

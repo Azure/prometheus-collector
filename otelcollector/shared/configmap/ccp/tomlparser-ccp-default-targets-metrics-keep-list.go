@@ -11,13 +11,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var (
-	configMapMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
-)
-
 // parseConfigMapForKeepListRegex extracts the control plane metrics keep list from metricsConfigBySection.
 func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	fmt.Printf("parseConfigMapForKeepListRegex::schemaVersion: %s\n", schemaVersion)
+
+	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
+
+	minimalProfileEnabled := true // Default to true if not found
 
 	// Get minimal ingestion profile setting
 	sectionName := "default-targets-metrics-keep-list"
@@ -27,7 +27,30 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 		keyName = "enabled"
 	}
 
-	minimalProfileEnabled := true // Default to true if not found
+	switch schemaVersion {
+	case shared.SchemaVersion.V1:
+		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
+		if err != nil {
+			fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", err.Error())
+			metricsConfigBySection = map[string]map[string]string{}
+		} else {
+			minimalProfileEnabled = minimalProfileEnabledBool
+			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
+		}
+	case shared.SchemaVersion.V2:
+		minimalProfileEnabledBool, err := strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+		if err != nil {
+			fmt.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+			metricsConfigBySection = map[string]map[string]string{}
+		} else {
+			minimalProfileEnabled = minimalProfileEnabledBool
+			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
+		}
+	default:
+		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults\n", schemaVersion)
+		metricsConfigBySection = map[string]map[string]string{}
+	}
+
 	if settings, ok := metricsConfigBySection[sectionName]; ok {
 		if minimalProfile, ok := settings[keyName]; ok {
 			fmt.Printf("parseConfigMapForKeepListRegex::Found %s: %s\n", keyName, minimalProfile)
@@ -50,8 +73,9 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 		fmt.Printf("parseConfigMapForKeepListRegex::%s section not found, setting default to true\n", sectionName)
 	}
 
+	// TODO: does this account for v2 schema?
 	// Set keeplist from configmap and with or without minimal ingestion profile
-	settings, _ := metricsConfigBySection["default-targets-metrics-keep-list"]
+	settings := metricsConfigBySection["default-targets-metrics-keep-list"]
 	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
 		if schemaVersion == shared.SchemaVersion.V1 {
 			jobName = "controlplane-" + jobName // Prefix for v1 schema
@@ -69,10 +93,12 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 
 		if minimalProfileEnabled {
 			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
-			job.CustomerKeepListRegex += "|" + job.KeepListRegex
+			job.KeepListRegex = "|" + job.MinimalKeepListRegex
 		} else {
 			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, appending values")
 		}
+
+		job.KeepListRegex = job.CustomerKeepListRegex + job.KeepListRegex
 	}
 }
 
@@ -83,7 +109,7 @@ func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[s
 	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
 		fmt.Printf("tomlparserCCPTargetsMetricsKeepList::Processing with schema version: %s\n", configSchemaVersion)
 	} else {
-		if _, err := os.Stat(configMapMountPath); err == nil {
+		if _, err := os.Stat(configMapKeepListMountPath); err == nil {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 		metricsConfigBySection = map[string]map[string]string{}
@@ -95,7 +121,7 @@ func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[s
 	data := map[string]string{}
 	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
 		envVarName := fmt.Sprintf("CONTROLPLANE_%s_KEEP_LIST_REGEX", strings.ToUpper(jobName))
-		data[envVarName] = job.CustomerKeepListRegex
+		data[envVarName] = job.KeepListRegex
 	}
 	fmt.Printf("tomlparserCCPTargetsMetricsKeepList::Final data to write: %+v\n", data)
 
@@ -105,7 +131,7 @@ func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[s
 		return
 	}
 
-	err = os.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", []byte(out), fs.FileMode(0644))
+	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return

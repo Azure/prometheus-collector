@@ -13,13 +13,17 @@ import (
 var NoDefaultsEnabled bool
 
 func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, schemaVersion string) error {
-	settings, ok := metricsConfigBySection["default-targets-scrape-enabled"]
+	configSectionName := "default-scrape-settings-enabled"
+	if schemaVersion == shared.SchemaVersion.V2 {
+		configSectionName = "default-targets-scrape-enabled"
+	}
+	settings, ok := metricsConfigBySection[configSectionName]
 	if !ok {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::No default-targets-scrape-enabled section found, using defaults")
+		NoDefaultsEnabled = false
 		return nil
 	}
 
-	NoDefaultsEnabled = true
 	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
 		if schemaVersion == shared.SchemaVersion.V1 {
 			jobName = "controlplane-" + jobName // Prefix for v1 schema
@@ -31,15 +35,31 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 			if err != nil {
 				return fmt.Errorf("ParseConfigMapForDefaultScrapeSettings::Error parsing value for %s: %v", jobName, err)
 			}
-			if job.Enabled {
-				NoDefaultsEnabled = false
-			}
-
 			fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Job: %s, Enabled: %t\n", jobName, job.Enabled)
 		}
 	}
+	// Check if no defaults are enabled
+	controllerType := os.Getenv("CONTROLLER_TYPE")
+	containerType := strings.ToLower(os.Getenv("CONTAINER_TYPE"))
+	if containerType == shared.ControllerType.ConfigReaderSidecar {
+		controllerType = shared.ControllerType.ReplicaSet
+	}
+	osType := strings.ToLower(os.Getenv("OS_TYPE"))
+	NoDefaultsEnabled = true
+
+	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
+		fmt.Println("Checking job:", jobName, "ControllerType:", job.ControllerType, "OSType:", job.OSType, "Enabled:", job.Enabled)
+		fmt.Println("Current controllerType:", controllerType, "Current osType:", osType)
+		if job.ControllerType == controllerType &&
+			job.OSType == osType &&
+			job.Enabled {
+			NoDefaultsEnabled = false
+			break
+		}
+	}
+
 	if NoDefaultsEnabled {
-		fmt.Println("PopulateSettingValues::No default scrape configs enabled")
+		fmt.Printf("No default scrape configs enabled\n")
 	}
 	return nil
 }
@@ -56,7 +76,10 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 
 	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
 		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_ENABLED=%v\n", strings.ToUpper(jobName), job.Enabled))
+		fmt.Println("WriteDefaultScrapeSettingsToFile::Writing setting for job:", jobName, "Enabled:", job.Enabled)
 	}
+
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", NoDefaultsEnabled))
 
 	fmt.Println("WriteDefaultScrapeSettingsToFile::Settings written to file successfully")
 	return nil
@@ -113,15 +136,15 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 func tomlparserCCPDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	fmt.Println("tomlparserCCPDefaultScrapeSettings::Start ccp-default-scrape-settings Processing")
 
-	configLoaderPath := "/etc/config/settings/default-targets-scrape-enabled"
+	configLoaderPath := defaultSettingsMountPath
 	if schemaVersion == shared.SchemaVersion.V2 {
-		configLoaderPath = "/etc/config/settings/default-targets-scrape-enabled"
+		configLoaderPath = defaultSettingsMountPathv2
 	}
 
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: configLoaderPath},
 		ConfigWriter:   &FileConfigWriter{},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var",
+		ConfigFilePath: defaultSettingsEnvVarPath,
 		ConfigParser:   &ConfigProcessor{},
 	}
 

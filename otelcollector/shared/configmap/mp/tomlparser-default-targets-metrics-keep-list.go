@@ -13,6 +13,7 @@ import (
 
 // populateKeepList initializes the regex keep list with values from metricsConfigBySection.
 func populateKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
+	// TODO: does this account for v2 schema?
 	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
 
 	minimalProfileEnabled := true

@@ -13,12 +13,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	mergedDefaultConfigPath     = "/opt/defaultsMergedConfig.yml"
-	replicasetControllerType    = "replicaset"
-	defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
-)
-
 var mergedDefaultConfigs map[interface{}]interface{}
 
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
@@ -98,7 +92,7 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 func populateDefaultPrometheusConfig() {
 
 	defaultConfigs := []string{}
-	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
+	currentControllerType := os.Getenv("CONTROLLER_TYPE")
 
 	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
 		if job.Enabled && job.ControllerType == currentControllerType {
@@ -106,17 +100,17 @@ func populateDefaultPrometheusConfig() {
 
 			if job.CustomerKeepListRegex != "" {
 				fmt.Printf("Using regex for %s: %s\n", jobName, job.CustomerKeepListRegex)
-				appendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.CustomerKeepListRegex)
+				appendMetricRelabelConfig(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.CustomerKeepListRegex)
 			}
 
-			contents, err := os.ReadFile(job.ScrapeConfigDefinitionFile)
+			contents, err := os.ReadFile(scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile)
 			if err == nil {
 				for _, envVarName := range job.PlaceholderNames {
 					contents = []byte(strings.Replace(string(contents), fmt.Sprintf("$$%s$$", envVarName), os.Getenv(envVarName), -1))
-					os.WriteFile(job.ScrapeConfigDefinitionFile, contents, fs.FileMode(0644))
+					os.WriteFile(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, contents, fs.FileMode(0644))
 				}
 			}
-			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
+			defaultConfigs = append(defaultConfigs, scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile)
 		}
 	}
 
@@ -197,7 +191,7 @@ func writeDefaultScrapeTargetsFile() {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
 	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
 		populateDefaultPrometheusConfig()
-		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+		if len(mergedDefaultConfigs) > 0 {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err == nil {
@@ -212,12 +206,11 @@ func writeDefaultScrapeTargetsFile() {
 	} else {
 		mergedDefaultConfigs = make(map[interface{}]interface{})
 	}
-	fmt.Printf("Done creating default targets file\n")
 }
 
 func setDefaultFileScrapeInterval(scrapeInterval string) {
 	for _, job := range shared.ControlPlaneDefaultScrapeJobs {
-		currentFile := job.ScrapeConfigDefinitionFile
+		currentFile := scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile
 		contents, err := os.ReadFile(currentFile)
 		if err != nil {
 			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
