@@ -43,7 +43,7 @@ data:
     networkobservabilityCilium = ""
     controlplane-apiserver = "apiserver_request_total"
     controlplane-cluster-autoscaler = "rest_client_requests_total"
-    node-auto-provisioning = ""
+    controlplane-node-auto-provisioning = ""
     controlplane-kube-scheduler = "scheduler_schedule_attempts_total"
     controlplane-kube-controller-manager = "rest_client_requests_total"
     controlplane-etcd = "rest_client_requests_total"
