@@ -22,10 +22,10 @@
   - build: Add Github action for otelcollector upgrade bot (https://github.com/Azure/prometheus-collector/pull/1197)
 
 ## Release 07-10-2025 (CCP only release)
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-cfg`
 * AKS and Arc Container Images:
   - feat: Scrape metrics for node autoprovisioning (aks control plane) (https://github.com/Azure/prometheus-collector/pull/1169)
 
