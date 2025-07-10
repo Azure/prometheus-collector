@@ -10,64 +10,9 @@ parameters:
   type: string
   default: '4.39.0'
 variables:
-- name: ACRRegistry
-  value: containerinsights.azurecr.io
-- name: ARCAdminSubscriptionID
-  value: b9842c7c-1a38-4385-8f39-a51314758bcf
-- name: ARCHelmChartName
-  value: ama-metrics-arc
-- name: ARCResourceAudience
-  value: c699bf69-fb1d-4eaf-999b-99e6b2ae4d85
-- name: ChartTag
-  value: ''
-- name: ConfigReaderTag
-  value: ''
-- name: DevMCRAgentRepository
-  value: /azuremonitor/containerinsights/cidev/prometheus-collector/images
-- name: DevMCRChartRepository
-  value: /azuremonitor/containerinsights/cidev/prometheus-collector
-- name: DevMCRNERepository
-  value: /azuremonitor/containerinsights/cidev/prometheus-node-exporter
-- name: LinuxCCPTag
-  value: ''
-- name: LinuxTag
-  value: ''
-- name: ManagedIdentity
-  value: /subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release
-- name: MCRRegistry
-  value: mcr.microsoft.com
-- name: NEChartTag
-  value: 4.39.0
-- name: ProdACRAgentRepository
-  value: /public/azuremonitor/containerinsights/ciprod/prometheus-collector/images
-- name: ProdACRChartRepository
-  value: /public/azuremonitor/containerinsights/ciprod
-- name: ProdACRKSMRepository
-  value: /public/azuremonitor/containerinsights/ciprod/kube-state-metrics
-- name: ProdACRNERepository
-  value: /public/azuremonitor/containerinsights/ciprod/prometheus-node-exporter
-- name: ProdMCRAgentRepository
-  value: /azuremonitor/containerinsights/ciprod/prometheus-collector/images
-- name: ProdMCRArcChartRepository
-  value: /azuremonitor/containerinsights/ciprod/ama-metrics-arc
-- name: ProdMCRChartRepository
-  value: /azuremonitor/containerinsights/ciprod/prometheus-collector
-- name: ProdMCRKSMRepository
-  value: /azuremonitor/containerinsights/ciprod/kube-state-metrics
-- name: ProdMCRNERepository
-  value: /azuremonitor/containerinsights/ciprod/prometheus-node-exporter
-- name: ProdMCRRepositoryHelmDependencies
-  value: /azuremonitor/containerinsights/ciprod
-- name: PushNewKSMChart
-  value: false
-- name: PushNewNEChart
-  value: false
 - name: ServiceTreeGUID
   value: 3170cdd2-19f0-4027-912b-1027311691a2
-- name: TargetAllocatorTag
-  value: ''
-- name: WindowsTag
-  value: ''
+
 resources:
   containers: []
   pipelines:
@@ -80,6 +25,7 @@ resources:
     type: git
     name: 1ESPipelineTemplates/1ESPipelineTemplates
     ref: refs/tags/release
+
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
