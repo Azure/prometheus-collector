@@ -179,7 +179,7 @@ extends:
         name: Azure-Pipelines-Windows-CI-Test-EO
         os: windows
       templateContext:
-        cloud: Public
+        #cloud: Public
         isProduction: true
         approval:
           workflow: approvalService
@@ -215,7 +215,7 @@ extends:
         name: Azure-Pipelines-Windows-CI-Test-EO
         os: windows
       templateContext:
-        cloud: Public
+        #cloud: Public
         isProduction: true
         approval:
           workflow: approvalService
