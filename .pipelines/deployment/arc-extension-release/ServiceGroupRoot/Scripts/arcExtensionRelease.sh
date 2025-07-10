@@ -97,8 +97,6 @@ if [ -z "$CHART_VERSION" ]; then
     echo "-e error chart version must be provided "
     exit 1
 fi
-
-# NEED TO ADD:
 if [ -z "$METHOD" ]; then
     echo "-e error method must be provided "
     exit 1

@@ -11,7 +11,7 @@
 		"subscription": "30c56c3a-54da-46ea-b004-06eb33432687",
         "releaseTrain": "stable",
         "chartVersion": "0.0.1",
-		"method": "PUT",
+		"method": "PATCH",
         "resourceAudience": "c699bf69-fb1d-4eaf-999b-99e6b2ae4d85",
 		"tenantId": "$(aad.tenants.USME.id)",
 		"environment": "Fairfax",
