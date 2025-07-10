@@ -82,8 +82,6 @@ resources:
     ref: refs/heads/main
 
 variables:
-- name: ServiceTreeGUID
-  value: 3170cdd2-19f0-4027-912b-1027311691a2
 - name: deployToProd
   value: ${{ and(ne(parameters.deployTo, 'Fairfax'), ne(parameters.deployTo, 'Mooncake')) }}
 - name: deployToFairfax
@@ -112,7 +110,6 @@ extends:
       overrideManagedValidationDuration: ${{parameters.overrideManagedValidationDuration}} 
       managedValidationOverrideDurationInHours: ${{parameters.managedValidationDurationInHours}} 
       icmIncidentId: ${{parameters.icmIncidentId}}
-    serviceTreeId: $(ServiceTreeGUID)
 
     stages:
     - stage: PROD_Managed_SDP
