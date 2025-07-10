@@ -1,9 +1,9 @@
 # Azure Monitor Metrics for AKS clusters
 ## Release 07-<TBD>-2025 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-cfg`
 * AKS and Arc Container Images:
   - fix: sign prometheusui.exe, main.exe and remove telegraf.exe code (https://github.com/Azure/prometheus-collector/pull/1213)
   - build(deps): bump github.com/shirou/gopsutil/v4 from 4.25.5 to 4.25.6 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1208)
@@ -22,10 +22,10 @@
   - build: Add Github action for otelcollector upgrade bot (https://github.com/Azure/prometheus-collector/pull/1197)
 
 ## Release 07-10-2025 (CCP only release)
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-TBD-cfg`
 * AKS and Arc Container Images:
   - feat: Scrape metrics for node autoprovisioning (aks control plane) (https://github.com/Azure/prometheus-collector/pull/1169)
 
