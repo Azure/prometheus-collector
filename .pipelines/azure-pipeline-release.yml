@@ -9,6 +9,10 @@ parameters:
   displayName: 'NE Chart Tag'
   type: string
   default: '4.39.0'
+- name: 'onlyCCPRelease'
+  type: boolean
+  default: false
+
 variables:
 - name: ServiceTreeGUID
   value: 3170cdd2-19f0-4027-912b-1027311691a2
@@ -155,6 +159,7 @@ extends:
                 configReaderTag: "$(stageDependencies.Setup.SetTags.outputs['set_tags.ConfigReaderTag'])"
                 pushNewNEChart: "${{ parameters.pushNewNEChart }}"
                 NEChartTag: "${{ parameters.NEChartTag }}"
+                onlyCCPRelease: "${{ parameters.onlyCCPRelease }}"
     - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
       dependsOn: Push_Images

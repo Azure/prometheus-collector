@@ -26,6 +26,7 @@
     "configReaderTag": "",
     "chartTag": "",
     "NEChartTag": "4.39.0",
-    "pushNewNEChart": "false"
+    "pushNewNEChart": "false",
+    "onlyCCPRelease": "false"
   }
 }

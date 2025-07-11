@@ -44,6 +44,10 @@
           {
             "name": "IMAGE_TAG",
             "value": "__LINUX_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -96,6 +100,10 @@
           {
             "name": "IMAGE_TAG",
             "value": "__LINUX_CCP_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -148,6 +156,10 @@
           {
             "name": "IMAGE_TAG",
             "value": "__WINDOWS_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -200,6 +212,10 @@
           {
             "name": "IMAGE_TAG",
             "value": "__TARGETALLOCATOR_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -252,6 +268,10 @@
           {
             "name": "IMAGE_TAG",
             "value": "__CONFIGREADER_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -328,6 +348,10 @@
           {
             "name": "NE_CHART_TAG",
             "value": "__NE_CHART_TAG__"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {
@@ -388,6 +412,10 @@
           {
             "name": "STEP_NAME",
             "value": "PushNEChart"
+          },
+          {
+            "name": "ONLY_CCP_RELEASE",
+            "value": "__ONLY_CCP_RELEASE__"
           }
         ],
         "identity": {

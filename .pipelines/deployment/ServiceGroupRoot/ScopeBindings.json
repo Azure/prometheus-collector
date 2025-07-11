@@ -92,6 +92,10 @@
         {
           "find": "__ARC_HELM_CHART_NAME__",
           "replaceWith": "$config(arcHelmChartName)"
+        },
+        {
+          "find": "__ONLY_CCP_RELEASE__",
+          "replaceWith": "$config(onlyCCPRelease)"
         }
       ]
     }
