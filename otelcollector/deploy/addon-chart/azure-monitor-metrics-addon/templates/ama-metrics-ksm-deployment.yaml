@@ -64,10 +64,16 @@ spec:
           {{- end }}
         {{- end }}
         - --telemetry-port=8081
+        - --shard=0
+        - --total-shards=2
+        - --config=/etc/config/options/kube-state-metrics
+        - --enable-config-file-overwrite=true
         imagePullPolicy: IfNotPresent
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-        image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+        #image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+        #image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:rashmi-ksm-cfg-1"
+        image: "docker.io/rashmichandrashekarms/ksm-cfg:v5"
           {{-  end  }}
         {{-  end  }}
         resources:
@@ -98,6 +104,10 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
+        volumeMounts:
+          - mountPath: /etc/config/options
+            name: ksm-config-vol
+            readOnly: true
       nodeSelector:
         kubernetes.io/os: linux
       {{- if not $arcExtensionSettings.isArcExtension }}
@@ -134,4 +144,9 @@ spec:
           effect: NoExecute
         - operator: "Exists"
           effect: NoSchedule
+      volumes:
+        - name: ksm-config-vol
+          configMap:
+            name: ama-metrics-ksm-options-configmap
+            optional: true
       {{- end }}
