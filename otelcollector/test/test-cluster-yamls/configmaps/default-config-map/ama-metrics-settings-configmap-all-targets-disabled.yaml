@@ -26,6 +26,7 @@ data:
     prometheuscollectorhealth = false
     controlplane-apiserver = false
     controlplane-cluster-autoscaler = false
+    controlplane-node-auto-provisioning = false
     controlplane-kube-scheduler = false
     controlplane-kube-controller-manager = false
     controlplane-etcd = false
@@ -53,6 +54,7 @@ data:
     networkobservabilityCilium = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
+    controlplane-node-auto-provisioning = ""
     controlplane-kube-scheduler = ""
     controlplane-kube-controller-manager = ""
     controlplane-etcd = ""

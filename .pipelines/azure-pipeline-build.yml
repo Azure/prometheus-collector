@@ -1464,8 +1464,10 @@ extends:
               echo "Creating fist party directory"
               mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
               cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract LivenessProbe"
-              docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+              echo "Extract prometheusui"
+              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
+              echo "Extract main"
+              docker cp signingContainer:C:\opt\microsoft\main.exe .
               echo "Extract OtelCollector"
               docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
               echo "Creating OSS directory"
@@ -1475,8 +1477,6 @@ extends:
               docker cp signingContainer:C:\opt\fluent-bit .
               echo "Extract Ruby"
               docker cp signingContainer:C:\ruby26 .
-              echo "Extract telegraf"
-              docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
               echo "Extract promconfigvalidator"
               docker cp signingContainer:C:\opt\promconfigvalidator.exe .
               echo "Removing container"
@@ -1574,11 +1574,11 @@ extends:
             script: |
               docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
               echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
               docker rm pushContainer
@@ -1632,8 +1632,10 @@ extends:
               echo "Creating fist party directory"
               mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
               cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract LivenessProbe"
-              docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+              echo "Extract prometheusui"
+              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
+              echo "Extract main"
+              docker cp signingContainer:C:\opt\microsoft\main.exe .
               echo "Extract OtelCollector"
               docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
               echo "Creating OSS directory"
@@ -1643,8 +1645,6 @@ extends:
               docker cp signingContainer:C:\opt\fluent-bit .
               echo "Extract Ruby"
               docker cp signingContainer:C:\ruby26 .
-              echo "Extract telegraf"
-              docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
               echo "Extract promconfigvalidator"
               docker cp signingContainer:C:\opt\promconfigvalidator.exe .
               echo "Removing container"
@@ -1742,11 +1742,11 @@ extends:
             script: |
               docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
               echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
               docker rm pushContainer
