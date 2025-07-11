@@ -144,6 +144,7 @@ extends:
             rolloutInfra: Prod
             serviceRootPath: deploy/ServiceGroupRoot
             rolloutSpecPath: RolloutSpec.json
+            select: regions(eastus2euap)
             configurationOverrides:
               settings:
                 linuxTag: "$(stageDependencies.Setup.SetTags.outputs['set_tags.LinuxTag'])"
