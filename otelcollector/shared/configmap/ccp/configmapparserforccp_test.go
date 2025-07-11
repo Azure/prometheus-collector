@@ -98,6 +98,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				"AZMON_PROMETHEUS_KUBE-SCHEDULER_ENABLED":          "true",
 				"AZMON_PROMETHEUS_KUBE-CONTROLLER-MANAGER_ENABLED": "true",
 				"AZMON_PROMETHEUS_ETCD_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_NODE-AUTO-PROVISIONING_ENABLED":  "true",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
@@ -126,6 +127,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				controlplane-cluster-autoscaler = true
 				controlplane-kube-scheduler = true
 				controlplane-kube-controller-manager = true
+				controlplane-node-auto-provisioning = true
 				controlplane-etcd = true
 				acstor-capacity-provisioner = true
 				acstor-metrics-exporter = true
@@ -153,6 +155,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				controlplane-kube-scheduler = "test.*|test2"
 				controlplane-kube-controller-manager = "test.*|test2"
 				controlplane-etcd = "test.*|test2"
+				controlplane-node-auto-provisioning = "test.*|test2"
 				acstor-capacity-provisioner = "test.*|test2"
 				acstor-metrics-exporter = "test.*|test2"
 				minimalingestionprofile = true
@@ -203,6 +206,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				controlplane-cluster-autoscaler = false
 				controlplane-kube-scheduler = false
 				controlplane-kube-controller-manager = false
+				controlplane-node-auto-provisioning = false
 				controlplane-etcd = false
 				prometheuscollectorhealth = false
 			`)
@@ -244,6 +248,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				controlplane-cluster-autoscaler = "test.*|test2"
 				controlplane-kube-scheduler = "test.*|test2"
 				controlplane-kube-controller-manager = "test.*|test2"
+				controlplane-node-auto-provisioning = "test.*|test2"
 				controlplane-etcd = "test.*|test2"
 				minimalingestionprofile = false
 			`)
@@ -266,6 +271,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				"AZMON_PROMETHEUS_KUBE-SCHEDULER_ENABLED":          "true",
 				"AZMON_PROMETHEUS_KUBE-CONTROLLER-MANAGER_ENABLED": "true",
 				"AZMON_PROMETHEUS_ETCD_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_NODE-AUTO-PROVISIONING_ENABLED":  "true",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
@@ -289,12 +295,14 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 					kube-scheduler = true
 					kube-controller-manager = true
 					etcd = true
+					node-auto-provisioning = true
 				default-targets-metrics-keep-list: |-
 					apiserver = "test.*|test2"
 					cluster-autoscaler = "test.*|test2"
 					kube-scheduler = "test.*|test2"
 					kube-controller-manager = "test.*|test2"
 					etcd = "test.*|test2"
+					node-auto-provisioning = "test.*|test2"
 				minimal-ingestion-profile: |-
 					enabled = true
 	  		`)

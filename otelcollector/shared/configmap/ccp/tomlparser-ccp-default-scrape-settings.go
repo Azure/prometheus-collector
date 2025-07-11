@@ -47,9 +47,7 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
 	NoDefaultsEnabled = true
 
-	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
-		fmt.Println("Checking job:", jobName, "ControllerType:", job.ControllerType, "OSType:", job.OSType, "Enabled:", job.Enabled)
-		fmt.Println("Current controllerType:", controllerType, "Current osType:", osType)
+	for _, job := range shared.ControlPlaneDefaultScrapeJobs {
 		if job.ControllerType == controllerType &&
 			job.OSType == osType &&
 			job.Enabled {
