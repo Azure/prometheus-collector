@@ -5,12 +5,15 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/prometheus-collector/shared"
 )
 
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Extract the prometheus-collector-settings section
-	if settings, ok := metricsConfigBySection["cluster_alias"]; ok {
+	fmt.Println("metricsConfigBySection:", metricsConfigBySection)
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
@@ -62,12 +65,10 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 }
 
 // Configure processes the configuration and writes it to a file.
-func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
 
-	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
+	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
 		if len(metricsConfigBySection) > 0 {
 			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
@@ -102,13 +103,14 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
-func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		//TODO: does this account for v2 schema?
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
+		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
-	configurator.Configure(metricsConfigBySection)
+	configurator.Configure(metricsConfigBySection, schemaVersion)
 }
