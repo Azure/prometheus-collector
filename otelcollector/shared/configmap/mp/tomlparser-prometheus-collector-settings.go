@@ -47,8 +47,6 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		cp.TargetallocatorHttpsEnabled = true
 		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 			if value, ok := settings["https_config"]; ok {
-				// if value, ok := parsedConfig["https_config"]; ok {
-				// fmt.Printf("value: %s\n", value)
 				if strings.ToLower(value) == "false" {
 					cp.TargetallocatorHttpsEnabled = false
 				}
@@ -119,9 +117,15 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+
+	operatorHttpsEnabled := false
+	if strings.ToLower(os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")) == "true" {
+		operatorHttpsEnabled = true
+	}
+
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
-		ConfigParser:   &ConfigProcessor{},
+		ConfigParser:   &ConfigProcessor{TargetallocatorHttpsEnabled: operatorHttpsEnabled},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}

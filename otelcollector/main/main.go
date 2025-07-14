@@ -29,8 +29,16 @@ func main() {
 	aksRegion := shared.GetEnv("AKSREGION", "")
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 	osType := os.Getenv("OS_TYPE")
+	customEnvironment := shared.GetEnv("customEnvironment", "")
 
 	if osType == "windows" {
+		env := strings.ToLower(customEnvironment)
+		switch env {
+		case "usnat", "ussec", "bleu":
+			shared.BootstrapCACertificates()
+		default:
+			// non-sovereign cloud
+		}
 		shared.SetEnvVariablesForWindows()
 	}
 
@@ -64,7 +72,6 @@ func main() {
 	shared.EchoVar("CONTROLLER_TYPE", shared.GetEnv("CONTROLLER_TYPE", ""))
 	shared.EchoVar("CLUSTER", cluster)
 
-	customEnvironment := shared.GetEnv("customEnvironment", "")
 	if ccpMetricsEnabled != "true" {
 		shared.SetupTelemetry(customEnvironment)
 		if err := shared.ConfigureEnvironment(); err != nil {
@@ -175,7 +182,7 @@ func main() {
 	if controllerType == "replicaset" {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			_ = shared.CollectorTAHttpsCheck(collectorConfig)
-		} else {
+		} else if ccpMetricsEnabled  != "true" {
 			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
@@ -196,8 +203,10 @@ func main() {
 		}
 	}
 
-	fmt.Println("startCommand prometheusui")
-	shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+	if ccpMetricsEnabled != "true" {
+		fmt.Println("startCommand prometheusui")
+		shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+	}
 
 	if osType == "linux" {
 		shared.LogVersionInfo()

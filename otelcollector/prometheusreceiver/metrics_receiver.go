@@ -60,7 +60,10 @@ type pReceiver struct {
 }
 
 // New creates a new prometheus.Receiver reference.
-func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
+func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) (*pReceiver, error) {
+	if err := cfg.PrometheusConfig.Reload(); err != nil {
+		return nil, fmt.Errorf("failed to reload Prometheus config: %w", err)
+	}
 	baseCfg := promconfig.Config(*cfg.PrometheusConfig)
 	registry := prometheus.NewRegistry()
 	registerer := prometheus.WrapRegistererWith(
@@ -85,7 +88,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		),
 		apiServerManager: apiServerManager,
 	}
-	return pr
+	return pr, nil
 }
 
 // Start is the method that starts Prometheus scraping. It
@@ -167,7 +170,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
-		EnableCreatedTimestampZeroIngestion: true,
+		EnableCreatedTimestampZeroIngestion: useCreatedMetricGate.IsEnabled(),
 	}
 
 	if enableNativeHistogramsGate.IsEnabled() {

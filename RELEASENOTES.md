@@ -1,16 +1,63 @@
 # Azure Monitor Metrics for AKS clusters
-## Release <TBD>
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+## Release 07-<TBD>-2025 
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main--TBD-cfg`
+* AKS and Arc Container Images:
+  - fix: sign prometheusui.exe, main.exe and remove telegraf.exe code (https://github.com/Azure/prometheus-collector/pull/1213)
+  - build(deps): bump github.com/shirou/gopsutil/v4 from 4.25.5 to 4.25.6 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1208)
+  - upgrade bot: account for patch version differences between TA and otelcollector (https://github.com/Azure/prometheus-collector/pull/1206)
+  - build: separate out fluent-bit golang version and upgrade to 1.24, revert scan.yml github action changes that should only go in the upgrade file (https://github.com/Azure/prometheus-collector/pull/1203)
+  - build(deps): bump github.com/prometheus/client_golang from 1.11.1 to 1.22.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1202)
+  - fix: respect debug mode setting in configmap v1 (https://github.com/Azure/prometheus-collector/pull/1191)
+  - Remove secret create permissions (https://github.com/Azure/prometheus-collector/pull/1190)
+  - Upgrade ME with Bleu support (https://github.com/Azure/prometheus-collector/pull/1200)
+  - build(deps): bump k8s.io/apimachinery from 0.32.3 to 0.33.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1198)
+* Pipeline/Docs/Templates Updates:
+  - release: separate pipeline for arc release (https://github.com/Azure/prometheus-collector/pull/1212)
+  - update configmap to v1 as its pointed from docs (https://github.com/Azure/prometheus-collector/pull/1188)
+  - Add reference app to dependabot for OSS vulnerability remediation (https://github.com/Azure/prometheus-collector/pull/1201)
+  - Add documentation for AMW limit upgrade api (https://github.com/Azure/prometheus-collector/pull/1199)
+  - build: Add Github action for otelcollector upgrade bot (https://github.com/Azure/prometheus-collector/pull/1197)
+
+## Release 07-10-2025 (CCP only release)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-cfg`
+* AKS and Arc Container Images:
+  - feat: Scrape metrics for node autoprovisioning (aks control plane) (https://github.com/Azure/prometheus-collector/pull/1169)
+
+## Release 06-19-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-cfg`
+* AKS and Arc Container Images:
+  - feat: Update max shards to 24 (https://github.com/Azure/prometheus-collector/pull/1167)
+  - feat: Secure communication between ReplicaSet and TargetAllocator (https://github.com/Azure/prometheus-collector/pull/1133)
+  - fix: Respect minimal ingestion profile when no configmap is present (https://github.com/Azure/prometheus-collector/pull/1184)
+  - fix: Set minimal ingestion environment variable with value (https://github.com/Azure/prometheus-collector/pull/1185)
+  - feat: add support for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1150)
+  - feat: Upgrade OpenTelemetry Collector components from 0.123.0 to 0.127.0 (https://github.com/Azure/prometheus-collector/pull/1182)
+  - fix: Update code for win support in sovereign clouds, ca cert bootstrap (https://github.com/Azure/prometheus-collector/pull/1174)
+
+## Release 05-29-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b-cfg`
 * AKS and Arc Container Images:
   - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
   - feat: add support for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1150)
-  - feat: enable ux recording rules arm, bicep, terraform, policy for aks and arc (https://github.com/Azure/prometheus-collector/pull/1140)
   - feat: Upgrade OpenTelemetry Collector components from 0.121.0 to 0.123.0 (https://github.com/Azure/prometheus-collector/pull/1139)
   - fix: Update CA Cert volume mounts for Azure Linux (https://github.com/Azure/prometheus-collector/pull/1132)
+  - fix: Downgrade Target Allocator to 0.120.0 to fix missing target when it's included in two different jobs (https://github.com/Azure/prometheus-collector/pull/1163)
+  - fix: Very high CPU usage in OpenTelemetry Collector with openmetrics protocol (https://github.com/Azure/prometheus-collector/pull/1162)
+  - fix: Empty scrape job in custom configmap (https://github.com/Azure/prometheus-collector/pull/1161)
 * Pipeline/Docs/Templates Updates:
+  - feat: enable ux recording rules arm, bicep, terraform, policy for aks and arc (https://github.com/Azure/prometheus-collector/pull/1140)
   - fix: move filesystemwatcher to hash based golang appoach for windows (https://github.com/Azure/prometheus-collector/pull/1144)
   - feat: move to 1ES build pipeline (https://github.com/Azure/prometheus-collector/pull/1135)
   - fix: KubePodReadyStateLow alert query (https://github.com/Azure/prometheus-collector/pull/1141)

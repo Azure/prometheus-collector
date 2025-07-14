@@ -12,11 +12,13 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-viper/mapstructure/v2"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install"
@@ -26,26 +28,32 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const (
+	DefaultListenAddr                                  = ":8080"
+	DefaultHttpsListenAddr                             = ":8443"
 	DefaultResyncTime                                  = 5 * time.Minute
 	DefaultConfigFilePath               string         = "/conf/targetallocator.yaml"
 	DefaultCRScrapeInterval             model.Duration = model.Duration(time.Second * 30)
 	DefaultAllocationStrategy                          = "consistent-hashing"
 	DefaultFilterStrategy                              = "relabel-config"
-	DefaultCollectorNotReadyGracePeriod                = 0 * time.Second
+	DefaultCollectorNotReadyGracePeriod                = 30 * time.Second
 )
 
-// By default, scrape protocols include PrometheusText1_0_0, which only Prometheus >=3.0 supports.
-// Manually exclude this protocol until several versions of the Otel Collector support it.
-var DefaultScrapeProtocols = []promconfig.ScrapeProtocol{
-	promconfig.OpenMetricsText1_0_0,
-	promconfig.OpenMetricsText0_0_1,
-	promconfig.PrometheusText0_0_4,
+var (
+	DefaultKubeConfigFilePath string = filepath.Join(homedir.HomeDir(), ".kube", "config")
+)
+
+var defaultScrapeProtocolsCR = []monitoringv1.ScrapeProtocol{
+	monitoringv1.OpenMetricsText1_0_0,
+	monitoringv1.OpenMetricsText0_0_1,
+	monitoringv1.PrometheusText1_0_0,
+	monitoringv1.PrometheusText0_0_4,
 }
 
 // logger which discards all messages written to it. Replace this with slog.DiscardHandler after we require Go 1.24.
@@ -68,18 +76,19 @@ type Config struct {
 }
 
 type PrometheusCRConfig struct {
-	Enabled                         bool                  `yaml:"enabled,omitempty"`
-	AllowNamespaces                 []string              `yaml:"allow_namespaces,omitempty"`
-	DenyNamespaces                  []string              `yaml:"deny_namespaces,omitempty"`
-	PodMonitorSelector              *metav1.LabelSelector `yaml:"pod_monitor_selector,omitempty"`
-	PodMonitorNamespaceSelector     *metav1.LabelSelector `yaml:"pod_monitor_namespace_selector,omitempty"`
-	ServiceMonitorSelector          *metav1.LabelSelector `yaml:"service_monitor_selector,omitempty"`
-	ServiceMonitorNamespaceSelector *metav1.LabelSelector `yaml:"service_monitor_namespace_selector,omitempty"`
-	ScrapeConfigSelector            *metav1.LabelSelector `yaml:"scrape_config_selector,omitempty"`
-	ScrapeConfigNamespaceSelector   *metav1.LabelSelector `yaml:"scrape_config_namespace_selector,omitempty"`
-	ProbeSelector                   *metav1.LabelSelector `yaml:"probe_selector,omitempty"`
-	ProbeNamespaceSelector          *metav1.LabelSelector `yaml:"probe_namespace_selector,omitempty"`
-	ScrapeInterval                  model.Duration        `yaml:"scrape_interval,omitempty"`
+	Enabled                         bool                          `yaml:"enabled,omitempty"`
+	AllowNamespaces                 []string                      `yaml:"allow_namespaces,omitempty"`
+	DenyNamespaces                  []string                      `yaml:"deny_namespaces,omitempty"`
+	PodMonitorSelector              *metav1.LabelSelector         `yaml:"pod_monitor_selector,omitempty"`
+	PodMonitorNamespaceSelector     *metav1.LabelSelector         `yaml:"pod_monitor_namespace_selector,omitempty"`
+	ServiceMonitorSelector          *metav1.LabelSelector         `yaml:"service_monitor_selector,omitempty"`
+	ServiceMonitorNamespaceSelector *metav1.LabelSelector         `yaml:"service_monitor_namespace_selector,omitempty"`
+	ScrapeConfigSelector            *metav1.LabelSelector         `yaml:"scrape_config_selector,omitempty"`
+	ScrapeConfigNamespaceSelector   *metav1.LabelSelector         `yaml:"scrape_config_namespace_selector,omitempty"`
+	ProbeSelector                   *metav1.LabelSelector         `yaml:"probe_selector,omitempty"`
+	ProbeNamespaceSelector          *metav1.LabelSelector         `yaml:"probe_namespace_selector,omitempty"`
+	ScrapeProtocols                 []monitoringv1.ScrapeProtocol `yaml:"scrape_protocols,omitempty"`
+	ScrapeInterval                  model.Duration                `yaml:"scrape_interval,omitempty"`
 }
 
 type HTTPSServerConfig struct {
@@ -127,50 +136,19 @@ func MapToPromConfig() mapstructure.DecodeHookFuncType {
 			return data, nil
 		}
 
-		pConfig := &promconfig.Config{}
-
 		dataMap := data.(map[any]any)
-		err := ApplyPromConfigDefaults(dataMap)
-		if err != nil {
-			return nil, err
-		}
 		mb, err := yaml.Marshal(dataMap)
 		if err != nil {
 			return nil, err
 		}
 
+		pConfig := &promconfig.Config{}
 		err = yaml.Unmarshal(mb, pConfig)
 		if err != nil {
 			return nil, err
 		}
 		return pConfig, nil
 	}
-}
-
-// applyPromConfigDefaults applies our own defaults to the Prometheus configuration. The unmarshalling process for
-// Prometheus config is quite involved, and as a result, we need to apply our own defaults before it happens.
-func ApplyPromConfigDefaults(promcCfgMap map[any]any) error {
-	// use our own struct definition here because we don't want Prometheus unmarshalling logic to apply here
-	promCfg := struct {
-		GlobalConfig struct {
-			ScrapeProtocols []promconfig.ScrapeProtocol `mapstructure:"scrape_protocols"`
-			Rest            map[any]any                 `mapstructure:",remain"`
-		} `mapstructure:"global"`
-		Rest map[any]any `mapstructure:",remain"`
-	}{}
-	err := mapstructure.Decode(promcCfgMap, &promCfg)
-	if err != nil {
-		return err
-	}
-	// apply defaults here
-	promCfg.GlobalConfig.ScrapeProtocols = DefaultScrapeProtocols
-
-	// decode back into the map
-	err = mapstructure.Decode(promCfg, &promcCfgMap)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // MapToLabelSelector returns a DecodeHookFuncType that
@@ -227,9 +205,10 @@ func LoadFromCLI(target *Config, flagSet *pflag.FlagSet) error {
 	klog.SetLogger(target.RootLogger)
 	ctrl.SetLogger(target.RootLogger)
 
-	target.KubeConfigFilePath, err = getKubeConfigFilePath(flagSet)
-	if err != nil {
-		return err
+	if kubeConfigFilePath, changed, flagErr := getKubeConfigFilePath(flagSet); flagErr != nil {
+		return flagErr
+	} else if changed {
+		target.KubeConfigFilePath = kubeConfigFilePath
 	}
 	clusterConfig, err := clientcmd.BuildConfigFromFlags("", target.KubeConfigFilePath)
 	if err != nil {
@@ -245,9 +224,10 @@ func LoadFromCLI(target *Config, flagSet *pflag.FlagSet) error {
 	}
 	target.ClusterConfig = clusterConfig
 
-	target.ListenAddr, err = getListenAddr(flagSet)
-	if err != nil {
-		return err
+	if listenAddr, changed, flagErr := getListenAddr(flagSet); flagErr != nil {
+		return flagErr
+	} else if changed {
+		target.ListenAddr = listenAddr
 	}
 
 	if prometheusCREnabled, changed, flagErr := getPrometheusCREnabled(flagSet); flagErr != nil {
@@ -291,7 +271,9 @@ func LoadFromCLI(target *Config, flagSet *pflag.FlagSet) error {
 
 // LoadFromEnv loads configuration from environment variables.
 func LoadFromEnv(target *Config) error {
-	target.CollectorNamespace = os.Getenv("OTELCOL_NAMESPACE")
+	if ns, ok := os.LookupEnv("OTELCOL_NAMESPACE"); ok {
+		target.CollectorNamespace = ns
+	}
 	return nil
 }
 
@@ -335,6 +317,11 @@ func unmarshal(cfg *Config, configFile string) error {
 
 func CreateDefaultConfig() Config {
 	return Config{
+		ListenAddr:         DefaultListenAddr,
+		KubeConfigFilePath: DefaultKubeConfigFilePath,
+		HTTPS: HTTPSServerConfig{
+			ListenAddr: DefaultHttpsListenAddr,
+		},
 		AllocationStrategy:         DefaultAllocationStrategy,
 		AllocationFallbackStrategy: "",
 		FilterStrategy:             DefaultFilterStrategy,
@@ -344,16 +331,17 @@ func CreateDefaultConfig() Config {
 			PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
 			ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
 			ProbeNamespaceSelector:          &metav1.LabelSelector{},
+			ScrapeProtocols:                 defaultScrapeProtocolsCR,
 		},
 		CollectorNotReadyGracePeriod: DefaultCollectorNotReadyGracePeriod,
 	}
 }
 
-func Load() (*Config, error) {
+func Load(args []string) (*Config, error) {
 	var err error
 
 	flagSet := getFlagSet(pflag.ExitOnError)
-	err = flagSet.Parse(os.Args)
+	err = flagSet.Parse(args)
 	if err != nil {
 		return nil, err
 	}
