@@ -124,10 +124,10 @@ func processConfigFiles() {
 
 	fmt.Println(metricsConfigBySection)
 
-	// Check if /etc/config/settings/config-version exists
-	if _, err := os.Stat(configVersionFile); os.IsNotExist(err) {
+	// Check if /etc/config/settings/schema-version exists
+	if _, err := os.Stat(schemaVersionFile); os.IsNotExist(err) {
 		metricsConfigBySection = nil
-		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+		fmt.Println("Schema version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
 	}
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)

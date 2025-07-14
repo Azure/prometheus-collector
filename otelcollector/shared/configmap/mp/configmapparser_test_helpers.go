@@ -167,7 +167,7 @@ func createTempFile(dir string, name string, content string) string {
 	fmt.Println("creating file with content", content)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
-		GinkgoT().Fatalf("Failed to create directory %s: %v", dir, err)
+		return fmt.Sprintf("Failed to create directory %s: %v", dir, err)
 	}
 	filepath := dir + name
 	tempFile, err := os.Create(filepath)
@@ -194,38 +194,11 @@ func createTempFile(dir string, name string, content string) string {
 func setSetupEnvVars(controllertype string, os string) {
 	envVars := map[string]string{}
 	if os == shared.OSType.Windows {
-		envVars = map[string]string{}
-	}
-	switch controllertype {
-	case shared.ControllerType.ReplicaSet:
-		envVars = map[string]string{
-			"AZMON_OPERATOR_ENABLED":    "true",
-			"CONTAINER_TYPE":            "",
-			"CONTROLLER_TYPE":           "ReplicaSet",
-			"OS_TYPE":                   "linux",
-			"MODE":                      "advanced",
-			"KUBE_STATE_NAME":           "ama-metrics-ksm",
-			"POD_NAMESPACE":             "kube-system",
-			"MAC":                       "true",
-			"AZMON_SET_GLOBAL_SETTINGS": "true",
-		}
-	case shared.ControllerType.ConfigReaderSidecar:
-		envVars = map[string]string{
-			"AZMON_OPERATOR_ENABLED":    "true",
-			"CONTAINER_TYPE":            "ConfigReaderSidecar",
-			"OS_TYPE":                   "linux",
-			"MODE":                      "advanced",
-			"KUBE_STATE_NAME":           "ama-metrics-ksm",
-			"POD_NAMESPACE":             "kube-system",
-			"MAC":                       "true",
-			"AZMON_SET_GLOBAL_SETTINGS": "true",
-		}
-	case shared.ControllerType.DaemonSet:
 		envVars = map[string]string{
 			"AZMON_OPERATOR_ENABLED":    "true",
 			"CONTAINER_TYPE":            "",
 			"CONTROLLER_TYPE":           "DaemonSet",
-			"OS_TYPE":                   "linux",
+			"OS_TYPE":                   "windows",
 			"MODE":                      "advanced",
 			"KUBE_STATE_NAME":           "ama-metrics-ksm",
 			"POD_NAMESPACE":             "kube-system",
@@ -235,8 +208,49 @@ func setSetupEnvVars(controllertype string, os string) {
 			"NODE_EXPORTER_TARGETPORT":  "9100",
 			"AZMON_SET_GLOBAL_SETTINGS": "true",
 		}
-	default:
-		envVars = map[string]string{}
+	} else if os == shared.OSType.Linux {
+		switch controllertype {
+		case shared.ControllerType.ReplicaSet:
+			envVars = map[string]string{
+				"AZMON_OPERATOR_ENABLED":    "true",
+				"CONTAINER_TYPE":            "",
+				"CONTROLLER_TYPE":           "ReplicaSet",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
+			}
+		case shared.ControllerType.ConfigReaderSidecar:
+			envVars = map[string]string{
+				"AZMON_OPERATOR_ENABLED":    "true",
+				"CONTAINER_TYPE":            "ConfigReaderSidecar",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
+			}
+		case shared.ControllerType.DaemonSet:
+			envVars = map[string]string{
+				"AZMON_OPERATOR_ENABLED":    "true",
+				"CONTAINER_TYPE":            "",
+				"CONTROLLER_TYPE":           "DaemonSet",
+				"OS_TYPE":                   "linux",
+				"MODE":                      "advanced",
+				"KUBE_STATE_NAME":           "ama-metrics-ksm",
+				"POD_NAMESPACE":             "kube-system",
+				"MAC":                       "true",
+				"NODE_NAME":                 "test-node",
+				"NODE_IP":                   "192.168.1.1",
+				"NODE_EXPORTER_TARGETPORT":  "9100",
+				"AZMON_SET_GLOBAL_SETTINGS": "true",
+			}
+		default:
+			envVars = map[string]string{}
+		}
 	}
 
 	setEnvVars(envVars)

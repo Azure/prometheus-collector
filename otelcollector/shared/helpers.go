@@ -90,7 +90,6 @@ func LogVersionInfo() {
 	}
 }
 
-
 func SetEnvVariablesForWindows() {
 	// Set Windows version (Microsoft Windows Server 2019 Datacenter or 2022 Datacenter)
 	out, err := exec.Command("wmic", "os", "get", "Caption").Output()
@@ -213,7 +212,8 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
+			fmt.Printf("failed to open file %s: %v\n", filePath, err)
+			continue
 		}
 		defer func() {
 			if cerr := file.Close(); cerr != nil {

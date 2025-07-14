@@ -1,0 +1,30 @@
+global:
+  external_labels:
+    external_label_1: external_label_value
+    external_label_123: external_label_value
+  scrape_interval: 15s
+scrape_configs:
+- job_name: prometheus_ref_app
+  kubernetes_sd_configs:
+  - role: pod
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  relabel_configs:
+  - action: keep
+    regex: prometheus-reference-app
+    source_labels:
+    - __meta_kubernetes_pod_label_app
+  - action: replace
+    regex: (.*)
+    replacement: $$1
+    source_labels:
+    - __meta_kubernetes_pod_label_app
+    target_label: double_dollar_sign
+  - action: replace
+    regex: (.*)
+    replacement: $1
+    source_labels:
+    - __meta_kubernetes_pod_label_app
+    target_label: single_dollar_sign
+  scheme: http

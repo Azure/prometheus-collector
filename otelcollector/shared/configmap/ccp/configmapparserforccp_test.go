@@ -369,6 +369,153 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			isDefaultConfig := false
 			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, nil, expectedContentsFilePath, "")
 		})
+		It("should process when the minimal ingestion profile is false for CCP", func() {
+			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+
+			expectedEnvVars := getDefaultExpectedEnvVars()
+			extraEnvVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+				"AZMON_CLUSTER_LABEL":                              "alias",
+				"AZMON_CLUSTER_ALIAS":                              "alias",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
+				"AZMON_PROMETHEUS_CLUSTER-AUTOSCALER_ENABLED":      "true",
+				"AZMON_PROMETHEUS_KUBE-SCHEDULER_ENABLED":          "true",
+				"AZMON_PROMETHEUS_KUBE-CONTROLLER-MANAGER_ENABLED": "true",
+				"AZMON_PROMETHEUS_ETCD_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_NODE-AUTO-PROVISIONING_ENABLED":  "true",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
+			expectedKeepListHashMap := getExpectedKeepListMap(false, "test.*|test2")
+			expectedContentsFilePath := "./testdata/advanced-no-minimal-linux-rs.yaml"
+
+			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			fmt.Println("Schema version file created at:", schemaVersionFile)
+			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			fmt.Println("Config version file created at:", configVersionFile)
+			_ = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `
+    			cluster_alias = "alias"
+   				debug-mode = true
+    			https_config = true
+			`)
+			_ = createTempFile(configSettingsPrefix, "controlplane-metrics", `
+				default-targets-scrape-enabled: |-
+					apiserver = true
+					cluster-autoscaler = true
+					kube-scheduler = true
+					kube-controller-manager = true
+					etcd = true
+					node-auto-provisioning = true
+				default-targets-metrics-keep-list: |-
+					apiserver = "test.*|test2"
+					cluster-autoscaler = "test.*|test2"
+					kube-scheduler = "test.*|test2"
+					kube-controller-manager = "test.*|test2"
+					etcd = "test.*|test2"
+					node-auto-provisioning = "test.*|test2"
+				minimal-ingestion-profile: |-
+					enabled = false
+	  		`)
+			_ = createTempFile(configSettingsPrefix, "metrics", `
+				default-targets-scrape-enabled: |-
+					kubelet = true
+					coredns = true
+					cadvisor = true
+					kubeproxy = true
+					apiserver = true
+					kubestate = true
+					nodeexporter = true
+					windowsexporter = true
+					windowskubeproxy = true
+					kappiebasic = true
+					networkobservabilityRetina = true
+					networkobservabilityHubble = true
+					networkobservabilityCilium = true
+					acstor-capacity-provisioner = true
+					acstor-metrics-exporter = true
+					prometheuscollectorhealth = false
+				pod-annotation-based-scraping: |-
+					podannotationnamespaceregex = ".*|value"
+				default-targets-metrics-keep-list: |-
+					kubelet = "test.*|test2"
+					coredns = "test.*|test2"
+					cadvisor = "test.*|test2"
+					kubeproxy = "test.*|test2"
+					apiserver = "test.*|test2"
+					kubestate = "test.*|test2"
+					nodeexporter = "test.*|test2"
+					windowsexporter = "test.*|test2"
+					windowskubeproxy = "test.*|test2"
+					podannotations = "test.*|test2"
+					kappiebasic = "test.*|test2"
+					networkobservabilityRetina = "test.*|test2"
+					networkobservabilityHubble = "test.*|test2"
+					networkobservabilityCilium = "test.*|test2"
+					acstor-capacity-provisioner = "test.*|test2"
+					acstor-metrics-exporter = "test.*|test2"
+					prometheuscollectorhealth = "test.*|test2"
+				minimal-ingestion-profile: |-
+					enabled = true
+				default-targets-scrape-interval-settings: |-
+					kubelet = "15s"
+					coredns = "15s"
+					cadvisor = "15s"
+					kubeproxy = "15s"
+					apiserver = "15s"
+					kubestate = "15s"
+					nodeexporter = "15s"
+					windowsexporter = "15s"
+					windowskubeproxy = "15s"
+					kappiebasic = "15s"
+					networkobservabilityRetina = "15s"
+					networkobservabilityHubble = "15s"
+					networkobservabilityCilium = "15s"
+					prometheuscollectorhealth = "15s"
+					podannotations = "15s"
+					acstor-capacity-provisioner = "15s"
+					acstor-metrics-exporter = "15s"
+			`)
+
+			isDefaultConfig := false
+			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, nil, expectedContentsFilePath, "")
+		})
+		It("should process the config with no scrape jobs enabled and without all sections for the Linux ReplicaSet", func() {
+			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+			expectedEnvVars := getDefaultExpectedEnvVars()
+			extraEnvVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+				"AZMON_PROMETHEUS_APISERVER_ENABLED":               "false",
+				"AZMON_PROMETHEUS_CLUSTER-AUTOSCALER_ENABLED":      "false",
+				"AZMON_PROMETHEUS_KUBE-SCHEDULER_ENABLED":          "false",
+				"AZMON_PROMETHEUS_KUBE-CONTROLLER-MANAGER_ENABLED": "false",
+				"AZMON_PROMETHEUS_ETCD_ENABLED":                    "false",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "true",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
+			expectedKeepListHashMap := getExpectedKeepListMap(false, "")
+			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
+			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			_ = createTempFile(configSettingsPrefix, "controlplane-metrics", `
+				default-targets-scrape-enabled: |-
+					apiserver = false
+					cluster-autoscaler = false
+					kube-scheduler = false
+					kube-controller-manager = false
+					etcd = false
+					node-auto-provisioning = false
+				minimal-ingestion-profile: |-
+					enabled = false
+	  		`)
+			isDefaultConfig := false
+			expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
+			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
+		})
 	})
 })
 

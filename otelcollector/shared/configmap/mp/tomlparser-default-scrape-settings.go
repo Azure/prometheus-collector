@@ -12,6 +12,33 @@ import (
 
 var NoDefaultsEnabled bool
 
+func checkIfNoDefaultsEnabled() bool {
+	// Check if no defaults are enabled
+	controllerType := os.Getenv("CONTROLLER_TYPE")
+	containerType := os.Getenv("CONTAINER_TYPE")
+	if containerType == shared.ControllerType.ConfigReaderSidecar {
+		controllerType = shared.ControllerType.ReplicaSet
+	}
+
+	osType := strings.ToLower(os.Getenv("OS_TYPE"))
+	NoDefaultsEnabled = true
+
+	for _, job := range shared.DefaultScrapeJobs {
+		fmt.Println("checking job:", job.JobName, "ControllerType:", job.ControllerType, "OSType:", job.OSType, "Enabled:", job.Enabled)
+		if job.ControllerType == controllerType &&
+			job.OSType == osType &&
+			job.Enabled {
+			NoDefaultsEnabled = false
+			break
+		}
+	}
+
+	if NoDefaultsEnabled {
+		fmt.Printf("No default scrape configs enabled\n")
+	}
+	return NoDefaultsEnabled
+}
+
 func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, schemaVersion string) error {
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == shared.SchemaVersion.V2 {
@@ -20,7 +47,7 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 	settings, ok := metricsConfigBySection[configSectionName]
 	if !ok {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::No default-targets-scrape-enabled section found, using defaults")
-		NoDefaultsEnabled = false
+		NoDefaultsEnabled = checkIfNoDefaultsEnabled()
 		return nil
 	}
 
@@ -35,28 +62,7 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 			fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Job: %s, Enabled: %t\n", jobName, job.Enabled)
 		}
 	}
-
-	// Check if no defaults are enabled
-	controllerType := os.Getenv("CONTROLLER_TYPE")
-	containerType := os.Getenv("CONTAINER_TYPE")
-	if containerType == shared.ControllerType.ConfigReaderSidecar {
-		controllerType = shared.ControllerType.ReplicaSet
-	}
-	osType := strings.ToLower(os.Getenv("OS_TYPE"))
-	NoDefaultsEnabled = true
-
-	for _, job := range shared.DefaultScrapeJobs {
-		if job.ControllerType == controllerType &&
-			job.OSType == osType &&
-			job.Enabled {
-			NoDefaultsEnabled = false
-			break
-		}
-	}
-
-	if NoDefaultsEnabled {
-		fmt.Printf("No default scrape configs enabled\n")
-	}
+	NoDefaultsEnabled = checkIfNoDefaultsEnabled()
 
 	return nil
 }
