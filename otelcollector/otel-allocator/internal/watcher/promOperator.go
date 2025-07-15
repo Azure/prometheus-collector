@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -49,6 +50,11 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	}
 
 	clientset, err := kubernetes.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +196,7 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -321,7 +327,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 						return
 					}
 
-					newSecret, err := w.store.SecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+					newSecret, err := w.store.GetSecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
 
 					if err != nil {
 						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
