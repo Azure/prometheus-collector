@@ -34,8 +34,17 @@ func IsValidRegex(input string) bool {
 	return err == nil
 }
 
-func DetermineConfigFiles(controllerType, clusterOverride string) (string, string) {
-	var meConfigFile, fluentBitConfigFile string
+func DetermineConfigFiles(controllerType, clusterOverride string, otlpEnabled bool) (string, string, string, bool) {
+	var meConfigFile, fluentBitConfigFile, meDCRConfigDirectory string
+	var meLocalControl bool
+
+	if otlpEnabled {
+		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/me"
+		meLocalControl = false
+	} else {
+		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/metricsextension"
+		meLocalControl = true
+	}
 
 	switch {
 	case strings.ToLower(controllerType) == "replicaset":
@@ -48,20 +57,36 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 	case os.Getenv("OS_TYPE") != "windows":
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal.config"
+			if otlpEnabled {
+				meConfigFile = "/usr/sbin/me_ds_internal_setdim.config"
+			} else {
+				meConfigFile = "/usr/sbin/me_ds_internal.config"
+			}
 		} else {
-			meConfigFile = "/usr/sbin/me_ds.config"
+			if otlpEnabled {
+				meConfigFile = "/usr/sbin/me_ds_setdim.config"
+			} else {
+				meConfigFile = "/usr/sbin/me_ds.config"
+			}
 		}
 	default:
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
+			if otlpEnabled {
+				meConfigFile = "/opt/metricextension/me_ds_internal_setdim_win.config"
+			} else {
+				meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
+			}
 		} else {
-			meConfigFile = "/opt/metricextension/me_ds_win.config"
+			if otlpEnabled {
+				meConfigFile = "/opt/metricextension/me_ds_setdim_win.config"
+			} else {
+				meConfigFile = "/opt/metricextension/me_ds_win.config"
+			}
 		}
 	}
 
-	return meConfigFile, fluentBitConfigFile
+	return meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl
 }
 
 func LogVersionInfo() {

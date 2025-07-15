@@ -54,10 +54,11 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"operatormodelcfgmapsetting":              "AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",
 	"operatormodelchartsetting":               "AZMON_OPERATOR_ENABLED_CHART_SETTING",
 	"collectorHpaEnabled":                     "AZMON_COLLECTOR_HPA_ENABLED",
-	"isarcextension":                          "$IS_ARC_EXTENSION",
-	"arcdistribution":                         "$ARC_DISTRIBUTION",
-	"mountmarinercerts":                       "$MOUNT_MARINER_CERTS",
-	"mountubuntucerts":                        "$MOUNT_UBUNTU_CERTS",
+	"isarcextension":                          "IS_ARC_EXTENSION",
+	"arcdistribution":                         "ARC_DISTRIBUTION",
+	"mountmarinercerts":                       "MOUNT_MARINER_CERTS",
+	"mountubuntucerts":                        "MOUNT_UBUNTU_CERTS",
+	"otlpenabled":                             "AZMON_FULL_OTLP_ENABLED",
 	"settingsconfigschemaversion":             "AZMON_AGENT_CFG_SCHEMA_VERSION",
 }
 

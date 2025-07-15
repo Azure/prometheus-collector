@@ -130,6 +130,16 @@ func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string)
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
+func parseOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseOpentelemetryMetricsSettings")
+	if err := ConfigureOpentelemetryMetricsSettings(metricsConfigBySection); err != nil {
+		shared.EchoError(err.Error())
+		return
+	}
+	handleEnvFileError(opentelemetryMetricsEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parseOpentelemetryMetricsSettings")
+}
+
 func handleEnvFileError(filename string) {
 	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -160,15 +170,16 @@ func Configmapparser() {
 	}
 
 	// Check if /etc/config/settings/config-version exists
-  if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
-	  metricsConfigBySection = nil
-	  fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
-  }
+	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
+		metricsConfigBySection = nil
+		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	}
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
 	parseDefaultScrapeSettings(metricsConfigBySection)
 	parseDebugModeSettings(metricsConfigBySection)
+	parseOpentelemetryMetricsSettings(metricsConfigBySection)
 
 	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
 	tomlparserScrapeInterval(metricsConfigBySection)
