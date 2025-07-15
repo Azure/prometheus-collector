@@ -75,7 +75,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 			}
 		} else {
 			minimalingestionprofile_value = "true" // Default value for unsupported schema versions
-			shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", true, true)
+			shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", "true", true)
 			return RegexValues{}, fmt.Errorf("unsupported/missing config schema version - '%s', using defaults, please use supported schema version", configSchemaVersion)
 		}
 	}
