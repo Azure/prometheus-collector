@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/oklog/run"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/discovery"
 	"go.opentelemetry.io/otel"
@@ -19,6 +20,7 @@ import (
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -75,6 +77,17 @@ func main() {
 	ctx := context.Background()
 	log := ctrl.Log.WithName("allocator")
 
+	k8sClient, err := kubernetes.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		setupLog.Error(err, "Unable to initialize kubernetes client")
+		os.Exit(1)
+	}
+	monitoringClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		setupLog.Error(err, "Unable to initialize monitoring client")
+		os.Exit(1)
+	}
+
 	metricExporter, promErr := otelprom.New()
 	if promErr != nil {
 		panic(promErr)
@@ -115,7 +128,7 @@ func main() {
 	if targetErr != nil {
 		panic(targetErr)
 	}
-	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, cfg.ClusterConfig, cfg.CollectorNotReadyGracePeriod)
+	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, k8sClient, cfg.CollectorNotReadyGracePeriod)
 	if collectorWatcherErr != nil {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
@@ -124,7 +137,8 @@ func main() {
 	defer close(interrupts)
 
 	if cfg.PrometheusCR.Enabled {
-		promWatcher, allocErr := allocatorWatcher.NewPrometheusCRWatcher(ctx, setupLog.WithName("prometheus-cr-watcher"), *cfg)
+		promWatcher, allocErr := allocatorWatcher.NewPrometheusCRWatcher(
+			ctx, setupLog.WithName("prometheus-cr-watcher"), k8sClient, monitoringClient, *cfg)
 		if allocErr != nil {
 			setupLog.Error(allocErr, "Can't start the prometheus watcher")
 			os.Exit(1)
@@ -168,8 +182,8 @@ func main() {
 		func() error {
 			// Initial loading of the config file's scrape config
 			if cfg.PromConfig != nil && len(cfg.PromConfig.ScrapeConfigs) > 0 {
-				err := targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig.ScrapeConfigs)
-				if err != nil {
+				applyErr := targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig.ScrapeConfigs)
+				if applyErr != nil {
 					setupLog.Error(err, "Unable to apply initial configuration")
 					return err
 				}
@@ -177,9 +191,9 @@ func main() {
 				setupLog.Info("Prometheus config empty, skipping initial discovery configuration")
 			}
 
-			err := targetDiscoverer.Run()
+			tErr := targetDiscoverer.Run()
 			setupLog.Info("Target discoverer exited")
-			return err
+			return tErr
 		},
 		func(_ error) {
 			setupLog.Info("Closing target discoverer")
@@ -187,9 +201,9 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := collectorWatcher.Watch(cfg.CollectorNamespace, cfg.CollectorSelector, allocator.SetCollectors)
+			watchErr := collectorWatcher.Watch(cfg.CollectorNamespace, cfg.CollectorSelector, allocator.SetCollectors)
 			setupLog.Info("Collector watcher exited")
-			return err
+			return watchErr
 		},
 		func(_ error) {
 			setupLog.Info("Closing collector watcher")
@@ -197,9 +211,9 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := srv.Start()
+			startErr := srv.Start()
 			setupLog.Info("Server failed to start")
-			return err
+			return startErr
 		},
 		func(_ error) {
 			setupLog.Info("Closing server")
@@ -210,9 +224,9 @@ func main() {
 	if cfg.HTTPS.Enabled {
 		runGroup.Add(
 			func() error {
-				err := srv.StartHTTPS()
+				startErr := srv.StartHTTPS()
 				setupLog.Info("HTTPS Server failed to start")
-				return err
+				return startErr
 			},
 			func(_ error) {
 				setupLog.Info("Closing HTTPS server")
