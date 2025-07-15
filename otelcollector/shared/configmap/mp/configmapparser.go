@@ -159,12 +159,6 @@ func Configmapparser() {
 		fmt.Println("Invalid schema version. Using defaults.")
 	}
 
-	// Check if /etc/config/settings/config-version exists
-  if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
-	  metricsConfigBySection = nil
-	  fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
-  }
-
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
 	parseDefaultScrapeSettings(metricsConfigBySection)
