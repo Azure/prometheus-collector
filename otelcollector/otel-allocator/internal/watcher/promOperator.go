@@ -12,6 +12,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
+	promOperatorMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
@@ -197,7 +198,8 @@ func checkCRDAvailability(dcl discovery.DiscoveryInterface, resourceName string)
 
 	apiGroups := apiList.Groups
 	for _, group := range apiGroups {
-		if group.Name == "monitoring.coreos.com" {
+		// if group.Name == "monitoring.coreos.com" {
+		if group.Name == promOperatorMonitoring.GroupName {
 			for _, version := range group.Versions {
 				resources, err := dcl.ServerResourcesForGroupVersion(version.GroupVersion)
 				if err != nil {
