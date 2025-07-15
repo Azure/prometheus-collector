@@ -10,8 +10,6 @@ data:
   prometheus-collector-settings: |-
     cluster_alias = ""
     https_config = true
-  opentelemetry-metrics: |-
-      enabled = false
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false
