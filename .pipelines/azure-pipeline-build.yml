@@ -1,15 +1,12 @@
 trigger:
   branches:
     include:
-    - feature/otlpmain
     - main
-    - vishwa/otlpfeaturemain-07012025
 pr:
   autoCancel: true
   branches:
     include:
     - main
-    - feature/otlpmain
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
