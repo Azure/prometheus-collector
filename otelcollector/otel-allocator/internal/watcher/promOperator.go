@@ -290,7 +290,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 
 		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
 		if name == string(v1.ResourceSecrets) {
-			w.logger.Info("rashmi-logs: Using custom event handler for secrets informer", "informer", name)
+			w.logger.Info("Using custom event handler for secrets informer", "informer", name)
 			// only send an event notification if there isn't one already
 			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				// these functions only write to the notification channel if it's empty to avoid blocking
@@ -302,7 +302,6 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					}
 				},
 				UpdateFunc: func(oldObj, newObj interface{}) {
-					w.logger.Info("rashmi-logs: Inside secret informer UpdateFunc")
 					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
 					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
 					secretName := newMeta.GetObjectMeta().GetName()
@@ -319,11 +318,6 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 							return
 						}
 						// if the secret does not exist in the store, we skip the update
-						w.logger.Info(
-							"rashmi-logs: Secret does not exist in store, skipping update",
-							"newObjName", secretName,
-							"newobjnamespace", secretNamespace,
-						)
 						return
 					}
 
@@ -334,13 +328,12 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 						return
 					}
 
-					w.logger.Info("rashmi-logs: Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
+					w.logger.Info("Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
 					if err := w.store.UpdateObject(newSecret); err != nil {
 						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
-						//return
 					} else {
 						w.logger.Info(
-							"rashmi-logs:Successfully updated store, sending update event to notifyEvents channel",
+							"Successfully updated store, sending update event to notifyEvents channel",
 							"oldObjName", oldMeta.GetObjectMeta().GetName(),
 							"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
 							"newObjName", newMeta.GetObjectMeta().GetName(),
@@ -355,12 +348,10 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				DeleteFunc: func(obj interface{}) {
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
-					w.logger.Info("rashmi-logs: Inside secret informer Delete Func")
 					secretName := secretMeta.GetObjectMeta().GetName()
 					secretNamespace := secretMeta.GetObjectMeta().GetNamespace()
 
 					// check if the secret exists in the store
-					w.logger.Info("rashmi-logs: Checking if secret exists in store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
 					secretObj := &v1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      secretName,
@@ -375,14 +366,9 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 							return
 						}
 						// if the secret does not exist in the store, we skip the delete
-						w.logger.Info(
-							"rashmi-logs: Secret does not exist in store, skipping delete",
-							"objName", secretMeta.GetObjectMeta().GetName(),
-							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
-						)
 						return
 					}
-					w.logger.Info("rashmi-logs: Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					w.logger.Info("Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
 					// if the secret exists in the store, we delete it
 					// and send an event notification to the notifyEvents channel
 					if err := w.store.DeleteObject(secretObj); err != nil {
@@ -390,7 +376,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 						//return
 					} else {
 						w.logger.Info(
-							"rashmi-logs:Successfully removed secret from store, sending update event to notifyEvents channel",
+							"Successfully removed secret from store, sending update event to notifyEvents channel",
 							"objName", secretMeta.GetObjectMeta().GetName(),
 							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
 						)
@@ -402,7 +388,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				},
 			})
 		} else {
-			w.logger.Info("rashmi-logs: Using default event handler for informer", "informer", name)
+			w.logger.Info("Using default event handler for informer", "informer", name)
 			// only send an event notification if there isn't one already
 			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				// these functions only write to the notification channel if it's empty to avoid blocking
