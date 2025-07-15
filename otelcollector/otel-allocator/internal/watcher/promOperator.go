@@ -24,11 +24,11 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
 	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
-	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -376,30 +376,151 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 			continue
 		}
 
-		// only send an event notification if there isn't one already
-		resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			// these functions only write to the notification channel if it's empty to avoid blocking
-			// if scrape config updates are being rate-limited
-			AddFunc: func(obj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-			DeleteFunc: func(obj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-		})
+		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
+		if name == string(v1.ResourceSecrets) {
+			w.logger.Info("rashmi-logs: Using custom event handler for secrets informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					w.logger.Info("rashmi-logs: Inside secret informer UpdateFunc")
+					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
+					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
+
+					secretName := newMeta.GetObjectMeta().GetName()
+					secretNamespace := newMeta.GetObjectMeta().GetNamespace()
+					_, exists, err := w.store.GetObject(&v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					})
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping update", secretName, "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the update
+						w.logger.Info(
+							"rashmi-logs: Secret does not exist in store, skipping update",
+							"newObjName", secretName,
+							"newobjnamespace", secretNamespace,
+						)
+						return
+					}
+
+					newSecret, err := w.store.SecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+
+					if err != nil {
+						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
+						return
+					}
+
+					w.logger.Info("rashmi-logs: Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
+					if err := w.store.UpdateObject(newSecret); err != nil {
+						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"rashmi-logs:Successfully updated store, sending update event to notifyEvents channel",
+							"oldObjName", oldMeta.GetObjectMeta().GetName(),
+							"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+							"newObjName", newMeta.GetObjectMeta().GetName(),
+							"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					// Periodic resync may resend the Namespace without changes
+					// in-between.
+					//secretResource := obj.(*v1.Secret)
+					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
+
+					w.logger.Info("rashmi-logs: Inside secret informer Delete Func")
+					secretName := secretMeta.GetObjectMeta().GetName()
+					secretNamespace := secretMeta.GetObjectMeta().GetNamespace()
+
+					// check if the secret exists in the store
+					w.logger.Info("rashmi-logs: Checking if secret exists in store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					secretObj := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					}
+					_, exists, err := w.store.GetObject(secretObj)
+					// if the secret does not exist in the store, we skip the delete
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the delete
+						w.logger.Info(
+							"rashmi-logs: Secret does not exist in store, skipping delete",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						return
+					}
+					w.logger.Info("rashmi-logs: Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					// if the secret exists in the store, we delete it
+					// and send an event notification to the notifyEvents channel
+					if err := w.store.DeleteObject(secretObj); err != nil {
+						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"rashmi-logs:Successfully removed secret from store, sending update event to notifyEvents channel",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+			})
+		} else {
+			w.logger.Info("rashmi-logs: Using default event handler for informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+			})
+		}
 	}
+
 	if !success {
 		return fmt.Errorf("failed to sync one of the caches")
 	}
