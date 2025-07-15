@@ -6,6 +6,8 @@ package config
 import (
 	"flag"
 
+	uberzap "go.uber.org/zap"
+
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
