@@ -3,9 +3,15 @@
 
 # CRITICAL
 
+# KSM
 # HIGH
+CVE-2024-33599 # glibc: stack-based buffer overflow in netgroup cache
+CVE-2024-33601 # glibc: netgroup cache may terminate daemon on memory allocation failure
 
 # MEDIUM
+CVE-2023-4527  # glibc: Stack read overflow in getaddrinfo in no-aaaa mode
+CVE-2023-4806  # glibc: potential use-after-free in getaddrinfo()
+CVE-2024-33600 # glibc: null pointer dereferences after failed netgroup cache insertion
 # prometheusui
 CVE-2025-22872 # golang.org/x/net
 GHSA-fv92-fjc5-jj9h 
