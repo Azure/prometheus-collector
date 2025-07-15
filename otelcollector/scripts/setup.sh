@@ -44,7 +44,7 @@ echo "Installing mdsd..."
 # fi
 
 # Install this way once moving to the Mariner published RPMs:
-sudo tdnf install -y azure-mdsd-1.30.3
+sudo tdnf install -y azure-mdsd-1.35.7
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
@@ -55,7 +55,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2025.123.2222
+sudo tdnf install -y metricsext2-2.2025.628.22
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless

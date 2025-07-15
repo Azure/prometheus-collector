@@ -301,26 +301,42 @@ func copyOutputFile(src io.Reader, file *os.File) {
 }
 
 // StartMetricsExtensionForOverlay starts the MetricsExtension process based on the OS
-func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
+func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory string, meLocalControl bool) (int, error) {
 	osType := os.Getenv("OS_TYPE")
 	var cmd *exec.Cmd
 
 	switch osType {
 	case "linux":
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		if meLocalControl {
+			cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		} else {
+			cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", meConfigFile)
+		}
 
 	case "windows":
 		// Prepare the command and its arguments
-		cmd = exec.Command(
-			"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
-			"-Logger", "File",
-			"-LogLevel", "Info",
-			"-LocalControlChannel",
-			"-TokenSource", "AMCS",
-			"-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\",
-			"-Input", "otlp_grpc_prom",
-			"-ConfigOverridesFilePath", meConfigFile,
-		)
+		if meLocalControl {
+			cmd = exec.Command(
+				"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
+				"-Logger", "File",
+				"-LogLevel", "Info",
+				"-LocalControlChannel",
+				"-TokenSource", "AMCS",
+				"-DataDirectory", meDCRConfigDirectory,
+				"-Input", "otlp_grpc_prom",
+				"-ConfigOverridesFilePath", meConfigFile,
+			)
+		} else {
+			cmd = exec.Command(
+				"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
+				"-Logger", "File",
+				"-LogLevel", "Info",
+				"-TokenSource", "AMCS",
+				"-DataDirectory", meDCRConfigDirectory,
+				"-Input", "otlp_grpc_prom",
+				"-ConfigOverridesFilePath", meConfigFile,
+			)
+		}
 	}
 
 	cmd.Env = append(os.Environ())
@@ -333,9 +349,13 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 	return cmd.Process.Pid, nil
 }
 
-func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
-
+func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string, meDCRConfigDirectory string, meLocalControl bool) {
+	var cmd *exec.Cmd
+	if meLocalControl {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	} else {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	}
 	// Create a file to store the stdoutput
 	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
 	// if err != nil {
