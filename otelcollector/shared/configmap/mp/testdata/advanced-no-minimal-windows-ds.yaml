@@ -1,0 +1,29 @@
+scrape_configs:
+- job_name: windows-exporter
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  relabel_configs:
+  - replacement: test-node
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - 192.168.1.1:9182
+- job_name: kube-proxy-windows
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  relabel_configs:
+  - replacement: test-node
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - 192.168.1.1:10249

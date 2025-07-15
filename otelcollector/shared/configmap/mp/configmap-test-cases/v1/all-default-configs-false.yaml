@@ -1,0 +1,27 @@
+schema-version:
+  v1
+config-version:
+  ver1
+default-scrape-settings-enabled:
+  kubelet = false
+  coredns = false
+  cadvisor = false
+  kubeproxy = false
+  apiserver = false
+  kubestate = false
+  nodeexporter = false
+  windowsexporter = false
+  windowskubeproxy = false
+  kappiebasic = false
+  networkobservabilityRetina = false
+  networkobservabilityHubble = false
+  networkobservabilityCilium = false
+  acstor-capacity-provisioner = false
+  acstor-metrics-exporter = false
+  prometheuscollectorhealth = false
+  controlplane-apiserver = false
+  controlplane-cluster-autoscaler = false
+  controlplane-node-auto-provisioning = false
+  controlplane-kube-scheduler = false
+  controlplane-kube-controller-manager = false
+  controlplane-etcd = false

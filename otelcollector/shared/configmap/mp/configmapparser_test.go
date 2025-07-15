@@ -18,21 +18,51 @@ import (
  * 2) Test that the Prometheus config created is as expected for the settings given.
  */
 
-type TestConfig struct {
-	// Setup parameters
-	EnvVars            map[string]string
-	UseConfigFiles     bool
-	IsDefaultConfig    bool
-	ConfigMapFiles     map[string]string
-	ConfigMapMountPath string
-
-	// Expected results
-	ExpectedEnvVars             map[string]string
-	ExpectedKeepListHashMap     map[string]string
-	ExpectedScrapeIntervalMap   map[string]string
-	ExpectedDefaultContentsPath string
-	ExpectedMergedContentsPath  string
+// PlatformConfig represents a platform/controller type combination
+type PlatformConfig struct {
+	ControllerType string
+	OSType         string
+	Name           string
 }
+
+// TestScenario defines a complete test scenario with setup and expectations
+type TestScenario struct {
+	Name                      string
+	Description               string
+	UseConfigFiles            bool
+	IsDefaultConfig           bool
+	ConfigMapMountPath        string
+	ExtraEnvVars              map[string]string
+	KeepListRegex             string
+	ScrapeInterval            string
+	MinimalIngestion          *bool // nil means use default
+	SchemaVersion             string
+	ConfigVersion             string
+	ConfigMapContents         map[string]string
+	ExpectedConfigPaths       map[string]string // platform name -> expected config file path
+	ExpectedMergedConfigPaths map[string]string // platform name -> expected merged config file path
+}
+
+// Platform definitions for reuse across tests
+var (
+	LinuxReplicaSet = PlatformConfig{
+		ControllerType: shared.ControllerType.ConfigReaderSidecar,
+		OSType:         shared.OSType.Linux,
+		Name:           "Linux ReplicaSet",
+	}
+	LinuxDaemonSet = PlatformConfig{
+		ControllerType: shared.ControllerType.DaemonSet,
+		OSType:         shared.OSType.Linux,
+		Name:           "Linux DaemonSet",
+	}
+	WindowsDaemonSet = PlatformConfig{
+		ControllerType: shared.ControllerType.DaemonSet,
+		OSType:         shared.OSType.Windows,
+		Name:           "Windows DaemonSet",
+	}
+
+	AllPlatforms = []PlatformConfig{LinuxReplicaSet, LinuxDaemonSet, WindowsDaemonSet}
+)
 
 func setupTest() {
 	var originalDefaultScrapeJobs map[string]shared.DefaultScrapeJob
@@ -804,6 +834,11 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			expectedContentsFilePath := "./testdata/advanced-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
+
+		It("should process the config with custom settings for the Windows DaemonSet", func() {
+			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-windows-ds.yaml", "")
+		})
 	})
 
 	Context("when the settings configmap uses v2, minimal ingestion is false, and not all sections are present", func() {
@@ -876,6 +911,11 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
 			expectedContentsFilePath := "./testdata/advanced-no-minimal-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
+		})
+
+		It("should process the settings for the Windows DaemonSet", func() {
+			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-no-minimal-windows-ds.yaml", "")
 		})
 	})
 })

@@ -313,3 +313,47 @@ func getExpectedScrapeIntervalMap(value string) map[string]string {
 	}
 	return expectedScrapeIntervalHashMap
 }
+
+func CreateTempFilesFromConfigMapTestCase(testCaseFileName string, schemaVersion string) error {
+	var testCaseDir string
+	switch schemaVersion {
+	case shared.SchemaVersion.V1:
+		testCaseDir = "./configmap-test-cases/v1/"
+	case shared.SchemaVersion.V2:
+		testCaseDir = "./configmap-test-cases/v2/"
+	default:
+		return fmt.Errorf("unsupported schema version: %s", schemaVersion)
+	}
+	filePath := testCaseDir + testCaseFileName
+
+	// Read the YAML file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read test case file %s: %v", filePath, err)
+	}
+
+	// Parse the YAML into a map
+	var yamlData map[string]interface{}
+	err = yaml.Unmarshal(data, &yamlData)
+	if err != nil {
+		return fmt.Errorf("failed to parse YAML from %s: %v", filePath, err)
+	}
+
+	for fileName, data := range yamlData {
+		// Convert the value to YAML string
+		var content string
+		if data == nil {
+			content = ""
+		} else {
+			contentBytes, err := yaml.Marshal(data)
+			if err != nil {
+				return fmt.Errorf("failed to marshal content for key %s: %v", fileName, err)
+			}
+			content = string(contentBytes)
+		}
+
+		createTempFile(configSettingsPrefix, fileName, content)
+	}
+
+	return nil
+}

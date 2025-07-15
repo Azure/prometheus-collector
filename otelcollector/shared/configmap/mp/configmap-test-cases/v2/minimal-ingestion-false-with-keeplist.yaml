@@ -1,0 +1,36 @@
+schema-version: 
+  #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+  v2
+config-version: 
+  #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+  ver1
+cluster-metrics: |-
+  default-targets-metrics-keep-list: |-
+    kubelet = "test1.*|test2"
+    coredns = "test1.*|test2"
+    cadvisor = "test1.*|test2"
+    kubeproxy = "test1.*|test2"
+    apiserver = "test1.*|test2"
+    kubestate = "test1.*|test2"
+    nodeexporter = "test1.*|test2"
+    windowsexporter = "test1.*|test2"
+    windowskubeproxy = "test1.*|test2"
+    podannotations = "test1.*|test2"
+    kappiebasic = "test1.*|test2"
+    networkobservabilityRetina = "test1.*|test2"
+    networkobservabilityHubble = "test1.*|test2"
+    networkobservabilityCilium = "test1.*|test2"
+    acstor-capacity-provisioner = "test1.*|test2"
+    acstor-metrics-exporter = "test1.*|test2"
+  minimal-ingestion-profile: |-
+    enabled = true
+controlplane-metrics: |-
+  default-targets-metrics-keep-list: |-
+    apiserver = "test1.*|test2.*"
+    cluster-autoscaler = "test1.*|test2.*"
+    node-auto-provisioning = "test1.*|test2.*"
+    kube-scheduler = "test1.*|test2.*"
+    kube-controller-manager = "test1.*|test2.*"
+    etcd = "test1.*|test2.*"
+  minimal-ingestion-profile: |-
+    enabled = false
