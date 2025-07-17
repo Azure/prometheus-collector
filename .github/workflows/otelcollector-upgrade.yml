@@ -37,9 +37,39 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
             rm -f TargetAllocatorCHANGELOG.md
           fi
+      
+      - name: Check if an existing PR with this version already exists but hasn't been merged
+        if: ${{ env.ISNEWVERSION == 'true' }}
+        id: check_existing_pr
+        run: |
+          PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
+          echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+
+      - name: Close older upgrade PRs
+        if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
+        run: |
+          echo "Checking for older otelcollector upgrade PRs..."
+          OLDER_PRS=$(gh pr list --search "is:open head:bot/otelcollector-upgrade-" --json number,headRefName)
+          if [ "$(echo $OLDER_PRS | jq 'length')" -gt 0 ]; then
+            echo "Found older upgrade PRs, closing them..."
+            echo $OLDER_PRS | jq -c '.[]' | while read PR; do
+              PR_NUM=$(echo $PR | jq -r '.number')
+              PR_BRANCH=$(echo $PR | jq -r '.headRefName')
+              if [ "$PR_BRANCH" != "bot/otelcollector-upgrade-${{ env.VERSION }}" ]; then
+                echo "Closing PR #$PR_NUM ($PR_BRANCH) as a newer version is available"
+                gh pr close $PR_NUM --comment "Closing in favor of a newer otelcollector version upgrade (${{ env.VERSION }})"
+              fi
+            done
+          else
+            echo "No older upgrade PRs found"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
 
       - name: Create Pull Request
-        if: ${{ env.ISNEWVERSION == 'true' }}
+        if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
@@ -62,8 +92,8 @@ jobs:
             ${{ steps.upgrade.outputs.target_allocator_changelog }}
           draft: true
 
-      - name: Check if PR exists
-        id: check_pr
+      - name: Check if the new PR exists
+        id: check_new_pr
         run: |
           PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
           echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
@@ -72,7 +102,7 @@ jobs:
 
       - name: Checkout PR branch if it exists
         uses: actions/checkout@v4
-        if: steps.check_pr.outputs.exists != '0'
+        if: steps.check_new_pr.outputs.exists != '0'
         with:
           ref: bot/otelcollector-upgrade-${{ env.VERSION }}
           token: ${{ secrets.UPGRADE_OTEL_SECRET }}

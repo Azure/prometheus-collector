@@ -271,4 +271,43 @@ else
 	echo "Directory opentelemetry-operator does not exist, skipping cleanup"
 fi
 
+# Step 7: Update Prometheus UI dependencies
+echo "Updating Prometheus UI dependencies..."
+cd "$CURRENT_DIR/otelcollector/prometheus-ui"
+
+# Extract prometheus/common version from opentelemetry-collector-builder
+PROM_COMMON_VERSION=$(grep -m 1 "github.com/prometheus/common " ../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+PROM_EXPORTER_VERSION=$(grep -m 1 "github.com/prometheus/exporter-toolkit " ../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+OTELHTTP_VERSION=$(grep -m 1 "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp " ../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+
+echo "Found Prometheus Common version: $PROM_COMMON_VERSION"
+echo "Found Prometheus Exporter Toolkit version: $PROM_EXPORTER_VERSION"
+echo "Found OTel HTTP version: $OTELHTTP_VERSION"
+
+# Update the versions in go.mod
+if [ ! -z "$PROM_COMMON_VERSION" ]; then
+	sed -i "s|github.com/prometheus/common v[0-9.]*|github.com/prometheus/common $PROM_COMMON_VERSION|g" go.mod
+fi
+
+# Keep prometheus/common/assets as is since it might not be in the builder's go.mod
+
+if [ ! -z "$PROM_EXPORTER_VERSION" ]; then
+	sed -i "s|github.com/prometheus/exporter-toolkit v[0-9.]*|github.com/prometheus/exporter-toolkit $PROM_EXPORTER_VERSION|g" go.mod
+fi
+
+if [ ! -z "$OTELHTTP_VERSION" ]; then
+	sed -i "s|go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v[0-9.]*|go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp $OTELHTTP_VERSION|g" go.mod
+fi
+
+# Remove "// indirect" dependencies from go.mod
+echo "Removing indirect dependencies from go.mod..."
+grep -v "// indirect" go.mod > go.mod.tmp && mv go.mod.tmp go.mod
+
+# Run go mod tidy to update the go.sum file
+go mod tidy
+
+echo "Prometheus UI dependencies updated successfully."
+
+cd "$CURRENT_DIR"
+
 echo "Upgrade process complete!"
