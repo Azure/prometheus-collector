@@ -66,14 +66,19 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 
 		configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 		if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+			// default value of schema version is v1 for no configmap + partial configmap with missing schema version scenario + configmap with v1 schema version
 			minimalingestionprofile_value = getStringValue(keeplist["minimalingestionprofile"])
 			shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", minimalingestionprofile_value, true)
 		} else if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+			// configmap with v2 schema version
 			if minimalProfile := metricsConfigBySection["minimal-ingestion-profile"]; minimalProfile != nil {
 				minimalingestionprofile_value = getStringValue(minimalProfile["enabled"])
 				shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", minimalingestionprofile_value, true)
 			}
 		} else {
+			// handle the case when the schema version is defined but not supported
+			minimalingestionprofile_value = "true" // Default value for unsupported schema versions
+			shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", "true", true)
 			return RegexValues{}, fmt.Errorf("unsupported/missing config schema version - '%s', using defaults, please use supported schema version", configSchemaVersion)
 		}
 	}
@@ -186,6 +191,10 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 	var regexValues RegexValues
 
 	regexValues, err := populateKeepList(metricsConfigBySection)
+	if err != nil {
+		fmt.Println("Error populating keep list:", err)
+		return
+	}
 	populateRegexValuesWithMinimalIngestionProfile(regexValues)
 
 	// Write settings to a YAML file.

@@ -169,11 +169,23 @@ func Configmapparser() {
 		fmt.Println("Invalid schema version. Using defaults.")
 	}
 
-	// Check if /etc/config/settings/config-version exists
-	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
-		metricsConfigBySection = nil
-		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	// Detect configmap presence and set CONFIGMAP_VERSION
+	configmapVer := "not_present"
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		configmapVer = "v2"
+	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+		files, err := os.ReadDir("/etc/config/settings")
+		if err == nil {
+		    for _, file := range files {
+		        if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
+		            continue
+		        }
+		        configmapVer = "v1"
+		        break
+		    }
+		}
 	}
+	shared.SetEnvAndSourceBashrcOrPowershell("CONFIGMAP_VERSION", configmapVer, true)
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
