@@ -104,7 +104,7 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
 }
 
 resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
-  count                   = (local.dce_region_mismatch && var.is_private_cluster) ? 1 : 0
+  count                   = (local.dce_region_mismatch || var.is_private_cluster) ? 1 : 0
   target_resource_id      = azurerm_kubernetes_cluster.k8s.id
   data_collection_endpoint_id = local.dce_region_mismatch ? azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id : azurerm_monitor_data_collection_endpoint.dce.id
   description             = "Association of data collection endpoint for private link clusters. Deleting this association will break the data collection for this AKS Cluster."
