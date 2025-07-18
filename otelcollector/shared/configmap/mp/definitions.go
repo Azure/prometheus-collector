@@ -50,6 +50,7 @@ var (
 	networkObservabilityCiliumDefaultFileDs      = "networkobservabilityCiliumDefaultDs.yml"
 	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
 	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
+	storagOperatorCPExporterDefaultFile          = "storageOperatorCPExporterDefaultFile.yml"
 )
 
 type RegexValues struct {
@@ -70,6 +71,7 @@ type RegexValues struct {
 	minimalingestionprofile    string
 	acstorcapacityprovisioner  string
 	acstormetricsexporter      string
+	storageoperatorcpexporter  string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -111,6 +113,7 @@ type ConfigProcessor struct {
 	NetworkObservabilityCilium string
 	AcstorCapacityProvisioner  string
 	AcstorMetricsExporter      string
+	StorageExporterCPExporter  string
 }
 
 // ConfigParser is an interface for parsing configurations.
