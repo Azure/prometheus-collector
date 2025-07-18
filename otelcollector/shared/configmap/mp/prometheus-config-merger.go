@@ -699,6 +699,18 @@ func populateDefaultPrometheusConfig() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORCPEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		storageOperatorCPExporterKeepListRegex, exists := regexHash["STORAGEOPERATORCPEXPORTER_KEEP_LIST_REGEX"]
+		storageOperatorCPExporterScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORCPEXPORTER_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(storagOperatorCPExporterDefaultFile, storageOperatorCPExporterScrapeInterval)
+		}
+		if exists && storageOperatorCPExporterKeepListRegex != "" {
+			AppendMetricRelabelConfig(storagOperatorCPExporterDefaultFile, storageOperatorCPExporterKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, storagOperatorCPExporterDefaultFile)
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1162,6 +1174,19 @@ func populateDefaultPrometheusConfigWithOperator() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORCPEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
+		storageOperatorCPExporterKeepListRegex, exists := regexHash["STORAGEOPERATORCPEXPORTER_KEEP_LIST_REGEX"]
+		storageOperatorCPExporterScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORCPEXPORTER_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "storageOperatorCPExporterDefaultFile", storagOperatorCPExporterDefaultFile)
+		if intervalExists {
+			UpdateScrapeIntervalConfig(storagOperatorCPExporterDefaultFile, storageOperatorCPExporterScrapeInterval)
+		}
+		if exists && storageOperatorCPExporterKeepListRegex != "" {
+			AppendMetricRelabelConfig(storagOperatorCPExporterDefaultFile, storageOperatorCPExporterKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, storagOperatorCPExporterDefaultFile)
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1281,6 +1306,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
 		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
+		storagOperatorCPExporterDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {
