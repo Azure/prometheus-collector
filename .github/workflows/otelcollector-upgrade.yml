@@ -87,7 +87,7 @@ jobs:
           signoff: false
           branch: bot/otelcollector-upgrade-${{ env.VERSION }}
           delete-branch: true
-          title: '[chore]: Upgrade otelcollector to ${{ env.VERSION }}'
+          title: 'build(deps): Upgrade otelcollector to ${{ env.VERSION }}'
           body: |
             This PR upgrades the otelcollector to the latest version available for the opentelemetry-collector and opentelemetry-operator.
 
