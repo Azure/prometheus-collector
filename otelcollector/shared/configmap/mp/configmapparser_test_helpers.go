@@ -92,10 +92,11 @@ func setupConfigFiles(defaultPath bool) {
 		configMapKeepListMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
 		configMapMountPathForPodAnnotation = "/etc/config/settings/pod-annotation-based-scraping"
 		collectorSettingsMountPath = "/etc/config/settings/prometheus-collector-settings"
+		configMapOpentelemetryMetricsMountPath = "/etc/config/settings/opentelemetry-metrics"
 		//schemaVersionFile = "/etc/config/settings/schema-version"
 		//configVersionFile = "/etc/config/settings/config-version"
 		configMapScrapeIntervalMountPath = "/etc/config/settings/default-targets-scrape-interval-settings"
-		createTempFile(configSettingsPrefix, "metrics", "")
+		createTempFile(configSettingsPrefix, "cluster-metrics", "")
 		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 	} else {
 		//schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
@@ -106,7 +107,8 @@ func setupConfigFiles(defaultPath bool) {
 		configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", "")
 		configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", "")
 		configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", "")
-		createTempFile(configSettingsPrefix, "metrics", "")
+		configMapOpentelemetryMetricsMountPath = createTempFile(configSettingsPrefix, "opentelemetry-metrics", "")
+		createTempFile(configSettingsPrefix, "cluster-metrics", "")
 		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 		replicaSetCollectorConfig = "./testdata/collector-config-replicaset.yml"
 	}
@@ -119,6 +121,7 @@ func setupProcessedFiles() {
 	debugModeEnvVarPath = createTempFile(configSettingsPrefix, "debug-mode-envvar", "")
 	configMapKeepListEnvVarPath = createTempFile(configSettingsPrefix, "keep-list-envvar", "")
 	scrapeIntervalEnvVarPath = createTempFile(configSettingsPrefix, "scrape-interval-envvar", "")
+	opentelemetryMetricsEnvVarPath = createTempFile(configSettingsPrefix, "opentelemetry-metrics-envvar", "")
 
 	// Create test directory if it doesn't exist
 	testDir := "../../../configmapparser/default-prom-configs/test/"
@@ -258,13 +261,13 @@ func setSetupEnvVars(controllertype string, os string) {
 
 func getDefaultExpectedEnvVars() map[string]string {
 	return map[string]string{
-		"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "",
-		"AZMON_AGENT_CFG_FILE_VERSION":                                 "",
+		"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
+		"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
 		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "",
 		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
 		"AZMON_CLUSTER_LABEL":                                          "",
 		"AZMON_CLUSTER_ALIAS":                                          "",
-		"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "false",
+		"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "true",
 		"AZMON_OPERATOR_ENABLED":                                       "true",
 		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
 		"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
@@ -282,7 +285,7 @@ func getDefaultExpectedEnvVars() map[string]string {
 		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
 		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-		"DEBUG_MODE_ENABLED":                                           "",
+		"DEBUG_MODE_ENABLED":                                           "false",
 	}
 }
 

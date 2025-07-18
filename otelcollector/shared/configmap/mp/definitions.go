@@ -20,6 +20,7 @@ var (
 	configMapScrapeIntervalMountPath       = configSettingsPrefix + "default-targets-scrape-interval-settings"
 	scrapeIntervalEnvVarPath               = configMapParserPrefix + "config_def_targets_scrape_intervals_hash"
 	configMapOpentelemetryMetricsMountPath = configMapParserPrefix + "opentelemetry-metrics"
+	opentelemetryMetricsEnvVarPath         = configMapParserPrefix + "config_opentelemetry_metrics_env_var"
 	promMergedConfigPath                   = "/opt/promMergedConfig.yaml"
 	mergedDefaultConfigPath                = "/opt/defaultsMergedConfig.yaml"
 	defaultPromConfigPathPrefix            = "/opt/microsoft/otelcollector/default-prom-configs/"

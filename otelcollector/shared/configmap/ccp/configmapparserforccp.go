@@ -3,10 +3,38 @@ package ccpconfigmapsettings
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus-collector/shared"
 )
+
+func Configmapparserforccp() {
+	fmt.Printf("in configmapparserforccp")
+	fmt.Printf("waiting for 30 secs...")
+	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+
+	processAndMergeConfigFiles()
+
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
+	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+
+	// No need to merge custom prometheus config, only merging in the default configs
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
+	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
+		fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+	} else {
+		sourcePath := "/opt/ccp-collector-config-with-defaults.yml"
+		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		err := shared.CopyFile(sourcePath, destinationPath)
+		if err != nil {
+			fmt.Printf("Error copying file: %v\n", err)
+		} else {
+			fmt.Println("File copied successfully.")
+		}
+	}
+}
 
 func processAndMergeConfigFiles() {
 	configVersionPath := configVersionFile
@@ -23,9 +51,42 @@ func processAndMergeConfigFiles() {
 
 	fmt.Println("done listing /etc/config/settings")
 
-	// Process config schema and version
-	shared.ProcessConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
-	shared.ProcessConfigFile(configSchemaPath, "AZMON_AGENT_CFG_SCHEMA_VERSION")
+	if shared.ExistsAndNotEmpty(configSchemaPath) {
+		configVersion, err := shared.ReadAndTrim(configVersionPath)
+		if err != nil {
+			fmt.Println("Error reading config version file:", err)
+			return
+		}
+		// Remove all spaces and take the first 10 characters
+		configVersion = strings.ReplaceAll(configVersion, " ", "")
+		if len(configVersion) >= 10 {
+			configVersion = configVersion[:10]
+		}
+		// Set the environment variable
+		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
+	} else {
+		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
+	}
+
+	// Set agent config file version
+	if shared.ExistsAndNotEmpty(configVersionPath) {
+		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
+		if err != nil {
+			fmt.Println("Error reading config schema version file:", err)
+			return
+		}
+		// Remove all spaces and take the first 10 characters
+		configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
+		if len(configSchemaVersion) >= 10 {
+			configSchemaVersion = configSchemaVersion[:10]
+		}
+		// Set the environment variable
+		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_SCHEMA_VERSION:", configSchemaVersion)
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
+	} else {
+		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
+	}
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
@@ -69,31 +130,4 @@ func processAndMergeConfigFiles() {
 	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
 
 	prometheusCcpConfigMerger()
-}
-
-func Configmapparserforccp() {
-	fmt.Printf("in configmapparserforccp")
-	fmt.Printf("waiting for 30 secs...")
-	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
-
-	processAndMergeConfigFiles()
-
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
-	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
-
-	// No need to merge custom prometheus config, only merging in the default configs
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
-	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
-	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
-		fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-	} else {
-		sourcePath := "/opt/ccp-collector-config-with-defaults.yml"
-		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
-		err := shared.CopyFile(sourcePath, destinationPath)
-		if err != nil {
-			fmt.Printf("Error copying file: %v\n", err)
-		} else {
-			fmt.Println("File copied successfully.")
-		}
-	}
 }

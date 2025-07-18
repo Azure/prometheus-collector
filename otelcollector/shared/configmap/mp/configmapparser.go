@@ -14,6 +14,46 @@ const (
 	defaultConfigFileVersion   = "ver1"
 )
 
+func setConfigSchemaVersionEnv() {
+	fileInfo, err := os.Stat(schemaVersionFile)
+	if err != nil || fileInfo.Size() == 0 {
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
+		return
+	}
+	content, err := os.ReadFile(schemaVersionFile)
+	if err != nil {
+		shared.EchoError("Error reading schema version file:" + err.Error())
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
+		return
+	}
+	trimmedContent := strings.TrimSpace(string(content))
+	configSchemaVersion := strings.ReplaceAll(trimmedContent, " ", "")
+	if len(configSchemaVersion) > 10 {
+		configSchemaVersion = configSchemaVersion[:10]
+	}
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
+}
+
+func setConfigFileVersionEnv() {
+	fileInfo, err := os.Stat(configVersionFile)
+	if err != nil || fileInfo.Size() == 0 {
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
+		return
+	}
+	content, err := os.ReadFile(configVersionFile)
+	if err != nil {
+		shared.EchoError("Error reading config version file:" + err.Error())
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
+		return
+	}
+	trimmedContent := strings.TrimSpace(string(content))
+	configFileVersion := strings.ReplaceAll(trimmedContent, " ", "")
+	if len(configFileVersion) > 10 {
+		configFileVersion = configFileVersion[:10]
+	}
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
+}
+
 func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
 	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
@@ -107,15 +147,15 @@ func handleEnvFileError(filename string) {
 }
 
 func processConfigFiles() {
-	shared.ProcessConfigFile(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION")
-	shared.ProcessConfigFile(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION")
+	setConfigFileVersionEnv()
+	setConfigSchemaVersionEnv()
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
 	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	switch schemaVersion {
 	case shared.SchemaVersion.V2:
-		filePaths := []string{configSettingsPrefix + "metrics", configSettingsPrefix + "prometheus-collector-settings"}
+		filePaths := []string{configSettingsPrefix + "cluster-metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)

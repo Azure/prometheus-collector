@@ -105,7 +105,6 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	configurator := &Configurator{
-		//TODO: does this account for v2 schema?
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},

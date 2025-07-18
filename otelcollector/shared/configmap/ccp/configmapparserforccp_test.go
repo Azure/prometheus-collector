@@ -306,7 +306,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				minimal-ingestion-profile: |-
 					enabled = true
 	  		`)
-			_ = createTempFile(configSettingsPrefix, "metrics", `
+			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -418,7 +418,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				minimal-ingestion-profile: |-
 					enabled = false
 	  		`)
-			_ = createTempFile(configSettingsPrefix, "metrics", `
+			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -697,7 +697,7 @@ func setupConfigFiles(defaultPath bool) {
 		collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 		defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
 		configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", "")
-		createTempFile(configSettingsPrefix, "metrics", "")
+		createTempFile(configSettingsPrefix, "cluster-metrics", "")
 		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
 	}
 }

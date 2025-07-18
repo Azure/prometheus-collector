@@ -13,7 +13,6 @@ import (
 
 // populateKeepList initializes the regex keep list with values from metricsConfigBySection.
 func populateKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
-	// TODO: does this account for v2 schema?
 	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
 
 	minimalProfileEnabled := true
@@ -21,7 +20,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	case shared.SchemaVersion.V1:
 		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
 		if err != nil {
-			fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", err.Error())
+			fmt.Println("Invalid value for minimalingestionprofile in v1:", err.Error())
 			metricsConfigBySection = map[string]map[string]string{}
 		} else {
 			minimalProfileEnabled = minimalProfileEnabledBool

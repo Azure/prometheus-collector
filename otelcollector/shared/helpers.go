@@ -371,23 +371,3 @@ func ParseV1Config(configDir string) (map[string]map[string]string, error) {
 
 	return metricsConfigBySection, nil
 }
-
-func ProcessConfigFile(path, envVar string) {
-	if ExistsAndNotEmpty(path) {
-		value, err := ReadAndTrim(path)
-		if err != nil {
-			fmt.Printf("Error reading file %s: %v\n", path, err)
-			return
-		}
-
-		value = strings.ReplaceAll(value, " ", "")
-		if len(value) >= 10 {
-			value = value[:10]
-		}
-
-		fmt.Printf("Setting env var %s: %s\n", envVar, value)
-		SetEnvAndSourceBashrcOrPowershell(envVar, value, true)
-	} else {
-		fmt.Printf("File doesn't exist or is empty: %s\n", path)
-	}
-}

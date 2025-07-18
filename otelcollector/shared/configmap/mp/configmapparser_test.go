@@ -678,7 +678,8 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				"DEBUG_MODE_ENABLED":             "false",
+				// TODO: investigate
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING": "false",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
@@ -759,7 +760,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
    				debug-mode = true
     			https_config = true
 			`)
-			_ = createTempFile(configSettingsPrefix, "metrics", `
+			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -876,7 +877,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			fmt.Println("Schema version file created at:", schemaVersionFile)
 			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
 			fmt.Println("Config version file created at:", configVersionFile)
-			_ = createTempFile(configSettingsPrefix, "metrics", `
+			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
