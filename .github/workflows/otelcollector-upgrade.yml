@@ -10,6 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Upgrade otel
         id: upgrade
         run: |
@@ -45,7 +52,7 @@ jobs:
           PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
           echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Close older upgrade PRs
         if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
@@ -66,14 +73,14 @@ jobs:
             echo "No older upgrade PRs found"
           fi
         env:
-          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Create Pull Request
         if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           commit-message: Upgrade otelcollector to ${{ env.VERSION }}
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
@@ -98,14 +105,14 @@ jobs:
           PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
           echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Checkout PR branch if it exists
         uses: actions/checkout@v4
         if: steps.check_new_pr.outputs.exists != '0'
         with:
           ref: bot/otelcollector-upgrade-${{ env.VERSION }}
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Build otelcollector and related go binaries
         if: ${{ steps.cpr.outputs.pull-request-number }}
@@ -127,7 +134,7 @@ jobs:
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'true' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ⚠️ Building the otelcollector failed. Manual review for breaking changes is required. View build errors below.
@@ -144,7 +151,7 @@ jobs:
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ✅ Building the otelcollector and related go binaries succeeded. No breaking changes were detected.
@@ -173,7 +180,7 @@ jobs:
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
         uses: peter-evans/create-or-update-comment@v4
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ## CVE Changes Report
@@ -204,7 +211,7 @@ jobs:
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             /azp run
