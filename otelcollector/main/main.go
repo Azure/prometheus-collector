@@ -252,7 +252,7 @@ func main() {
 		// Define the command to start inotify
 		inotifyCommand := exec.Command(
 			"inotifywait",
-			meDCRConfigDirectory+"TokenConfig.json",
+			meDCRConfigDirectory+"/TokenConfig.json",
 			"--daemon",
 			"--outfile", outputFile,
 			"--event", "ATTRIB",
