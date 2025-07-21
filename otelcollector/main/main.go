@@ -188,7 +188,7 @@ func main() {
 	if controllerType == "replicaset" {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			_ = shared.CollectorTAHttpsCheck(collectorConfig)
-		} else if ccpMetricsEnabled  != "true" {
+		} else if ccpMetricsEnabled != "true" {
 			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
@@ -249,10 +249,11 @@ func main() {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
 
+		// TODO: account for otlp with /config-cache/me/TokenConfig.json
 		// Define the command to start inotify
 		inotifyCommand := exec.Command(
 			"inotifywait",
-			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+			meDCRConfigDirectory+"TokenConfig.json",
 			"--daemon",
 			"--outfile", outputFile,
 			"--event", "ATTRIB",
