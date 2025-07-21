@@ -1,9 +1,13 @@
-package configmapsettings
+package ccpconfigmapsettings
 
 import (
 	"fmt"
 	"os"
 	"strconv"
+)
+
+var (
+	opentelemetryMetricsEnvVarPath = "/opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var"
 )
 
 func ConfigureOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[string]string) error {
