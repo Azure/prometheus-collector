@@ -249,7 +249,6 @@ func main() {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
 
-		// TODO: account for otlp with /config-cache/me/TokenConfig.json
 		// Define the command to start inotify
 		inotifyCommand := exec.Command(
 			"inotifywait",
