@@ -109,27 +109,25 @@ COPY --from=builder /bin/sh /bin/sh
 COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+COPY --from=builder /usr/lib/libreadline.so.8 /usr/lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 
 # inotifywait dependencies
 COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
 
 # crond dependencies
-COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/libaudit.so.1 /usr/lib/libcap-ng.so.0/ /usr/lib/
+COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/
 
 # vim dependencies
-COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
+COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6 /usr/lib/
 
 # logrotate dependencies
 COPY --from=builder /usr/lib/libpopt.so.0 /usr/lib/libc.so.6 /usr/lib/
 
 # curl dependencies
-COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
-COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+COPY --from=builder /usr/lib/libcurl.so.4 /usr/lib/libz.so.1 /usr/lib/libc.so.6 /usr/lib/libnghttp2.so.14 /usr/lib/libssh2.so.1 /usr/lib/libgssapi_krb5.so.2 /usr/lib/libzstd.so.1 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
 
 # sh dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
+COPY --from=builder /usr/lib/libreadline.so.8 /usr/lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 
 COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 COPY --from=builder /opt/*.sh $tmpdir/
