@@ -41,6 +41,23 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	} else {
 		cp.IsOperatorEnabledChartSetting = false
 	}
+
+	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
+		cp.TargetallocatorHttpsEnabledChartSetting = true
+		cp.TargetallocatorHttpsEnabled = true
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+			if value, ok := settings["https_config"]; ok {
+				if strings.ToLower(value) == "false" {
+					cp.TargetallocatorHttpsEnabled = false
+				}
+				fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
+			}
+			fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
+		}
+	} else {
+		cp.TargetallocatorHttpsEnabledChartSetting = false
+		cp.TargetallocatorHttpsEnabled = false
+	}
 }
 
 func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *ConfigProcessor) error {
@@ -58,7 +75,8 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))
 	}
-
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING=%t\n", configParser.TargetallocatorHttpsEnabledChartSetting))
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	return nil
 }
 
@@ -99,9 +117,15 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+
+	operatorHttpsEnabled := false
+	if strings.ToLower(os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")) == "true" {
+		operatorHttpsEnabled = true
+	}
+
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
-		ConfigParser:   &ConfigProcessor{},
+		ConfigParser:   &ConfigProcessor{TargetallocatorHttpsEnabled: operatorHttpsEnabled},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}

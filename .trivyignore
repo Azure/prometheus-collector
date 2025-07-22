@@ -1,18 +1,17 @@
+# CRITICAL
+
 # HIGH
-# otelcollector
-CVE-2025-29786 # github.com/expr-lang/expr 
-CVE-2025-30204 # github.com/golang-jwt/jwt/v5 
-# promconfigvalidator
-CVE-2025-29786 # github.com/expr-lang/expr 
-CVE-2025-30204 # github.com/golang-jwt/jwt/v5 
+# kube-state-metrics
+CVE-2024-33599
+CVE-2024-33601
+
 # MEDIUM
-# targetallocator
+# prometheusui
 CVE-2025-22872 # golang.org/x/net
-# config-reader
-CVE-2025-22872 # golang.org/x/net
-#otelcollector
-CVE-2025-22870 # golang.org/x/net
-CVE-2025-22872 # golang.org/x/net
-#promconfigvalidator
-CVE-2025-22870 # golang.org/x/net
-CVE-2025-22872 # golang.org/x/net
+GHSA-fv92-fjc5-jj9h 
+# kube-state-metrics
+CVE-2023-4527
+CVE-2023-4806
+CVE-2024-33600
+
+# LOW

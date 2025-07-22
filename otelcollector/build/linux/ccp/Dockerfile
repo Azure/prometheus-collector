@@ -20,13 +20,17 @@ WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./shared/go.mod ./shared/go.sum ./shared/
 WORKDIR /src/prometheusreceiver
 RUN go version
+RUN go mod download
+WORKDIR /src/shared
 RUN go mod download
 WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./shared /src/shared
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
@@ -56,7 +60,7 @@ RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go build -o ccpmain ./main.go
 
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
@@ -77,7 +81,6 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
-COPY ./react-app /static/react-app
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -90,7 +93,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
@@ -110,7 +113,6 @@ COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
-COPY --from=builder /static/react-app /static/react-app
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
@@ -118,11 +120,11 @@ COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /lib/libinotifytools.so.0 /lib/libc.so.6 /lib/
 # metricsextension dependencies
-COPY --from=builder /lib/libboost_filesystem.so.1.76.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
-COPY --from=builder /lib64/libuuid.so.1 /lib64
+COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # mdsd dependencies
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
-COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
+COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
+COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
 
 # debug image
 # COPY --from=builder /busybin /busybin

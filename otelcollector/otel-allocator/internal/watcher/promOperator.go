@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -53,11 +54,17 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
+	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
-	factory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
+	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
+	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
 
-	monitoringInformers, err := getInformers(factory)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +89,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 				ProbeSelector:                   cfg.PrometheusCR.ProbeSelector,
 				ProbeNamespaceSelector:          cfg.PrometheusCR.ProbeNamespaceSelector,
 				ServiceDiscoveryRole:            &serviceDiscoveryRole,
+				Version:                         "2.55.1", // fix Prometheus version 2 to avoid generating incompatible config
+				ScrapeProtocols:                 cfg.PrometheusCR.ScrapeProtocols,
 			},
 			EvaluationInterval: monitoringv1.Duration("30s"),
 		},
@@ -187,7 +196,7 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -208,11 +217,17 @@ func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informe
 		return nil, err
 	}
 
+	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]*informers.ForResource{
 		monitoringv1.ServiceMonitorName: serviceMonitorInformers,
 		monitoringv1.PodMonitorName:     podMonitorInformers,
 		monitoringv1.ProbeName:          probeInformers,
 		promv1alpha1.ScrapeConfigName:   scrapeConfigInformers,
+		string(v1.ResourceSecrets):      secretInformers,
 	}, nil
 }
 
@@ -273,29 +288,131 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 			continue
 		}
 
-		// only send an event notification if there isn't one already
-		resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			// these functions only write to the notification channel if it's empty to avoid blocking
-			// if scrape config updates are being rate-limited
-			AddFunc: func(obj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-			DeleteFunc: func(obj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-		})
+		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
+		if name == string(v1.ResourceSecrets) {
+			w.logger.Info("Using custom event handler for secrets informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
+					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
+					secretName := newMeta.GetObjectMeta().GetName()
+					secretNamespace := newMeta.GetObjectMeta().GetNamespace()
+					_, exists, err := w.store.GetObject(&v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					})
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping update", secretName, "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the update
+						return
+					}
+
+					newSecret, err := w.store.GetSecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+
+					if err != nil {
+						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
+						return
+					}
+
+					w.logger.Info("Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
+					if err := w.store.UpdateObject(newSecret); err != nil {
+						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+					} else {
+						w.logger.Info(
+							"Successfully updated store, sending update event to notifyEvents channel",
+							"oldObjName", oldMeta.GetObjectMeta().GetName(),
+							"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+							"newObjName", newMeta.GetObjectMeta().GetName(),
+							"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
+
+					secretName := secretMeta.GetObjectMeta().GetName()
+					secretNamespace := secretMeta.GetObjectMeta().GetNamespace()
+
+					// check if the secret exists in the store
+					secretObj := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					}
+					_, exists, err := w.store.GetObject(secretObj)
+					// if the secret does not exist in the store, we skip the delete
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the delete
+						return
+					}
+					w.logger.Info("Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					// if the secret exists in the store, we delete it
+					// and send an event notification to the notifyEvents channel
+					if err := w.store.DeleteObject(secretObj); err != nil {
+						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"Successfully removed secret from store, sending update event to notifyEvents channel",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+			})
+		} else {
+			w.logger.Info("Using default event handler for informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+			})
+		}
 	}
 	if !success {
 		return fmt.Errorf("failed to sync one of the caches")

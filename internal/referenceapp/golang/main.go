@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -315,6 +316,7 @@ func recordTestMetrics() {
 			attribute.String("label.1", "label.1-value"),
 			attribute.String("label.2", "label.2-value"),
 			attribute.String("temporality", temporalityLabel),
+			attribute.String("protocol", protocolLabel),
 		)
 		for {
 			otlpIntCounterTest.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
@@ -391,6 +393,7 @@ var (
 	otlpFloatExplicitHistogramTest    metric.Float64Histogram
 
 	temporalityLabel string
+	protocolLabel    string
 
 	scrapeIntervalSec = 60
 	metricCount       = 10000
@@ -560,6 +563,35 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
 }
 
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	u, p, ok := r.BasicAuth()
+	if !ok {
+		fmt.Println("Error parsing basic auth")
+		w.WriteHeader(401)
+		fmt.Fprintf(w, "basic auth error")
+		return
+	}
+	if u != "admin" {
+		fmt.Printf("Username provided is incorrect: %s\n", u)
+		w.WriteHeader(401)
+		fmt.Fprintf(w, "username error")
+		return
+	}
+	if p != "pwd" {
+		fmt.Printf("Password provided is incorrect: %s\n", p)
+		w.WriteHeader(401)
+		fmt.Fprintf(w, "pwd error")
+		return
+	}
+	fmt.Printf("Username: %s\n", u)
+	fmt.Printf("Password: %s\n", p)
+	w.WriteHeader(200)
+	fmt.Fprintf(w, "my_metric{label_0=\"label-value\"} 0")
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "my_metric{label_1=\"label-value\"} 1")
+	return
+}
+
 func main() {
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
@@ -585,6 +617,10 @@ func main() {
 	untypedServer.HandleFunc("/metrics", untypedHandler)
 	weatherServer := http.NewServeMux()
 	weatherServer.Handle("/metrics", promhttp.Handler())
+
+	handler := http.HandlerFunc(handleRequest)
+	http.Handle("/httpsmetrics", handler)
+	http.ListenAndServe(":2114", nil)
 
 	// Run server for metrics without a type
 	go func() {
@@ -620,6 +656,12 @@ func deltaSelector(kind gosdkmetric.InstrumentKind) metricdata.Temporality {
 func setupOTLP() {
 	ctx := context.Background()
 
+	// Uncomment the lines below to enable debug logging
+	// verbosity := 8
+	// stdr.SetVerbosity(verbosity)
+	// l := stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
+	// otel.SetLogger(l)
+
 	var (
 		exporter gosdkmetric.Exporter
 		err      error
@@ -631,6 +673,12 @@ func setupOTLP() {
 	temporalityLabel = "cumulative"
 	if deltaTemporality {
 		temporalityLabel = "delta"
+	}
+
+	httpProtocol := os.Getenv("OTEL_EXPORT_PROTOCOL") == "http"
+	protocolLabel = "grpc"
+	if httpProtocol {
+		protocolLabel = "http"
 	}
 
 	// Export as stdout logs instead for debugging
@@ -648,16 +696,29 @@ func setupOTLP() {
 	} else { // Default to sending over GRPC
 		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
 		if deltaTemporality {
-			exporter, err = otlpmetricgrpc.New(ctx,
-				otlpmetricgrpc.WithEndpoint(endpoint),
-				otlpmetricgrpc.WithCompressor(gzip.Name),
-				otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
-			)
+			if httpProtocol {
+				exporter, err = otlpmetrichttp.New(ctx,
+					otlpmetrichttp.WithEndpoint(endpoint),
+					otlpmetrichttp.WithTemporalitySelector(deltaSelector),
+				)
+			} else {
+				exporter, err = otlpmetricgrpc.New(ctx,
+					otlpmetricgrpc.WithEndpoint(endpoint),
+					otlpmetricgrpc.WithCompressor(gzip.Name),
+					otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
+				)
+			}
 		} else {
-			exporter, err = otlpmetricgrpc.New(ctx,
-				otlpmetricgrpc.WithEndpoint(endpoint),
-				otlpmetricgrpc.WithCompressor(gzip.Name),
-			)
+			if httpProtocol {
+				exporter, err = otlpmetrichttp.New(ctx,
+					otlpmetrichttp.WithEndpoint(endpoint),
+				)
+			} else {
+				exporter, err = otlpmetricgrpc.New(ctx,
+					otlpmetricgrpc.WithEndpoint(endpoint),
+					otlpmetricgrpc.WithCompressor(gzip.Name),
+				)
+			}
 		}
 	}
 	if err != nil {

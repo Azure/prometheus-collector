@@ -273,7 +273,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory s
 	if meLocalControl {
 		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", meConfigFile)
 	}
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
@@ -290,7 +290,7 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	if meLocalControl {
 		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	}
 
 	// Create a file to store the stdoutput
@@ -473,6 +473,13 @@ func StartFluentBit(fluentBitConfigFile string) {
 		log.Fatalf("Error creating log file: %v\n", err)
 	}
 	defer logFile.Close()
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_TLS_SETTING", "on", true)
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_PROMETHEUS_PORT", "443", true)
+	} else {
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_TLS_SETTING", "off", true)
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_PROMETHEUS_PORT", "80", true)
+	}
 
 	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
 	fluentBitCmd.Stdout = os.Stdout
