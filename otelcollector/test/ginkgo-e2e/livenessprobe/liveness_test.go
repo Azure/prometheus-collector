@@ -32,7 +32,7 @@ var _ = Describe("When replicaset prometheus-collector container liveness probe 
 			"Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(120),
 		),
 		Entry("mdsd is not running, the container should restart", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
-			"mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(120),
+			"mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(120), Label(utils.MDSDLabel),
 		),
 	)
 
@@ -46,7 +46,7 @@ var _ = Describe("When replicaset prometheus-collector container liveness probe 
 		time.Sleep(120 * time.Second)
 	})
 
-	Specify("the TokenConfig.json file has updated, the container should restart", Label("token-config"), func() {
+	Specify("the TokenConfig.json file has updated, the container should restart", Label(utils.MDSDLabel), func() {
 		err := utils.GetAndUpdateTokenConfig(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", []string{"bash", "-c", "echo ' ' >> /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"})
 		Expect(err).NotTo(HaveOccurred())
 		err = utils.WatchForPodRestart(K8sClient, "kube-system", "rsName", "ama-metrics", 180, "prometheus-collector",
@@ -73,7 +73,7 @@ var _ = Describe("When the daemonset prometheus-collector container liveness pro
 			"Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(180), FlakeAttempts(2),
 		),
 		Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-			"mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(180), FlakeAttempts(2),
+			"mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(180), FlakeAttempts(2), Label(utils.MDSDLabel),
 		),
 	)
 
@@ -114,7 +114,7 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
 			"", "MetricsExtension.Native", int64(300), FlakeAttempts(2),
 		),
 		Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-			"", "MonAgentLauncher", int64(300), FlakeAttempts(2),
+			"", "MonAgentLauncher", int64(300), FlakeAttempts(2), Label(utils.MDSDLabel),
 		),
 	)
 
