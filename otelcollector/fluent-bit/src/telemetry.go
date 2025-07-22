@@ -167,10 +167,13 @@ const (
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
-	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 	basicAuthEnabled                      = "BasicAuthEnabled"
 	bearerTokenEnabledWithFile            = "BearerTokenEnabledWithFile"
 	bearerTokenEnabledWithSecret          = "BearerTokenEnabledWithSecret"
+)
+
+var (
+	amcsConfigFilePath = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -238,6 +241,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			CommonProperties["ClusterName"] = splitStrings[8]
 		}
 		// Reading AMCS config file for telemetry
+		otlpEnabled := os.Getenv("AZMON_FULL_OTLP_ENABLED") == "true"
+		if otlpEnabled {
+			amcsConfigFilePath = "/etc/mdsd.d/config-cache/me/TokenConfig.json"
+		}
 		amcsConfigFile, err := os.Open(amcsConfigFilePath)
 		if err != nil {
 			message := fmt.Sprintf("Error while opening AMCS config file - %v\n", err)

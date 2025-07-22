@@ -316,12 +316,18 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	processToCheck := ""
 
 	tokenConfigFileLocation := "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
+	if otlpEnabled {
+		tokenConfigFileLocation = "/etc/mdsd.d/config-cache/me/TokenConfig.json"
+	}
 	if osType == "windows" {
 		tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
+		if otlpEnabled {
+			tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\me\\TokenConfig.json"
+		}
 	}
 
 	// Checking if TokenConfig file exists
-	if _, err := os.Stat(tokenConfigFileLocation); !otlpEnabled && os.IsNotExist(err) {
+	if _, err := os.Stat(tokenConfigFileLocation); os.IsNotExist(err) {
 		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			fmt.Println("azmon-container-start-time file exists, reading start time")
