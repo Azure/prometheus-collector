@@ -215,3 +215,12 @@ jobs:
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             /azp run
+      
+      - name: Comment CLA agreement on PR
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          issue-number: ${{ steps.cpr.outputs.pull-request-number }}
+          body: |
+            @microsoft-github-policy-service agree company="Microsoft"
