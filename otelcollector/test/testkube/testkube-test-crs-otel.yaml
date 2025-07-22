@@ -18,7 +18,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config,fips,retina)"
+      - "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)"
       - "./containerstatus"
     executePostRunScriptBeforeScraping: false
 ---
@@ -42,7 +42,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config,fips,retina)"
+      - "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)"
       - "./livenessprobe"
     executePostRunScriptBeforeScraping: false
 ---
@@ -66,7 +66,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config,fips,retina)"
+      - "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)"
       - "./prometheusui"
     executePostRunScriptBeforeScraping: false
 ---

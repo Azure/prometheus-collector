@@ -248,20 +248,42 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
+		var inotifyCommand *exec.Cmd
 
 		// Define the command to start inotify
-		inotifyCommand := exec.Command(
-			"inotifywait",
-			meDCRConfigDirectory+"/TokenConfig.json",
-			"--daemon",
-			"--outfile", outputFile,
-			"--event", "ATTRIB",
-			"--event", "create",
-			"--event", "delete",
-			"--event", "modify",
-			"--format", "%e : %T",
-			"--timefmt", "+%s",
-		)
+		if !otlpEnabled {
+			fmt.Printf("Setting up inotify to watch: %s\n", meDCRConfigDirectory)
+
+			inotifyCommand = exec.Command(
+				"inotifywait",
+				meDCRConfigDirectory,
+				"--daemon",
+				"--outfile", outputFile,
+				"--event", "ATTRIB",
+				"--event", "create",
+				"--event", "delete",
+				"--event", "modify",
+				"--format", "%e : %T",
+				"--timefmt", "+%s",
+			)
+
+		} else {
+			tokenConfigFile := meDCRConfigDirectory + "/TokenConfig.json"
+			fmt.Printf("Setting up inotify to watch: %s\n", tokenConfigFile)
+
+			inotifyCommand = exec.Command(
+				"inotifywait",
+				tokenConfigFile,
+				"--daemon",
+				"--outfile", outputFile,
+				"--event", "ATTRIB",
+				"--event", "create",
+				"--event", "delete",
+				"--event", "modify",
+				"--format", "%e : %T",
+				"--timefmt", "+%s",
+			)
+		}
 
 		// Start the inotify process
 		err = inotifyCommand.Start()
@@ -316,18 +338,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	processToCheck := ""
 
 	tokenConfigFileLocation := "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
-	if otlpEnabled {
-		tokenConfigFileLocation = "/etc/mdsd.d/config-cache/me/TokenConfig.json"
-	}
 	if osType == "windows" {
 		tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
-		if otlpEnabled {
-			tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\me\\TokenConfig.json"
-		}
 	}
 
 	// Checking if TokenConfig file exists
-	if _, err := os.Stat(tokenConfigFileLocation); os.IsNotExist(err) {
+	if _, err := os.Stat(tokenConfigFileLocation); !otlpEnabled && os.IsNotExist(err) {
 		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			fmt.Println("azmon-container-start-time file exists, reading start time")

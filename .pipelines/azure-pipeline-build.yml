@@ -2469,9 +2469,9 @@ extends:
               - bash: |
                   export AMW_QUERY_ENDPOINT="https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com"
                   export AZURE_CLIENT_ID="6b8f6333-ecd0-4579-b05d-afc98a103a59"
-                  envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-otel.yaml
+                  envsubst < ./testkube/testkube-test-crs-otel.yaml > ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
                   kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-otel.yaml
+                  kubectl apply -f ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml

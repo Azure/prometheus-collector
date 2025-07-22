@@ -20,10 +20,6 @@ func CheckForFilesystemChanges() {
 		`C:\etc\config\settings\prometheus`,
 	}
 	tokenFile := `C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json`
-	otlpEnabled := os.Getenv("AZMON_FULL_OTLP_ENABLED") == "true"
-	if otlpEnabled {
-		tokenFile = `C:\opt\genevamonitoringagent\datadirectory\mcs\me\TokenConfig.json`
-	}
 	hashStore := `C:\last_config_hash.txt`
 	logFile := `C:\filesystemwatcher.txt`
 	debugLog := `C:\filesystemwatcher_error_log.txt`
