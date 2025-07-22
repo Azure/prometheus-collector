@@ -87,7 +87,7 @@ var _ = Describe("When the daemonset prometheus-collector container liveness pro
 		time.Sleep(180 * time.Second)
 	})
 
-	Specify("the TokenConfig.json file has updated from mdsd, the container should restart", Label(utils.MdsdLabel), func() {
+	Specify("the TokenConfig.json file has updated from mdsd, the container should restart", Label(utils.MDSDLabel), func() {
 		err := utils.GetAndUpdateTokenConfig(K8sClient, Cfg, "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", []string{"bash", "-c", "echo ' ' >> /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"})
 		Expect(err).NotTo(HaveOccurred())
 		err = utils.WatchForPodRestart(K8sClient, "kube-system", "dsName", "ama-metrics-node", 180, "prometheus-collector",
@@ -127,7 +127,7 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Specify("the TokenConfig.json file has updated from mdsd, the container should restart", Label(utils.MdsdLabel), func() {
+	Specify("the TokenConfig.json file has updated from mdsd, the container should restart", Label(utils.MDSDLabel), func() {
 		err := utils.GetAndUpdateTokenConfig(K8sClient, Cfg, "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", []string{"powershell", "-Command", "echo ' ' >> C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"})
 		Expect(err).NotTo(HaveOccurred())
 		err = utils.WatchForPodRestart(K8sClient, "kube-system", "dsName", "ama-metrics-win-node", 300, "prometheus-collector",
