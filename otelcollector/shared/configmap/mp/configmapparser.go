@@ -176,13 +176,13 @@ func Configmapparser() {
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		files, err := os.ReadDir("/etc/config/settings")
 		if err == nil {
-			for _, file := range files {
-				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
-					continue
-				}
-				configmapVer = "v1"
-				break
-			}
+		    for _, file := range files {
+		        if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
+		            continue
+		        }
+		        configmapVer = "v1"
+		        break
+		    }
 		}
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIGMAP_VERSION", configmapVer, true)

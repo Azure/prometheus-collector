@@ -188,7 +188,7 @@ func main() {
 	if controllerType == "replicaset" {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			_ = shared.CollectorTAHttpsCheck(collectorConfig)
-		} else if ccpMetricsEnabled != "true" {
+		} else if ccpMetricsEnabled  != "true" {
 			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")

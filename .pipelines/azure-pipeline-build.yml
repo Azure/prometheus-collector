@@ -1,7 +1,6 @@
 trigger:
   branches:
     include:
-    - vishwa/05022025
     - main
 
 pr:
@@ -9,7 +8,6 @@ pr:
   branches:
     include:
     - main
-    - feature/otlpmain
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
