@@ -58,7 +58,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "networkobservabilityCilium")
 		intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-capacity-provisioner")
 		intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-metrics-exporter")
-		intervalHash["STORAGEOPERATORCPEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "storage-operator-control-plane")
+		intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "storage-operator-service-metrics")
 
 		return intervalHash
 	}
@@ -73,7 +73,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
 		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
 		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL", "ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL",
-		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL", "STORAGEOPERATORCPEXPORTER_SCRAPE_INTERVAL",
+		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL", "STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL",
 	}
 
 	for _, key := range keys {
