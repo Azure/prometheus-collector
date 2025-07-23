@@ -122,7 +122,7 @@ spec:
         value: "$AZURE_CLIENT_ID"
         type: basic
     args:
-    - "--label-filter"
+      - "--label-filter"
       - "!(arc-extension,linux-daemonset-custom-config,otlp)"
       - "./querymetrics"
     executePostRunScriptBeforeScraping: false
