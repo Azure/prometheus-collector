@@ -72,8 +72,8 @@ var (
 	AcstorCapacityProvisionerKeepListRegex string
 	// ACStor Metrics Exporter keep list regex
 	AcstorMetricsExporterKeepListRegex string
-	// Storage Operator Control Plane Metrics Exporter keep list regex
-	StorageOperatorCPExporterKeepListRegex string
+	// Storage Operator Service Metrics  keep list regex
+	StorageOperatorServiceMetricsKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
 	NetworkObservabilityCiliumKeepListRegex string
 	// Network Observability Hubble metrics keep list regex
@@ -109,8 +109,8 @@ var (
 	AcstorCapacityProvisionerScrapeInterval string
 	// ACStor Metrics Exporter scrape interval
 	AcstorMetricsExporterScrapeInterval string
-	// Storage Operator Control Plane Metrics Exporter scrape interval
-	StorageOperatorCPExporterScrapeInterval string
+	// Storage Operator Service Metrics  scrape interval
+	StorageOperatorServiceMetricsScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
 	NetworkObservabilityCiliumScrapeInterval string
 	// Network Observability Hubble metrics scrape interval
@@ -364,7 +364,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
 			AcstorCapacityProvisionerKeepListRegex = regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
 			AcstorMetricsExporterKeepListRegex = regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
-			StorageOperatorCPExporterKeepListRegex = regexHash["STORAGEOPERATORCPEXPORTER_KEEP_LIST_REGEX"]
+			StorageOperatorServiceMetricsKeepListRegex = regexHash["STORAGEOPERATORSERVICEMETRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
@@ -396,7 +396,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 			AcstorCapacityProvisionerScrapeInterval = intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
 			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
-			StorageOperatorCPExporterScrapeInterval = intervalHash["STORAGEOPERATORCPEXPORTER_SCRAPE_INTERVAL"]
+			StorageOperatorServiceMetricsScrapeInterval = intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
 			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
@@ -918,8 +918,8 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if AcstorMetricsExporterKeepListRegex != "" {
 					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
 				}
-				if StorageOperatorCPExporterKeepListRegex != "" {
-					metric.Properties["StorageOperatorCPExporterRegex"] = StorageOperatorCPExporterKeepListRegex
+				if StorageOperatorServiceMetricsKeepListRegex != "" {
+					metric.Properties["StorageOperatorCPExporterRegex"] = StorageOperatorServiceMetricsKeepListRegex
 				}
 				if NetworkObservabilityCiliumKeepListRegex != "" {
 					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex

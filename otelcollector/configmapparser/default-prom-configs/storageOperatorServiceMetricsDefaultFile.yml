@@ -1,5 +1,5 @@
  scrape_configs:
- - job_name: storage-operator-control-plane
+ - job_name: storage-operator-service-metrics
    honor_labels: true
    scrape_interval: $$SCRAPE_INTERVAL$$
    scheme: http
