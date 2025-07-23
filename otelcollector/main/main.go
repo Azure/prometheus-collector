@@ -238,7 +238,7 @@ func main() {
 		}
 	}
 
-	if osType == "linux" {
+	if osType == "linux" && !otlpEnabled {
 		// Start inotify to watch for changes
 		fmt.Println("Starting inotify for watching mdsd config update")
 
@@ -248,42 +248,20 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
-		var inotifyCommand *exec.Cmd
 
 		// Define the command to start inotify
-		if !otlpEnabled {
-			fmt.Printf("Setting up inotify to watch: %s\n", meDCRConfigDirectory)
-
-			inotifyCommand = exec.Command(
-				"inotifywait",
-				meDCRConfigDirectory,
-				"--daemon",
-				"--outfile", outputFile,
-				"--event", "ATTRIB",
-				"--event", "create",
-				"--event", "delete",
-				"--event", "modify",
-				"--format", "%e : %T",
-				"--timefmt", "+%s",
-			)
-
-		} else {
-			tokenConfigFile := meDCRConfigDirectory + "/TokenConfig.json"
-			fmt.Printf("Setting up inotify to watch: %s\n", tokenConfigFile)
-
-			inotifyCommand = exec.Command(
-				"inotifywait",
-				tokenConfigFile,
-				"--daemon",
-				"--outfile", outputFile,
-				"--event", "ATTRIB",
-				"--event", "create",
-				"--event", "delete",
-				"--event", "modify",
-				"--format", "%e : %T",
-				"--timefmt", "+%s",
-			)
-		}
+		inotifyCommand := exec.Command(
+			"inotifywait",
+			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+			"--daemon",
+			"--outfile", outputFile,
+			"--event", "ATTRIB",
+			"--event", "create",
+			"--event", "delete",
+			"--event", "modify",
+			"--format", "%e : %T",
+			"--timefmt", "+%s",
+		)
 
 		// Start the inotify process
 		err = inotifyCommand.Start()
