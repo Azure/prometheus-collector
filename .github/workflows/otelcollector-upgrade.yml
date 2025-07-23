@@ -97,7 +97,7 @@ jobs:
             ${{ steps.upgrade.outputs.prometheusreceiver_changelog }}
 
             ${{ steps.upgrade.outputs.target_allocator_changelog }}
-          draft: true
+          draft: false
 
       - name: Check if the new PR exists
         id: check_new_pr
