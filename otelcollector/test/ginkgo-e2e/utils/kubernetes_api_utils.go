@@ -413,3 +413,23 @@ func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, confi
 
 	return nil
 }
+
+func GetAndUpdateTokenConfig(K8sClient *kubernetes.Clientset, Cfg *rest.Config, namespace, labelName, labelValue, containerName string, updateCommand []string) error {
+	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range pods {
+		_, stderr, err := ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, updateCommand)
+		if err != nil {
+			return err
+		}
+
+		if stderr != "" {
+			return fmt.Errorf("stderr: %s", stderr)
+		}
+	}
+
+	return nil
+}
