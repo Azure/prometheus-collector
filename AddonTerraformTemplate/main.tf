@@ -103,13 +103,17 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   ]
 }
 
+
+# This association is required only if the cluster is private and the DCE region differs from the cluster region.
+# In this case, we associate the cluster with the DCE created in the cluster's region (dce_mismatch).
+# If there is no region mismatch, this resource is not created.
 resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
-  count                   = (local.dce_region_mismatch && var.is_private_cluster) ? 1 : 0
-  target_resource_id      = azurerm_kubernetes_cluster.k8s.id
-  data_collection_endpoint_id = local.dce_region_mismatch ? azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id : azurerm_monitor_data_collection_endpoint.dce.id
-  description             = "Association of data collection endpoint for private link clusters. Deleting this association will break the data collection for this AKS Cluster."
+  count                       = (local.dce_region_mismatch && var.is_private_cluster) ? 1 : 0
+  target_resource_id          = azurerm_kubernetes_cluster.k8s.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id
+  description                 = "Association of data collection endpoint for private link clusters. Deleting this association will break the data collection for this AKS Cluster."
   depends_on = [
-    azurerm_monitor_data_collection_endpoint.dce
+    azurerm_monitor_data_collection_endpoint.dce_mismatch
   ]
 }
 
