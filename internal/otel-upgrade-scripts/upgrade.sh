@@ -227,6 +227,211 @@ rm otelcollector/Makefile.backup
 sed -i '/import (/a\\tuberzap "go.uber.org/zap"' otelcollector/otel-allocator/internal/config/flags.go
 sed -i '/zapCmdLineOpts.BindFlags(zapFlagSet)/a\\tlvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)\n\tzapCmdLineOpts.Level = &lvl' otelcollector/otel-allocator/internal/config/flags.go
 
+# Apply custom changes for asset store fixes and secret watching
+echo "Applying custom changes for asset store fixes and secret watching..."
+echo "These changes are based on commit 341e15c4014e14cff73c5a4b2b9dabaff8fd8aa9"
+echo "Fix for watching secret updates for CRs - adds informer for secrets and updates asset store when secrets are updated/deleted"
+
+# Apply promOperator.go changes
+cat > promoperator_patch.py << 'EOF'
+import re
+
+# Read the file
+with open('otelcollector/otel-allocator/internal/watcher/promOperator.go', 'r') as f:
+    content = f.read()
+
+# 1. Add metadata import after kubernetes import
+if '"k8s.io/client-go/metadata"' not in content:
+    content = re.sub(
+        r'(\s*"k8s\.io/client-go/kubernetes"\s*\n)',
+        r'\1\t"k8s.io/client-go/metadata"\n',
+        content
+    )
+
+# 2. Add metadata client creation
+if 'mdClient, err := metadata.NewForConfig' not in content:
+    content = re.sub(
+        r'(mClient, err := versioned\.NewForConfig\(cfg\.ClusterConfig\)\s*\n\s*if err != nil \{\s*\n\s*return nil, err\s*\n\s*\})',
+        r'\1\n\n\tmdClient, err := metadata.NewForConfig(cfg.ClusterConfig)\n\tif err != nil {\n\t\treturn nil, err\n\t}',
+        content, flags=re.DOTALL
+    )
+
+# 3. Update factory creation
+content = re.sub(
+    r'factory := informers\.NewMonitoringInformerFactories\(allowList, denyList, mClient, allocatorconfig\.DefaultResyncTime, nil\)',
+    'monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)\n\tmetaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)',
+    content
+)
+
+# 4. Update getInformers call
+content = re.sub(
+    r'monitoringInformers, err := getInformers\(factory\)',
+    'monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)',
+    content
+)
+
+# 5. Update getInformers function signature
+content = re.sub(
+    r'func getInformers\(factory informers\.FactoriesForNamespaces\) \(map\[string\]\*informers\.ForResource, error\) \{',
+    'func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {',
+    content
+)
+
+# 6. Add secretInformers creation after scrapeConfigInformers
+if 'secretInformers, err := informers.NewInformersForResourceWithTransform' not in content:
+    content = re.sub(
+        r'(scrapeConfigInformers, err := informers\.NewInformersForResource\(factory, promv1alpha1\.SchemeGroupVersion\.WithResource\(promv1alpha1\.ScrapeConfigName\)\)\s*if err != nil \{\s*return nil, err\s*\})',
+        r'\1\n\n\tsecretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)\n\tif err != nil {\n\t\treturn nil, err\n\t}',
+        content, flags=re.DOTALL
+    )
+
+# 7. Add secrets to return map
+if 'string(v1.ResourceSecrets):' not in content:
+    content = re.sub(
+        r'(promv1alpha1\.ScrapeConfigName:\s+scrapeConfigInformers,)',
+        r'\1\n\t\tstring(v1.ResourceSecrets):      secretInformers,',
+        content
+    )
+
+# 8. Replace the event handler section with custom logic
+event_handler_pattern = r'(\s+)// only send an event notification if there isn\'t one already\s*resource\.AddEventHandler\(cache\.ResourceEventHandlerFuncs\{[^}]*}\)\s*}\)\s*'
+if re.search(event_handler_pattern, content, re.DOTALL):
+    replacement = '''
+		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
+		if name == string(v1.ResourceSecrets) {
+			w.logger.Info("Using custom event handler for secrets informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
+					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
+					secretName := newMeta.GetObjectMeta().GetName()
+					secretNamespace := newMeta.GetObjectMeta().GetNamespace()
+					_, exists, err := w.store.GetObject(&v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					})
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping update", secretName, "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the update
+						return
+					}
+
+					newSecret, err := w.store.GetSecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+
+					if err != nil {
+						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
+						return
+					}
+
+					w.logger.Info("Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
+					if err := w.store.UpdateObject(newSecret); err != nil {
+						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+					} else {
+						w.logger.Info(
+							"Successfully updated store, sending update event to notifyEvents channel",
+							"oldObjName", oldMeta.GetObjectMeta().GetName(),
+							"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+							"newObjName", newMeta.GetObjectMeta().GetName(),
+							"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
+
+					secretName := secretMeta.GetObjectMeta().GetName()
+					secretNamespace := secretMeta.GetObjectMeta().GetNamespace()
+
+					// check if the secret exists in the store
+					secretObj := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
+					}
+					_, exists, err := w.store.GetObject(secretObj)
+					// if the secret does not exist in the store, we skip the delete
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the delete
+						return
+					}
+					w.logger.Info("Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					// if the secret exists in the store, we delete it
+					// and send an event notification to the notifyEvents channel
+					if err := w.store.DeleteObject(secretObj); err != nil {
+						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"Successfully removed secret from store, sending update event to notifyEvents channel",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
+					}
+				},
+			})
+		} else {
+			w.logger.Info("Using default event handler for informer", "informer", name)
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+			})
+		}
+'''
+    content = re.sub(event_handler_pattern, replacement, content, flags=re.DOTALL)
+
+with open('otelcollector/otel-allocator/internal/watcher/promOperator.go', 'w') as f:
+    f.write(content)
+EOF
+
+python3 promoperator_patch.py
+#rm promoperator_patch.py
+
 # Add the Arc EULA into the main.go file
 echo "Adding Arc EULA to otel-allocator main.go file..."
 sed -i '/func main() {/a\\t// EULA statement is required for Arc extension\n\tclusterResourceId := os.Getenv("CLUSTER")\n\tif strings.EqualFold(clusterResourceId, "connectedclusters") {\n\t\tsetupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\\n\\nMICROSOFT Azure Arc-enabled Kubernetes\\n\\nThis software is licensed to you as part of your or your company'\''s subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")\n\t}' otelcollector/otel-allocator/main.go
@@ -238,6 +443,15 @@ fi
 cd otelcollector/otel-allocator
 cp "$CURRENT_DIR/opentelemetry-operator/go.mod" .
 sed -i '1s#.*#module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator#' go.mod
+
+# Add custom prometheus-operator replace directive
+echo "Adding custom prometheus-operator replace directive (from commit 341e15c4014e14cff73c5a4b2b9dabaff8fd8aa9)..."
+echo "" >> go.mod
+echo "// pointing to this fork for prometheus-operator since we need fixes for asset store which is only available from v0.84.0 of prometheus-operator" >> go.mod
+echo "// targetallocator cannot upgrade to v0.84.0 because of this issue - https://github.com/open-telemetry/opentelemetry-operator/issues/4196" >> go.mod
+echo "// this commit is from this repository -https://github.com/rashmichandrashekar/prometheus-operator/tree/rashmi/v0.81.0-patch-assetstore - which only has the asset store fixes on top of v0.81.0 of prometheus-operator" >> go.mod
+echo "replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138" >> go.mod
+
 go mod tidy
 #make
 #rm -f targetallocator
