@@ -1,0 +1,6 @@
+schema-version:
+  v1 
+config-version:
+  ver1
+default-targets-metrics-keep-list:
+  minimalingestionprofile = false

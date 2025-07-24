@@ -1,0 +1,84 @@
+schema-version: 
+  #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+  v2
+config-version: 
+  #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+  ver1
+cluster-metrics: |-
+  default-targets-scrape-enabled: |-
+    kubelet = true
+    coredns = true
+    cadvisor = true
+    kubeproxy = true
+    apiserver = true
+    kubestate = true
+    nodeexporter = true
+    windowsexporter = true
+    windowskubeproxy = true
+    kappiebasic = true
+    networkobservabilityRetina = true
+    networkobservabilityHubble = true
+    networkobservabilityCilium = true
+    prometheuscollectorhealth = true
+    acstor-capacity-provisioner = true
+    acstor-metrics-exporter = true
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = ".*|value"
+  default-targets-metrics-keep-list: |-
+    kubelet = "test1.*|test2"
+    coredns = "test1.*|test2"
+    cadvisor = "test1.*|test2"
+    kubeproxy = "test1.*|test2"
+    apiserver = "test1.*|test2"
+    kubestate = "test1.*|test2"
+    nodeexporter = "test1.*|test2"
+    windowsexporter = "test1.*|test2"
+    windowskubeproxy = "test1.*|test2"
+    podannotations = "test1.*|test2"
+    kappiebasic = "test1.*|test2"
+    networkobservabilityRetina = "test1.*|test2"
+    networkobservabilityHubble = "test1.*|test2"
+    networkobservabilityCilium = "test1.*|test2"
+    acstor-capacity-provisioner = "test1.*|test2"
+    acstor-metrics-exporter = "test1.*|test2"
+  minimal-ingestion-profile: |-
+    enabled = true
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubeproxy = "30s"
+    apiserver = "30s"
+    kubestate = "30s"
+    nodeexporter = "30s"
+    windowsexporter = "30s"
+    windowskubeproxy = "30s"
+    kappiebasic = "30s"
+    networkobservabilityRetina = "30s"
+    networkobservabilityHubble = "30s"
+    networkobservabilityCilium = "30s"
+    acstor-capacity-provisioner = "30s"
+    acstor-metrics-exporter = "30s"
+    prometheuscollectorhealth = "30s"
+    podannotations = "30s"
+controlplane-metrics: |-
+  default-targets-scrape-enabled: |-
+    apiserver = true
+    cluster-autoscaler = true
+    node-auto-provisioning = true
+    kube-scheduler = true
+    kube-controller-manager = true
+    etcd = true
+  default-targets-metrics-keep-list: |-
+    apiserver = "test1.*|test2.*"
+    cluster-autoscaler = "test1.*|test2.*"
+    node-auto-provisioning = "test1.*|test2.*"
+    kube-scheduler = "test1.*|test2.*"
+    kube-controller-manager = "test1.*|test2.*"
+    etcd = "test1.*|test2.*"
+  minimal-ingestion-profile: |-
+    enabled = true
+prometheus-collector-settings: |-
+  cluster_alias = "alias"
+  debug-mode = true
+  https_config = true

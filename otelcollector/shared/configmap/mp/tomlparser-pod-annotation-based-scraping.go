@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+
+	"github.com/prometheus-collector/shared"
 )
 
 const (
@@ -34,6 +36,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
 		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
 		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
+		shared.DefaultScrapeJobs["podannotations"].Enabled = true
 
 		if _, err := file.WriteString(envVarString); err != nil {
 			return fmt.Errorf("error writing to file: %v", err)
