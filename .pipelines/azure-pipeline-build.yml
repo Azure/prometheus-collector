@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/test-improvements
 
 pr:
   autoCancel: true
@@ -28,6 +29,7 @@ variables:
   GOLANG_VERSION: '1.23.10'
   FLUENTBIT_GOLANG_VERSION: '1.24.4'
   TESTKUBE_GOLANG_VERSION: '1.23.10'
+  TEAMS_WEBHOOK_URL: ''
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
 resources:
@@ -2026,11 +2028,12 @@ extends:
                     az config set extension.use_dynamic_install=yes_without_prompt
                     az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
                   retryCountOnTaskFailure: 2
+
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
         environment: Prometheus-Collector
-        dependsOn: Deploy_Chart_ARC
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #dependsOn: Deploy_Chart_ARC
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2044,14 +2047,6 @@ extends:
               steps:
               - checkout: self
                 persistCredentials: true
-              - bash: |
-                  wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-                  echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-                  sudo apt-get update
-                  sudo apt-get install -y testkube
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)
-                displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2059,51 +2054,24 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials -g ci-dev-arc-wcus -n ci-dev-arc-wcus'
               - bash: |
-                  export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
-                  export AZURE_CLIENT_ID="5f13547e-a4e2-4efd-85fe-a2b03d5b8661"
-                  envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
-                  kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-                displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
-              - bash: |
-                  sleep 360
-                  exit 0
-                displayName: "Wait for cluster to be ready"
-              - bash: |
-                  # Run the full test suite
-                  kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
-                  # Get the current id of the test suite now running
-                  execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-                  # Watch until the all the tests in the test suite finish
-                  kubectl testkube watch testsuiteexecution $execution_id
-                  # Get the results as a formatted json file
-                  kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-                  # For any test that has failed, print out the Ginkgo logs
-                  if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-                    # Get each test name and id that failed
-                    jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                      testName=$(echo $line | cut -d ' ' -f 1)
-                      id=$(echo $line | cut -d ' ' -f 2)
-                      echo "Test $testName failed. Test ID: $id"
-                      # Get the Ginkgo logs of the test
-                      kubectl testkube get execution $id > out 2>error.log
-                      # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                      # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                      cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                    done
-                    # Explicitly fail the ADO task since at least one test failed
-                    exit 0
-                  fi
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
-                displayName: "Run tests"
+                  export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+                  ./testkube/run-testkube-workflow.sh \
+                    "https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com" \
+                    "5f13547e-a4e2-4efd-85fe-a2b03d5b8661" \
+                    "testkube-test-crs-arc.yaml" \
+                    "testkube-test-crs-ci-dev-arc-wcus.yaml" \
+                    "" \
+                    "" \
+                    "ARC"
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                displayName: "Run TestKube workflow"
+              - task: PublishPipelineArtifact@1
+                condition: always()
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
+                  artifactName: 'testkube-results-ARC'
+                displayName: 'Publish TestKube ARC Results'
+
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy: AKS dev cluster"
         environment: Prometheus-Collector
@@ -2358,8 +2326,8 @@ extends:
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
         environment: Prometheus-Collector
-        dependsOn: Deploy_AKS_Chart
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #dependsOn: Deploy_AKS_Chart
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2373,14 +2341,6 @@ extends:
               steps:
               - checkout: self
                 persistCredentials: true
-              - bash: |
-                  wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-                  echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-                  sudo apt-get update
-                  sudo apt-get install -y testkube
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)
-                displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2388,57 +2348,29 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
               - bash: |
-                  export AMW_QUERY_ENDPOINT="https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com"
-                  export AZURE_CLIENT_ID="c7f895bb-c4f6-45af-be82-2273a424e237"
-                  envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
-                  kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-                displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
-              - bash: |
-                  sleep 360
-                  exit 0
-                displayName: "Wait for cluster to be ready"
-              - bash: |
-                  # Run the full test suite
-                  kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
-                  # Get the current id of the test suite now running
-                  execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-                  # Watch until the all the tests in the test suite finish
-                  kubectl testkube watch testsuiteexecution $execution_id
-                  # Get the results as a formatted json file
-                  kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-                  # For any test that has failed, print out the Ginkgo logs
-                  if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-                    # Get each test name and id that failed
-                    jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                      testName=$(echo $line | cut -d ' ' -f 1)
-                      id=$(echo $line | cut -d ' ' -f 2)
-                      echo "Test $testName failed. Test ID: $id"
-                      # Get the Ginkgo logs of the test
-                      kubectl testkube get execution $id > out 2>error.log
-                      # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                      # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                      cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                    done
-                    # Explicitly fail the ADO task since at least one test failed
-                    exit 0
-                  fi
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
-                displayName: "Run tests"
+                  export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+                  ./testkube/run-testkube-workflow.sh \
+                    "https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com" \
+                    "c7f895bb-c4f6-45af-be82-2273a424e237" \
+                    "testkube-test-crs.yaml" \
+                    "testkube-test-crs-ci-dev-aks-mac-eus.yaml" \
+                    "" \
+                    "" \
+                    "AKS"
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                displayName: "Run TestKube workflow"
+              - task: PublishPipelineArtifact@1
+                condition: always()
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
+                  artifactName: 'testkube-results-AKS'
+                displayName: 'Publish TestKube AKS Results'
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
         environment: Prometheus-Collector
-        dependsOn: Deploy_AKS_Chart_OTel_Cluster
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #dependsOn: Deploy_AKS_Chart_OTel_Cluster
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2452,14 +2384,6 @@ extends:
               steps:
               - checkout: self
                 persistCredentials: true
-              - bash: |
-                  wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-                  echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-                  sudo apt-get update
-                  sudo apt-get install -y testkube
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)
-                displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2467,48 +2391,91 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials --resource-group ciprom-dev-aks-otlp --name ciprom-dev-aks-otlp'
               - bash: |
-                  export AMW_QUERY_ENDPOINT="https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com"
-                  export AZURE_CLIENT_ID="6b8f6333-ecd0-4579-b05d-afc98a103a59"
-                  envsubst < ./testkube/testkube-test-crs-otel.yaml > ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
-                  kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-                  #kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap-v2.yaml
-                  kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-                displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
-              - bash: |
-                  sleep 360
-                  exit 0
-                displayName: "Wait for cluster to be ready"
-              - bash: |
-                  # Run the full test suite
-                  kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
-                  # Get the current id of the test suite now running
-                  execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-                  # Watch until the all the tests in the test suite finish
-                  kubectl testkube watch testsuiteexecution $execution_id
-                  # Get the results as a formatted json file
-                  kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-                  # For any test that has failed, print out the Ginkgo logs
-                  if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-                    # Get each test name and id that failed
-                    jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                      testName=$(echo $line | cut -d ' ' -f 1)
-                      id=$(echo $line | cut -d ' ' -f 2)
-                      echo "Test $testName failed. Test ID: $id"
-                      # Get the Ginkgo logs of the test
-                      kubectl testkube get execution $id > out 2>error.log
-                      # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                      # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                      cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                    done
-                    # Explicitly fail the ADO task since at least one test failed
-                    exit 0
-                  fi
-                  exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
-                displayName: "Run tests"
+                  export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+                  ./testkube/run-testkube-workflow.sh \
+                    "https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com" \
+                    "6b8f6333-ecd0-4579-b05d-afc98a103a59" \
+                    "testkube-test-crs-otel.yaml" \
+                    "testkube-test-crs-ciprom-dev-aks-otlp.yaml" \
+                    "false" \
+                    "" \
+                    "OTel"
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                displayName: "Run TestKube workflow"
+              - task: PublishPipelineArtifact@1
+                condition: always()
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
+                  artifactName: 'testkube-results-OTel'
+                displayName: 'Publish TestKube OTel Results'
+
+      - job: TestKube_Summary
+        displayName: "Send TestKube Summary Notification"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn: 
+        - Testkube_ARC
+        - Testkube
+        - Testkube_OTel
+        condition: always()
+        variables:
+          skipComponentGovernanceDetection: true
+          TEAMS_WEBHOOK_URL: $(variables.TEAMS_WEBHOOK_URL)
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download TestKube ARC Results'
+          condition: always()
+          inputs:
+            artifactName: 'testkube-results-ARC'
+            targetPath: '$(Pipeline.Workspace)/testkube-results'
+          continueOnError: true
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download TestKube AKS Results' 
+          condition: always()
+          inputs:
+            artifactName: 'testkube-results-AKS'
+            targetPath: '$(Pipeline.Workspace)/testkube-results'
+          continueOnError: true
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download TestKube OTel Results'
+          condition: always() 
+          inputs:
+            artifactName: 'testkube-results-OTel'
+            targetPath: '$(Pipeline.Workspace)/testkube-results'
+          continueOnError: true
+        - bash: |
+            echo "Downloaded artifacts:"
+            find $(Pipeline.Workspace)/testkube-results -name "*.json" -exec echo "Found: {}" \; -exec cat {} \;
+            
+            # Create combined results file
+            echo '{"results": [], "start_time": "'$(date -u '+%Y-%m-%d %H:%M:%S UTC')'"}' > /tmp/testkube-combined-results.json
+            
+            # Process each result file
+            for result_file in $(Pipeline.Workspace)/testkube-results/testkube-results-*.json; do
+                if [ -f "$result_file" ]; then
+                    echo "Processing: $result_file"
+                    env=$(jq -r '.environment' "$result_file" 2>/dev/null || echo "Unknown")
+                    status=$(jq -r '.status' "$result_file" 2>/dev/null || echo "unknown")
+                    message=$(jq -r '.message // "No message"' "$result_file" 2>/dev/null || echo "No message")
+                    timestamp=$(jq -r '.end_time // .start_time' "$result_file" 2>/dev/null || date -u '+%Y-%m-%d %H:%M:%S UTC')
+                    
+                    # Add to combined results
+                    temp_file=$(mktemp)
+                    jq --arg env "$env" --arg status "$status" --arg message "$message" --arg timestamp "$timestamp" \
+                       '.results += [{"environment": $env, "status": $status, "message": $message, "timestamp": $timestamp}]' \
+                       /tmp/testkube-combined-results.json > "$temp_file" && mv "$temp_file" /tmp/testkube-combined-results.json
+                fi
+            done
+            
+            echo "Combined results:"
+            cat /tmp/testkube-combined-results.json
+            
+            # Call the summary script
+            chmod +x send-testkube-summary.sh
+            ./testkube/send-testkube-summary.sh "$(TEAMS_WEBHOOK_URL)" /tmp/testkube-combined-results.json
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+          displayName: "Send TestKube Summary Notification"

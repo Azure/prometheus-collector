@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 
 	"bytes"
 	"fmt"
-	"io"
 )
 
 /*
@@ -175,6 +175,15 @@ func CheckAllWindowsProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.
  * Executes the given command in the specified container of the pod and returns the stdout and stderr.
  */
 func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, containerName string, namespace string, command []string) (stdout string, stderr string, err error) {
+	// Create a copy of the config to avoid modifying the original
+	configCopy := *config
+
+	// Suppress verbose logging by setting log level
+	if configCopy.WrapTransport == nil {
+		// We can't easily suppress the SPDY executor's debug output without modifying the underlying transport
+		// The verbose output comes from the HTTP/2 SPDY stream handling
+	}
+
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -195,21 +204,61 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 		TTY:       false,
 	}, parameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(&configCopy, "POST", req.URL())
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating command executor: %v", err)
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
-	var stdoutB, stderrB bytes.Buffer
-	if err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdout: &stdoutB,
-		Stderr: &stderrB,
-	}); err != nil {
-		return stdoutB.String(), stderrB.String(), fmt.Errorf("Error when running command %v in the container: %v. Stderr: %s", command, err, stderrB.String())
+	var stdoutB bytes.Buffer
+
+	// Create a custom stderr buffer that filters out SPDY debug messages
+	var filteredStderrB bytes.Buffer
+	stderrWriter := &filteringWriter{
+		underlying: &filteredStderrB,
+		filter: func(data []byte) []byte {
+			lines := strings.Split(string(data), "\n")
+			var filteredLines []string
+			for _, line := range lines {
+				// Filter out SPDY executor debug messages
+				if !strings.Contains(line, "Create stream") &&
+					!strings.Contains(line, "Stream added, broadcasting") &&
+					!strings.Contains(line, "Stream removed, broadcasting") &&
+					!strings.Contains(line, "Reply frame received") &&
+					!strings.Contains(line, "Data frame handling") &&
+					!strings.Contains(line, "Data frame sent") &&
+					!strings.Contains(line, "Data frame received") &&
+					!strings.Contains(line, "Go away received") {
+					filteredLines = append(filteredLines, line)
+				}
+			}
+			return []byte(strings.Join(filteredLines, "\n"))
+		},
 	}
 
-	return stdoutB.String(), stderrB.String(), nil
+	if err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdout: &stdoutB,
+		Stderr: stderrWriter,
+	}); err != nil {
+		return stdoutB.String(), filteredStderrB.String(), fmt.Errorf("Error when running command %v in the container: %v. Stderr: %s", command, err, filteredStderrB.String())
+	}
+
+	return stdoutB.String(), filteredStderrB.String(), nil
+}
+
+// filteringWriter is a custom writer that filters out unwanted log messages
+type filteringWriter struct {
+	underlying io.Writer
+	filter     func([]byte) []byte
+}
+
+func (fw *filteringWriter) Write(data []byte) (int, error) {
+	filtered := fw.filter(data)
+	if len(filtered) > 0 {
+		_, err := fw.underlying.Write(filtered)
+		return len(data), err // Return original length to avoid breaking the caller
+	}
+	return len(data), nil
 }
 
 /*
