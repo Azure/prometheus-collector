@@ -2041,6 +2041,12 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Ev2: publish testkube artifacts'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
+            artifactName: testkube-results-ARC
         strategy:
           runOnce:
             deploy:
@@ -2065,12 +2071,6 @@ extends:
                     "ARC"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
-              - task: PublishPipelineArtifact@1
-                condition: always()
-                inputs:
-                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
-                  artifactName: 'testkube-results-ARC'
-                displayName: 'Publish TestKube ARC Results'
 
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy: AKS dev cluster"
@@ -2335,6 +2335,12 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish TestKube AKS Results'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
+            artifactName: 'testkube-results-AKS'
         strategy:
           runOnce:
             deploy:
@@ -2359,12 +2365,6 @@ extends:
                     "AKS"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
-              - task: PublishPipelineArtifact@1
-                condition: always()
-                inputs:
-                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
-                  artifactName: 'testkube-results-AKS'
-                displayName: 'Publish TestKube AKS Results'
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2378,6 +2378,12 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish TestKube OTel Results'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
+            artifactName: 'testkube-results-OTel'
         strategy:
           runOnce:
             deploy:
@@ -2402,12 +2408,6 @@ extends:
                     "OTel"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
-              - task: PublishPipelineArtifact@1
-                condition: always()
-                inputs:
-                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
-                  artifactName: 'testkube-results-OTel'
-                displayName: 'Publish TestKube OTel Results'
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
