@@ -1928,6 +1928,7 @@ extends:
             echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: push helm chart to dev ACR"
+
     - stage: Deploy
       jobs:
       - deployment: Deploy_Chart_ARC
@@ -2359,7 +2360,7 @@ extends:
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
         environment: Prometheus-Collector
-        condition: and(eq(variables.IS_PR, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true))
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2607,7 +2608,7 @@ extends:
         displayName: "Test: AKS OTel Upgrade testkube tests"
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart_OTel_Upgrade_Cluster
-        condition: and(succeeded(), and(eq(variables.IS_PR, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
+        condition: and(succeeded(), eq(variables.IS_OTEL_UPGRADE_BRANCH, true))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2644,7 +2645,7 @@ extends:
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-                  #kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap-v2.yaml
+                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
@@ -2676,7 +2677,7 @@ extends:
                       cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
                     done
                     # Explicitly fail the ADO task since at least one test failed
-                    exit 0
+                    exit 1
                   fi
                   exit 0
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube

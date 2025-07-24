@@ -200,19 +200,4 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .trivyignore
           git commit -m "Update .trivyignore with new CVEs from version ${{ env.VERSION }}" || echo "No changes to commit"
-          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}
-
-      - name: Wait for 1 minute for all commits to be processed
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        run: sleep 60
-        shell: bash
-
-      - name: Comment azp run on PR
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          token: ${{ steps.generate-token.outputs.token }}
-          issue-number: ${{ steps.cpr.outputs.pull-request-number }}
-          body: |
-            /azp run
-      
+          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}    
