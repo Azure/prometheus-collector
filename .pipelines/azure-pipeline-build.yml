@@ -2477,6 +2477,6 @@ extends:
             cat /tmp/testkube-combined-results.json
             
             # Call the summary script
-            ./testkube/send-testkube-summary.sh "$(TEAMS_WEBHOOK_URL)" /tmp/testkube-combined-results.json
+            ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) /tmp/testkube-combined-results.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
           displayName: "Send TestKube Summary Notification"
