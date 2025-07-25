@@ -115,7 +115,7 @@ echo "✓ Cluster wait period completed"
 echo "Step 4: Starting TestKube test suite execution..."
 
 # Run the full test suite
-kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
+kubectl testkube run testsuite e2e-tests-merge --verbose --job-template testkube/job-template.yaml
 
 # Get the current id of the test suite now running
 execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
