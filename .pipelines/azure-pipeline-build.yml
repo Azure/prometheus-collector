@@ -29,7 +29,6 @@ variables:
   GOLANG_VERSION: '1.23.10'
   FLUENTBIT_GOLANG_VERSION: '1.24.4'
   TESTKUBE_GOLANG_VERSION: '1.23.10'
-  TEAMS_WEBHOOK_URL: ''
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
 resources:
@@ -2477,6 +2476,7 @@ extends:
             cat /tmp/testkube-combined-results.json
             
             # Call the summary script
+            echo $(TEAMS_WEBHOOK_URL)
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) /tmp/testkube-combined-results.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
           displayName: "Send TestKube Summary Notification"
