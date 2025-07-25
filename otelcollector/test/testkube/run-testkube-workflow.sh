@@ -56,85 +56,6 @@ add_result() {
     cat "$RESULTS_FILE"
 }
 
-# Function to send Teams summary notification
-send_teams_summary() {
-    if [ -z "$TEAMS_WEBHOOK_URL" ]; then
-        echo "Teams webhook URL not provided, skipping notification"
-        return 0
-    fi
-    
-    if [ ! -f "$RESULTS_FILE" ]; then
-        echo "No results file found, skipping summary notification"
-        return 0
-    fi
-    
-    local total_count=$(jq '.results | length' "$RESULTS_FILE")
-    local passed_count=$(jq '.results | map(select(.status == "passed")) | length' "$RESULTS_FILE")
-    local failed_count=$(jq '.results | map(select(.status == "failed")) | length' "$RESULTS_FILE")
-    local start_time=$(jq -r '.start_time' "$RESULTS_FILE")
-    local end_time="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-    
-    local title
-    local color
-    local summary_message
-    
-    if [ "$failed_count" -eq 0 ]; then
-        title="✅ All TestKube Tests Passed"
-        color="00b294"
-        summary_message="All $total_count test environments completed successfully!"
-    else
-        title="❌ Some TestKube Tests Failed"
-        color="d63333"
-        summary_message="$failed_count out of $total_count test environments failed."
-    fi
-    
-    # Build detailed results
-    local details=""
-    while IFS= read -r result; do
-        local env=$(echo "$result" | jq -r '.environment')
-        local status=$(echo "$result" | jq -r '.status')
-        local message=$(echo "$result" | jq -r '.message')
-        local icon="✅"
-        if [ "$status" = "failed" ]; then
-            icon="❌"
-        fi
-        details="$details$icon **$env**: $message\\n\\n"
-    done <<< "$(jq -c '.results[]' "$RESULTS_FILE")"
-    
-    local payload=$(cat <<EOF
-{
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    "themeColor": "$color",
-    "summary": "$title",
-    "sections": [{
-        "activityTitle": "$title",
-        "activitySubtitle": "TestKube Workflow Summary",
-        "text": "$summary_message\\n\\n$details",
-        "facts": [{
-            "name": "Total Environments",
-            "value": "$total_count"
-        }, {
-            "name": "Passed",
-            "value": "$passed_count"
-        }, {
-            "name": "Failed", 
-            "value": "$failed_count"
-        }, {
-            "name": "Started",
-            "value": "$start_time"
-        }, {
-            "name": "Completed",
-            "value": "$end_time"
-        }]
-    }]
-}
-EOF
-    )
-    
-    curl -H "Content-Type: application/json" -d "$payload" "$TEAMS_WEBHOOK_URL" || echo "Failed to send Teams notification"
-}
-
 echo "================================================="
 echo "Starting TestKube deployment and testing workflow"
 echo "================================================="
@@ -160,9 +81,6 @@ echo "Target output: $TARGET_OUTPUT"
 # Export environment variables for envsubst
 export AMW_QUERY_ENDPOINT
 export AZURE_CLIENT_ID
-
-# Change to test directory
-cd "$(dirname "$0")/../otelcollector/test/"
 
 # Generate the test CRs from template
 envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
@@ -195,9 +113,6 @@ echo "✓ Cluster wait period completed"
 
 # Step 4: Run TestKube tests
 echo "Step 4: Starting TestKube test suite execution..."
-
-# Change to testkube directory
-cd testkube
 
 # Run the full test suite
 kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
