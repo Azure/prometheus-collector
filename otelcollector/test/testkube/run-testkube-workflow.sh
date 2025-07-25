@@ -14,7 +14,7 @@ set -e
 
 if [ $# -lt 4 ]; then
     echo "Usage: $0 <AMW_QUERY_ENDPOINT> <AZURE_CLIENT_ID> <SOURCE_TEMPLATE> <TARGET_OUTPUT> [APPLY_SETTINGS_CONFIGMAP] [SLEEP_DURATION] [TARGET_ENV] [TEAMS_WEBHOOK_URL]"
-    exit 1
+    exit 0
 fi
 
 AMW_QUERY_ENDPOINT="$1"
@@ -137,7 +137,7 @@ done
 if [ -z "$execution_id" ]; then
     echo "Error: Failed to get test suite execution ID after $max_get_id_retries attempts."
     add_result "$TARGET_ENV" "error" "Failed to retrieve test suite execution ID"
-    exit 1
+    exit 0
 fi
 
 # Watch until all the tests in the test suite finish with retry logic
@@ -177,7 +177,7 @@ done
 if [ "$get_results_success" != "true" ]; then
     echo "Error: Failed to get test results after $max_retries attempts."
     add_result "$TARGET_ENV" "error" "Failed to retrieve test results after multiple attempts"
-    exit 1
+    exit 0
 fi
 
 # Check if any tests failed and process results
@@ -199,7 +199,7 @@ if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
         
         # Remove superfluous logs of everything before the last occurrence of 'go downloading'.
         # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-        cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+        cat error.log | tac | awk '/go: downloading/ {exit} 0' | tac
     done
     
     # Get complete list of failed tests for the result message

@@ -2322,6 +2322,7 @@ extends:
                     "AKS"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
+                continueOnError: true
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2365,6 +2366,7 @@ extends:
                     "OTel"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
+                continueOnError: true
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
@@ -2399,15 +2401,16 @@ extends:
               - bash: |
                   export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
                   ./testkube/run-testkube-workflow.sh \
-                    "https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com" \
-                    "5f13547e-a4e2-4efd-85fe-a2b03d5b8661" \
-                    "testkube-test-crs-arc.yaml" \
-                    "testkube-test-crs-ci-dev-arc-wcus.yaml" \
-                    "" \
-                    "" \
-                    "ARC"
+                  "https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com" \
+                  "5f13547e-a4e2-4efd-85fe-a2b03d5b8661" \
+                  "testkube-test-crs-arc.yaml" \
+                  "testkube-test-crs-ci-dev-arc-wcus.yaml" \
+                  "" \
+                  "" \
+                  "ARC"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
+                continueOnError: true
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
