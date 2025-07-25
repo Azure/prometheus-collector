@@ -175,15 +175,6 @@ func CheckAllWindowsProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.
  * Executes the given command in the specified container of the pod and returns the stdout and stderr.
  */
 func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, containerName string, namespace string, command []string) (stdout string, stderr string, err error) {
-	// Create a copy of the config to avoid modifying the original
-	configCopy := *config
-
-	// Suppress verbose logging by setting log level
-	if configCopy.WrapTransport == nil {
-		// We can't easily suppress the SPDY executor's debug output without modifying the underlying transport
-		// The verbose output comes from the HTTP/2 SPDY stream handling
-	}
-
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -204,7 +195,7 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 		TTY:       false,
 	}, parameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(&configCopy, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating command executor: %v", err)
 	}
