@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # Comprehensive TestKube deployment and testing script
 # Parameters:
@@ -199,7 +198,7 @@ if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
         
         # Remove superfluous logs of everything before the last occurrence of 'go downloading'.
         # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-        cat error.log | tac | awk '/go: downloading/ {exit} 0' | tac
+        cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
     done
     
     # Get complete list of failed tests for the result message
