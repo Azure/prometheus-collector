@@ -117,15 +117,68 @@ echo "Step 4: Starting TestKube test suite execution..."
 # Run the full test suite
 kubectl testkube run testsuite e2e-tests-merge --verbose --job-template testkube/job-template.yaml
 
-# Get the current id of the test suite now running
-execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-echo "Test suite execution ID: $execution_id"
+# Get the current id of the test suite now running with retry logic
+max_get_id_retries=5
+get_id_retry_count=0
+execution_id=""
 
-# Watch until all the tests in the test suite finish
-kubectl testkube watch testsuiteexecution "$execution_id"
+while [ $get_id_retry_count -lt $max_get_id_retries ] && [ -z "$execution_id" ]; do
+    execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+    
+    if [ -n "$execution_id" ]; then
+        echo "Test suite execution ID: $execution_id"
+    else
+        get_id_retry_count=$((get_id_retry_count+1))
+        echo "Failed to get test suite execution ID (attempt $get_id_retry_count/$max_get_id_retries). Retrying in 5 seconds..."
+        sleep 5
+    fi
+done
 
-# Get the results as a formatted json file
-kubectl testkube get testsuiteexecution "$execution_id" --output json > testkube-results.json
+if [ -z "$execution_id" ]; then
+    echo "Error: Failed to get test suite execution ID after $max_get_id_retries attempts."
+    add_result "$TARGET_ENV" "error" "Failed to retrieve test suite execution ID"
+    exit 1
+fi
+
+# Watch until all the tests in the test suite finish with retry logic
+max_retries=3
+retry_count=0
+watch_success=false
+
+while [ $retry_count -lt $max_retries ] && [ "$watch_success" != "true" ]; do
+    if kubectl testkube watch testsuiteexecution "$execution_id"; then
+        watch_success=true
+    else
+        retry_count=$((retry_count+1))
+        echo "Watching test suite execution failed (attempt $retry_count/$max_retries). Retrying in 10 seconds..."
+        sleep 10
+    fi
+done
+
+if [ "$watch_success" != "true" ]; then
+    echo "Warning: Failed to watch test suite execution after $max_retries attempts. Continuing with result collection..."
+fi
+
+# Get the results as a formatted json file with retry logic
+max_retries=3
+retry_count=0
+get_results_success=false
+
+while [ $retry_count -lt $max_retries ] && [ "$get_results_success" != "true" ]; do
+    if kubectl testkube get testsuiteexecution "$execution_id" --output json > testkube-results.json; then
+        get_results_success=true
+    else
+        retry_count=$((retry_count+1))
+        echo "Getting test results failed (attempt $retry_count/$max_retries). Retrying in 10 seconds..."
+        sleep 10
+    fi
+done
+
+if [ "$get_results_success" != "true" ]; then
+    echo "Error: Failed to get test results after $max_retries attempts."
+    add_result "$TARGET_ENV" "error" "Failed to retrieve test results after multiple attempts"
+    exit 1
+fi
 
 # Check if any tests failed and process results
 if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
