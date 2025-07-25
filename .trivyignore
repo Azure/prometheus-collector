@@ -1,17 +1,11 @@
+# This file contains CVEs to be ignored by Trivy
+# Auto-generated on Fri Jul 25 07:10:19 UTC 2025
+
 # CRITICAL
 
 # HIGH
-# kube-state-metrics
-CVE-2024-33599
-CVE-2024-33601
 
 # MEDIUM
-# prometheusui
-CVE-2025-22872 # golang.org/x/net
-GHSA-fv92-fjc5-jj9h 
-# kube-state-metrics
-CVE-2023-4527
-CVE-2023-4806
-CVE-2024-33600
 
 # LOW
+
