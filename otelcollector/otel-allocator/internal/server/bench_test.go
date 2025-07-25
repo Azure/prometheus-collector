@@ -15,7 +15,6 @@ import (
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/allocation"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/target"
@@ -45,8 +44,7 @@ func BenchmarkServerTargetsHandler(b *testing.B) {
 			listenAddr := ":8080"
 			a.SetCollectors(cols)
 			a.SetTargets(targets)
-			s, err := NewServer(logger, a, listenAddr)
-			require.NoError(b, err)
+			s := NewServer(logger, a, listenAddr)
 			b.Run(fmt.Sprintf("%s_num_cols_%d_num_jobs_%d", allocatorName, v.numCollectors, v.numJobs), func(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {

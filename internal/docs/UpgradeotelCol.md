@@ -60,30 +60,10 @@ and add the below after *zapCmdLineOpts.BindFlags(zapFlagSet)* in the getFlagSet
 	lvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)
 	zapCmdLineOpts.Level = &lvl
 ```
-8. In the file otelcollector/otel-allocator/internal/watcher/promOperator.go,
-	- add the import `"k8s.io/client-go/metadata"`
-	- Replace in the function with:
-		```
-			mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
-			if err != nil {
-				return nil, err
-			}
 
-			allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
-
-			monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
-			metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
-			monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
-		```
-	- Change the getInformers function to:
-		```
-			func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
-		```
-
-9. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
-10. Replace the module as module `github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator`
-11. Add the section `replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138` to the go.mod file.
-12. Run go mod tidy from the otel-allocator directory and then run make.
+8. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
+9. Replace the module as module `github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator`
+10. Run go mod tidy from the otel-allocator directory and then run make.
 
 ## Configuration Reader Builder
 1. Update the version of prometheus/common in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator

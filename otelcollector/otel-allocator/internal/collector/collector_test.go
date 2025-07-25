@@ -9,11 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
-	"go.uber.org/atomic"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -31,15 +29,6 @@ var labelSelector = metav1.LabelSelector{
 	MatchLabels: labelMap,
 }
 
-type reportingGauge struct {
-	embedded.Int64Gauge
-	value atomic.Int64
-}
-
-func (r *reportingGauge) Record(_ context.Context, value int64, _ ...metric.RecordOption) {
-	r.value.Store(value)
-}
-
 func getTestPodWatcher(collectorNotReadyGracePeriod time.Duration) Watcher {
 	podWatcher := Watcher{
 		k8sClient:                    fake.NewSimpleClientset(),
@@ -47,7 +36,6 @@ func getTestPodWatcher(collectorNotReadyGracePeriod time.Duration) Watcher {
 		log:                          logger,
 		minUpdateInterval:            time.Millisecond,
 		collectorNotReadyGracePeriod: collectorNotReadyGracePeriod,
-		collectorsDiscovered:         &reportingGauge{},
 	}
 	return podWatcher
 }
@@ -203,7 +191,7 @@ func Test_runWatch(t *testing.T) {
 				defer mapMutex.Unlock()
 				assert.Len(collect, actual, len(tt.want))
 				assert.Equal(collect, tt.want, actual)
-				assert.Equal(collect, podWatcher.collectorsDiscovered.(*reportingGauge).value.Load(), int64(len(actual)))
+				assert.Equal(collect, testutil.ToFloat64(collectorsDiscovered), float64(len(actual)))
 			}, time.Second*30, time.Millisecond*100)
 		})
 	}
@@ -325,7 +313,7 @@ func Test_gracePeriodWithNonRunningPodPhase(t *testing.T) {
 				defer mapMutex.Unlock()
 				assert.Len(collect, actual, len(tt.want))
 				assert.Equal(collect, actual, tt.want)
-				assert.Equal(collect, podWatcher.collectorsDiscovered.(*reportingGauge).value.Load(), int64(len(actual)))
+				assert.Equal(collect, testutil.ToFloat64(collectorsDiscovered), float64(len(actual)))
 			}, time.Second*3, time.Millisecond)
 		})
 	}
@@ -448,7 +436,7 @@ func Test_gracePeriodWithNonReadyPodCondition(t *testing.T) {
 				defer mapMutex.Unlock()
 				assert.Len(collect, actual, len(tt.want))
 				assert.Equal(collect, actual, tt.want)
-				assert.Equal(collect, podWatcher.collectorsDiscovered.(*reportingGauge).value.Load(), int64(len(actual)))
+				assert.Equal(collect, testutil.ToFloat64(collectorsDiscovered), float64(len(actual)))
 			}, time.Second*3, time.Millisecond)
 		})
 	}

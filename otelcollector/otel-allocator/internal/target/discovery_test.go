@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,14 +62,13 @@ func TestDiscovery(t *testing.T) {
 	require.NoError(t, err)
 	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
 	results := make(chan []string)
-	manager, err := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets []*Item) {
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets []*Item) {
 		var result []string
 		for _, t := range targets {
 			result = append(result, t.TargetURL)
 		}
 		results <- result
 	})
-	require.NoError(t, err)
 
 	defer func() { manager.Close() }()
 	defer cancelFunc()
@@ -311,8 +309,7 @@ func TestDiscovery_ScrapeConfigHashing(t *testing.T) {
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(t, err)
 	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
-	manager, err := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
-	require.NoError(t, err)
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
@@ -403,12 +400,11 @@ func TestDiscoveryTargetHashing(t *testing.T) {
 	require.NoError(t, err)
 	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
 	results := make(chan []*Item)
-	manager, err := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets []*Item) {
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets []*Item) {
 		var result []*Item
 		result = append(result, targets...)
 		results <- result
 	})
-	require.NoError(t, err)
 
 	defer manager.Close()
 	defer cancelFunc()
@@ -452,8 +448,7 @@ func TestDiscovery_NoConfig(t *testing.T) {
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(t, err)
 	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
-	manager, err := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
-	require.NoError(t, err)
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 	defer close(manager.close)
 	defer cancelFunc()
 
@@ -464,48 +459,6 @@ func TestDiscovery_NoConfig(t *testing.T) {
 	// check the updated scrape configs
 	expectedScrapeConfigs := map[string]*promconfig.ScrapeConfig{}
 	assert.Equal(t, expectedScrapeConfigs, scu.mockCfg)
-}
-
-func TestProcessTargetGroups_StableLabelIterationOrder(t *testing.T) {
-	// Labels are used to compute the hash of targets and hashing is
-	// reliant on consistent ordering of labels. Creating one label
-	// per letter of the english alphabet is enough to reliably
-	// reproduce inconsistent label ordering due to non-deterministic
-	// map iteration order + lack of sorting.
-	groupLabels := model.LabelSet{}
-	for i := 'a'; i <= 'm'; i++ {
-		groupLabels[model.LabelName(i)] = model.LabelValue(i)
-	}
-
-	targetLabels := model.LabelSet{}
-	for i := 'n'; i <= 'z'; i++ {
-		targetLabels[model.LabelName(i)] = model.LabelValue(i)
-	}
-
-	groups := []*targetgroup.Group{
-		{
-			Labels:  groupLabels,
-			Source:  "",
-			Targets: []model.LabelSet{targetLabels},
-		},
-	}
-
-	results := make([]*Item, 1)
-	scu := &mockScrapeConfigUpdater{}
-	ctx := context.Background()
-	registry := prometheus.NewRegistry()
-	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
-	require.NoError(t, err)
-	manager := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
-	d, err := NewDiscoverer(ctrl.Log.WithName("test"), manager, nil, scu, nil)
-	require.NoError(t, err)
-	d.processTargetGroups("test", groups, results)
-
-	for i, l := range results[0].Labels {
-		expected := string(rune('a' + i))
-		assert.Equal(t, expected, l.Name, "unexpected label key at index %d", i)
-		assert.Equal(t, expected, l.Value, "unexpected label value at index %d", i)
-	}
 }
 
 func BenchmarkApplyScrapeConfig(b *testing.B) {
@@ -545,8 +498,7 @@ func BenchmarkApplyScrapeConfig(b *testing.B) {
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(b, err)
 	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
-	manager, err := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
-	require.NoError(b, err)
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

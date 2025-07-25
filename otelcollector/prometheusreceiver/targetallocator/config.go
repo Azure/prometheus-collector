@@ -141,47 +141,47 @@ func configureSDHTTPClientConfigFromTA(httpSD *promHTTP.SDConfig, allocConf *Con
 	httpSD.HTTPClientConfig.FollowRedirects = false
 
 	httpSD.HTTPClientConfig.TLSConfig = commonconfig.TLSConfig{
-		InsecureSkipVerify: allocConf.TLS.InsecureSkipVerify,
-		ServerName:         allocConf.TLS.ServerName,
-		CAFile:             allocConf.TLS.CAFile,
-		CertFile:           allocConf.TLS.CertFile,
-		KeyFile:            allocConf.TLS.KeyFile,
+		InsecureSkipVerify: allocConf.TLSSetting.InsecureSkipVerify,
+		ServerName:         allocConf.TLSSetting.ServerName,
+		CAFile:             allocConf.TLSSetting.CAFile,
+		CertFile:           allocConf.TLSSetting.CertFile,
+		KeyFile:            allocConf.TLSSetting.KeyFile,
 	}
 
-	if allocConf.TLS.CAPem != "" {
-		decodedCA, err := base64.StdEncoding.DecodeString(string(allocConf.TLS.CAPem))
+	if allocConf.TLSSetting.CAPem != "" {
+		decodedCA, err := base64.StdEncoding.DecodeString(string(allocConf.TLSSetting.CAPem))
 		if err != nil {
 			return fmt.Errorf("failed to decode CA: %w", err)
 		}
 		httpSD.HTTPClientConfig.TLSConfig.CA = string(decodedCA)
 	}
 
-	if allocConf.TLS.CertPem != "" {
-		decodedCert, err := base64.StdEncoding.DecodeString(string(allocConf.TLS.CertPem))
+	if allocConf.TLSSetting.CertPem != "" {
+		decodedCert, err := base64.StdEncoding.DecodeString(string(allocConf.TLSSetting.CertPem))
 		if err != nil {
 			return fmt.Errorf("failed to decode Cert: %w", err)
 		}
 		httpSD.HTTPClientConfig.TLSConfig.Cert = string(decodedCert)
 	}
 
-	if allocConf.TLS.KeyPem != "" {
-		decodedKey, err := base64.StdEncoding.DecodeString(string(allocConf.TLS.KeyPem))
+	if allocConf.TLSSetting.KeyPem != "" {
+		decodedKey, err := base64.StdEncoding.DecodeString(string(allocConf.TLSSetting.KeyPem))
 		if err != nil {
 			return fmt.Errorf("failed to decode Key: %w", err)
 		}
 		httpSD.HTTPClientConfig.TLSConfig.Key = commonconfig.Secret(decodedKey)
 	}
 
-	if allocConf.TLS.MinVersion != "" {
-		minVersion, err := convertTLSVersion(allocConf.TLS.MinVersion)
+	if allocConf.TLSSetting.MinVersion != "" {
+		minVersion, err := convertTLSVersion(allocConf.TLSSetting.MinVersion)
 		if err != nil {
 			return err
 		}
 		httpSD.HTTPClientConfig.TLSConfig.MinVersion = minVersion
 	}
 
-	if allocConf.TLS.MaxVersion != "" {
-		maxVersion, err := convertTLSVersion(allocConf.TLS.MaxVersion)
+	if allocConf.TLSSetting.MaxVersion != "" {
+		maxVersion, err := convertTLSVersion(allocConf.TLSSetting.MaxVersion)
 		if err != nil {
 			return err
 		}

@@ -8,8 +8,6 @@ data:
     #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
     ver1
   cluster-metrics: |-
-    opentelemetry-metrics: |-
-      enabled = true
     default-targets-scrape-enabled: |-
       kubelet = true
       coredns = true
