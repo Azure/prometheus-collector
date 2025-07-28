@@ -199,42 +199,51 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 	if err != nil {
 		return "", "", fmt.Errorf("Error while creating command executor: %v", err)
 	}
-
 	ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
-	var stdoutB bytes.Buffer
 
-	// Create a custom stderr buffer that filters out SPDY debug messages
-	var filteredStderrB bytes.Buffer
-	stderrWriter := &filteringWriter{
-		underlying: &filteredStderrB,
-		filter: func(data []byte) []byte {
-			lines := strings.Split(string(data), "\n")
-			var filteredLines []string
-			for _, line := range lines {
-				// Filter out SPDY executor debug messages
-				if !strings.Contains(line, "Create stream") &&
-					!strings.Contains(line, "Stream added, broadcasting") &&
-					!strings.Contains(line, "Stream removed, broadcasting") &&
-					!strings.Contains(line, "Reply frame received") &&
-					!strings.Contains(line, "Data frame handling") &&
-					!strings.Contains(line, "Data frame sent") &&
-					!strings.Contains(line, "Data frame received") &&
-					!strings.Contains(line, "Go away received") {
-					filteredLines = append(filteredLines, line)
-				}
+	// Create filtered buffers for both stdout and stderr
+	var stdoutB bytes.Buffer
+	var stderrB bytes.Buffer
+
+	// Create filter function to filter out SPDY debug messages
+	filterFunc := func(data []byte) []byte {
+		lines := strings.Split(string(data), "\n")
+		var filteredLines []string
+		for _, line := range lines {
+			// Filter out SPDY executor debug messages
+			if !strings.Contains(line, "Create stream") &&
+				!strings.Contains(line, "Stream added, broadcasting") &&
+				!strings.Contains(line, "Stream removed, broadcasting") &&
+				!strings.Contains(line, "Reply frame received") &&
+				!strings.Contains(line, "Data frame handling") &&
+				!strings.Contains(line, "Data frame sent") &&
+				!strings.Contains(line, "Data frame received") &&
+				!strings.Contains(line, "Go away received") {
+				filteredLines = append(filteredLines, line)
 			}
-			return []byte(strings.Join(filteredLines, "\n"))
-		},
+		}
+		return []byte(strings.Join(filteredLines, "\n"))
+	}
+
+	// Create filtering writers for both stdout and stderr
+	stdoutWriter := &filteringWriter{
+		underlying: &stdoutB,
+		filter:     filterFunc,
+	}
+
+	stderrWriter := &filteringWriter{
+		underlying: &stderrB,
+		filter:     filterFunc,
 	}
 
 	if err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdout: &stdoutB,
+		Stdout: stdoutWriter,
 		Stderr: stderrWriter,
 	}); err != nil {
-		return stdoutB.String(), filteredStderrB.String(), fmt.Errorf("Error when running command %v in the container: %v. Stderr: %s", command, err, filteredStderrB.String())
+		return stdoutB.String(), stderrB.String(), fmt.Errorf("Error when running command %v in the container: %v. Stderr: %s", command, err, stderrB.String())
 	}
 
-	return stdoutB.String(), filteredStderrB.String(), nil
+	return stdoutB.String(), stderrB.String(), nil
 }
 
 // filteringWriter is a custom writer that filters out unwanted log messages
