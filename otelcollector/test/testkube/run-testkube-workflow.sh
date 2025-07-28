@@ -215,7 +215,7 @@ if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
     fi
     
     echo "Failed test processing completed"
-    add_result "$TARGET_ENV" "failed" "Tests failed: $failed_tests_list. Check pipeline logs for details." ${pipeline_link}
+    add_result "$TARGET_ENV" "failed" "Tests failed: $failed_tests_list. Check pipeline logs for details." "${pipeline_link}"
 else
     echo "All tests passed successfully!"
     add_result "$TARGET_ENV" "passed" "All tests passed successfully" ""
