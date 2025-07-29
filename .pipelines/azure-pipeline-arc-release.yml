@@ -49,10 +49,15 @@ parameters:
   - emergency
   - globaloutage
 
-- name: managedValidationOverrideDuration
-  displayName: Managed Validation Override Duration(in ISO 8601 format)
-  type: string
-  default: PT24H
+- name: 'overrideManagedValidationDuration'
+  displayName: 'Override standard SDP duration?'
+  type: boolean
+  default: false 
+
+- name: 'managedValidationDurationInHours'
+  displayName: 'Override standard SDP duration (in hours)'
+  type: number
+  default: 0
 
 - name: icmIncidentId
   displayName: IcM Incident Id (required when rollout type is globaloutage)
