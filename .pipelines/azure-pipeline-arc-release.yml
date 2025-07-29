@@ -135,8 +135,8 @@ extends:
               ValidateOnly: ${{ parameters.validateOnly }}
               ForceRegistration: ${{parameters.forceArtifactRegistration}}
               ArtifactsVersionOverride: $(Build.BuildNumber)
-              ServiceRootPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
-              RolloutSpecPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
+              ServiceRootPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+              RolloutSpecPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
               ConfigurationOverrides: $(configurationOverrides)
               StageMapName: "Microsoft.Azure.FluxAgent.SDP"
               ${{ if eq(variables.useSelectInProd, true) }}:
@@ -171,8 +171,8 @@ extends:
               ValidateOnly: ${{ parameters.validateOnly }}
               ForceRegistration: ${{parameters.forceArtifactRegistration}}
               ArtifactsVersionOverride: $(Build.BuildNumber)
-              ServiceRootPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
-              RolloutSpecPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
+              ServiceRootPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+              RolloutSpecPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
               StageMapName: "Microsoft.Azure.FluxAgent.SDP"
               ConfigurationOverrides: $(configurationOverrides)
 
@@ -200,7 +200,7 @@ extends:
               ValidateOnly: ${{ parameters.validateOnly }}
               ForceRegistration: ${{parameters.forceArtifactRegistration}}
               ArtifactsVersionOverride: $(Build.BuildNumber)
-              ServiceRootPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
-              RolloutSpecPath: $(Pipeline.Workspace)/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
+              ServiceRootPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot
+              RolloutSpecPath: $(Pipeline.Workspace)/_Azureprometheus-collector/ev2-drop/deploy/arc-extension-release/ServiceGroupRoot/RolloutSpec.json
               StageMapName: "Microsoft.Azure.FluxAgent.SDP"
               ConfigurationOverrides: $(configurationOverrides)

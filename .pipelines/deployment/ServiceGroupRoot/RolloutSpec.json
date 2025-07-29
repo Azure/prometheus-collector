@@ -39,8 +39,7 @@
         "shell/PushTargetAllocatorImage",
         "shell/PushConfigReaderImage",
         "shell/PushArcHelmChart",
-        "shell/PushNodeExporterChart",
-        "shell/PushKSMChart"
+        "shell/PushNodeExporterChart"
       ],
       "dependsOn": []
     }
