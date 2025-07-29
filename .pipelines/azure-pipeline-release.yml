@@ -50,7 +50,6 @@ extends:
     stages:
     - stage: Push_Images
       displayName: Push Images
-      dependsOn: Setup
       pool:
         name: Azure-Pipelines-Windows-CI-Test-EO
         os: windows
