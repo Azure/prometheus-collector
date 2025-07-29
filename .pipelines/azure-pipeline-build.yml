@@ -1974,6 +1974,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: push helm chart to dev ACR"
     - stage: Deploy
+      dependsOn: Build
       jobs:
       - deployment: Deploy_Chart_ARC
         templateContext:
