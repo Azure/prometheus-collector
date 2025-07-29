@@ -465,12 +465,12 @@ func StartFluentBit(fluentBitConfigFile string) {
 	fmt.Println("Starting fluent-bit")
 
 	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
-		log.Fatalf("Error creating directory: %v\n", err)
+		log.Errorf("Error creating directory: %v\n", err)
 	}
 
 	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
 	if err != nil {
-		log.Fatalf("Error creating log file: %v\n", err)
+		log.Errorf("Error creating log file: %v\n", err)
 	}
 	defer logFile.Close()
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
@@ -485,6 +485,6 @@ func StartFluentBit(fluentBitConfigFile string) {
 	fluentBitCmd.Stdout = os.Stdout
 	fluentBitCmd.Stderr = os.Stderr
 	if err := fluentBitCmd.Start(); err != nil {
-		log.Fatalf("Error starting fluent-bit: %v\n", err)
+		log.Errorf("Error starting fluent-bit: %v\n", err)
 	}
 }
