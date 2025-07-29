@@ -5,6 +5,7 @@ var (
 	LogLineErrorsToExclude = [...]string{
 		// Metrics Extension
 		"\"filepath\":\"/MetricsExtensionConsoleDebugLog.log\"",
+		"\"filepath\":\"C:\\\\MetricsExtensionConsoleDebugLog.log\"",
 		// Arc token adapter
 		"create or renew cluster identity error",
 		"get token from status error",
