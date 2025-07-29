@@ -1987,7 +1987,7 @@ extends:
         condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
         environment: Prometheus-Collector
         variables:
-          HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          HELM_SEMVER: $(resources.pipeline._Azureprometheus-collector.runName)
           skipComponentGovernanceDetection: true
         strategy:
           runOnce:
@@ -2174,7 +2174,6 @@ extends:
             isProduction: false
             inputs:
             - input: pipelineArtifact
-              pipeline: '_Azureprometheus-collector'
               artifactName: dev-cluster-helm-chart
               targetPath: $(Pipeline.Workspace)
         strategy:
@@ -2265,7 +2264,6 @@ extends:
             isProduction: false
             inputs:
             - input: pipelineArtifact
-              pipeline: '_Azureprometheus-collector'
               artifactName: dev-cluster-helm-chart
               targetPath: $(Pipeline.Workspace)
         strategy:
@@ -2338,7 +2336,6 @@ extends:
             isProduction: false
             inputs:
             - input: pipelineArtifact
-              pipeline: '_Azureprometheus-collector'
               artifactName: dev-cluster-helm-chart
               targetPath: $(Pipeline.Workspace)
         strategy:
