@@ -2430,7 +2430,6 @@ extends:
         - Testkube_ARC
         - Testkube
         - Testkube_OTel
-        condition: always()
         variables:
           skipComponentGovernanceDetection: true
         steps:
