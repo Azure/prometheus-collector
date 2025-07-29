@@ -218,25 +218,30 @@ func main() {
 		shared.LogVersionInfo()
 	}
 
-	// if ccpMetricsEnabled != "true" {
-	// 	shared.StartFluentBit(fluentBitConfigFile)
-	// 	// Run the command and capture the output
-	// 	if osType == "linux" {
-	// 		cmd := exec.Command("fluent-bit", "--version")
-	// 		fluentBitVersion, err := cmd.Output()
-	// 		if err != nil {
-	// 			log.Fatalf("failed to run command: %v", err)
-	// 		}
-	// 		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
-	// 	} else if osType == "windows" {
-	// 		cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
-	// 		fluentBitVersion, err := cmd.Output()
-	// 		if err != nil {
-	// 			log.Fatalf("failed to run command: %v", err)
-	// 		}
-	// 		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
-	// 	}
-	// }
+	if ccpMetricsEnabled != "true" {
+		err := shared.StartFluentBit(fluentBitConfigFile)
+		if err != nil {
+			log.Printf("failed to start Fluent Bit: %v", err)
+		}
+		// Run the command and capture the output
+		if osType == "linux" {
+			cmd := exec.Command("fluent-bit", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Printf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+			}
+		} else if osType == "windows" {
+			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Printf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+			}
+		}
+	}
 
 	if osType == "linux" && !otlpEnabled {
 		// Start inotify to watch for changes
