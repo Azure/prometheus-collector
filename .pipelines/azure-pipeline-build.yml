@@ -1973,6 +1973,27 @@ extends:
             echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: push helm chart to dev ACR"
+      - job: Tag_Github_Commit
+        displayName: "CI/CD: Tag commit with semver"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn:
+        - Image_Tags_and_Ev2_Artifacts
+        - Arc_Helm_Chart
+        - Linux_Prometheus_Collector
+        - WindowsMultiArch_Prometheus_Collector
+        condition: (and(succeeded(), eq(variables.IS_MAIN_BRANCH, true)))
+        variables:
+          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          skipComponentGovernanceDetection: true
+        steps:
+        - bash: |
+            git config --global user.name "AzureDevOps Agent"
+            git tag "v$(HELM_SEMVER)"
+            git push origin "v$(HELM_SEMVER)"
+          displayName: Tag commit with semver
     - stage: Deploy
       dependsOn: Build
       jobs:
@@ -1988,7 +2009,7 @@ extends:
         condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
         environment: Prometheus-Collector
         variables:
-          HELM_SEMVER: $(resources.pipeline._Azureprometheus-collector.runName)
+          HELM_SEMVER: $(Build.BuildNumber)
           skipComponentGovernanceDetection: true
         strategy:
           runOnce:
@@ -2181,11 +2202,6 @@ extends:
           runOnce:
             deploy:
               steps:
-              - bash: |
-                  git config --global user.name "AzureDevOps Agent"
-                  git tag "v$(HELM_SEMVER)"
-                  git push origin "v$(HELM_SEMVER)"
-                displayName: Tag commit with semver
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
