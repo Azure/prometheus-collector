@@ -157,7 +157,7 @@ if [ "$total_count" -gt 0 ]; then
             # Extract failed test details from message if available
             if echo "$message" | grep -q "Tests failed:"; then
                 failed_tests=$(echo "$message" | sed 's/.*Tests failed: \([^.]*\).*/\1/')
-                details="$details$icon **$env**: Failed tests: $failed_tests. [View Details]($link)\\n\\n"
+                details="$details$icon **$env**: Failed tests: $failed_tests. $link\\n\\n"
             else
                 details="$details$icon **$env**: $message\\n\\n"
             fi
