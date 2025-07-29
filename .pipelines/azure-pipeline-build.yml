@@ -225,6 +225,66 @@ extends:
             SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
+
+      - job: DevClusterHelmChartFiles
+        displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
+            artifactName: dev-cluster-helm-chart
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: HelmInstaller@1
+          displayName: Install Helm version
+          inputs:
+            helmVersionToInstall: 3.12.3
+        - bash: |
+            RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+            echo $RETINA_VERSION
+            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                do
+                  sleep 30
+                  echo $(IMAGE_TAG)
+                  echo $(IMAGE_TAG_WINDOWS)
+                  echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                  echo $(IMAGE_TAG_CONFIG_READER)
+                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                  if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                  then
+                    echo "Images are published to mcr"
+                    exit 0
+                  fi
+                done
+                echo "Images are not published to mcr within the timeout"
+                exit 1
+          displayName: "CI/CD: Download Retina Chart"
+          retryCountOnTaskFailure: 5
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart'
+            Contents: |
+              retina/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy Dev Cluster Helm Chart files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart'
+            Contents: |
+              azure-monitor-metrics-addon/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
@@ -1933,6 +1993,9 @@ extends:
     - stage: Deploy
       jobs:
       - deployment: Deploy_Chart_ARC
+        templateContext:
+            type: releaseJob
+            isProduction: false
         displayName: "Deploy: Arc dev cluster"
         pool:
           name: Azure-Pipelines-CI-Test-EO
@@ -2030,6 +2093,7 @@ extends:
                     az config set extension.use_dynamic_install=yes_without_prompt
                     az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
                   retryCountOnTaskFailure: 2
+
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
         environment: Prometheus-Collector
@@ -2108,6 +2172,7 @@ extends:
                   exit 0
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
                 displayName: "Run tests"
+
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy: AKS dev cluster"
         environment: Prometheus-Collector
@@ -2121,13 +2186,18 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              pipeline: '_Azureprometheus-collector'
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - bash: |
                   git config --global user.name "AzureDevOps Agent"
                   git tag "v$(HELM_SEMVER)"
@@ -2138,41 +2208,33 @@ extends:
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
-
-                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
-                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-                  echo $RETINA_VERSION
-                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                          do
-                            sleep 30
-                            echo $(IMAGE_TAG)
-                            echo $(IMAGE_TAG_WINDOWS)
-                            echo $(IMAGE_TAG_TARGET_ALLOCATOR)
-                            echo $(IMAGE_TAG_CONFIG_READER)
-                            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
-                            then
-                              echo "Images are published to mcr"
-                              exit 0
-                            fi
-                          done
-                          echo "Images are not published to mcr within the timeout"
-                          exit 1
-                  displayName: "Check images are pushed to dev MCR"
-                  retryCountOnTaskFailure: 5
+                      do
+                        sleep 30
+                        echo $(IMAGE_TAG)
+                        echo $(IMAGE_TAG_WINDOWS)
+                        echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                        echo $(IMAGE_TAG_CONFIG_READER)
+                        output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                        if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                        then
+                          echo "Images are published to mcr"
+                          exit 0
+                        fi
+                      done
+                      echo "Images are not published to mcr within the timeout"
+                      exit 1
+                displayName: "Check images are pushed to dev MCR"
+                retryCountOnTaskFailure: 5
               - bash: |
                   export AKS_REGION="eastus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
-                displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
-    
+                displayName: "Deploy: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
                 displayName: "Deploy: ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2183,10 +2245,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2197,10 +2259,10 @@ extends:
                   namespace: 'kube-system'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy: AKS tests cluster"
@@ -2215,13 +2277,18 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              pipeline: '_Azureprometheus-collector'
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
@@ -2249,9 +2316,9 @@ extends:
                   export AKS_REGION="centralus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
@@ -2264,10 +2331,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
 
 
       - deployment: Deploy_AKS_Chart_OTel_Cluster
@@ -2283,25 +2350,23 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              pipeline: '_Azureprometheus-collector'
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
-
-                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
-                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-                  echo $RETINA_VERSION
-                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
                         sleep 30
@@ -2324,9 +2389,9 @@ extends:
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-dev-aks-otlp/providers/Microsoft.ContainerService/managedClusters/ciprom-dev-aks-otlp"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
@@ -2339,10 +2404,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ciprom-dev-aks-otlp cluster"
                 inputs:
@@ -2353,10 +2418,10 @@ extends:
                   namespace: 'kube-system'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
 
       - deployment: Testkube
