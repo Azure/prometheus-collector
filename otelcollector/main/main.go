@@ -220,7 +220,6 @@ func main() {
 
 	if ccpMetricsEnabled != "true" {
 		shared.StartFluentBit(fluentBitConfigFile)
-		log.Printf("failed to start Fluent Bit: %v", err)
 		// Run the command and capture the output
 		if osType == "linux" {
 			cmd := exec.Command("fluent-bit", "--version")
