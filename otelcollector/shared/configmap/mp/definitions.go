@@ -4,6 +4,7 @@ var (
 	schemaVersionFile                            = "/etc/config/settings/schema-version"
 	configVersionFile                            = "/etc/config/settings/config-version"
 	configMapDebugMountPath                      = "/etc/config/settings/debug-mode"
+	configMapOpentelemetryMetricsMountPath       = "/etc/config/settings/opentelemetry-metrics"
 	replicaSetCollectorConfig                    = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 	debugModeEnvVarPath                          = "/opt/microsoft/configmapparser/config_debug_mode_env_var"
 	defaultSettingsMountPath                     = "/etc/config/settings/default-scrape-settings-enabled"
@@ -13,6 +14,7 @@ var (
 	podAnnotationEnvVarPath                      = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
 	collectorSettingsMountPath                   = "/etc/config/settings/prometheus-collector-settings"
 	collectorSettingsEnvVarPath                  = "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
+	opentelemetryMetricsEnvVarPath               = "/opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var"
 	configMapKeepListMountPath                   = "/etc/config/settings/default-targets-metrics-keep-list"
 	configMapKeepListEnvVarPath                  = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	configMapScrapeIntervalMountPath             = "/etc/config/settings/default-targets-scrape-interval-settings"
@@ -86,6 +88,7 @@ type ConfigProcessor struct {
 	ControlplaneKubeScheduler               string
 	ControlplaneApiserver                   string
 	ControlplaneClusterAutoscaler           string
+	ControlplaneNodeAutoProvisioning        string
 	ControlplaneEtcd                        string
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool

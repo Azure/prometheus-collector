@@ -426,8 +426,6 @@ github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndr
 github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
 github.com/prometheus-community/prom-label-proxy v0.11.0 h1:IO02WiiFMfcIqvjhwMbCYnDJiTNcSHBrkCGRQ/7KDd0=
 github.com/prometheus-community/prom-label-proxy v0.11.0/go.mod h1:lfvrG70XqsxWDrSh1843QXBG0fSg8EbIXmAo8xGsvw8=
-github.com/prometheus-operator/prometheus-operator v0.81.0 h1:+3DLFPMKBehPrVDO/WMFnDlb2qJLAVQcjeUmVt1YBuA=
-github.com/prometheus-operator/prometheus-operator v0.81.0/go.mod h1:FcXmSKTP+RrJjr8SWz+ww+ijRgboNq4QUXrEYq3Jftw=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0 h1:mSii7z+TihzdeULnGjLnNikgtDbeViY/wW8s3430rhE=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0/go.mod h1:YfnEQzw7tUQa0Sjiz8V6QFc6JUGE+i5wybsjc3EOKn8=
 github.com/prometheus-operator/prometheus-operator/pkg/client v0.81.0 h1:z8ETgiD2hThJi3+3S8eKAbC9/pwPq1kGt8HkeGlDstw=
@@ -458,6 +456,8 @@ github.com/prometheus/prometheus v0.301.0 h1:0z8dgegmILivNomCd79RKvVkIols8vBGPKm
 github.com/prometheus/prometheus v0.301.0/go.mod h1:BJLjWCKNfRfjp7Q48DrAjARnCi7GhfUVvUFEAWTssZM=
 github.com/prometheus/sigv4 v0.1.0 h1:FgxH+m1qf9dGQ4w8Dd6VkthmpFQfGTzUeavMoQeG1LA=
 github.com/prometheus/sigv4 v0.1.0/go.mod h1:doosPW9dOitMzYe2I2BN0jZqUuBrGPbXrNsTScN18iU=
+github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138 h1:S5SirW5BPl40JehmZkcayC/iiRP9/o1UHZ3ylUIDD9w=
+github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138/go.mod h1:FcXmSKTP+RrJjr8SWz+ww+ijRgboNq4QUXrEYq3Jftw=
 github.com/redis/go-redis/v9 v9.6.1 h1:HHDteefn6ZkTtY5fGUE8tj8uy85AHk6zP7CpzIAM0y4=
 github.com/redis/go-redis/v9 v9.6.1/go.mod h1:0C0c6ycQsdpVNQpxb1njEQIqkx5UcsM8FJCQLgE9+RA=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=

@@ -1,4 +1,35 @@
 # Azure Monitor Metrics for AKS clusters
+## Release 07-24-2025 
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-07-24-2025-756981f2`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-07-24-2025-756981f2-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-07-24-2025-756981f2-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.20.0-main-07-24-2025-756981f2-cfg`
+* AKS and Arc Container Images:
+  - feat: otlp support (https://github.com/Azure/prometheus-collector/pull/1216)
+  - fix: handle utf-16 BOM (LE/BE) encoding for certificates in air gapped clouds (https://github.com/Azure/prometheus-collector/pull/1244)
+  - fix: me upgrade+otlp+mariner3 fixes (https://github.com/Azure/prometheus-collector/pull/1232)
+  - fix: update to allow partial configmap settings (https://github.com/Azure/prometheus-collector/pull/1217)
+  - fix: for watching secret updates for CRs (https://github.com/Azure/prometheus-collector/pull/1218)
+  - fix: sign prometheusui.exe, main.exe and remove telegraf.exe code (https://github.com/Azure/prometheus-collector/pull/1213)
+  - fix: respect debug mode setting in configmap v1 (https://github.com/Azure/prometheus-collector/pull/1191)
+  - fix: Remove secret create permissions (https://github.com/Azure/prometheus-collector/pull/1190)
+* Pipeline/Docs/Templates Updates:
+  - fix: remove uneeded terneray operator in tf template (https://github.com/Azure/prometheus-collector/pull/1236)
+  - release: separate pipeline for arc release (https://github.com/Azure/prometheus-collector/pull/1212)
+  - docs: update configmap to v1 as its pointed from docs (https://github.com/Azure/prometheus-collector/pull/1188)
+  - build: add reference app to dependabot for OSS vulnerability remediation (https://github.com/Azure/prometheus-collector/pull/1201)
+  - docs: add documentation for AMW limit upgrade api (https://github.com/Azure/prometheus-collector/pull/1199)
+  - build: Add Github action for otelcollector upgrade bot (https://github.com/Azure/prometheus-collector/pull/1197)
+  - build: account for patch version differences between TA and otelcollector (https://github.com/Azure/prometheus-collector/pull/1206)
+
+## Release 07-10-2025 (CCP only release)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.19.0-main-07-10-2025-36d292f8-cfg`
+* AKS and Arc Container Images:
+  - feat: Scrape metrics for node autoprovisioning (aks control plane) (https://github.com/Azure/prometheus-collector/pull/1169)
+
 ## Release 06-19-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-win`

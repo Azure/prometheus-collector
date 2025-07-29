@@ -27,6 +27,7 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.10'
+  FLUENTBIT_GOLANG_VERSION: '1.24.4'
   TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
@@ -48,6 +49,8 @@ extends:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
         os: windows
+      componentgovernance: 
+        ignoreDirectories: 'mixins,internal,tools'
     customBuildTags:
     - ES365AIMigrationTooling
 
@@ -690,7 +693,7 @@ extends:
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -723,7 +726,7 @@ extends:
   
             docker system prune --all -f
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -1399,7 +1402,15 @@ extends:
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+          displayName: "Build: build otelcollector and promconfigvalidator"
+        - task: GoTool@0
+          displayName: "Build: specify fluent-bit golang version"
+          inputs:
+            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
         - powershell: |
             docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -1415,8 +1426,10 @@ extends:
               echo "Creating fist party directory"
               mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
               cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract LivenessProbe"
-              docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+              echo "Extract prometheusui"
+              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
+              echo "Extract main"
+              docker cp signingContainer:C:\opt\microsoft\main.exe .
               echo "Extract OtelCollector"
               docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
               echo "Creating OSS directory"
@@ -1426,8 +1439,6 @@ extends:
               docker cp signingContainer:C:\opt\fluent-bit .
               echo "Extract Ruby"
               docker cp signingContainer:C:\ruby26 .
-              echo "Extract telegraf"
-              docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
               echo "Extract promconfigvalidator"
               docker cp signingContainer:C:\opt\promconfigvalidator.exe .
               echo "Removing container"
@@ -1525,11 +1536,11 @@ extends:
             script: |
               docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
               echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
               docker rm pushContainer
@@ -1559,7 +1570,15 @@ extends:
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+          displayName: "Build: build otelcollector and promconfigvalidator"
+        - task: GoTool@0
+          displayName: "Build: specify fluent-bit golang version"
+          inputs:
+            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
         - powershell: |
             docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -1575,8 +1594,10 @@ extends:
               echo "Creating fist party directory"
               mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
               cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract LivenessProbe"
-              docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+              echo "Extract prometheusui"
+              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
+              echo "Extract main"
+              docker cp signingContainer:C:\opt\microsoft\main.exe .
               echo "Extract OtelCollector"
               docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
               echo "Creating OSS directory"
@@ -1586,8 +1607,6 @@ extends:
               docker cp signingContainer:C:\opt\fluent-bit .
               echo "Extract Ruby"
               docker cp signingContainer:C:\ruby26 .
-              echo "Extract telegraf"
-              docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
               echo "Extract promconfigvalidator"
               docker cp signingContainer:C:\opt\promconfigvalidator.exe .
               echo "Removing container"
@@ -1685,11 +1704,11 @@ extends:
             script: |
               docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
               echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
+              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
               docker rm pushContainer
@@ -2254,7 +2273,7 @@ extends:
       - deployment: Deploy_AKS_Chart_OTel_Cluster
         displayName: "Deploy: AKS OTEL cluster"
         environment: Prometheus-Collector
-        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_OTLP_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
+        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2423,7 +2442,7 @@ extends:
         displayName: "Test: OTel AKS testkube tests"
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart_OTel_Cluster
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_OTLP_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2454,9 +2473,9 @@ extends:
               - bash: |
                   export AMW_QUERY_ENDPOINT="https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com"
                   export AZURE_CLIENT_ID="6b8f6333-ecd0-4579-b05d-afc98a103a59"
-                  envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-otel.yaml
+                  envsubst < ./testkube/testkube-test-crs-otel.yaml > ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
                   kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-otel.yaml
+                  kubectl apply -f ./testkube/testkube-test-crs-ciprom-dev-aks-otlp.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml

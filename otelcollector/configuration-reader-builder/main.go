@@ -401,30 +401,19 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 		return err
 	}
 
-	// Try to get the secret, retry once after 10 seconds if not found
-	log.Printf("Checking if secret %s exists in namespace %s...", secretName, namespace)
-	_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	// Create or update the secret in the kube-system namespace
+	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Printf("Secret %s not found, retrying after 10 seconds...", secretName)
-			time.Sleep(10 * time.Second)
-			_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
-			if err != nil && apierrors.IsNotFound(err) {
-				log.Printf("Secret %s still not found after retry: %v", secretName, err)
+		if apierrors.IsAlreadyExists(err) {
+			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+			if err != nil {
+				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
 				return err
 			}
 		} else {
-			log.Printf("Error getting secret %s: %v", secretName, err)
+			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
 			return err
 		}
-	}
-
-	log.Printf("Secret %s found in namespace %s, updating it...", secretName, namespace)
-	// Update the secret with cert contents in the kube-system namespace
-	_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-	if err != nil {
-		log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
-		return err
 	}
 
 	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
@@ -466,29 +455,20 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 		log.Printf("Unable to create Kubernetes client: %v", err)
 		return err
 	}
-	// Try to get the secret, retry once after 10 seconds if not found
-	log.Printf("Checking if secret %s exists in namespace %s...", secretName, namespace)
-	_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+
+	// Create or update the secret in the kube-system namespace
+	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Printf("Secret %s not found, retrying after 10 seconds...", secretName)
-			time.Sleep(10 * time.Second)
-			_, err = clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
-			if err != nil && apierrors.IsNotFound(err) {
-				log.Printf("Secret %s still not found after retry: %v", secretName, err)
+		if apierrors.IsAlreadyExists(err) {
+			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+			if err != nil {
+				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
 				return err
 			}
 		} else {
-			log.Printf("Error getting secret %s: %v", secretName, err)
+			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
 			return err
 		}
-	}
-	log.Printf("Secret %s found in namespace %s, updating it...", secretName, namespace)
-	// Update the secret with cert contents in the kube-system namespace
-	_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-	if err != nil {
-		log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
-		return err
 	}
 
 	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
