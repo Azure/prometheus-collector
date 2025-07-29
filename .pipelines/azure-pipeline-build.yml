@@ -2509,6 +2509,53 @@ extends:
                 displayName: "Run TestKube workflow"
                 continueOnError: true
 
+      - deployment: Testkube_OTel_Upgrade
+        displayName: "Test: OTel Collector Upgrade testkube tests"
+        environment: Prometheus-Collector
+        dependsOn:  Deploy_AKS_Chart_OTel_Upgrade_Cluster
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        variables:
+          HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+          HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+          HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+          skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish TestKube OTel Upgrade Results'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Upgrade.json'
+            artifactName: 'testkube-results-OTel-Upgrade'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - checkout: self
+                persistCredentials: true
+              - task: AzureCLI@1
+                displayName: Get kubeconfig
+                inputs:
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
+              - bash: |
+                  export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+                  export BUILD_BUILDID="$(Build.BuildId)"
+                  export SYSTEM_JOBID="$(System.JobId)"
+                  export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  ./testkube/run-testkube-workflow.sh \
+                    "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
+                    "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
+                    "testkube-test-crs.yaml" \
+                    "testkube-test-crs-otel-upgrade.yaml" \
+                    "" \
+                    "" \
+                    "OTelCollector-Upgrade"
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                displayName: "Run TestKube workflow"
+                continueOnError: true
+
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
         pool:
@@ -2543,6 +2590,38 @@ extends:
           condition: always() 
           inputs:
             artifactName: 'testkube-results-OTel'
+            targetPath: '$(Pipeline.Workspace)/testkube-results'
+          continueOnError: true
+        - bash: |
+            export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+            export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+            export BUILD_REASON="$(Build.Reason)"
+            export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+            export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+            export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+          displayName: "Send TestKube Summary Notification"
+
+      - job: TestKube_Notification_OTelCollector_Upgrade
+        displayName: "Send TestKube Summary Notification"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn: 
+        - Testkube_OTel_Upgrade
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        variables:
+          skipComponentGovernanceDetection: true
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download TestKube OTelCollector Upgrade Results'
+          condition: always() 
+          inputs:
+            artifactName: 'testkube-results-OTel-Upgrade'
             targetPath: '$(Pipeline.Workspace)/testkube-results'
           continueOnError: true
         - bash: |
