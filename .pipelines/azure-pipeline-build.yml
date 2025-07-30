@@ -1984,7 +1984,7 @@ extends:
         - Arc_Helm_Chart
         - Linux_Prometheus_Collector
         - WindowsMultiArch_Prometheus_Collector
-        condition: (and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         variables:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
