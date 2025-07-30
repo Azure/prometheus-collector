@@ -12,6 +12,22 @@ parameters:
 - name: 'onlyCCPRelease'
   type: boolean
   default: false
+- name: 'icmIncidentId'
+  displayName: 'ICM Incident ID'
+  type: string
+  default: ''
+- name: 'managedValidationOverrideDuration'
+  displayName: 'Managed Validation Override Duration'
+  type: number
+  default: 0
+- name: "rolloutType"
+  displayName: "Rollout Type"
+  type: string
+  default: "normal"
+  values:
+    - "normal"
+    - "emergency"
+    - "globaloutage"
 
 variables:
 - name: ServiceTreeGUID
@@ -77,6 +93,11 @@ extends:
             serviceRootPath: deploy/ServiceGroupRoot
             rolloutSpecPath: RolloutSpec.json
             select: regions(eastus2euap)
+            skipRegistrationIfExists: true
+            forceRegistration: true
+            rolloutType: ${{ parameters.rolloutType }}
+            icmIncidentId: ${{ parameters.icmIncidentId }}
+            managedValidationOverrideDuration: ${{ parameters.managedValidationOverrideDuration }}
             configurationOverrides:
               settings:
                 linuxTag: "$(resources.pipeline._Azureprometheus-collector.runName)"
