@@ -5,6 +5,7 @@ var (
 	LogLineErrorsToExclude = [...]string{
 		// Metrics Extension
 		"\"filepath\":\"/MetricsExtensionConsoleDebugLog.log\"",
+		"\"filepath\":\"C:\\\\MetricsExtensionConsoleDebugLog.log\"",
 		// Arc token adapter
 		"create or renew cluster identity error",
 		"get token from status error",
@@ -27,6 +28,8 @@ const (
 	ARM64Label                                        = "arm64"
 	FIPSLabel                                         = "fips"
 	RetinaLabel                                       = "retina"
+	MDSDLabel                                         = "mdsd"
+	OTLPLabel                                         = "otlp"
 	LinuxDaemonsetCustomConfig                        = "linux-daemonset-custom-config"
 	ConfigProcessingCommonNoConfigMaps                = "config-processing-common-no-config-maps"
 	ConfigProcessingCommonWithConfigMap               = "config-processing-common-with-config-maps"

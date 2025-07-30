@@ -118,7 +118,7 @@ COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 # inotifywait dependencies
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=builder /lib/libinotifytools.so.0 /lib/libc.so.6 /lib/
+COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
 # metricsextension dependencies
 COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # mdsd dependencies

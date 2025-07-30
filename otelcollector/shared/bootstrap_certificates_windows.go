@@ -1,14 +1,18 @@
 package shared
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 )
 
 func BootstrapCACertificates() {
@@ -34,9 +38,35 @@ func BootstrapCACertificates() {
 			continue
 		}
 
+		// Handle UTF-8 BOM
+		if bytes.HasPrefix(data, []byte{0xEF, 0xBB, 0xBF}) {
+			fmt.Println("  Found UTF-8 BOM, stripping.")
+			data = data[3:]
+		}
+
+		// Handle UTF-16 LE BOM
+		if bytes.HasPrefix(data, []byte{0xFF, 0xFE}) || bytes.HasPrefix(data, []byte{0xFE, 0xFF}) {
+			fmt.Println("  Found UTF-16 BOM, decoding.")
+			utf16Decoder := unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewDecoder()
+			decoded, _, err := transform.Bytes(utf16Decoder, data)
+			if err != nil {
+				fmt.Printf("  UTF-16 decode failed: %v\n", err)
+				continue
+			}
+			data = decoded
+		}
+
+		// Trim leading whitespace/newlines just in case
+		data = bytes.TrimLeft(data, "\r\n\t ")
+
 		block, _ := pem.Decode(data)
-		if block == nil || block.Type != "CERTIFICATE" {
-			fmt.Printf("  Skipping invalid or non-certificate PEM block.\n")
+		if block == nil {
+			fmt.Printf("  Skipping: PEM decode returned nil.\n")
+			continue
+		}
+
+		if !strings.EqualFold(block.Type, "CERTIFICATE") {
+			fmt.Printf("  Skipping: block type is %q, not CERTIFICATE.\n", block.Type)
 			continue
 		}
 

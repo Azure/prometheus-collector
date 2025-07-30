@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Query Metrics Test Suite", func() {
 
-	DescribeTable("should return the expected results for specified metrics in each job",
+	DescribeTable("should return the expected results for specified Prometheus metrics in each job",
 		func(job string, expectedMetrics []string) {
 			for _, metric := range expectedMetrics {
 				query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
@@ -276,7 +276,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"node_ip_single_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
 			"node_name_double_dollar_sign": ".+",                                        // Legacy backwards compatibility for $$NODE_NAME when single $ was not supported
 			"node_ip_double_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", // Legacy backwards compatibility for $$NODE_IP when single $ was not supported
-		}),
+		}, Label(utils.LinuxDaemonsetCustomConfig)),
 		Entry("Relabeling with dollar signs & external labels for PodMonitor", "default/referenceapp", "up", map[string]string{
 			"double_dollar_sign": "\\$1",                     // PodMonitor does not have the legacy backwards compatibility for $$1
 			"single_dollar_sign": "prometheus-reference-app", // $1 does work for PodMonitor
@@ -296,37 +296,87 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		Entry("External labels are applied from DaemonSet Configmap", "node-configmap", "up", map[string]string{
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
-		}),
+		}, Label(utils.LinuxDaemonsetCustomConfig)),
 		Entry("External labels are applied from Windows DaemonSet Configmap", "windows-node-configmap", "up", map[string]string{
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
-		}),
+		}, Label(utils.WindowsLabel)),
 	)
 
 	Context("When querying metrics", func() {
-		It("should return the expected results for up=1 for all default jobs", func() {
-			// Define a list of default jobs
-			defaultJobs := []string{"kubelet", "cadvisor", "kube-state-metrics", "node", "networkobservability-retina"}
+		DescribeTable("should return the expected results for up=1 for all jobs",
+			func(jobs []string) {
+				for _, job := range jobs {
+					// Run the query for the job
+					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, fmt.Sprintf("up{job=\"%s\"} == 1", job))
+					Expect(err).NotTo(HaveOccurred(), "failed to execute query for job %s", job)
 
-			for _, job := range defaultJobs {
-				// Run the query for each job
-				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, fmt.Sprintf("up{job=\"%s\"} == 1", job))
+					// Ensure there are no warnings
+					Expect(warnings).To(BeEmpty(), "warnings should be empty for job %s", job)
+
+					// Ensure there is at least one result
+					vectorResult, ok := result.(model.Vector)
+					Expect(ok).To(BeTrue(), "result should be of type model.Vector for job %s", job)
+					Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty for job %s", job)
+
+					// Ensure that all results have the 'up' metric with a value of 1
+					for _, sample := range vectorResult {
+						Expect(string(sample.Metric["__name__"])).To(Equal("up"), "metric name should be 'up' for job %s", job)
+						Expect(sample.Value.String()).To(Equal("1"), "metric value should be '1' for job %s", job)
+					}
+				}
+			},
+			Entry("AKS jobs", []string{"kubelet", "cadvisor", "kube-state-metrics", "node", "networkobservability-retina"}, Label(utils.RetinaLabel)),
+			Entry("Arc jobs", []string{"kubelet", "cadvisor", "kube-state-metrics", "node"}, Label(utils.ArcExtensionLabel)),
+		)
+
+		It("should return the expected results for OTLP data-quality validation metrics", Label(utils.OTLPLabel), func() {
+			metrics := []string{
+				"otlpapp.intcounter.total",
+				"otlpapp.floatcounter.total",
+				"otlpapp.intgauge",
+				"otlpapp.floatgauge",
+				"otlpapp.intupdowncounter",
+				"otlpapp.floatupdowncounter",
+				"otlpapp.intexponentialhistogram",
+				"otlpapp.floatexponentialhistogram",
+				"otlpapp.intexplicithistogram",
+				"otlpapp.floatexplicithistogram",
+			}
+
+			for _, metric := range metrics {
+				query := fmt.Sprintf("{\"%s\"}", metric)
+
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
 				Expect(err).NotTo(HaveOccurred())
-
-				// Ensure there are no warnings
 				Expect(warnings).To(BeEmpty())
 
-				// Ensure there is at least one result
 				vectorResult, ok := result.(model.Vector)
-				Expect(ok).To(BeTrue(), "result should be of type model.Vector")
-				Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty")
+				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
+				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
 
-				// Ensure that all results have the 'up' metric with a value of 1
+				labelName := "temporality"
+				deltaLabelFound := false
+				cumulativeLabelFound := false
 				for _, sample := range vectorResult {
-					Expect(string(sample.Metric["__name__"])).To(Equal("up"))
-					Expect(sample.Value.String()).To(Equal("1"))
+					val, ok := sample.Metric[model.LabelName(labelName)]
+					if !ok {
+						Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", labelName, metric))
+					}
+					if string(val) == "delta" {
+						deltaLabelFound = true
+					} else if string(val) == "cumulative" {
+						cumulativeLabelFound = true
+					}
+
+					_, ok = sample.Metric[model.LabelName("cluster")]
+					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", "cluster", metric))
 				}
+
+				Expect(deltaLabelFound).To(BeTrue(), fmt.Sprintf("Expected metric %q to have a sample with delta temporality label", metric))
+				Expect(cumulativeLabelFound).To(BeTrue(), fmt.Sprintf("Expected metric %q to have a sample with cumulative temporality label", metric))
 			}
 		})
+
 	})
 })

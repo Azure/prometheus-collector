@@ -118,6 +118,13 @@ func processAndMergeConfigFiles() {
 		fmt.Printf("Error when settinng env for %s: %v\n", collectorSettingsEnvVarPath, err)
 	}
 
+	ConfigureOpentelemetryMetricsSettings(metricsConfigBySection)
+	filename = "/opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var"
+	err = shared.SetEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var: %v\n", err)
+	}
+
 	// Parse the settings for default scrape configs
 	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	filename = defaultSettingsEnvVarPath

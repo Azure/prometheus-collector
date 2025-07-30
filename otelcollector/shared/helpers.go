@@ -37,12 +37,21 @@ func IsValidRegex(input string) bool {
 func DetermineConfigFiles(controllerType, clusterOverride string, otlpEnabled bool) (string, string, string, bool) {
 	var meConfigFile, fluentBitConfigFile, meDCRConfigDirectory string
 	var meLocalControl bool
+	osType := os.Getenv("OS_TYPE")
 
 	if otlpEnabled {
-		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/me"
+		if osType == "windows" {
+			meDCRConfigDirectory = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\me\\"
+		} else {
+			meDCRConfigDirectory = "/etc/mdsd.d/config-cache/me"
+		}
 		meLocalControl = false
 	} else {
-		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/metricsextension"
+		if osType == "windows" {
+			meDCRConfigDirectory = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\"
+		} else {
+			meDCRConfigDirectory = "/etc/mdsd.d/config-cache/metricsextension"
+		}
 		meLocalControl = true
 	}
 
@@ -54,7 +63,7 @@ func DetermineConfigFiles(controllerType, clusterOverride string, otlpEnabled bo
 		} else {
 			meConfigFile = "/usr/sbin/me.config"
 		}
-	case os.Getenv("OS_TYPE") != "windows":
+	case osType != "windows":
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
 			if otlpEnabled {
