@@ -14,8 +14,8 @@ parameters:
   default: false
 - name: 'icmIncidentId'
   displayName: 'ICM Incident ID'
-  type: string
-  default: ' '
+  type: number
+  default: 0
 - name: 'managedValidationOverrideDuration'
   displayName: 'Managed Validation Override Duration'
   type: number
