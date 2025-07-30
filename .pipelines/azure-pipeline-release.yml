@@ -15,13 +15,11 @@ parameters:
 - name: 'icmIncidentId'
   displayName: 'ICM Incident ID'
   type: string
-  default: ''
-  required: false
+  default: ""
 - name: 'managedValidationOverrideDuration'
   displayName: 'Managed Validation Override Duration'
   type: number
   default: 0
-  required: false
 - name: "rolloutType"
   displayName: "Rollout Type"
   type: string
