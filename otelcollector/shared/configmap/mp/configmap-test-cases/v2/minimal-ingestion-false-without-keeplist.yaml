@@ -1,0 +1,12 @@
+schema-version: 
+  #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+  v2
+config-version: 
+  #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+  ver1
+cluster-metrics: |-
+  minimal-ingestion-profile: |-
+    enabled = true
+controlplane-metrics: |-
+  minimal-ingestion-profile: |-
+    enabled = false

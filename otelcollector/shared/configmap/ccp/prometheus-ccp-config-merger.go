@@ -8,41 +8,12 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/prometheus-collector/shared"
+
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	mergedDefaultConfigPath               = "/opt/defaultsMergedConfig.yml"
-	replicasetControllerType              = "replicaset"
-	defaultPromConfigPathPrefix           = "/opt/microsoft/otelcollector/default-prom-configs/"
-	regexHashFile                         = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
-	controlplaneApiserverDefaultFile      = defaultPromConfigPathPrefix + "controlplane_apiserver.yml"
-	controlplaneKubeSchedulerDefaultFile  = defaultPromConfigPathPrefix + "controlplane_kube_scheduler.yml"
-	controlplaneKubeControllerManagerFile = defaultPromConfigPathPrefix + "controlplane_kube_controller_manager.yml"
-	controlplaneClusterAutoscalerFile     = defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
-	controlplaneNodeAutoProvisioningFile  = defaultPromConfigPathPrefix + "controlplane_node_auto_provisioning.yml"
-	controlplaneEtcdDefaultFile           = defaultPromConfigPathPrefix + "controlplane_etcd.yml"
-)
-
-var (
-	regexHash    = make(map[string]string)
-	intervalHash = make(map[string]string)
-)
-
 var mergedDefaultConfigs map[interface{}]interface{}
-
-func loadRegexHash() {
-	data, err := os.ReadFile(regexHashFile)
-	if err != nil {
-		fmt.Printf("Exception in loadRegexHash for prometheus config: %v. Keep list regexes will not be used\n", err)
-		return
-	}
-
-	err = yaml.Unmarshal(data, &regexHash)
-	if err != nil {
-		fmt.Printf("Exception in loadRegexHash for prometheus config: %v. Keep list regexes will not be used\n", err)
-	}
-}
 
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
@@ -119,95 +90,31 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 }
 
 func populateDefaultPrometheusConfig() {
-	loadRegexHash()
 
 	defaultConfigs := []string{}
-	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
+	currentControllerType := os.Getenv("CONTROLLER_TYPE")
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_CONTROLLER_MANAGER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		fmt.Println("Kube Controller Manager enabled.")
-		kubeControllerManagerMetricsKeepListRegex, exists := regexHash["CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX"]
-		if exists && kubeControllerManagerMetricsKeepListRegex != "" {
-			fmt.Printf("Using regex for Kube Controller Manager: %s\n", kubeControllerManagerMetricsKeepListRegex)
-			appendMetricRelabelConfig(controlplaneKubeControllerManagerFile, kubeControllerManagerMetricsKeepListRegex)
-		}
-		contents, err := os.ReadFile(controlplaneKubeControllerManagerFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneKubeControllerManagerFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneKubeControllerManagerFile)
-	}
+	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
+		if job.Enabled && job.ControllerType == currentControllerType {
+			fmt.Printf("%s job enabled\n", jobName)
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneKubeSchedulerKeepListRegex, exists := regexHash["CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX"]
-		if exists && controlplaneKubeSchedulerKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneKubeSchedulerDefaultFile, controlplaneKubeSchedulerKeepListRegex)
-		}
-		contents, err := os.ReadFile(controlplaneKubeSchedulerDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneKubeSchedulerDefaultFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneKubeSchedulerDefaultFile)
-	}
+			if job.CustomerKeepListRegex != "" {
+				fmt.Printf("Using regex for %s: %s\n", jobName, job.CustomerKeepListRegex)
+				appendMetricRelabelConfig(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.CustomerKeepListRegex)
+			}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneApiserverKeepListRegex, exists := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
-		if exists && controlplaneApiserverKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex)
+			contents, err := os.ReadFile(scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile)
+			if err == nil {
+				for _, envVarName := range job.PlaceholderNames {
+					contents = []byte(strings.Replace(string(contents), fmt.Sprintf("$$%s$$", envVarName), os.Getenv(envVarName), -1))
+					os.WriteFile(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, contents, fs.FileMode(0644))
+				}
+			}
+			defaultConfigs = append(defaultConfigs, scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile)
 		}
-		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneApiserverDefaultFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneApiserverDefaultFile)
-	}
-
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneClusterAutoscalerKeepListRegex, exists := regexHash["CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX"]
-		if exists && controlplaneClusterAutoscalerKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneClusterAutoscalerFile, controlplaneClusterAutoscalerKeepListRegex)
-		}
-		contents, err := os.ReadFile(controlplaneClusterAutoscalerFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneClusterAutoscalerFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneClusterAutoscalerFile)
-	}
-
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_NODE_AUTO_PROVISIONING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneNodeAutoProvisioningKeepListRegex, exists := regexHash["CONTROLPLANE_NODE_AUTO_PROVISIONING_KEEP_LIST_REGEX"]
-		if exists && controlplaneNodeAutoProvisioningKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneNodeAutoProvisioningFile, controlplaneNodeAutoProvisioningKeepListRegex)
-		}
-		contents, err := os.ReadFile(controlplaneNodeAutoProvisioningFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneNodeAutoProvisioningFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneNodeAutoProvisioningFile)
-	}
-
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneEtcdKeepListRegex, exists := regexHash["CONTROLPLANE_ETCD_KEEP_LIST_REGEX"]
-		if exists && controlplaneEtcdKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneEtcdDefaultFile, controlplaneEtcdKeepListRegex)
-		}
-		contents, err := os.ReadFile(controlplaneEtcdDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneEtcdDefaultFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	// if mergedDefaultConfigs != nil {
-	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	// }
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
@@ -283,9 +190,8 @@ func writeDefaultScrapeTargetsFile() {
 	fmt.Printf("Start Updating Default Prometheus Config\n")
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
 	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
-		loadRegexHash()
 		populateDefaultPrometheusConfig()
-		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+		if len(mergedDefaultConfigs) > 0 {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err == nil {
@@ -298,18 +204,13 @@ func writeDefaultScrapeTargetsFile() {
 			}
 		}
 	} else {
-		mergedDefaultConfigs = nil
+		mergedDefaultConfigs = make(map[interface{}]interface{})
 	}
-	fmt.Printf("Done creating default targets file\n")
 }
 
 func setDefaultFileScrapeInterval(scrapeInterval string) {
-	defaultFilesArray := []string{
-		controlplaneApiserverDefaultFile, controlplaneKubeSchedulerDefaultFile, controlplaneKubeControllerManagerFile,
-		controlplaneClusterAutoscalerFile, controlplaneNodeAutoProvisioningFile, controlplaneEtcdDefaultFile,
-	}
-
-	for _, currentFile := range defaultFilesArray {
+	for _, job := range shared.ControlPlaneDefaultScrapeJobs {
+		currentFile := scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile
 		contents, err := os.ReadFile(currentFile)
 		if err != nil {
 			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
