@@ -94,11 +94,11 @@ variables:
   value: |
     {
       "ConfigurationSpecification": {
-        "settings": {
+        "Settings": {
           "chartVersion": "$(resources.pipeline._Azureprometheus-collector.runName)",
           "releaseTrain": "${{ parameters.releaseTrain }}",
-          "isCustomerHidden": ${{ parameters.isCustomerHidden }}
-        }
+          "isCustomerHidden": ${{ lower(parameters.isCustomerHidden) }}
+          }
       }
     }
 

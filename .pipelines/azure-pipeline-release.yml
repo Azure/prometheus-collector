@@ -12,22 +12,6 @@ parameters:
 - name: 'onlyCCPRelease'
   type: boolean
   default: false
-- name: 'icmIncidentId'
-  displayName: 'ICM Incident ID'
-  type: number
-  default: 0
-- name: 'managedValidationOverrideDuration'
-  displayName: 'Managed Validation Override Duration'
-  type: number
-  default: 0
-- name: "rolloutType"
-  displayName: "Rollout Type"
-  type: string
-  default: "normal"
-  values:
-    - "normal"
-    - "emergency"
-    - "globaloutage"
 
 variables:
 - name: ServiceTreeGUID
@@ -95,9 +79,6 @@ extends:
             select: regions(eastus2euap)
             skipRegistrationIfExists: true
             forceRegistration: true
-            rolloutType: ${{ parameters.rolloutType }}
-            icmIncidentId: ${{ parameters.icmIncidentId }}
-            managedValidationOverrideDuration: ${{ parameters.managedValidationOverrideDuration }}
             configurationOverrides:
               settings:
                 linuxTag: "$(resources.pipeline._Azureprometheus-collector.runName)"
@@ -106,9 +87,9 @@ extends:
                 chartTag: "$(resources.pipeline._Azureprometheus-collector.runName)"
                 targetAllocatorTag: "$(resources.pipeline._Azureprometheus-collector.runName)-targetallocator"
                 configReaderTag: "$(resources.pipeline._Azureprometheus-collector.runName)-cfg"
-                pushNewNEChart: "${{ parameters.pushNewNEChart }}"
+                pushNewNEChart: "${{ lower(parameters.pushNewNEChart) }}"
                 NEChartTag: "${{ parameters.NEChartTag }}"
-                onlyCCPRelease: "${{ parameters.onlyCCPRelease }}"
+                onlyCCPRelease: "${{ lower(parameters.onlyCCPRelease) }}"
     - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
       dependsOn: Push_Images
