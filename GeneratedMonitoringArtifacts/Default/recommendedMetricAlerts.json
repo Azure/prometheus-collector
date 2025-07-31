@@ -2,12 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "clusterName": {
-            "type": "string",
-            "metadata": {
-                "description": "Cluster name"
-            }
-        },
         "clusterResourceId": {
             "type": "string",
             "metadata": {
@@ -32,8 +26,9 @@
         }
     },
     "variables": {
+        "clusterName": "[last(split(parameters('clusterResourceId'), '/'))]",
         "kubernetesAlertRuleGroup": "KubernetesAlert-RecommendedMetricAlerts",
-        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
+        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), variables('clusterName'))]",
         "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-RecommendedMetricAlerts",
         "version": " - 0.1"
     },
@@ -49,7 +44,7 @@
                     "[parameters('azureMonitorWorkspaceResourceId')]",
                     "[parameters('clusterResourceId')]"
                 ],
-                "clusterName": "[parameters('clusterName')]",
+                "clusterName": "[variables('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
                     {
@@ -308,7 +303,7 @@
                     "[parameters('azureMonitorWorkspaceResourceId')]",
                     "[parameters('clusterResourceId')]"
                 ],
-                "clusterName": "[parameters('clusterName')]",
+                "clusterName": "[variables('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
                     {
@@ -391,7 +386,7 @@
                     "[parameters('azureMonitorWorkspaceResourceId')]",
                     "[parameters('clusterResourceId')]"
                 ],
-                "clusterName": "[parameters('clusterName')]",
+                "clusterName": "[variables('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
                     {
