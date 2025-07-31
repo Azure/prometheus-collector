@@ -28,6 +28,4 @@ spec:
     rsName: ama-metrics-operator-targets
   sessionAffinity: None
   type: ClusterIP
-status:
-  loadBalancer: {}
 {{- end }}
