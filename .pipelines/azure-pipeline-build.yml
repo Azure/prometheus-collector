@@ -2,7 +2,8 @@ trigger:
   branches:
     include:
     - main
-
+    - bot/otelcollector-upgrade-*
+    - dependabot*
 pr:
   autoCancel: true
   branches:
@@ -23,6 +24,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.10'
@@ -2278,6 +2280,93 @@ extends:
                   waitForExecution: false
                   arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
+      - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
+        displayName: "Deploy: AKS OTel Upgrade cluster"
+        environment: Prometheus-Collector
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        variables:
+          HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+          HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+          HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+          IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+          IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          skipComponentGovernanceDetection: true
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - checkout: self
+                submodules: true
+                persistCredentials: true
+              - task: HelmInstaller@1
+                displayName: Install Helm version
+                inputs:
+                  helmVersionToInstall: 3.12.3
+              - bash: |
+
+                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+                  echo $RETINA_VERSION
+                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+
+                  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                      do
+                        sleep 30
+                        echo $(IMAGE_TAG)
+                        echo $(IMAGE_TAG_WINDOWS)
+                        echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                        echo $(IMAGE_TAG_CONFIG_READER)
+                        output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                        if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                        then
+                          echo "Images are published to mcr"
+                          exit 0
+                        fi
+                      done
+                      echo "Images are not published to mcr within the timeout"
+                      exit 1
+                displayName: "Check images are pushed to dev MCR"
+                retryCountOnTaskFailure: 5
+              - bash: |
+                  export AKS_REGION="westus3"
+                  export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-upgrade-bot/providers/Microsoft.ContainerService/managedClusters/ciprom-upgrade-bot"
+                  export ARC_EXTENSION="false"
+                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  helm dependency update
+                displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+              - task: HelmDeploy@0
+                displayName: "Deploy: ciprom-upgrade-bot cluster"
+                inputs:
+                  connectionType: 'Azure Resource Manager'
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  azureResourceGroup: 'ciprom-upgrade-bot'
+                  kubernetesCluster: 'ciprom-upgrade-bot'
+                  namespace: 'default'
+                  command: 'upgrade'
+                  chartType: 'FilePath'
+                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  releaseName: 'ama-metrics'
+                  waitForExecution: false
+                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              - task: HelmDeploy@1
+                displayName: "Deploy: retina onto ciprom-upgrade-bot cluster"
+                inputs:
+                  connectionType: 'Azure Resource Manager'
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  azureResourceGroup: 'ciprom-upgrade-bot'
+                  kubernetesCluster: 'ciprom-upgrade-bot'
+                  namespace: 'kube-system'
+                  command: 'upgrade'
+                  chartType: 'FilePath'
+                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  releaseName: 'retina'
+                  waitForExecution: false
+                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
@@ -2420,6 +2509,53 @@ extends:
                 displayName: "Run TestKube workflow"
                 continueOnError: true
 
+      - deployment: Testkube_OTel_Upgrade
+        displayName: "Test: OTel Collector Upgrade testkube tests"
+        environment: Prometheus-Collector
+        dependsOn:  Deploy_AKS_Chart_OTel_Upgrade_Cluster
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        variables:
+          HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+          HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+          HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+          skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish TestKube OTel Upgrade Results'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Upgrade.json'
+            artifactName: 'testkube-results-OTel-Upgrade'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - checkout: self
+                persistCredentials: true
+              - task: AzureCLI@1
+                displayName: Get kubeconfig
+                inputs:
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
+              - bash: |
+                  export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+                  export BUILD_BUILDID="$(Build.BuildId)"
+                  export SYSTEM_JOBID="$(System.JobId)"
+                  export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  ./testkube/run-testkube-workflow.sh \
+                    "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
+                    "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
+                    "testkube-test-crs.yaml" \
+                    "testkube-test-crs-otel-upgrade.yaml" \
+                    "" \
+                    "" \
+                    "OTelCollector-Upgrade"
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                displayName: "Run TestKube workflow"
+                continueOnError: true
+
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
         pool:
@@ -2454,6 +2590,38 @@ extends:
           condition: always() 
           inputs:
             artifactName: 'testkube-results-OTel'
+            targetPath: '$(Pipeline.Workspace)/testkube-results'
+          continueOnError: true
+        - bash: |
+            export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+            export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+            export BUILD_REASON="$(Build.Reason)"
+            export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+            export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+            export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+          displayName: "Send TestKube Summary Notification"
+
+      - job: TestKube_Notification_OTelCollector_Upgrade
+        displayName: "Send TestKube Summary Notification"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn: 
+        - Testkube_OTel_Upgrade
+        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        variables:
+          skipComponentGovernanceDetection: true
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download TestKube OTelCollector Upgrade Results'
+          condition: always() 
+          inputs:
+            artifactName: 'testkube-results-OTel-Upgrade'
             targetPath: '$(Pipeline.Workspace)/testkube-results'
           continueOnError: true
         - bash: |
