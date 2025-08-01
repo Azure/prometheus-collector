@@ -19,6 +19,7 @@
     "arcHelmChartName": "ama-metrics-arc",
     "prodMCRNodeExporterRepository": "/azuremonitor/containerinsights/ciprod/prometheus-node-exporter",
     "devMCRNodeExporterRepository": "/azuremonitor/containerinsights/cidev/prometheus-node-exporter",
+    "prodACRNodeExporterRepository": "/public/azuremonitor/containerinsights/ciprod/prometheus-node-exporter",
     "linuxTag": "",
     "linuxCCPTag": "",
     "windowsTag": "",
