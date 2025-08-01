@@ -270,6 +270,30 @@ extends:
               azure-monitor-metrics-addon/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
 
+      - job: TestKubeTestFiles
+        displayName: "CI/CD: Export TestKube test files for Deploy stage"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish TestKube test files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
+            artifactName: testkube-test-files
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy TestKube files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/test'
+            Contents: |
+              testkube/**
+              test-cluster-yamls/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
@@ -2113,19 +2137,24 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: testkube-test-files
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - bash: |
                   wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
                   echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
                   sudo apt-get update
                   sudo apt-get install -y testkube
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
@@ -2145,7 +2174,7 @@ extends:
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2177,7 +2206,7 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
                 displayName: "Run tests"
 
       - deployment: Deploy_AKS_Chart
@@ -2438,19 +2467,24 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: testkube-test-files
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - bash: |
                   wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
                   echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
                   sudo apt-get update
                   sudo apt-get install -y testkube
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
@@ -2470,7 +2504,7 @@ extends:
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2502,7 +2536,7 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
                 displayName: "Run tests"
 
       - deployment: Testkube_OTel
@@ -2517,19 +2551,24 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: testkube-test-files
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - bash: |
                   wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
                   echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
                   sudo apt-get update
                   sudo apt-get install -y testkube
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
@@ -2549,7 +2588,7 @@ extends:
                   #kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap-v2.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2581,5 +2620,5 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
                 displayName: "Run tests"
