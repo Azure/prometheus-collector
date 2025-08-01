@@ -58,7 +58,7 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"arcdistribution":                         "ARC_DISTRIBUTION",
 	"mountmarinercerts":                       "MOUNT_MARINER_CERTS",
 	"mountubuntucerts":                        "MOUNT_UBUNTU_CERTS",
-	"otlpenabled":                             "AZMON_FULL_OTLP_ENABLED",
+	"otlpenabled":                             "APPMONITORING_OPENTELEMETRYMETRICS_ENABLED",
 	"settingsconfigschemaversion":             "CONFIGMAP_VERSION",
 }
 

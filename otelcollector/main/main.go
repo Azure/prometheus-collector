@@ -93,7 +93,7 @@ func main() {
 	var fluentBitConfigFile string
 	var meDCRConfigDirectory string
 	var meLocalControl bool
-	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
+	otlpEnabled := strings.ToLower(shared.GetEnv("APPMONITORING_OPENTELEMETRYMETRICS_ENABLED", "false")) == "true"
 
 	meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl = shared.DetermineConfigFiles(controllerType, clusterOverride, otlpEnabled)
 	fmt.Println("meConfigFile:", meConfigFile)
@@ -310,7 +310,7 @@ func handleShutdown() {
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	osType := os.Getenv("OS_TYPE")
-	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
+	otlpEnabled := strings.ToLower(shared.GetEnv("APPMONITORING_OPENTELEMETRYMETRICS_ENABLED", "false")) == "true"
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 	processToCheck := ""

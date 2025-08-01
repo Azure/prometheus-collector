@@ -139,6 +139,13 @@ spec:
               value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
               value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
+          {{- if .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}
+          ports:
+            - name: otlp-endpoint
+              containerPort: 56680
+              hostPort: {{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}
+              protocol: TCP
+          {{- end }}
           securityContext:
             privileged: false
             capabilities:
@@ -419,6 +426,13 @@ spec:
               value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
               value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
+          {{- if .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}
+          ports:
+            - name: otlp-endpoint
+              containerPort: 56680
+              hostPort: {{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}
+              protocol: TCP
+          {{- end }}
           securityContext:
             privileged: false
             capabilities:

@@ -4,6 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
+    - feature/otlp-appmonitoring
 pr:
   autoCancel: true
   branches:

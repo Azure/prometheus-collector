@@ -241,7 +241,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			CommonProperties["ClusterName"] = splitStrings[8]
 		}
 		// Reading AMCS config file for telemetry
-		otlpEnabled := os.Getenv("AZMON_FULL_OTLP_ENABLED") == "true"
+		otlpEnabled := os.Getenv("APPMONITORING_OPENTELEMETRYMETRICS_ENABLED") == "true"
 		if otlpEnabled {
 			amcsConfigFilePath = "/etc/mdsd.d/config-cache/me/dcrs"
 			// Read the AMCS config directory instead of a single file
