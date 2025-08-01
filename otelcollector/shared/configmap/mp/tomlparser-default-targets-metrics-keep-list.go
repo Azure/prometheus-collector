@@ -34,7 +34,9 @@ var (
 	windowskubeproxyRegex_minimal_mac                                   = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 	acstorCapacityProvisionerRegex_minimal_mac                          = "storage_pool_ready_state|storage_pool_capacity_used_bytes|storage_pool_capacity_provisioned_bytes|storage_pool_snapshot_capacity_reserved_bytes"
 	acstorMetricsExporter_minimal_mac                                   = "disk_read_operations_completed_total|disk_write_operations_completed_total|disk_read_operations_time_seconds_total|disk_write_operations_time_seconds_total|disk_read_bytes_total|disk_written_bytes_total|disk_reads_merged_total|disk_writes_merged_total|disk_io_now|disk_io_time_seconds_total|disk_io_time_weighted_seconds_total|disk_discard_operations_completed_total|disk_discards_merged_total|disk_discarded_sectors_total|disk_discard_operations_time_seconds_total|disk_flush_requests_total|disk_flush_requests_time_seconds_total"
-	storageOperatorServiceMetrics_minimal_mac                           = "rpc_server_duration_milliseconds_bucket"
+	//These metrics are somewhere getting transformed from rpc_server.duration_milliseconds_bucket to rpc.server.duration_milliseconds_bucket.
+	// It's not clear where this is happening, so we are keeping both regexes for now. Once we find the root cause, we can remove one of them.
+	storageOperatorServiceMetrics_minimal_mac = "rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
