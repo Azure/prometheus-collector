@@ -2174,7 +2174,7 @@ extends:
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2206,7 +2206,7 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube
                 displayName: "Run tests"
 
       - deployment: Deploy_AKS_Chart
@@ -2504,7 +2504,7 @@ extends:
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2536,7 +2536,7 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube
                 displayName: "Run tests"
 
       - deployment: Testkube_OTel
@@ -2588,7 +2588,7 @@ extends:
                   #kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap-v2.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
               - bash: |
                   sleep 360
@@ -2620,5 +2620,5 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Pipeline.Workspace)/testkube-files/testkube
+                workingDirectory: $(Pipeline.Workspace)/testkube
                 displayName: "Run tests"
