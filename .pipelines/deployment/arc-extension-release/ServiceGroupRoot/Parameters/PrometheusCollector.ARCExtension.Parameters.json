@@ -7,7 +7,7 @@
       "type": "ShellExtensionType",
       "properties": {
         "maxExecutionTime": "PT1H",
-        "useFallBackLocations": false,
+        "useFallBackLocations": true,
         "skipDeleteAfterExecution": false
       },
       "package": {
