@@ -699,6 +699,18 @@ func populateDefaultPrometheusConfig() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		StorageOperatorServiceMetricsKeepListRegex, exists := regexHash["STORAGEOPERATORSERVICEMETRICS_KEEP_LIST_REGEX"]
+		StorageOperatorServiceMetricsScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsScrapeInterval)
+		}
+		if exists && StorageOperatorServiceMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, StorageOperatorServiceMetricsDefaultFile)
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1162,6 +1174,19 @@ func populateDefaultPrometheusConfigWithOperator() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
+		StorageOperatorServiceMetricsKeepListRegex, exists := regexHash["STORAGEOPERATORSERVICEMETRICS_KEEP_LIST_REGEX"]
+		StorageOperatorServiceMetricsScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "storageOperatorServiceMetricsDefaultFile", StorageOperatorServiceMetricsDefaultFile)
+		if intervalExists {
+			UpdateScrapeIntervalConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsScrapeInterval)
+		}
+		if exists && StorageOperatorServiceMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, StorageOperatorServiceMetricsDefaultFile)
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1281,6 +1306,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
 		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
+		StorageOperatorServiceMetricsDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {

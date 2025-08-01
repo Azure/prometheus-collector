@@ -27,6 +27,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
+	config["storage-operator-service-metrics"] = "true"
 
 	return config, nil
 }
@@ -51,6 +52,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
+	config["storage-operator-service-metrics"] = "true"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -150,6 +152,11 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
 	}
 
+	if val, ok := parsedConfig["storage-operator-service-metrics"]; ok && val != "" {
+		cp.StorageOperatorServiceMetrics = val
+		fmt.Printf("config:: Using scrape settings for storage-operator-service-metrics: %v\n", cp.StorageOperatorServiceMetrics)
+	}
+
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
@@ -191,6 +198,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED=%v\n", cp.AcstorCapacityProvisioner))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED=%v\n", cp.AcstorMetricsExporter))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED=%v\n", cp.StorageOperatorServiceMetrics))
 
 	return nil
 }
