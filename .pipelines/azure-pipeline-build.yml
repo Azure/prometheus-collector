@@ -251,8 +251,10 @@ extends:
             echo $RETINA_VERSION
             helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+            echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
           displayName: "CI/CD: Download Retina Chart"
           retryCountOnTaskFailure: 5
+          name: setup
         - task: CopyFiles@2
           displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
           inputs:
@@ -2190,6 +2192,7 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
         templateContext:
             type: releaseJob
@@ -2275,6 +2278,7 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
         templateContext:
             type: releaseJob
@@ -2347,6 +2351,7 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
         templateContext:
             type: releaseJob
