@@ -1,16 +1,25 @@
-name: size-label #https://github.com/kubernetes/kubernetes/labels?q=size
-on: 
-  pull_request:
-    branches:
-      - main
+name: Dependabot Auto-Merge
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
 jobs:
-  size-label:
+  dependabot-automerge:
     runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
-      - name: size-label
-        uses: "pascalgn/size-label-action@v0.5.5"
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Enable auto-merge for Dependabot PRs
+        run: gh pr merge --auto --squash "$PR_URL"
         env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
