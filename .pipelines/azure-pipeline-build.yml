@@ -2410,7 +2410,8 @@ extends:
                     "testkube-test-crs-ci-dev-aks-mac-eus.yaml" \
                     "" \
                     "" \
-                    "AKS"
+                    "AKS" \
+                    ""
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2457,7 +2458,8 @@ extends:
                     "testkube-test-crs-ciprom-dev-aks-otlp.yaml" \
                     "false" \
                     "" \
-                    "OTel"
+                    "OTel" \
+                    ""
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2504,7 +2506,8 @@ extends:
                   "testkube-test-crs-ci-dev-arc-wcus.yaml" \
                   "" \
                   "" \
-                  "ARC"
+                  "ARC" \
+                  ""
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2547,11 +2550,12 @@ extends:
                   ./testkube/run-testkube-workflow.sh \
                     "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
                     "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
-                    "testkube-test-crs.yaml" \
+                    "testkube-test-crs-otelcollector-upgrade.yaml" \
                     "testkube-test-crs-otel-upgrade.yaml" \
                     "" \
                     "" \
-                    "OTelCollector-Upgrade"
+                    "OTelCollector-Upgrade" \
+                    "$(System.PullRequest.SourceBranch)"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2621,7 +2625,7 @@ extends:
           displayName: 'Download TestKube OTelCollector Upgrade Results'
           condition: always() 
           inputs:
-            artifactName: 'testkube-results-OTel-Upgrade'
+            artifactName: 'testkube-results-OTelCollector-Upgrade'
             targetPath: '$(Pipeline.Workspace)/testkube-results'
           continueOnError: true
         - bash: |
