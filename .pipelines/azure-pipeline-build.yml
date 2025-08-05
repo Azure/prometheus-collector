@@ -2372,7 +2372,7 @@ extends:
         displayName: "Test: AKS testkube tests"
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2410,8 +2410,7 @@ extends:
                     "testkube-test-crs-ci-dev-aks-mac-eus.yaml" \
                     "" \
                     "" \
-                    "AKS" \
-                    ""
+                    "AKS"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2458,8 +2457,7 @@ extends:
                     "testkube-test-crs-ciprom-dev-aks-otlp.yaml" \
                     "false" \
                     "" \
-                    "OTel" \
-                    ""
+                    "OTel"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2506,8 +2504,7 @@ extends:
                   "testkube-test-crs-ci-dev-arc-wcus.yaml" \
                   "" \
                   "" \
-                  "ARC" \
-                  ""
+                  "ARC"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
@@ -2516,7 +2513,7 @@ extends:
         displayName: "Test: OTel Collector Upgrade testkube tests"
         environment: Prometheus-Collector
         dependsOn:  Deploy_AKS_Chart_OTel_Upgrade_Cluster
-        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        #condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
