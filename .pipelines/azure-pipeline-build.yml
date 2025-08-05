@@ -4,6 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
+    - grace/v0.131.0-bot-improvements
 pr:
   autoCancel: true
   branches:
