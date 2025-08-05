@@ -125,6 +125,7 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
 			"",
 		)
 		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(300 * time.Second)
 	})
 
 	Specify("the TokenConfig.json file has updated from mdsd, the container should restart", Label(utils.MDSDLabel), func() {
