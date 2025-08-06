@@ -2478,23 +2478,10 @@ extends:
           - input: pipelineArtifact
             artifactName: testkube-test-files
             targetPath: $(Pipeline.Workspace)
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube AKS Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
-            artifactName: 'testkube-results-AKS'
         strategy:
           runOnce:
             deploy:
               steps:
-              - bash: |
-                  wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-                  echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-                  sudo apt-get update
-                  sudo apt-get install -y testkube
-                  exit 0
-                workingDirectory: $(Pipeline.Workspace)
-                displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2517,6 +2504,10 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - task: 1ES.PublishPipelineArtifact@1
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
+                  artifactName: 'testkube-results-AKS'
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2537,23 +2528,10 @@ extends:
           - input: pipelineArtifact
             artifactName: testkube-test-files
             targetPath: $(Pipeline.Workspace)
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube OTel Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
-            artifactName: 'testkube-results-OTel'
         strategy:
           runOnce:
             deploy:
               steps:
-              - bash: |
-                  wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-                  echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-                  sudo apt-get update
-                  sudo apt-get install -y testkube
-                  exit 0
-                workingDirectory: $(Pipeline.Workspace)
-                displayName: "Install testkube CLI"
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2576,6 +2554,10 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - task: 1ES.PublishPipelineArtifact@1
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
+                  artifactName: 'testkube-results-OTel'
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
@@ -2596,11 +2578,6 @@ extends:
           - input: pipelineArtifact
             artifactName: testkube-test-files
             targetPath: $(Pipeline.Workspace)
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Ev2: publish testkube artifacts'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
-            artifactName: testkube-results-ARC
         strategy:
           runOnce:
             deploy:
@@ -2629,6 +2606,10 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - task: 1ES.PublishPipelineArtifact@1
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
+                  artifactName: 'testkube-results-ARC'
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
@@ -2649,11 +2630,6 @@ extends:
           - input: pipelineArtifact
             artifactName: testkube-test-files
             targetPath: $(Pipeline.Workspace)
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube OTel Upgrade Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Upgrade.json'
-            artifactName: 'testkube-results-OTel-Upgrade'
         strategy:
           runOnce:
             deploy:
@@ -2682,6 +2658,10 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - task: 1ES.PublishPipelineArtifact@1
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-Otel-Upgrade.json'
+                  artifactName: 'testkube-results-Otel-Upgrade'
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
