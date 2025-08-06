@@ -2504,7 +2504,7 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
-              - task: 1ES.PublishPipelineArtifact@1
+              - task: PublishPipelineArtifact@1
                 inputs:
                   targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
                   artifactName: 'testkube-results-AKS'
@@ -2554,7 +2554,7 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
-              - task: 1ES.PublishPipelineArtifact@1
+              - task: PublishPipelineArtifact@1
                 inputs:
                   targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
                   artifactName: 'testkube-results-OTel'
@@ -2606,7 +2606,7 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
-              - task: 1ES.PublishPipelineArtifact@1
+              - task: PublishPipelineArtifact@1
                 inputs:
                   targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
                   artifactName: 'testkube-results-ARC'
@@ -2658,7 +2658,7 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
-              - task: 1ES.PublishPipelineArtifact@1
+              - task: PublishPipelineArtifact@1
                 inputs:
                   targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-Otel-Upgrade.json'
                   artifactName: 'testkube-results-Otel-Upgrade'
