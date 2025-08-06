@@ -2388,9 +2388,6 @@ extends:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
@@ -2600,8 +2597,6 @@ extends:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2661,8 +2656,6 @@ extends:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2715,8 +2708,6 @@ extends:
           TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['testkube_results.TESTKUBE_RESULTS_AKS'] ]
           TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['testkube_results.TESTKUBE_RESULTS_OTEL'] ]
         steps:
-        - checkout: self
-          persistCredentials: true
         - bash: |
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
@@ -2772,8 +2763,6 @@ extends:
           skipComponentGovernanceDetection: true
           TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
         steps:
-        - checkout: self
-          persistCredentials: true
         - bash: |
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
