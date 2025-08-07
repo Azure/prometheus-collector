@@ -1,5 +1,5 @@
  scrape_configs:
- - job_name: storage-operator-service-metrics
+ - job_name: local-csi-driver
    honor_labels: true
    scrape_interval: $$SCRAPE_INTERVAL$$
    scheme: http

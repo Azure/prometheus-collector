@@ -33,7 +33,7 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
-    storageoperator-service-metrics = true
+    local-csi-driver = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -62,7 +62,7 @@ data:
     controlplane-etcd = ""
     acstor-capacity-provisioner = ""
     acstor-metrics-exporter = ""
-    storageoperator-service-metrics = ""
+    local-csi-driver = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -81,7 +81,7 @@ data:
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
-    storageoperator-service-metrics = "30s"
+    local-csi-driver = "30s"
     podannotations = "30s"
   debug-mode: |-
     enabled = false

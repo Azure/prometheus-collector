@@ -699,16 +699,16 @@ func populateDefaultPrometheusConfig() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		StorageOperatorServiceMetricsKeepListRegex, exists := regexHash["STORAGEOPERATORSERVICEMETRICS_KEEP_LIST_REGEX"]
-		StorageOperatorServiceMetricsScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"]
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_LOCALCSIDRIVER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		LocalCSIDriverKeepListRegex, exists := regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
+		LocalCSIDriverScrapeInterval, intervalExists := intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
 		if intervalExists {
-			UpdateScrapeIntervalConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsScrapeInterval)
+			UpdateScrapeIntervalConfig(LocalCSIDriverDefaultFile, LocalCSIDriverScrapeInterval)
 		}
-		if exists && StorageOperatorServiceMetricsKeepListRegex != "" {
-			AppendMetricRelabelConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsKeepListRegex)
+		if exists && LocalCSIDriverKeepListRegex != "" {
+			AppendMetricRelabelConfig(LocalCSIDriverDefaultFile, LocalCSIDriverKeepListRegex)
 		}
-		defaultConfigs = append(defaultConfigs, StorageOperatorServiceMetricsDefaultFile)
+		defaultConfigs = append(defaultConfigs, LocalCSIDriverDefaultFile)
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -1174,17 +1174,17 @@ func populateDefaultPrometheusConfigWithOperator() {
 		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
-		StorageOperatorServiceMetricsKeepListRegex, exists := regexHash["STORAGEOPERATORSERVICEMETRICS_KEEP_LIST_REGEX"]
-		StorageOperatorServiceMetricsScrapeInterval, intervalExists := intervalHash["STORAGEOPERATORSERVICEMETRICS_SCRAPE_INTERVAL"]
-		log.Printf("path %s: %s\n", "storageOperatorServiceMetricsDefaultFile", StorageOperatorServiceMetricsDefaultFile)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_LOCALCSIDRIVER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
+		LocalCSIDriverKeepListRegex, exists := regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
+		LocalCSIDriverScrapeInterval, intervalExists := intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "LocalCSIDriverDefaultFile", LocalCSIDriverDefaultFile)
 		if intervalExists {
-			UpdateScrapeIntervalConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsScrapeInterval)
+			UpdateScrapeIntervalConfig(LocalCSIDriverDefaultFile, LocalCSIDriverScrapeInterval)
 		}
-		if exists && StorageOperatorServiceMetricsKeepListRegex != "" {
-			AppendMetricRelabelConfig(StorageOperatorServiceMetricsDefaultFile, StorageOperatorServiceMetricsKeepListRegex)
+		if exists && LocalCSIDriverKeepListRegex != "" {
+			AppendMetricRelabelConfig(LocalCSIDriverDefaultFile, LocalCSIDriverKeepListRegex)
 		}
-		defaultConfigs = append(defaultConfigs, StorageOperatorServiceMetricsDefaultFile)
+		defaultConfigs = append(defaultConfigs, LocalCSIDriverDefaultFile)
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -1306,7 +1306,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
 		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
-		StorageOperatorServiceMetricsDefaultFile,
+		LocalCSIDriverDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {

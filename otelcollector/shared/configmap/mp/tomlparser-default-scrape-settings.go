@@ -27,7 +27,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
-	config["storage-operator-service-metrics"] = "true"
+	config["local-csi-driver"] = "true"
 
 	return config, nil
 }
@@ -52,7 +52,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
-	config["storage-operator-service-metrics"] = "true"
+	config["local-csi-driver"] = "true"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -152,9 +152,9 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
 	}
 
-	if val, ok := parsedConfig["storage-operator-service-metrics"]; ok && val != "" {
-		cp.StorageOperatorServiceMetrics = val
-		fmt.Printf("config:: Using scrape settings for storage-operator-service-metrics: %v\n", cp.StorageOperatorServiceMetrics)
+	if val, ok := parsedConfig["local-csi-driver"]; ok && val != "" {
+		cp.LocalCSIDriver = val
+		fmt.Printf("config:: Using scrape settings for local-csi-driver: %v\n", cp.LocalCSIDriver)
 	}
 
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
@@ -198,7 +198,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED=%v\n", cp.AcstorCapacityProvisioner))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED=%v\n", cp.AcstorMetricsExporter))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_STORAGEOPERATORSERVICEMETRICS_SCRAPING_ENABLED=%v\n", cp.StorageOperatorServiceMetrics))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_LOCALCSIDRIVER_SCRAPING_ENABLED=%v\n", cp.LocalCSIDriver))
 
 	return nil
 }

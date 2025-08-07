@@ -50,28 +50,28 @@ var (
 	networkObservabilityCiliumDefaultFileDs      = "networkobservabilityCiliumDefaultDs.yml"
 	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
 	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
-	StorageOperatorServiceMetricsDefaultFile     = "storageOperatorServiceMetricsDefaultFile.yml"
+	LocalCSIDriverDefaultFile                    = "LocalCSIDriverDefaultFile.yml"
 )
 
 type RegexValues struct {
-	kubelet                       string
-	coredns                       string
-	cadvisor                      string
-	kubeproxy                     string
-	apiserver                     string
-	kubestate                     string
-	nodeexporter                  string
-	kappiebasic                   string
-	windowsexporter               string
-	windowskubeproxy              string
-	networkobservabilityretina    string
-	networkobservabilityhubble    string
-	networkobservabilitycilium    string
-	podannotations                string
-	minimalingestionprofile       string
-	acstorcapacityprovisioner     string
-	acstormetricsexporter         string
-	storageoperatorservicemetrics string
+	kubelet                    string
+	coredns                    string
+	cadvisor                   string
+	kubeproxy                  string
+	apiserver                  string
+	kubestate                  string
+	nodeexporter               string
+	kappiebasic                string
+	windowsexporter            string
+	windowskubeproxy           string
+	networkobservabilityretina string
+	networkobservabilityhubble string
+	networkobservabilitycilium string
+	podannotations             string
+	minimalingestionprofile    string
+	acstorcapacityprovisioner  string
+	acstormetricsexporter      string
+	localcsidriver             string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -96,24 +96,24 @@ type ConfigProcessor struct {
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
 
-	Kubelet                       string
-	Coredns                       string
-	Cadvisor                      string
-	Kubeproxy                     string
-	Apiserver                     string
-	Kubestate                     string
-	NodeExporter                  string
-	PrometheusCollectorHealth     string
-	PodAnnotation                 string
-	Windowsexporter               string
-	Windowskubeproxy              string
-	Kappiebasic                   string
-	NetworkObservabilityRetina    string
-	NetworkObservabilityHubble    string
-	NetworkObservabilityCilium    string
-	AcstorCapacityProvisioner     string
-	AcstorMetricsExporter         string
-	StorageOperatorServiceMetrics string
+	Kubelet                    string
+	Coredns                    string
+	Cadvisor                   string
+	Kubeproxy                  string
+	Apiserver                  string
+	Kubestate                  string
+	NodeExporter               string
+	PrometheusCollectorHealth  string
+	PodAnnotation              string
+	Windowsexporter            string
+	Windowskubeproxy           string
+	Kappiebasic                string
+	NetworkObservabilityRetina string
+	NetworkObservabilityHubble string
+	NetworkObservabilityCilium string
+	AcstorCapacityProvisioner  string
+	AcstorMetricsExporter      string
+	LocalCSIDriver             string
 }
 
 // ConfigParser is an interface for parsing configurations.
