@@ -22,6 +22,7 @@ TARGET_OUTPUT="$4"
 APPLY_SETTINGS_CONFIGMAP="${5:-true}"
 SLEEP_DURATION="${6:-360}"
 TARGET_ENV="${7:-Unknown}"
+BRANCH_NAME="${8:-main}"
 
 # Define shared results file  
 RESULTS_FILE="${BUILD_ARTIFACTSTAGINGDIRECTORY}/testkube-results-${TARGET_ENV}.json"
@@ -78,6 +79,7 @@ echo "Target output: $TARGET_OUTPUT"
 # Export environment variables for envsubst
 export AMW_QUERY_ENDPOINT
 export AZURE_CLIENT_ID
+export BRANCH_NAME
 
 # Generate the test CRs from template
 envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"

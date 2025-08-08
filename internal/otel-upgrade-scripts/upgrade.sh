@@ -16,6 +16,24 @@ CURRENT_TA_VERSION=$5
 BRANCH_NAME="${TAG}"
 CURRENT_DIR=$(pwd)
 
+# Check for required tools for registry querying
+REGISTRY_TOOLS_AVAILABLE=true
+if ! command -v curl &> /dev/null; then
+    echo "Warning: curl not found. Will use go.mod versions directly without checking registry for latest patches."
+    REGISTRY_TOOLS_AVAILABLE=false
+fi
+
+if ! command -v jq &> /dev/null; then
+    echo "Warning: jq not found. Will use go.mod versions directly without checking registry for latest patches."
+    REGISTRY_TOOLS_AVAILABLE=false
+fi
+
+if [ "$REGISTRY_TOOLS_AVAILABLE" = true ]; then
+    echo "Registry tools (curl and jq) are available. Will check for latest patch versions."
+else
+    echo "Registry tools not available. Install curl and jq for automatic patch version detection."
+fi
+
 
 echo "Current OTel version: $CURRENT_OTEL_VERSION"
 echo "Current Target Allocator version: $CURRENT_TA_VERSION"
@@ -136,24 +154,7 @@ go mod tidy
 #rm -f promconfigvalidator
 cd "$CURRENT_DIR"
 
-# Step 5: Update golang version in azure-pipeline-build.yaml
-echo "Updating golang version in azure-pipeline-build.yaml..."
-GO_VERSION=$(grep "go " opentelemetry-collector-contrib/go.mod | awk '{print $2}')
-# Extract current golang version from the pipeline file
-CURRENT_GO_VERSION=$(grep "GOLANG_VERSION: '" ".pipelines/azure-pipeline-build.yml" | sed "s/GOLANG_VERSION: '//;s/'//g")
-CURRENT_GO_MAJOR_MINOR=$(echo $CURRENT_GO_VERSION | grep -oE '^[0-9]+\.[0-9]+')
-NEW_GO_MAJOR_MINOR=$(echo $GO_VERSION | grep -oE '^[0-9]+\.[0-9]+')
-
-echo "Current Golang version in pipeline: $CURRENT_GO_VERSION"
-echo "Golang version using by otelcollector go.mod: $GO_VERSION"
-
-# Only update if major.minor version is different
-if [ "$CURRENT_GO_MAJOR_MINOR" != "$NEW_GO_MAJOR_MINOR" ]; then
-	echo "Updating Golang version in pipeline from $CURRENT_GO_VERSION to $GO_VERSION"
-	sed -i "s/GOLANG_VERSION: '.*'/GOLANG_VERSION: '${GO_VERSION}'/g" ".pipelines/azure-pipeline-build.yml"
-else
-	echo "Golang major.minor version unchanged, keeping current version in pipeline"
-fi
+# Step 5: Golang version will be updated later after both go.mod files are available
 
 # Get CHANGELOG.md from opentelemetry-collector-contrib
 echo "Fetching CHANGELOG.md from opentelemetry-collector-contrib..."
@@ -309,5 +310,242 @@ go mod tidy
 echo "Prometheus UI dependencies updated successfully."
 
 cd "$CURRENT_DIR"
+
+# Step 7.1: Update Test Utils Prometheus dependencies
+echo "Updating Test Utils Prometheus dependencies..."
+cd "$CURRENT_DIR/otelcollector/test/ginkgo-e2e/utils"
+
+# Extract prometheus versions from both opentelemetry-collector-builder and otel-allocator
+OTEL_BUILDER_PROM_CLIENT_VERSION=$(grep -m 1 "github.com/prometheus/client_golang " ../../../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+OTEL_BUILDER_PROM_COMMON_VERSION=$(grep -m 1 "github.com/prometheus/common " ../../../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+OTEL_BUILDER_PROM_CLIENT_MODEL_VERSION=$(grep -m 1 "github.com/prometheus/client_model " ../../../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+
+OTEL_ALLOCATOR_PROM_CLIENT_VERSION=$(grep -m 1 "github.com/prometheus/client_golang " ../../../otel-allocator/go.mod | awk '{print $2}')
+OTEL_ALLOCATOR_PROM_COMMON_VERSION=$(grep -m 1 "github.com/prometheus/common " ../../../otel-allocator/go.mod | awk '{print $2}')
+OTEL_ALLOCATOR_PROM_CLIENT_MODEL_VERSION=$(grep -m 1 "github.com/prometheus/client_model " ../../../otel-allocator/go.mod | awk '{print $2}')
+
+echo "Found Prometheus versions in opentelemetry-collector-builder:"
+echo "  client_golang: $OTEL_BUILDER_PROM_CLIENT_VERSION"
+echo "  common: $OTEL_BUILDER_PROM_COMMON_VERSION" 
+echo "  client_model: $OTEL_BUILDER_PROM_CLIENT_MODEL_VERSION"
+
+echo "Found Prometheus versions in otel-allocator:"
+echo "  client_golang: $OTEL_ALLOCATOR_PROM_CLIENT_VERSION"
+echo "  common: $OTEL_ALLOCATOR_PROM_COMMON_VERSION"
+echo "  client_model: $OTEL_ALLOCATOR_PROM_CLIENT_MODEL_VERSION"
+
+# Function to compare and select highest version
+select_highest_version() {
+    local version1=$1
+    local version2=$2
+    if [[ -z "$version1" ]]; then
+        echo "$version2"
+    elif [[ -z "$version2" ]]; then
+        echo "$version1"
+    elif [[ $version1 > $version2 ]]; then
+        echo "$version1"
+    else
+        echo "$version2"
+    fi
+}
+
+# Select the highest versions
+FINAL_PROM_CLIENT_VERSION=$(select_highest_version "$OTEL_BUILDER_PROM_CLIENT_VERSION" "$OTEL_ALLOCATOR_PROM_CLIENT_VERSION")
+FINAL_PROM_COMMON_VERSION=$(select_highest_version "$OTEL_BUILDER_PROM_COMMON_VERSION" "$OTEL_ALLOCATOR_PROM_COMMON_VERSION")
+FINAL_PROM_CLIENT_MODEL_VERSION=$(select_highest_version "$OTEL_BUILDER_PROM_CLIENT_MODEL_VERSION" "$OTEL_ALLOCATOR_PROM_CLIENT_MODEL_VERSION")
+
+echo "Selected final Prometheus versions for test utils:"
+echo "  client_golang: $FINAL_PROM_CLIENT_VERSION"
+echo "  common: $FINAL_PROM_COMMON_VERSION"
+echo "  client_model: $FINAL_PROM_CLIENT_MODEL_VERSION"
+
+# Update the versions in go.mod
+if [ ! -z "$FINAL_PROM_CLIENT_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_golang v[0-9.]*|github.com/prometheus/client_golang $FINAL_PROM_CLIENT_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_COMMON_VERSION" ]; then
+    sed -i "s|github.com/prometheus/common v[0-9.]*|github.com/prometheus/common $FINAL_PROM_COMMON_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_CLIENT_MODEL_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_model v[0-9.]*|github.com/prometheus/client_model $FINAL_PROM_CLIENT_MODEL_VERSION|g" go.mod
+fi
+
+# Remove "// indirect" dependencies from go.mod
+echo "Removing indirect dependencies from go.mod..."
+grep -v "// indirect" go.mod > go.mod.tmp && mv go.mod.tmp go.mod
+
+# Run go mod tidy to update the go.sum file
+go mod tidy
+
+echo "Test Utils Prometheus dependencies updated successfully."
+
+cd "$CURRENT_DIR"
+
+# Step 7.2: Update PrometheusUI Test Prometheus dependencies
+echo "Updating PrometheusUI Test Prometheus dependencies..."
+cd "$CURRENT_DIR/otelcollector/test/ginkgo-e2e/prometheusui"
+
+echo "Using final Prometheus versions for prometheusui test:"
+echo "  client_golang: $FINAL_PROM_CLIENT_VERSION"
+echo "  common: $FINAL_PROM_COMMON_VERSION"
+echo "  client_model: $FINAL_PROM_CLIENT_MODEL_VERSION"
+
+# Update the versions in go.mod (reusing variables from Step 7.1)
+if [ ! -z "$FINAL_PROM_CLIENT_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_golang v[0-9.]*|github.com/prometheus/client_golang $FINAL_PROM_CLIENT_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_COMMON_VERSION" ]; then
+    sed -i "s|github.com/prometheus/common v[0-9.]*|github.com/prometheus/common $FINAL_PROM_COMMON_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_CLIENT_MODEL_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_model v[0-9.]*|github.com/prometheus/client_model $FINAL_PROM_CLIENT_MODEL_VERSION|g" go.mod
+fi
+
+# Special handling for prometheus/prometheus (only extract these since we need them)
+OTEL_ALLOCATOR_PROM_PROMETHEUS_VERSION=$(grep -m 1 "github.com/prometheus/prometheus " ../../../otel-allocator/go.mod | awk '{print $2}')
+OTEL_BUILDER_PROM_PROMETHEUS_VERSION=$(grep -m 1 "github.com/prometheus/prometheus " ../../../opentelemetry-collector-builder/go.mod | awk '{print $2}')
+FINAL_PROM_PROMETHEUS_VERSION=$(select_highest_version "$OTEL_BUILDER_PROM_PROMETHEUS_VERSION" "$OTEL_ALLOCATOR_PROM_PROMETHEUS_VERSION")
+
+echo "Found prometheus/prometheus versions:"
+echo "  otel-allocator: $OTEL_ALLOCATOR_PROM_PROMETHEUS_VERSION"
+echo "  otel-builder: $OTEL_BUILDER_PROM_PROMETHEUS_VERSION"
+echo "  selected: $FINAL_PROM_PROMETHEUS_VERSION"
+
+if [ ! -z "$FINAL_PROM_PROMETHEUS_VERSION" ]; then
+    # This regex handles both regular versions and pre-release versions with commit hashes
+    # Escape special characters in the version string for sed
+    ESCAPED_VERSION=$(echo "$FINAL_PROM_PROMETHEUS_VERSION" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    sed -i "s|github.com/prometheus/prometheus v[0-9][0-9.]*[^[:space:]]*|github.com/prometheus/prometheus $ESCAPED_VERSION|g" go.mod
+fi
+
+# Remove "// indirect" dependencies from go.mod
+echo "Removing indirect dependencies from go.mod..."
+grep -v "// indirect" go.mod > go.mod.tmp && mv go.mod.tmp go.mod
+
+# Run go mod tidy to update the go.sum file
+go mod tidy
+
+echo "PrometheusUI Test Prometheus dependencies updated successfully."
+
+cd "$CURRENT_DIR"
+
+# Step 8: Update golang version in azure-pipeline-build.yaml using highest version
+echo "Updating golang version in azure-pipeline-build.yaml..."
+
+# Function to compare version strings
+version_compare() {
+    if [[ $1 == $2 ]]; then
+        echo "0"
+    elif [[ $1 > $2 ]]; then
+        echo "1"
+    else
+        echo "-1"
+    fi
+}
+
+# Get Go versions from both go.mod files
+OTEL_CONTRIB_GO_VERSION=$(grep "^go " otelcollector/opentelemetry-collector-builder/go.mod | awk '{print $2}')
+OTEL_ALLOCATOR_GO_VERSION=$(grep "^go " otelcollector/otel-allocator/go.mod | awk '{print $2}')
+
+echo "Go version from opentelemetry-collector-contrib: $OTEL_CONTRIB_GO_VERSION"
+echo "Go version from otel-allocator: $OTEL_ALLOCATOR_GO_VERSION"
+
+# Compare versions and use the highest one
+COMPARISON=$(version_compare "$OTEL_CONTRIB_GO_VERSION" "$OTEL_ALLOCATOR_GO_VERSION")
+if [[ $COMPARISON -eq 1 ]]; then
+    GO_VERSION=$OTEL_CONTRIB_GO_VERSION
+    echo "Using Go version from opentelemetry-collector-contrib: $GO_VERSION"
+elif [[ $COMPARISON -eq -1 ]]; then
+    GO_VERSION=$OTEL_ALLOCATOR_GO_VERSION
+    echo "Using Go version from otel-allocator: $GO_VERSION"
+else
+    GO_VERSION=$OTEL_CONTRIB_GO_VERSION
+    echo "Both versions are the same, using: $GO_VERSION"
+fi
+
+# Extract current golang version from the pipeline file
+CURRENT_GO_VERSION=$(grep "GOLANG_VERSION: '" ".pipelines/azure-pipeline-build.yml" | head -1 | sed "s/.*GOLANG_VERSION: '//;s/'.*//g")
+CURRENT_GO_MAJOR_MINOR=$(echo $CURRENT_GO_VERSION | grep -oE '^[0-9]+\.[0-9]+')
+NEW_GO_MAJOR_MINOR=$(echo $GO_VERSION | grep -oE '^[0-9]+\.[0-9]+')
+
+echo "Current Golang version in pipeline: $CURRENT_GO_VERSION"
+echo "Selected Golang version from go.mod files: $GO_VERSION"
+
+# Function to get latest patch version from Microsoft container registry
+get_latest_patch_version() {
+    local major_minor=$1
+    local registry_url="mcr.microsoft.com"
+    local repository="oss/go/microsoft/golang"
+    
+    # Check if registry tools are available
+    if [ "$REGISTRY_TOOLS_AVAILABLE" = false ]; then
+        echo "$GO_VERSION"
+        return
+    fi
+    
+    echo "Checking for latest patch version for Go $major_minor from $registry_url/$repository..." >&2
+    
+    # Use curl to query the MCR API for tags with timeout
+    local api_url="https://$registry_url/v2/$repository/tags/list"
+    local available_tags
+    available_tags=$(timeout 30 curl -s -f "$api_url" 2>/dev/null | jq -r '.tags[]?' 2>/dev/null || true)
+    
+    if [ -z "$available_tags" ]; then
+        echo "Warning: Could not fetch tags from registry (timeout or network issue), falling back to original version" >&2
+        echo "$GO_VERSION"
+        return
+    fi
+    
+    # Filter tags that match the major.minor version pattern and find the latest patch
+    local latest_patch=""
+    local highest_patch=-1
+    local found_versions=""
+    
+    while IFS= read -r tag; do
+        # Skip empty lines
+        [ -z "$tag" ] && continue
+        
+        # Check if tag matches the pattern major.minor.patch (e.g., 1.21.5)
+        if [[ $tag =~ ^${major_minor}\.([0-9]+)$ ]]; then
+            local patch_num="${BASH_REMATCH[1]}"
+            found_versions="$found_versions $tag"
+            if [ "$patch_num" -gt "$highest_patch" ]; then
+                highest_patch=$patch_num
+                latest_patch="$tag"
+            fi
+        fi
+    done <<< "$available_tags"
+    
+    if [ -n "$latest_patch" ]; then
+        echo "Found versions for $major_minor:$found_versions" >&2
+        echo "Selected latest patch version: $latest_patch" >&2
+        echo "$latest_patch"
+    else
+        echo "No matching patch versions found in registry for $major_minor, using original version" >&2
+        echo "$GO_VERSION"
+    fi
+}
+
+# Only update if major.minor version is different or if we need to get latest patch
+if [ "$CURRENT_GO_MAJOR_MINOR" != "$NEW_GO_MAJOR_MINOR" ]; then
+    echo "Major.minor version changed, checking for latest patch version..."
+    FINAL_GO_VERSION=$(get_latest_patch_version "$NEW_GO_MAJOR_MINOR")
+    echo "Updating Golang version in pipeline from $CURRENT_GO_VERSION to $FINAL_GO_VERSION"
+    sed -i "s/^  GOLANG_VERSION: '.*'/  GOLANG_VERSION: '${FINAL_GO_VERSION}'/g" ".pipelines/azure-pipeline-build.yml"
+else
+    echo "Major.minor version unchanged ($NEW_GO_MAJOR_MINOR), checking if we should update to latest patch..."
+    FINAL_GO_VERSION=$(get_latest_patch_version "$NEW_GO_MAJOR_MINOR")
+    
+    if [ "$CURRENT_GO_VERSION" != "$FINAL_GO_VERSION" ]; then
+        echo "Updating to latest patch version from $CURRENT_GO_VERSION to $FINAL_GO_VERSION"
+        sed -i "s/^  GOLANG_VERSION: '.*'/  GOLANG_VERSION: '${FINAL_GO_VERSION}'/g" ".pipelines/azure-pipeline-build.yml"
+    else
+        echo "Already using the latest patch version: $CURRENT_GO_VERSION"
+    fi
+fi
 
 echo "Upgrade process complete!"
