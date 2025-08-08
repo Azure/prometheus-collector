@@ -1,0 +1,21 @@
+{
+    "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ConfigurationSpecification.json",
+    "Settings": {
+        "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
+		"packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823",
+		"helmEndpoint": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
+		"isCustomerHidden": false,
+		"arcApiUrl": "https://usgovvirginia.dp.kubernetesconfiguration.azure.us",
+		"arcApiVersion": "2021-11-01",
+		"msi": "/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release",
+		"subscription": "30c56c3a-54da-46ea-b004-06eb33432687",
+        "releaseTrain": "stable",
+        "chartVersion": "0.0.1",
+		"method": "PATCH",
+        "resourceAudience": "c699bf69-fb1d-4eaf-999b-99e6b2ae4d85",
+		"tenantId": "$(aad.tenants.USME.id)",
+		"environment": "Fairfax",
+		"azureResourceGroup": "PrometheusCollector-Release-Stable",
+		"subscriptionKey": "30c56c3a-54da-46ea-b004-06eb33432687"
+    }
+}

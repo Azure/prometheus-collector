@@ -1,0 +1,63 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",
+  "contentVersion": "0.0.0.1",
+  "scopeBindings": [
+    {
+      "scopeTagName": "Stable",
+      "bindings": [
+        {
+          "find": "__LOCATION__",
+          "replaceWith": "$location()"
+        },
+        {
+          "find": "__EXTENSION_TYPE_NAME__",
+          "replaceWith": "$config(extensionTypeName)"
+        },
+        {
+          "find": "__PACKAGE_CONFIG__",
+          "replaceWith": "$config(packageConfig)"
+        },
+        {
+          "find": "__HELM_CHART_ENDPOINT__",
+          "replaceWith": "$config(helmEndpoint)"
+        },
+        {
+          "find": "__IS_CUSTOMER_HIDDEN__",
+          "replaceWith": "$config(isCustomerHidden)"
+        },
+        {
+          "find": "__ARC_API_URL__",
+          "replaceWith": "$config(arcApiUrl)"
+        },
+        {
+          "find": "__MSI__",
+          "replaceWith": "$config(msi)"
+        },
+        {
+          "find": "__ARC_API_VERSION__",
+          "replaceWith": "$config(arcApiVersion)"
+        },
+        {
+          "find": "__SUBSCRIPTION__",
+          "replaceWith": "$config(subscription)"
+        },
+        {
+          "find": "__RELEASE_TRAIN__",
+          "replaceWith": "$config(releaseTrain)"
+        },
+        {
+          "find": "__VERSION__",
+          "replaceWith": "$config(chartVersion)"
+        },
+        {
+          "find": "__METHOD__",
+          "replaceWith": "$config(method)"
+        },
+        {
+          "find": "__RESOURCE_AUDIENCE__",
+          "replaceWith": "$config(resourceAudience)"
+        }
+      ]
+    }
+  ]
+}

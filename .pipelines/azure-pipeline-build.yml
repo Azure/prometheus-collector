@@ -190,6 +190,9 @@ extends:
             export AKS_REGION="westeurope"
             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
+
+            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
+            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - bash: |
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
@@ -223,6 +226,75 @@ extends:
             SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
+
+      - job: DevClusterHelmChartFiles
+        displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
+            artifactName: dev-cluster-helm-chart
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: HelmInstaller@1
+          displayName: Install Helm version
+          inputs:
+            helmVersionToInstall: 3.12.3
+        - bash: |
+            RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+            echo $RETINA_VERSION
+            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+            echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
+          displayName: "CI/CD: Download Retina Chart"
+          retryCountOnTaskFailure: 5
+          name: setup
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart'
+            Contents: |
+              retina/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy Dev Cluster Helm Chart files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart'
+            Contents: |
+              azure-monitor-metrics-addon/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+
+      - job: TestKubeTestFiles
+        displayName: "CI/CD: Export TestKube test files for Deploy stage"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish TestKube test files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
+            artifactName: testkube-test-files
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy TestKube files to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/test'
+            Contents: |
+              testkube/**
+              test-cluster-yamls/**
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
@@ -1928,10 +2000,34 @@ extends:
             echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: push helm chart to dev ACR"
-
+      - job: Tag_Github_Commit
+        displayName: "CI/CD: Tag commit with semver"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn:
+        - Image_Tags_and_Ev2_Artifacts
+        - Arc_Helm_Chart
+        - Linux_Prometheus_Collector
+        - WindowsMultiArch_Prometheus_Collector
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        variables:
+          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          skipComponentGovernanceDetection: true
+        steps:
+        - bash: |
+            git config --global user.name "AzureDevOps Agent"
+            git tag "v$(HELM_SEMVER)"
+            git push origin "v$(HELM_SEMVER)"
+          displayName: Tag commit with semver
     - stage: Deploy
+      dependsOn: Build
       jobs:
       - deployment: Deploy_Chart_ARC
+        templateContext:
+            type: releaseJob
+            isProduction: false
         displayName: "Deploy: Arc dev cluster"
         pool:
           name: Azure-Pipelines-CI-Test-EO
@@ -1940,7 +2036,7 @@ extends:
         condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
         environment: Prometheus-Collector
         variables:
-          HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          HELM_SEMVER: $(Build.BuildNumber)
           skipComponentGovernanceDetection: true
         strategy:
           runOnce:
@@ -2042,59 +2138,51 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
-              - bash: |
-                  git config --global user.name "AzureDevOps Agent"
-                  git tag "v$(HELM_SEMVER)"
-                  git push origin "v$(HELM_SEMVER)"
-                displayName: Tag commit with semver
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
-
-                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
-                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-                  echo $RETINA_VERSION
-                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                          do
-                            sleep 30
-                            echo $(IMAGE_TAG)
-                            echo $(IMAGE_TAG_WINDOWS)
-                            echo $(IMAGE_TAG_TARGET_ALLOCATOR)
-                            echo $(IMAGE_TAG_CONFIG_READER)
-                            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
-                            then
-                              echo "Images are published to mcr"
-                              exit 0
-                            fi
-                          done
-                          echo "Images are not published to mcr within the timeout"
-                          exit 1
-                  displayName: "Check images are pushed to dev MCR"
-                  retryCountOnTaskFailure: 5
+                      do
+                        sleep 30
+                        echo $(IMAGE_TAG)
+                        echo $(IMAGE_TAG_WINDOWS)
+                        echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                        echo $(IMAGE_TAG_CONFIG_READER)
+                        output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                        if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                        then
+                          echo "Images are published to mcr"
+                          exit 0
+                        fi
+                      done
+                      echo "Images are not published to mcr within the timeout"
+                      exit 1
+                displayName: "Check images are pushed to dev MCR"
+                retryCountOnTaskFailure: 5
               - bash: |
                   export AKS_REGION="eastus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
-                displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
-    
+                displayName: "Deploy: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
                 displayName: "Deploy: ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2105,10 +2193,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2119,10 +2207,10 @@ extends:
                   namespace: 'kube-system'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy: AKS tests cluster"
@@ -2136,14 +2224,19 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
@@ -2171,9 +2264,9 @@ extends:
                   export AKS_REGION="centralus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
@@ -2186,10 +2279,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
 
 
       - deployment: Deploy_AKS_Chart_OTel_Cluster
@@ -2204,26 +2297,24 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
-
-                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
-                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-                  echo $RETINA_VERSION
-                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
                         sleep 30
@@ -2246,9 +2337,9 @@ extends:
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-dev-aks-otlp/providers/Microsoft.ContainerService/managedClusters/ciprom-dev-aks-otlp"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
@@ -2261,10 +2352,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ciprom-dev-aks-otlp cluster"
                 inputs:
@@ -2275,10 +2366,10 @@ extends:
                   namespace: 'kube-system'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2297,9 +2388,6 @@ extends:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                submodules: true
-                persistCredentials: true
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
@@ -2381,17 +2469,16 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
         templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube AKS Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json'
-            artifactName: 'testkube-results-AKS'
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2414,6 +2501,19 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" ]; then
+                    # Read the JSON content and set it as a pipeline variable
+                    TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -c .)
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isoutput=true]$TESTKUBE_RESULTS_AKS"
+                    echo "TestKube AKS results set as pipeline variable"
+                  else
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isoutput=true]{\"environment\":\"AKS\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "TestKube AKS results file not found, setting default failure result"
+                  fi
+                displayName: "Set TestKube AKS Results as Pipeline Variable"
+                continueOnError: true
+                name: testkube_results
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2428,17 +2528,16 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
         templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube OTel Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json'
-            artifactName: 'testkube-results-OTel'
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2461,6 +2560,19 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" ]; then
+                    # Read the JSON content and set it as a pipeline variable
+                    TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -c .)
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isoutput=true]$TESTKUBE_RESULTS_OTEL"
+                    echo "TestKube OTel results set as pipeline variable"
+                  else
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isoutput=true]{\"environment\":\"OTel\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "TestKube OTel results file not found, setting default failure result"
+                  fi
+                displayName: "Set TestKube OTel Results as Pipeline Variable"
+                continueOnError: true
+                name: testkube_results
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
@@ -2475,17 +2587,16 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
         templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Ev2: publish testkube artifacts'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json'
-            artifactName: testkube-results-ARC
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2508,6 +2619,19 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" ]; then
+                    # Read the JSON content and set it as a pipeline variable
+                    TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -c .)
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isoutput=true]$TESTKUBE_RESULTS_ARC"
+                    echo "TestKube ARC results set as pipeline variable"
+                  else
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isoutput=true]{\"environment\":\"ARC\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "TestKube ARC results file not found, setting default failure result"
+                  fi
+                displayName: "Set TestKube ARC Results as Pipeline Variable"
+                continueOnError: true
+                name: testkube_results
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
@@ -2522,17 +2646,16 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
         templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish TestKube OTel Upgrade Results'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Upgrade.json'
-            artifactName: 'testkube-results-OTel-Upgrade'
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
               steps:
-              - checkout: self
-                persistCredentials: true
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:
@@ -2556,6 +2679,19 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-Otel-Upgrade.json" ]; then
+                    # Read the JSON content and set it as a pipeline variable
+                    TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-Otel-Upgrade.json" | jq -c .)
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isoutput=true]$TESTKUBE_RESULTS_UPGRADE"
+                    echo "TestKube Upgrade results set as pipeline variable"
+                  else
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isoutput=true]{\"environment\":\"OTelCollector-Upgrade\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "TestKube Upgrade results file not found, setting default failure result"
+                  fi
+                displayName: "Set TestKube Upgrade Results as Pipeline Variable"
+                continueOnError: true
+                name: testkube_results
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
@@ -2569,30 +2705,41 @@ extends:
         - Testkube_OTel
         variables:
           skipComponentGovernanceDetection: true
+          TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['testkube_results.TESTKUBE_RESULTS_ARC'] ]
+          TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['testkube_results.TESTKUBE_RESULTS_AKS'] ]
+          TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['testkube_results.TESTKUBE_RESULTS_OTEL'] ]
         steps:
-        - checkout: self
-          persistCredentials: true
-        - task: DownloadPipelineArtifact@2
-          displayName: 'Download TestKube ARC Results'
-          condition: always()
-          inputs:
-            artifactName: 'testkube-results-ARC'
-            targetPath: '$(Pipeline.Workspace)/testkube-results'
-          continueOnError: true
-        - task: DownloadPipelineArtifact@2
-          displayName: 'Download TestKube AKS Results' 
-          condition: always()
-          inputs:
-            artifactName: 'testkube-results-AKS'
-            targetPath: '$(Pipeline.Workspace)/testkube-results'
-          continueOnError: true
-        - task: DownloadPipelineArtifact@2
-          displayName: 'Download TestKube OTel Results'
-          condition: always() 
-          inputs:
-            artifactName: 'testkube-results-OTel'
-            targetPath: '$(Pipeline.Workspace)/testkube-results'
-          continueOnError: true
+        - bash: |
+            # Create results directory and write pipeline variables to JSON files
+            mkdir -p "$(Pipeline.Workspace)/testkube-results"
+            
+            # Write ARC results if available
+            if [ -n "$(TESTKUBE_RESULTS_ARC)" ] && [ "$(TESTKUBE_RESULTS_ARC)" != "" ]; then
+              echo '$(TESTKUBE_RESULTS_ARC)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json"
+              echo "Created ARC results file"
+            else
+              echo "ARC results not available"
+            fi
+            
+            # Write AKS results if available
+            if [ -n "$(TESTKUBE_RESULTS_AKS)" ] && [ "$(TESTKUBE_RESULTS_AKS)" != "" ]; then
+              echo '$(TESTKUBE_RESULTS_AKS)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json"
+              echo "Created AKS results file"
+            else
+              echo "AKS results not available"
+            fi
+            
+            # Write OTel results if available
+            if [ -n "$(TESTKUBE_RESULTS_OTEL)" ] && [ "$(TESTKUBE_RESULTS_OTEL)" != "" ]; then
+              echo '$(TESTKUBE_RESULTS_OTEL)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json"
+              echo "Created OTel results file"
+            else
+              echo "OTel results not available"
+            fi
+            
+            echo "Results files created:"
+            ls -la "$(Pipeline.Workspace)/testkube-results/"
+          displayName: "Create TestKube Results Files from Pipeline Variables"
         - bash: |
             export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
             export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
@@ -2615,16 +2762,23 @@ extends:
         condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
         variables:
           skipComponentGovernanceDetection: true
+          TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
         steps:
-        - checkout: self
-          persistCredentials: true
-        - task: DownloadPipelineArtifact@2
-          displayName: 'Download TestKube OTelCollector Upgrade Results'
-          condition: always() 
-          inputs:
-            artifactName: 'testkube-results-OTelCollector-Upgrade'
-            targetPath: '$(Pipeline.Workspace)/testkube-results'
-          continueOnError: true
+        - bash: |
+            # Create results directory and write pipeline variables to JSON files
+            mkdir -p "$(Pipeline.Workspace)/testkube-results"
+            
+            # Write Upgrade results if available
+            if [ -n "$(TESTKUBE_RESULTS_UPGRADE)" ] && [ "$(TESTKUBE_RESULTS_UPGRADE)" != "" ]; then
+              echo '$(TESTKUBE_RESULTS_UPGRADE)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json"
+              echo "Created Upgrade results file"
+            else
+              echo "Upgrade results not available"
+            fi
+            
+            echo "Results files created:"
+            ls -la "$(Pipeline.Workspace)/testkube-results/"
+          displayName: "Create TestKube Results Files from Pipeline Variables"
         - bash: |
             export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
             export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
