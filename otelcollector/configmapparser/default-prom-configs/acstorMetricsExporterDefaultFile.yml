@@ -8,15 +8,16 @@
        namespaces:
          names:
            - acstor
+           - kube-system
    relabel_configs:
      # Include only specified namespace
    - source_labels: [__meta_kubernetes_namespace]
      action: keep
-     regex: acstor
+     regex: acstor|kube-system
      # Include only specified pods
    - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app_kubernetes_io_component]
      action: keep
-     regex: metrics-exporter;monitor
+     regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
      # Include only specified ports
    - source_labels: [__meta_kubernetes_pod_container_port_name]
      action: keep
