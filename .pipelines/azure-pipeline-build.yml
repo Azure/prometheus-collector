@@ -2670,11 +2670,12 @@ extends:
                   ./testkube/run-testkube-workflow.sh \
                     "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
                     "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
-                    "testkube-test-crs.yaml" \
+                    "testkube-test-crs-otelcollector-upgrade.yaml" \
                     "testkube-test-crs-otel-upgrade.yaml" \
                     "" \
                     "" \
-                    "OTelCollector-Upgrade"
+                    "OTelCollector-Upgrade" \
+                    "$(System.PullRequest.SourceBranch)"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
