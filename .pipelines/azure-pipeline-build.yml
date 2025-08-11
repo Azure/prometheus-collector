@@ -2540,7 +2540,7 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
               - bash: |
-                  echo "$(System.PullRequest.SourceBranch)"
+                  echo "bot/$(Build.SourceBranchName)"
                   export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
@@ -2553,7 +2553,7 @@ extends:
                     "" \
                     "" \
                     "OTelCollector-Upgrade" \
-                    "$(System.PullRequest.SourceBranch)"
+                    "bot/$(Build.SourceBranchName)"
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
                 displayName: "Run TestKube workflow"
                 continueOnError: true
