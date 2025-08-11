@@ -2084,7 +2084,7 @@ extends:
                           echo "Images are not published to mcr within the timeout"
                           exit 1
                   displayName: "Check images are pushed to dev MCR"
-                  retryCountOnTaskFailure: 5
+                  retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="eastus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
@@ -2166,7 +2166,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
-                retryCountOnTaskFailure: 5
+                retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="centralus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
@@ -2241,7 +2241,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
-                retryCountOnTaskFailure: 5
+                retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-dev-aks-otlp/providers/Microsoft.ContainerService/managedClusters/ciprom-dev-aks-otlp"
@@ -2329,7 +2329,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
-                retryCountOnTaskFailure: 5
+                retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-upgrade-bot/providers/Microsoft.ContainerService/managedClusters/ciprom-upgrade-bot"
