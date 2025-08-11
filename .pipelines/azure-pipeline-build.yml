@@ -2540,7 +2540,7 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
               - bash: |
-                  echo "$(System.PullRequest.SourceBranch)""
+                  echo "$(System.PullRequest.SourceBranch)"
                   export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
