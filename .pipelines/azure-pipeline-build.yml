@@ -2498,7 +2498,7 @@ extends:
                     "" \
                     "" \
                     "AKS"
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2557,7 +2557,7 @@ extends:
                     "false" \
                     "" \
                     "OTel"
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2616,7 +2616,7 @@ extends:
                   "" \
                   "" \
                   "ARC"
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2677,7 +2677,7 @@ extends:
                     "" \
                     "OTelCollector-Upgrade" \
                     "bot/$(Build.SourceBranchName)"
-                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2749,7 +2749,7 @@ extends:
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+          workingDirectory: $(Pipeline.Workspace)/testkube-test-files
           displayName: "Send TestKube Summary Notification"
 
       - job: TestKube_Notification_OTelCollector_Upgrade
@@ -2788,5 +2788,5 @@ extends:
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+          workingDirectory: $(Pipeline.Workspace)/testkube-test-files
           displayName: "Send TestKube Summary Notification"
