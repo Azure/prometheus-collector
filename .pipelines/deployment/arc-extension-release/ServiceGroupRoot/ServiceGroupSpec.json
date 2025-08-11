@@ -1,0 +1,6 @@
+{
+  "name": "Microsoft.Azure.InfrastructureInsights.ContainerInsights.AzureMonitorMetrics.Extension",
+  "description": "Azure Monitor Metrics Extension Deployment",
+  "ownerGroupContactEmail": "ciprometheus@microsoft.com",
+  "contentVersion": "1.0.0.0"
+}

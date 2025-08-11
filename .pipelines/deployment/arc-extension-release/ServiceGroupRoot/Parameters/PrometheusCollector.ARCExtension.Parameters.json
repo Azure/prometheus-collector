@@ -1,20 +1,14 @@
 {
-  "$schema": "http://schema.express.azure.com/schemas/2015-01-01-alpha/RolloutParameters.json",
+  "$schema": "http://schema.express.azure.com/schemas/2022-01-01/RolloutParameters.json",
   "contentVersion": "1.0.0.0",
-  "wait": [
-    {
-      "name": "waitSdpBakeTime",
-      "properties": {
-        "duration": "PT24H"
-      }
-    }
-  ],
   "shellExtensions": [
     {
       "name": "ArcExtensionRelease",
       "type": "ShellExtensionType",
       "properties": {
-        "maxexecutiontime": "PT1H"
+        "maxExecutionTime": "PT1H",
+        "useFallBackLocations": true,
+        "skipDeleteAfterExecution": false
       },
       "package": {
         "reference": {
@@ -28,44 +22,68 @@
         ],
         "environmentVariables": [
           {
-            "name": "ADMIN_SUBSCRIPTION_ID",
-            "value": "__ADMIN_SUBSCRIPTION_ID__"
+            "name": "LOCATION",
+            "value": "__LOCATION__"
           },
           {
-            "name": "CHART_VERSION",
-            "value": "__CHART_VERSION__"
+              "name": "EXTENSION_NAME",
+              "value": "__EXTENSION_TYPE_NAME__"
           },
           {
-            "name": "IS_CUSTOMER_HIDDEN",
-            "value": "__IS_CUSTOMER_HIDDEN__"
+              "name": "PACKAGE_CONFIG_NAME",
+              "value": "__PACKAGE_CONFIG__"
           },
           {
-            "name": "REGIONS_BATCH_NAME",
-            "value": "__REGIONS_BATCH_NAME__"
+              "name": "HELM_CHART_ENDPOINT",
+              "value": "__HELM_CHART_ENDPOINT__"
+          },
+          {
+              "name": "IS_CUSTOMER_HIDDEN",
+              "value": "__IS_CUSTOMER_HIDDEN__"
+          },
+          {
+              "name": "ARC_API_URL",
+              "value": "__ARC_API_URL__"
+          },
+          {
+              "name": "API_VERSION",
+              "value": "__ARC_API_VERSION__"
+          },
+          {
+              "name": "SUBSCRIPTION",
+              "value": "__SUBSCRIPTION__"
+          },
+          {
+              "name": "RELEASE_TRAIN",
+              "value": "__RELEASE_TRAIN__"
+          },
+          {
+              "name": "CHART_VERSION",
+              "value": "__VERSION__"
+          },
+          {
+            "name": "METHOD",
+            "value": "__METHOD__"
           },
           {
             "name": "RESOURCE_AUDIENCE",
             "value": "__RESOURCE_AUDIENCE__"
-          },
-          {
-            "name": "SPN_CLIENT_ID",
-            "value": "__SPN_CLIENT_ID__"
-          },
-          {
-            "name": "SPN_SECRET",
-            "value": "__SPN_SECRET__"
-          },
-          {
-            "name": "SPN_TENANT_ID",
-            "value": "__SPN_TENANT_ID__"
           }
-        ], 
+        ],
         "identity": {
           "type": "userAssigned",
           "userAssignedIdentities": [
-            "__MANAGED_IDENTITY__"
+            "__MSI__"
           ]
         }
+      }
+    }
+  ],
+  "wait": [
+    {
+      "name": "waitSdpBakeTime",
+      "properties": {
+        "duration": "PT24H"
       }
     }
   ]

@@ -1,0 +1,93 @@
+{
+    "Name": "Microsoft.Azure.FluxAgent.SDP",
+    "Version": "0.0.11",
+    "configuration": {
+        "promotion": {
+            "timeout": "P3D",
+            "validation": {
+                "waitDuration": "PT24H"
+            }
+        }
+    },
+    "Stages": [
+        {
+            "Sequence": 1,
+            "Name": "Canary",
+            "Regions": [
+                "centraluseuap"
+            ],
+            "configuration": {
+                "promotion": {
+                    "timeout": "P3D",
+                    "manual": true,
+                    "validation": {
+                        "waitDuration": "PT24H"
+                    }
+                }
+            }
+        },
+        {
+            "Sequence": 2,
+            "Name": "westcentralus",
+            "Regions": [
+                "westcentralus"
+            ]
+        },
+        {
+            "Sequence": 3,
+            "Name": "uksouth",
+            "Regions": [
+                "uksouth"
+            ]
+        },
+        {
+            "Sequence": 4,
+            "Name": "westeurope",
+            "Regions": [
+                "westeurope"
+            ]
+        },
+        {
+            "Sequence": 5,
+            "Name": "Batch1",
+            "Regions": [
+                "westus2"
+            ]
+        },
+        {
+            "Sequence": 6,
+            "Name": "Batch2",
+            "Regions": [
+                "eastus2"
+            ]
+        },
+        {
+            "Sequence": 7,
+            "Name": "Batch3",
+            "Regions": [
+                "eastus"
+            ]
+        },
+        {
+            "Sequence": 8,
+            "Name": "Batch4",
+            "Regions": [
+                "southindia"
+            ]
+        },
+        {
+            "Sequence": 9,
+            "Name": "Batch5",
+            "Regions": [
+                "italynorth"
+            ]
+        },
+        {
+            "Sequence": 10,
+            "Name": "Batch6",
+            "Regions": [
+                "chilecentral"
+            ]
+        }
+    ]
+}
