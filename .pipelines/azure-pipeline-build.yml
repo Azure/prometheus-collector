@@ -2374,7 +2374,7 @@ extends:
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
         environment: Prometheus-Collector
-        condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_OTEL_UPGRADE_BRANCH, true))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2393,13 +2393,6 @@ extends:
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
-
-                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
-                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-                  echo $RETINA_VERSION
-                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
                         sleep 30
@@ -2422,9 +2415,9 @@ extends:
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-upgrade-bot/providers/Microsoft.ContainerService/managedClusters/ciprom-upgrade-bot"
                   export ARC_EXTENSION="false"
-                  envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-                  ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-                  cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+                  envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
+                  cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
               - task: HelmDeploy@0
@@ -2437,10 +2430,10 @@ extends:
                   namespace: 'default'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+                  chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ciprom-upgrade-bot cluster"
                 inputs:
@@ -2451,10 +2444,10 @@ extends:
                   namespace: 'kube-system'
                   command: 'upgrade'
                   chartType: 'FilePath'
-                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
@@ -2498,7 +2491,7 @@ extends:
                     "" \
                     "" \
                     "AKS"
-                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2616,7 +2609,7 @@ extends:
                   "" \
                   "" \
                   "ARC"
-                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2677,7 +2670,7 @@ extends:
                     "" \
                     "OTelCollector-Upgrade" \
                     "bot/$(Build.SourceBranchName)"
-                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
@@ -2749,7 +2742,7 @@ extends:
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-          workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+          workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
 
       - job: TestKube_Notification_OTelCollector_Upgrade
@@ -2788,5 +2781,5 @@ extends:
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-          workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+          workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
