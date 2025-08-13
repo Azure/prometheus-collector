@@ -433,6 +433,25 @@ echo "PrometheusUI Test Prometheus dependencies updated successfully."
 
 cd "$CURRENT_DIR"
 
+# Step 7.3: Run go mod tidy in all test/ginkgo-e2e subdirectories
+echo "Running go mod tidy in all test/ginkgo-e2e subdirectories..."
+
+# Start with utils directory
+echo "Running go mod tidy in utils directory..."
+cd "$CURRENT_DIR/otelcollector/test/ginkgo-e2e/utils"
+go mod tidy
+cd "$CURRENT_DIR"
+
+# Get all subdirectories except utils
+for dir in $(find "$CURRENT_DIR/otelcollector/test/ginkgo-e2e" -maxdepth 1 -type d | grep -v "/utils$" | grep -v "^$CURRENT_DIR/otelcollector/test/ginkgo-e2e$"); do
+    echo "Running go mod tidy in $(basename $dir) directory..."
+    cd "$dir"
+    go mod tidy
+    cd "$CURRENT_DIR"
+done
+
+echo "Completed go mod tidy in all test/ginkgo-e2e subdirectories"
+
 # Step 8: Update golang version in azure-pipeline-build.yaml using highest version
 echo "Updating golang version in azure-pipeline-build.yaml..."
 
