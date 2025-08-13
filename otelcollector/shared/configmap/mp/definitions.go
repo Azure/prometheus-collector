@@ -50,7 +50,7 @@ var (
 	networkObservabilityCiliumDefaultFileDs      = "networkobservabilityCiliumDefaultDs.yml"
 	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
 	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
-	LocalCSIDriverDefaultFile                    = "LocalCSIDriverDefaultFile.yml"
+	LocalCSIDriverDefaultFile                    = "localCSIDriverDefaultFile.yml"
 )
 
 type RegexValues struct {
