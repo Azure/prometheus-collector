@@ -50,7 +50,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1 // indirect
-	github.com/prometheus/client_golang v1.21.1 // indirect
+	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect

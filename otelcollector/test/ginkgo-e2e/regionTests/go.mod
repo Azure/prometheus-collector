@@ -12,7 +12,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/monitor/azquery v1.1.0
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
-	github.com/prometheus/client_golang v1.21.1
+	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/common v0.63.0
 	k8s.io/client-go v0.32.3
 	prometheus-collector/otelcollector/test/utils v0.0.0-00010101000000-000000000000

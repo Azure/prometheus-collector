@@ -75,6 +75,7 @@ echo "AMW_QUERY_ENDPOINT: $AMW_QUERY_ENDPOINT"
 echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"
 echo "Source template: $SOURCE_TEMPLATE"
 echo "Target output: $TARGET_OUTPUT"
+echo "BRANCH_NAME: $BRANCH_NAME"
 
 # Export environment variables for envsubst
 export AMW_QUERY_ENDPOINT
