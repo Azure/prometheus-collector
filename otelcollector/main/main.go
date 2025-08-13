@@ -225,16 +225,18 @@ func main() {
 			cmd := exec.Command("fluent-bit", "--version")
 			fluentBitVersion, err := cmd.Output()
 			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
+				fmt.Errorf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		} else if osType == "windows" {
 			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
 			fluentBitVersion, err := cmd.Output()
 			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
+				fmt.Errorf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
 	}
 
