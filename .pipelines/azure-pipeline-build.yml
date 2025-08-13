@@ -2384,6 +2384,13 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
+        templateContext:
+            type: releaseJob
+            isProduction: false
+            inputs:
+            - input: pipelineArtifact
+              artifactName: dev-cluster-helm-chart
+              targetPath: $(Pipeline.Workspace)
         strategy:
           runOnce:
             deploy:
@@ -2483,6 +2490,7 @@ extends:
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
                   export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  chmod +x ./testkube/run-testkube-workflow.sh
                   ./testkube/run-testkube-workflow.sh \
                     "https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com" \
                     "c7f895bb-c4f6-45af-be82-2273a424e237" \
@@ -2542,6 +2550,7 @@ extends:
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
                   export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  chmod +x ./testkube/run-testkube-workflow.sh
                   ./testkube/run-testkube-workflow.sh \
                     "https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com" \
                     "6b8f6333-ecd0-4579-b05d-afc98a103a59" \
@@ -2601,6 +2610,7 @@ extends:
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
                   export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  chmod +x ./testkube/run-testkube-workflow.sh
                   ./testkube/run-testkube-workflow.sh \
                   "https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com" \
                   "5f13547e-a4e2-4efd-85fe-a2b03d5b8661" \
@@ -2661,6 +2671,7 @@ extends:
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
                   export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+                  chmod +x ./testkube/run-testkube-workflow.sh
                   ./testkube/run-testkube-workflow.sh \
                     "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
                     "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
@@ -2702,6 +2713,13 @@ extends:
           TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['testkube_results.TESTKUBE_RESULTS_ARC'] ]
           TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['testkube_results.TESTKUBE_RESULTS_AKS'] ]
           TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['testkube_results.TESTKUBE_RESULTS_OTEL'] ]
+        templateContext:
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         steps:
         - bash: |
             # Create results directory and write pipeline variables to JSON files
@@ -2741,6 +2759,7 @@ extends:
             export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            chmod +x ./testkube/send-testkube-summary.sh
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
@@ -2757,6 +2776,13 @@ extends:
         variables:
           skipComponentGovernanceDetection: true
           TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
+        templateContext:
+          type: releaseJob
+          isProduction: false
+          inputs:
+          - input: pipelineArtifact
+            artifactName: testkube-test-files
+            targetPath: $(Pipeline.Workspace)
         steps:
         - bash: |
             # Create results directory and write pipeline variables to JSON files
@@ -2780,6 +2806,7 @@ extends:
             export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            chmod +x ./testkube/send-testkube-summary.sh
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
