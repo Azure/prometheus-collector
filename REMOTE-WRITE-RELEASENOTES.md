@@ -1,5 +1,15 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 08-14-2025
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250814.1`
+* Change log -
+  * Updated base image `cbl-mariner/distroless/minimal` to latest security-patched version
+  * Fixed Microsoft Container Registry (MCR) repo and source name in build/release pipelines
+  * Various pipeline and build configuration fixes (ACR repo targeting, branch name inclusion, service tree path adjustments)
+  * Upgraded golang from 1.23.x to 1.24.6 for CVE resolution
+* CVE fixes
+  - CVE-2025-47907
+
 ## Release 03-26-2025
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250326.1`
 * Change log -
