@@ -71,12 +71,26 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 		if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 			// default value of schema version is v1 for no configmap + partial configmap with missing schema version scenario + configmap with v1 schema version
-			minimalingestionprofile_value = getStringValue(keeplist["minimalingestionprofile"])
+			val := getStringValue(keeplist["minimalingestionprofile"])
+			if val == "false" {
+				minimalingestionprofile_value = "false"
+			} else if val == "true" {
+				minimalingestionprofile_value = "true"
+			} else {
+				minimalingestionprofile_value = "true"
+			}
 			shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", minimalingestionprofile_value, true)
 		} else if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
 			// configmap with v2 schema version
 			if minimalProfile := metricsConfigBySection["minimal-ingestion-profile"]; minimalProfile != nil {
-				minimalingestionprofile_value = getStringValue(minimalProfile["enabled"])
+				val := getStringValue(minimalProfile["enabled"])
+				if val == "false" {
+					minimalingestionprofile_value = "false"
+				} else if val == "true" {
+					minimalingestionprofile_value = "true"
+				} else {
+					minimalingestionprofile_value = "true"
+				}
 				shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", minimalingestionprofile_value, true)
 			}
 		} else {
