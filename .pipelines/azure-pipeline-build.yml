@@ -4,6 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
+    - grace/infra-fixes
 pr:
   autoCancel: true
   branches:
@@ -23,7 +24,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.15.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'infra-fixes')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
@@ -2506,10 +2507,10 @@ extends:
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
                     TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -c .)
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isoutput=true]$TESTKUBE_RESULTS_AKS"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]$TESTKUBE_RESULTS_AKS"
                     echo "TestKube AKS results set as pipeline variable"
                   else
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isoutput=true]{\"environment\":\"AKS\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]{\"environment\":\"AKS\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube AKS results file not found, setting default failure result"
                   fi
                 displayName: "Set TestKube AKS Results as Pipeline Variable"
@@ -2559,17 +2560,17 @@ extends:
                     "false" \
                     "" \
                     "OTel"
-                workingDirectory: $(Pipeline.Workspace)/testkube-test-files
+                workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
               - bash: |
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
                     TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -c .)
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isoutput=true]$TESTKUBE_RESULTS_OTEL"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]$TESTKUBE_RESULTS_OTEL"
                     echo "TestKube OTel results set as pipeline variable"
                   else
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isoutput=true]{\"environment\":\"OTel\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]{\"environment\":\"OTel\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube OTel results file not found, setting default failure result"
                   fi
                 displayName: "Set TestKube OTel Results as Pipeline Variable"
@@ -2626,10 +2627,10 @@ extends:
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
                     TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -c .)
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isoutput=true]$TESTKUBE_RESULTS_ARC"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]$TESTKUBE_RESULTS_ARC"
                     echo "TestKube ARC results set as pipeline variable"
                   else
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isoutput=true]{\"environment\":\"ARC\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]{\"environment\":\"ARC\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube ARC results file not found, setting default failure result"
                   fi
                 displayName: "Set TestKube ARC Results as Pipeline Variable"
@@ -2688,10 +2689,10 @@ extends:
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
                     TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -c .)
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isoutput=true]$TESTKUBE_RESULTS_UPGRADE"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]$TESTKUBE_RESULTS_UPGRADE"
                     echo "TestKube Upgrade results set as pipeline variable"
                   else
-                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isoutput=true]{\"environment\":\"OTelCollector-Upgrade\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                    echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]{\"environment\":\"OTelCollector-Upgrade\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube Upgrade results file not found, setting default failure result"
                   fi
                 displayName: "Set TestKube Upgrade Results as Pipeline Variable"
