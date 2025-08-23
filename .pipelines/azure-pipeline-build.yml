@@ -2716,9 +2716,9 @@ extends:
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           skipComponentGovernanceDetection: true
-          TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['testkube_results.TESTKUBE_RESULTS_ARC'] ]
-          TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['testkube_results.TESTKUBE_RESULTS_AKS'] ]
-          TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['testkube_results.TESTKUBE_RESULTS_OTEL'] ]
+          TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
+          TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['Testkube.testkube_results.TESTKUBE_RESULTS_AKS'] ]
+          TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['Testkube_OTel.testkube_results.TESTKUBE_RESULTS_OTEL'] ]
         templateContext:
           type: releaseJob
           isProduction: false
