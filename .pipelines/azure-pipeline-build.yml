@@ -2728,16 +2728,6 @@ extends:
             targetPath: $(Pipeline.Workspace)
         steps:
         - bash: |
-            echo "Debug: Checking TestKube Results Variables"
-            echo "TESTKUBE_RESULTS_ARC: '$(TESTKUBE_RESULTS_ARC)'"
-            echo "TESTKUBE_RESULTS_AKS: '$(TESTKUBE_RESULTS_AKS)'"
-            echo "TESTKUBE_RESULTS_OTEL: '$(TESTKUBE_RESULTS_OTEL)'"
-            echo "Variable lengths:"
-            echo "ARC length: ${#TESTKUBE_RESULTS_ARC}"
-            echo "AKS length: ${#TESTKUBE_RESULTS_AKS}" 
-            echo "OTEL length: ${#TESTKUBE_RESULTS_OTEL}"
-          displayName: "Debug: Show TestKube Variables"
-        - bash: |
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
             
