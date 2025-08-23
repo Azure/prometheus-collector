@@ -2506,7 +2506,7 @@ extends:
               - bash: |
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
-                    TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -c .)
+                    TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -c . | tr -d '\n\r')
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]$TESTKUBE_RESULTS_AKS"
                     echo "TestKube AKS results set as pipeline variable"
                     echo $TESTKUBE_RESULTS_AKS
@@ -2567,7 +2567,7 @@ extends:
               - bash: |
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
-                    TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -c .)
+                    TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -c . | tr -d '\n\r')
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]$TESTKUBE_RESULTS_OTEL"
                     echo "TestKube OTel results set as pipeline variable"
                     echo $TESTKUBE_RESULTS_OTEL
@@ -2628,7 +2628,7 @@ extends:
               - bash: |
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
-                    TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -c .)
+                    TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -c . | tr -d '\n\r')
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]$TESTKUBE_RESULTS_ARC"
                     echo "TestKube ARC results set as pipeline variable"
                     echo $TESTKUBE_RESULTS_ARC
@@ -2691,7 +2691,7 @@ extends:
               - bash: |
                   if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" ]; then
                     # Read the JSON content and set it as a pipeline variable
-                    TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -c .)
+                    TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -c . | tr -d '\n\r')
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]$TESTKUBE_RESULTS_UPGRADE"
                     echo "TestKube Upgrade results set as pipeline variable"
                     echo $TESTKUBE_RESULTS_UPGRADE
