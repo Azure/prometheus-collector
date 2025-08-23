@@ -2509,6 +2509,7 @@ extends:
                     TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -c .)
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]$TESTKUBE_RESULTS_AKS"
                     echo "TestKube AKS results set as pipeline variable"
+                    echo $TESTKUBE_RESULTS_AKS
                   else
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]{\"environment\":\"AKS\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube AKS results file not found, setting default failure result"
@@ -2569,6 +2570,7 @@ extends:
                     TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -c .)
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]$TESTKUBE_RESULTS_OTEL"
                     echo "TestKube OTel results set as pipeline variable"
+                    echo $TESTKUBE_RESULTS_OTEL
                   else
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]{\"environment\":\"OTel\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube OTel results file not found, setting default failure result"
@@ -2629,6 +2631,7 @@ extends:
                     TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -c .)
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]$TESTKUBE_RESULTS_ARC"
                     echo "TestKube ARC results set as pipeline variable"
+                    echo $TESTKUBE_RESULTS_ARC
                   else
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]{\"environment\":\"ARC\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube ARC results file not found, setting default failure result"
@@ -2691,6 +2694,7 @@ extends:
                     TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -c .)
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]$TESTKUBE_RESULTS_UPGRADE"
                     echo "TestKube Upgrade results set as pipeline variable"
+                    echo $TESTKUBE_RESULTS_UPGRADE
                   else
                     echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]{\"environment\":\"OTelCollector-Upgrade\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
                     echo "TestKube Upgrade results file not found, setting default failure result"
@@ -2709,6 +2713,7 @@ extends:
         - Testkube_ARC
         - Testkube
         - Testkube_OTel
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           skipComponentGovernanceDetection: true
           TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['testkube_results.TESTKUBE_RESULTS_ARC'] ]
@@ -2722,6 +2727,16 @@ extends:
             artifactName: testkube-test-files
             targetPath: $(Pipeline.Workspace)
         steps:
+        - bash: |
+            echo "Debug: Checking TestKube Results Variables"
+            echo "TESTKUBE_RESULTS_ARC: '$(TESTKUBE_RESULTS_ARC)'"
+            echo "TESTKUBE_RESULTS_AKS: '$(TESTKUBE_RESULTS_AKS)'"
+            echo "TESTKUBE_RESULTS_OTEL: '$(TESTKUBE_RESULTS_OTEL)'"
+            echo "Variable lengths:"
+            echo "ARC length: ${#TESTKUBE_RESULTS_ARC}"
+            echo "AKS length: ${#TESTKUBE_RESULTS_AKS}" 
+            echo "OTEL length: ${#TESTKUBE_RESULTS_OTEL}"
+          displayName: "Debug: Show TestKube Variables"
         - bash: |
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
