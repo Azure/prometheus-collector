@@ -2731,25 +2731,30 @@ extends:
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
             
+            # Assign pipeline variables to bash variables to avoid syntax issues
+            ARC_RESULTS="$(TESTKUBE_RESULTS_ARC)"
+            AKS_RESULTS="$(TESTKUBE_RESULTS_AKS)"
+            OTEL_RESULTS="$(TESTKUBE_RESULTS_OTEL)"
+            
             # Write ARC results if available
-            if [ -n "$(TESTKUBE_RESULTS_ARC)" ] && [ "$(TESTKUBE_RESULTS_ARC)" != "" ]; then
-              echo '$(TESTKUBE_RESULTS_ARC)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json"
+            if [ -n "$ARC_RESULTS" ] && [ "$ARC_RESULTS" != "" ]; then
+              echo "$ARC_RESULTS" > "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json"
               echo "Created ARC results file"
             else
               echo "ARC results not available"
             fi
             
             # Write AKS results if available
-            if [ -n "$(TESTKUBE_RESULTS_AKS)" ] && [ "$(TESTKUBE_RESULTS_AKS)" != "" ]; then
-              echo '$(TESTKUBE_RESULTS_AKS)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json"
+            if [ -n "$AKS_RESULTS" ] && [ "$AKS_RESULTS" != "" ]; then
+              echo "$AKS_RESULTS" > "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json"
               echo "Created AKS results file"
             else
               echo "AKS results not available"
             fi
             
             # Write OTel results if available
-            if [ -n "$(TESTKUBE_RESULTS_OTEL)" ] && [ "$(TESTKUBE_RESULTS_OTEL)" != "" ]; then
-              echo '$(TESTKUBE_RESULTS_OTEL)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json"
+            if [ -n "$OTEL_RESULTS" ] && [ "$OTEL_RESULTS" != "" ]; then
+              echo "$OTEL_RESULTS" > "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json"
               echo "Created OTel results file"
             else
               echo "OTel results not available"
@@ -2794,9 +2799,12 @@ extends:
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
             
+            # Assign pipeline variable to bash variable to avoid syntax issues
+            UPGRADE_RESULTS="$(TESTKUBE_RESULTS_UPGRADE)"
+            
             # Write Upgrade results if available
-            if [ -n "$(TESTKUBE_RESULTS_UPGRADE)" ] && [ "$(TESTKUBE_RESULTS_UPGRADE)" != "" ]; then
-              echo '$(TESTKUBE_RESULTS_UPGRADE)' > "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json"
+            if [ -n "$UPGRADE_RESULTS" ] && [ "$UPGRADE_RESULTS" != "" ]; then
+              echo "$UPGRADE_RESULTS" > "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json"
               echo "Created Upgrade results file"
             else
               echo "Upgrade results not available"
