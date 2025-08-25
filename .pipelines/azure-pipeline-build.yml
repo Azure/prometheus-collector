@@ -2026,7 +2026,7 @@ extends:
     #         git push origin "v$(HELM_SEMVER)"
     #       displayName: Tag commit with semver
     - stage: Deploy
-      dependsOn: Build
+      # dependsOn: Build
       jobs:
       # - deployment: Deploy_Chart_ARC
       #   templateContext:
@@ -2736,29 +2736,32 @@ extends:
             echo "Results directory created"
           displayName: "Create TestKube Results Directory"
         
-        # Write ARC results directly to file if available using file write task
-        - task: WriteFile@1
+        # Write ARC results directly to file if available using PowerShell
+        - task: PowerShell@2
           displayName: "Write ARC Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_ARC'], ''))
           inputs:
-            path: "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json"
-            contents: $(TESTKUBE_RESULTS_ARC)
+            targetType: 'inline'
+            script: |
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json" -Value "$(TESTKUBE_RESULTS_ARC)"
         
-        # Write AKS results directly to file if available using file write task
-        - task: WriteFile@1
+        # Write AKS results directly to file if available using PowerShell
+        - task: PowerShell@2
           displayName: "Write AKS Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_AKS'], ''))
           inputs:
-            path: "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json"
-            contents: $(TESTKUBE_RESULTS_AKS)
+            targetType: 'inline'
+            script: |
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json" -Value "$(TESTKUBE_RESULTS_AKS)"
         
-        # Write OTel results directly to file if available using file write task
-        - task: WriteFile@1
+        # Write OTel results directly to file if available using PowerShell
+        - task: PowerShell@2
           displayName: "Write OTel Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_OTEL'], ''))
           inputs:
-            path: "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json"
-            contents: $(TESTKUBE_RESULTS_OTEL)
+            targetType: 'inline'
+            script: |
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json" -Value "$(TESTKUBE_RESULTS_OTEL)"
         
         # List created files
         - bash: |
@@ -2803,13 +2806,14 @@ extends:
             echo "Results directory created"
           displayName: "Create TestKube Results Directory"
         
-        # Write Upgrade results directly to file if available using file write task
-        - task: WriteFile@1
+        # Write Upgrade results directly to file if available using PowerShell
+        - task: PowerShell@2
           displayName: "Write Upgrade Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_UPGRADE'], ''))
           inputs:
-            path: "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json"
-            contents: $(TESTKUBE_RESULTS_UPGRADE)
+            targetType: 'inline'
+            script: |
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json" -Value "$(TESTKUBE_RESULTS_UPGRADE)"
         
         # List created files
         - bash: |
