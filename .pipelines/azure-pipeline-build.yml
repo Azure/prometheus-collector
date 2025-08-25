@@ -2731,10 +2731,10 @@ extends:
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
             
-            # Assign pipeline variables to bash variables to avoid syntax issues
-            ARC_RESULTS="$(TESTKUBE_RESULTS_ARC)"
-            AKS_RESULTS="$(TESTKUBE_RESULTS_AKS)"
-            OTEL_RESULTS="$(TESTKUBE_RESULTS_OTEL)"
+            # Assign pipeline variables to bash variables with proper escaping
+            ARC_RESULTS=$(printf '%s' "$(TESTKUBE_RESULTS_ARC)" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
+            AKS_RESULTS=$(printf '%s' "$(TESTKUBE_RESULTS_AKS)" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
+            OTEL_RESULTS=$(printf '%s' "$(TESTKUBE_RESULTS_OTEL)" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
             
             # Write ARC results if available
             if [ -n "$ARC_RESULTS" ] && [ "$ARC_RESULTS" != "" ]; then
@@ -2799,8 +2799,8 @@ extends:
             # Create results directory and write pipeline variables to JSON files
             mkdir -p "$(Pipeline.Workspace)/testkube-results"
             
-            # Assign pipeline variable to bash variable to avoid syntax issues
-            UPGRADE_RESULTS="$(TESTKUBE_RESULTS_UPGRADE)"
+            # Assign pipeline variable to bash variable with proper escaping
+            UPGRADE_RESULTS=$(printf '%s' "$(TESTKUBE_RESULTS_UPGRADE)" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
             
             # Write Upgrade results if available
             if [ -n "$UPGRADE_RESULTS" ] && [ "$UPGRADE_RESULTS" != "" ]; then
