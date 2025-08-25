@@ -2740,28 +2740,37 @@ extends:
         - task: PowerShell@2
           displayName: "Write ARC Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_ARC'], ''))
+          env:
+            TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_ARC)
           inputs:
             targetType: 'inline'
             script: |
-              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json" -Value "$(TESTKUBE_RESULTS_ARC)"
+              $content = $env:TESTKUBE_RESULTS
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json" -Value $content
         
         # Write AKS results directly to file if available using PowerShell
         - task: PowerShell@2
           displayName: "Write AKS Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_AKS'], ''))
+          env:
+            TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_AKS)
           inputs:
             targetType: 'inline'
             script: |
-              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json" -Value "$(TESTKUBE_RESULTS_AKS)"
+              $content = $env:TESTKUBE_RESULTS
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json" -Value $content
         
         # Write OTel results directly to file if available using PowerShell
         - task: PowerShell@2
           displayName: "Write OTel Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_OTEL'], ''))
+          env:
+            TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_OTEL)
           inputs:
             targetType: 'inline'
             script: |
-              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json" -Value "$(TESTKUBE_RESULTS_OTEL)"
+              $content = $env:TESTKUBE_RESULTS
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json" -Value $content
         
         # List created files
         - bash: |
@@ -2810,10 +2819,13 @@ extends:
         - task: PowerShell@2
           displayName: "Write Upgrade Results"
           condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_UPGRADE'], ''))
+          env:
+            TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_UPGRADE)
           inputs:
             targetType: 'inline'
             script: |
-              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json" -Value "$(TESTKUBE_RESULTS_UPGRADE)"
+              $content = $env:TESTKUBE_RESULTS
+              Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json" -Value $content
         
         # List created files
         - bash: |
