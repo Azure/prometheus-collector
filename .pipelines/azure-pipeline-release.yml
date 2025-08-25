@@ -51,7 +51,8 @@ extends:
     - stage: Push_Images
       displayName: Push Images
       pool:
-        name: Azure-Pipelines-Windows-CI-Test-EO
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
         os: windows
       templateContext:
         cloud: Public
@@ -62,7 +63,8 @@ extends:
       - job: ev2_image_rollout
         displayName: Push to Prod ACR Ev2 Rollout
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-windows-2022
           os: windows
         templateContext:
           type: releaseJob
@@ -94,7 +96,8 @@ extends:
       displayName: Deploy to Prod Clusters
       dependsOn: Push_Images
       pool:
-        name: Azure-Pipelines-Windows-CI-Test-EO
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
         os: windows
       jobs:
       - job: Job_1
