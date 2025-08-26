@@ -42,6 +42,8 @@ spec:
             value: "false"
         args:
         - --port=8080
+        - --config=/ksm-config/config
+        - --continue-without-config=true
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
@@ -64,16 +66,13 @@ spec:
           {{- end }}
         {{- end }}
         - --telemetry-port=8081
-        - --shard=0
-        - --total-shards=2
-        - --config=/etc/config/options/kube-state-metrics
-        - --enable-config-file-overwrite=true
         imagePullPolicy: IfNotPresent
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
         #image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-        #image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:rashmi-ksm-cfg-1"
-        image: "docker.io/rashmichandrashekarms/ksm-cfg:v5"
+        # image: docker.io/rashmichandrashekarms/ksm-cfg:fixes
+        image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:mount-test-2
+        # image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:dalec-ksm-2
           {{-  end  }}
         {{-  end  }}
         resources:
@@ -87,6 +86,10 @@ spec:
           capabilities:
             drop:
               - ALL
+        volumeMounts:
+          - mountPath: /ksm-config
+            name: ksm-config
+            readOnly: true
         ports:
         - containerPort: 8080
           name: "http"
@@ -104,10 +107,6 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
-        volumeMounts:
-          - mountPath: /etc/config/options
-            name: ksm-config-vol
-            readOnly: true
       nodeSelector:
         kubernetes.io/os: linux
       {{- if not $arcExtensionSettings.isArcExtension }}
@@ -145,8 +144,8 @@ spec:
         - operator: "Exists"
           effect: NoSchedule
       volumes:
-        - name: ksm-config-vol
+        - name: ksm-config
           configMap:
-            name: ama-metrics-ksm-options-configmap
+            name: ama-metrics-ksm-settings-configmap
             optional: true
       {{- end }}
