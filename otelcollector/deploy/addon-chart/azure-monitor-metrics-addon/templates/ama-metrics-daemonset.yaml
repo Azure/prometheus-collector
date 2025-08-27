@@ -142,7 +142,7 @@ spec:
           {{- if .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}
           ports:
             - name: otlp-endpoint
-              containerPort: 56680
+              containerPort: 56681
               hostPort: {{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}
               protocol: TCP
           {{- end }}
