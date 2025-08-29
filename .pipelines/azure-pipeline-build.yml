@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - mdsd-bleu-cloud
 pr:
   autoCancel: true
   branches:
@@ -24,7 +23,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.15.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'mdsd-bleu-cloud')]
+  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true

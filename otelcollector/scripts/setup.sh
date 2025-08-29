@@ -35,15 +35,7 @@ gem install deep_merge
 gem install re2 -v 2.11.0
 
 echo "Installing mdsd..."
-if [ "${ARCH}" != "amd64" ]; then
-  sudo tdnf install -y azure-mdsd-1.35.7
-else
-  wget https://github.com/Azure/prometheus-collector/releases/download/v6.18.0-main-06-24-2025-b0275ce3/azure-mdsd-1.37.0-pr.13273239.merge.5560.x86_64.rpm
-  sudo tdnf install -y azure-mdsd-1.37.0-pr.13273239.merge.5560.x86_64.rpm
-fi
-
-# Install this way once moving to the Mariner published RPMs:
-# sudo tdnf install -y azure-mdsd-1.35.7
+sudo tdnf install -y azure-mdsd-1.36.2
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
