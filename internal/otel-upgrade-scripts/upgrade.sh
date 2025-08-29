@@ -433,7 +433,53 @@ echo "PrometheusUI Test Prometheus dependencies updated successfully."
 
 cd "$CURRENT_DIR"
 
-# Step 7.3: Run go mod tidy in all test/ginkgo-e2e subdirectories
+# Step 7.3: Update ConfigProcessing Test Prometheus dependencies
+echo "Updating ConfigProcessing Test Prometheus dependencies..."
+cd "$CURRENT_DIR/otelcollector/test/ginkgo-e2e/configprocessing"
+
+echo "Using final Prometheus versions for configprocessing test:"
+echo "  client_golang: $FINAL_PROM_CLIENT_VERSION"
+echo "  common: $FINAL_PROM_COMMON_VERSION"
+echo "  client_model: $FINAL_PROM_CLIENT_MODEL_VERSION"
+
+# Update the versions in go.mod (reusing variables from Step 7.1)
+if [ ! -z "$FINAL_PROM_CLIENT_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_golang v[0-9.]*|github.com/prometheus/client_golang $FINAL_PROM_CLIENT_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_COMMON_VERSION" ]; then
+    sed -i "s|github.com/prometheus/common v[0-9.]*|github.com/prometheus/common $FINAL_PROM_COMMON_VERSION|g" go.mod
+fi
+
+if [ ! -z "$FINAL_PROM_CLIENT_MODEL_VERSION" ]; then
+    sed -i "s|github.com/prometheus/client_model v[0-9.]*|github.com/prometheus/client_model $FINAL_PROM_CLIENT_MODEL_VERSION|g" go.mod
+fi
+
+# Also handle prometheus/prometheus package for configprocessing
+echo "Found prometheus/prometheus versions for configprocessing:"
+echo "  otel-allocator: $OTEL_ALLOCATOR_PROM_PROMETHEUS_VERSION"
+echo "  otel-builder: $OTEL_BUILDER_PROM_PROMETHEUS_VERSION"
+echo "  selected: $FINAL_PROM_PROMETHEUS_VERSION"
+
+if [ ! -z "$FINAL_PROM_PROMETHEUS_VERSION" ]; then
+    # This regex handles both regular versions and pre-release versions with commit hashes
+    # Escape special characters in the version string for sed
+    ESCAPED_VERSION=$(echo "$FINAL_PROM_PROMETHEUS_VERSION" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    sed -i "s|github.com/prometheus/prometheus v[0-9][0-9.]*[^[:space:]]*|github.com/prometheus/prometheus $ESCAPED_VERSION|g" go.mod
+fi
+
+# Remove "// indirect" dependencies from go.mod
+echo "Removing indirect dependencies from go.mod..."
+grep -v "// indirect" go.mod > go.mod.tmp && mv go.mod.tmp go.mod
+
+# Run go mod tidy to update the go.sum file
+go mod tidy
+
+echo "ConfigProcessing Test Prometheus dependencies updated successfully."
+
+cd "$CURRENT_DIR"
+
+# Step 7.4: Run go mod tidy in all test/ginkgo-e2e subdirectories
 echo "Running go mod tidy in all test/ginkgo-e2e subdirectories..."
 
 # Start with utils directory
