@@ -1,12 +1,23 @@
 # This file contains CVEs to be ignored by Trivy
-# Auto-generated on Thu Jun 12 21:11:07 UTC 2025
+# Auto-generated on Mon Aug  4 17:43:16 UTC 2025
 
 # CRITICAL
 
 # HIGH
+# kube-state-metrics
+CVE-2024-33599 # 
+CVE-2024-33601 # 
 
 # MEDIUM
-# prometheusui
-CVE-2025-22872 # golang.org/x/net
+# kube-state-metrics
+CVE-2023-4527 # 
+CVE-2023-4806 # 
+CVE-2024-33600 # 
+# otelcollector
+CVE-2025-54388 # github.com/docker/docker
+# promconfigvalidator
+CVE-2025-54388 # github.com/docker/docker
 
 # LOW
+# kube-state-metrics
+

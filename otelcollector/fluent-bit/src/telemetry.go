@@ -72,6 +72,8 @@ var (
 	AcstorCapacityProvisionerKeepListRegex string
 	// ACStor Metrics Exporter keep list regex
 	AcstorMetricsExporterKeepListRegex string
+	// Local CSI Driver  keep list regex
+	LocalCSIDriverKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
 	NetworkObservabilityCiliumKeepListRegex string
 	// Network Observability Hubble metrics keep list regex
@@ -107,6 +109,8 @@ var (
 	AcstorCapacityProvisionerScrapeInterval string
 	// ACStor Metrics Exporter scrape interval
 	AcstorMetricsExporterScrapeInterval string
+	// Local CSI Driver  scrape interval
+	LocalCSIDriverScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
 	NetworkObservabilityCiliumScrapeInterval string
 	// Network Observability Hubble metrics scrape interval
@@ -167,10 +171,13 @@ const (
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
-	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 	basicAuthEnabled                      = "BasicAuthEnabled"
 	bearerTokenEnabledWithFile            = "BearerTokenEnabledWithFile"
 	bearerTokenEnabledWithSecret          = "BearerTokenEnabledWithSecret"
+)
+
+var (
+	amcsConfigFilePath = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -238,55 +245,91 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			CommonProperties["ClusterName"] = splitStrings[8]
 		}
 		// Reading AMCS config file for telemetry
-		amcsConfigFile, err := os.Open(amcsConfigFilePath)
-		if err != nil {
-			message := fmt.Sprintf("Error while opening AMCS config file - %v\n", err)
-			Log(message)
-			SendException(message)
-		}
-		Log("Successfully read AMCS config file contents for telemetry\n")
-		defer amcsConfigFile.Close()
-
-		amcsConfigFileContents, err := ioutil.ReadAll(amcsConfigFile)
-		if err != nil {
-			message := fmt.Sprintf("Error while reading AMCS config file contents - %v\n", err)
-			Log(message)
-			SendException(message)
-		}
-
-		var amcsConfig map[string]interface{}
-
-		err = json.Unmarshal([]byte(amcsConfigFileContents), &amcsConfig)
-		if err != nil {
-			message := fmt.Sprintf("Error while unmarshaling AMCS config file contents - %v\n", err)
-			Log(message)
-			SendException(message)
-		}
-
-		// iterate through keys and parse dcr name
-		for key, _ := range amcsConfig {
-			Log("Parsing %v for extracting DCR:", key)
-			splitKey := strings.Split(key, "/")
-			// Expecting a key in this format to extract out DCR Id -
-			// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
-			if len(splitKey) == 9 {
-				dcrId := CommonProperties["DCRId"]
-				if dcrId == "" {
-					CommonProperties["DCRId"] = splitKey[6]
-				} else {
-					dcrIdArray := dcrId + ";" + splitKey[6]
-					CommonProperties["DCRId"] = dcrIdArray
-				}
-			} else {
-				message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
+		otlpEnabled := os.Getenv("AZMON_FULL_OTLP_ENABLED") == "true"
+		if otlpEnabled {
+			amcsConfigFilePath = "/etc/mdsd.d/config-cache/me/dcrs"
+			// Read the AMCS config directory instead of a single file
+			files, err := os.ReadDir(amcsConfigFilePath)
+			if err != nil {
+				message := fmt.Sprintf("Error while reading AMCS config directory - %v\n", err)
 				Log(message)
 				SendException(message)
-				dcrId := CommonProperties["DCRId"]
-				if dcrId == "" {
-					CommonProperties["DCRId"] = key
+			} else {
+				Log("Successfully read AMCS config directory for telemetry\n")
+
+				// Initialize DCRId if not already present
+				if _, exists := CommonProperties["DCRId"]; !exists {
+					CommonProperties["DCRId"] = ""
+				}
+
+				// Process each file in the directory
+				for _, file := range files {
+					// Skip directories
+					if file.IsDir() {
+						continue
+					}
+
+					fileName := file.Name()
+
+					// Add the filename to DCRId with semicolon separator
+					if CommonProperties["DCRId"] == "" {
+						CommonProperties["DCRId"] = fileName
+					} else {
+						CommonProperties["DCRId"] = CommonProperties["DCRId"] + ";" + fileName
+					}
+				}
+			}
+		} else {
+			amcsConfigFile, err := os.Open(amcsConfigFilePath)
+			if err != nil {
+				message := fmt.Sprintf("Error while opening AMCS config file - %v\n", err)
+				Log(message)
+				SendException(message)
+			}
+			Log("Successfully read AMCS config file contents for telemetry\n")
+			defer amcsConfigFile.Close()
+
+			amcsConfigFileContents, err := ioutil.ReadAll(amcsConfigFile)
+			if err != nil {
+				message := fmt.Sprintf("Error while reading AMCS config file contents - %v\n", err)
+				Log(message)
+				SendException(message)
+			}
+
+			var amcsConfig map[string]interface{}
+
+			err = json.Unmarshal([]byte(amcsConfigFileContents), &amcsConfig)
+			if err != nil {
+				message := fmt.Sprintf("Error while unmarshaling AMCS config file contents - %v\n", err)
+				Log(message)
+				SendException(message)
+			}
+
+			// iterate through keys and parse dcr name
+			for key, _ := range amcsConfig {
+				Log("Parsing %v for extracting DCR:", key)
+				splitKey := strings.Split(key, "/")
+				// Expecting a key in this format to extract out DCR Id -
+				// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
+				if len(splitKey) == 9 {
+					dcrId := CommonProperties["DCRId"]
+					if dcrId == "" {
+						CommonProperties["DCRId"] = splitKey[6]
+					} else {
+						dcrIdArray := dcrId + ";" + splitKey[6]
+						CommonProperties["DCRId"] = dcrIdArray
+					}
 				} else {
-					dcrIdArray := dcrId + ";" + key
-					CommonProperties["DCRId"] = dcrIdArray
+					message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
+					Log(message)
+					SendException(message)
+					dcrId := CommonProperties["DCRId"]
+					if dcrId == "" {
+						CommonProperties["DCRId"] = key
+					} else {
+						dcrIdArray := dcrId + ";" + key
+						CommonProperties["DCRId"] = dcrIdArray
+					}
 				}
 			}
 		}
@@ -321,6 +364,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
 			AcstorCapacityProvisionerKeepListRegex = regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
 			AcstorMetricsExporterKeepListRegex = regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+			LocalCSIDriverKeepListRegex = regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
@@ -352,6 +396,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 			AcstorCapacityProvisionerScrapeInterval = intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
 			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
+			LocalCSIDriverScrapeInterval = intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
 			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
@@ -872,6 +917,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if AcstorMetricsExporterKeepListRegex != "" {
 					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
+				}
+				if LocalCSIDriverKeepListRegex != "" {
+					metric.Properties["LocalCSIDriverExporterRegex"] = LocalCSIDriverKeepListRegex
 				}
 				if NetworkObservabilityCiliumKeepListRegex != "" {
 					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex

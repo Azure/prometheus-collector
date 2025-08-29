@@ -1,0 +1,117 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: prometheus-reference-app-otel
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-reference-app-otel
+  template:
+    metadata:
+      labels:
+        app: prometheus-reference-app-otel
+    spec:
+      containers:
+        - name: prometheus-reference-app-golang-otel
+          image: >-
+            mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.14.0-grace-ref-app-update-march-03-20-2025-5eb7bdbf-ref-app-golang
+          ports:
+            - name: weather-app
+              containerPort: 2112
+              protocol: TCP
+            - name: untyped-metrics
+              containerPort: 2113
+              protocol: TCP
+          env:
+            - name: RUN_PERF_TEST
+              value: 'false'
+            - name: SCRAPE_INTERVAL
+              value: '15'
+            - name: METRIC_COUNT
+              value: '50'
+            - name: OTEL_TEMPORALITY
+              value: cumulative
+            - name: OTEL_CONSOLE_METRICS
+              value: 'false'
+            - name: OTEL_EXPORT_ENDPOINT
+              value: otlpservice.kube-system.svc.cluster.local:80
+            - name: OTEL_EXPORTER_OTLP_METRICS_INSECURE
+              value: 'true'
+            - name: OTEL_EXPORTER_OTLP_COMPRESSION
+              value: gzip
+            - name: OTEL_INTERVAL
+              value: '15'
+            - name: RUN_OTEL_PERF_TEST
+              value: 'false'
+            - name: OTEL_METRIC_COUNT
+              value: '547'
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      securityContext: {}
+      schedulerName: default-scheduler
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-reference-app-python
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-reference-app-python
+  template:
+    metadata:
+      labels:
+        app: prometheus-reference-app-python
+    spec:
+      containers:
+        - name: prometheus-reference-app-python
+          image: >-
+            mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.17.0-grace-otlp-http-06-05-2025-e89a73a3-ref-app-python
+          ports:
+            - name: python-client
+              containerPort: 2114
+              protocol: TCP
+          env:
+            - name: OTEL_ENDPOINT
+              value: otlpservice.kube-system.svc.cluster.local:80
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

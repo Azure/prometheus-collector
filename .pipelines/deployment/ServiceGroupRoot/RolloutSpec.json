@@ -1,0 +1,47 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/RegionAgnosticRolloutSpecification.json",
+  "contentVersion": "1.0.0.0",
+  "rolloutMetadata": {
+    "serviceModelPath": "ServiceModel.json",
+    "scopeBindingsPath": "ScopeBindings.json",
+    "name": "PrometheusCollectorAgent",
+    "configuration": {
+      "serviceGroupScope": {
+        "specPath": "Configuration.$rolloutinfra().json"
+      }
+    },
+    "rolloutType": "Major",
+    "buildSource": {
+      "parameters": {
+        "versionFile": "buildver.txt"
+      }
+    },
+    "notification": {
+      "email": {
+        "to": "ciprometheus@microsoft.com",
+        "options": {
+          "when": [
+            "onError"
+          ]
+        }
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "Rollout.Push",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "ShellExtension",
+      "actions": [
+        "shell/PushLinuxImage",
+        "shell/PushLinuxCCPImage",
+        "shell/PushWindowsImage",
+        "shell/PushTargetAllocatorImage",
+        "shell/PushConfigReaderImage",
+        "shell/PushArcHelmChart",
+        "shell/PushNodeExporterChart"
+      ],
+      "dependsOn": []
+    }
+  ]
+}

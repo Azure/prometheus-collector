@@ -1,0 +1,37 @@
+{
+    "properties": {
+        "dataCollectionEndpointId": "/subscriptions/<subid>/resourceGroups/vishwa-otlp-eus2euap/providers/Microsoft.Insights/dataCollectionEndpoints/MSProm-san-vishwa-otlp-eus2euap",
+        "dataSources": {
+            "otelMetrics": [
+                {
+                    "streams": [
+                        "Custom-Metrics-otlp"
+                    ],
+                    "name": "otlpMetricsDataSource"
+                }
+            ]
+        },
+        "destinations": {
+            "monitoringAccounts": [
+                {
+                    "accountResourceId": "/subscriptions/<subid>/resourceGroups/vishwa-otlp-eus2euap/providers/microsoft.monitor/accounts/vishwa-otlp-eus2euap",
+                    "name": "myMonAccountOtlpDest1"
+                }
+            ]
+        },
+        "dataFlows": [
+            {
+                "streams": [
+                    "Custom-Metrics-otlp"
+                ],
+                "destinations": [
+                    "myMonAccountOtlpDest1"
+                ]
+            }
+        ],
+        "provisioningState": "Succeeded"
+    },
+    "location": "eastus2euap",
+    "name": "vishwa-eue2euap-otlp-dcr",
+    "type": "Microsoft.Insights/dataCollectionRules"
+}

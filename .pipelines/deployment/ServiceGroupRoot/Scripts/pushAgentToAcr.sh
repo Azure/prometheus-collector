@@ -11,6 +11,11 @@ if [ $STEP_NAME == "PushNEChart" ] && [ $PUSH_NEW_NE_CHART == "false" ]; then
   exit 0
 fi
 
+if [ $ONLY_CCP_RELASE == "true" ] && [[ $IMAGE_TAG != *"ccp"* ]]; then
+  echo "Skipping image push - not a CCP image"
+  exit 0
+fi
+
 if [ -z $IMAGE_TAG ]; then
   echo "-e error value of IMAGE_TAG variable shouldnt be empty. Check release variables"
   exit 1

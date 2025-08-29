@@ -91,8 +91,11 @@ func main() {
 
 	var meConfigFile string
 	var fluentBitConfigFile string
+	var meDCRConfigDirectory string
+	var meLocalControl bool
+	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 
-	meConfigFile, fluentBitConfigFile = shared.DetermineConfigFiles(controllerType, clusterOverride)
+	meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl = shared.DetermineConfigFiles(controllerType, clusterOverride, otlpEnabled)
 	fmt.Println("meConfigFile:", meConfigFile)
 	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
@@ -116,33 +119,36 @@ func main() {
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
-	if ccpMetricsEnabled != "true" {
-		if osType == "linux" {
-			fmt.Println("Starting MDSD")
-			shared.StartMdsdForOverlay()
+	// Start MDSD only if OTLP is not enabled
+	if !otlpEnabled {
+		if ccpMetricsEnabled != "true" {
+			if osType == "linux" {
+				fmt.Println("Starting MDSD")
+				shared.StartMdsdForOverlay()
+			} else {
+				fmt.Println("Starting MA")
+				shared.StartMA()
+			}
 		} else {
-			fmt.Println("Starting MA")
-			shared.StartMA()
+			shared.StartMdsdForUnderlay()
 		}
-	} else {
-		shared.StartMdsdForUnderlay()
-	}
 
-	if osType == "linux" {
-		// update this to use color coding
-		shared.PrintMdsdVersion()
-	}
+		if osType == "linux" {
+			// update this to use color coding
+			shared.PrintMdsdVersion()
+		}
 
-	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
-	time.Sleep(30 * time.Second)
+		fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
+		time.Sleep(30 * time.Second)
+	}
 
 	fmt.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {
-		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile); err != nil {
+		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
 			log.Fatalf("Error starting MetricsExtension: %v\n", err)
 		}
 	} else {
-		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
+		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile, meDCRConfigDirectory, meLocalControl)
 	}
 
 	// note : this has to be after MA start so that the TokenConfig.json file is already in place
@@ -182,7 +188,7 @@ func main() {
 	if controllerType == "replicaset" {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			_ = shared.CollectorTAHttpsCheck(collectorConfig)
-		} else {
+		} else if ccpMetricsEnabled != "true" {
 			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
@@ -203,8 +209,10 @@ func main() {
 		}
 	}
 
-	fmt.Println("startCommand prometheusui")
-	shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+	if ccpMetricsEnabled != "true" {
+		fmt.Println("startCommand prometheusui")
+		shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+	}
 
 	if osType == "linux" {
 		shared.LogVersionInfo()
@@ -217,20 +225,22 @@ func main() {
 			cmd := exec.Command("fluent-bit", "--version")
 			fluentBitVersion, err := cmd.Output()
 			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
+				fmt.Errorf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		} else if osType == "windows" {
 			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
 			fluentBitVersion, err := cmd.Output()
 			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
+				fmt.Errorf("failed to get fluent-bit version: %v", err)
+			} else {
+				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
 	}
 
-	if osType == "linux" {
+	if osType == "linux" && !otlpEnabled {
 		// Start inotify to watch for changes
 		fmt.Println("Starting inotify for watching mdsd config update")
 
@@ -302,6 +312,7 @@ func handleShutdown() {
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	osType := os.Getenv("OS_TYPE")
+	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 	processToCheck := ""
@@ -312,7 +323,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Checking if TokenConfig file exists
-	if _, err := os.Stat(tokenConfigFileLocation); os.IsNotExist(err) {
+	if _, err := os.Stat(tokenConfigFileLocation); !otlpEnabled && os.IsNotExist(err) {
 		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			fmt.Println("azmon-container-start-time file exists, reading start time")
@@ -362,15 +373,17 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 
-		processToCheck = "/usr/sbin/mdsd"
-		if osType == "windows" {
-			processToCheck = "MonAgentLauncher.exe"
-		}
-		if !shared.IsProcessRunning(processToCheck) {
-			status = http.StatusServiceUnavailable
-			message = "mdsd not running (configuration exists)"
-			fmt.Println(message)
-			goto response
+		if !otlpEnabled {
+			processToCheck = "/usr/sbin/mdsd"
+			if osType == "windows" {
+				processToCheck = "MonAgentLauncher.exe"
+			}
+			if !shared.IsProcessRunning(processToCheck) {
+				status = http.StatusServiceUnavailable
+				message = "mdsd not running (configuration exists)"
+				fmt.Println(message)
+				goto response
+			}
 		}
 	}
 	if osType == "linux" {
