@@ -469,8 +469,7 @@ extends:
       - job: Golang_Windows_Reference_App
         displayName: "Build: windows golang reference app image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          name: Azure-Pipelines-Windows-CI-Test-EO
           os: windows
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
@@ -551,8 +550,7 @@ extends:
       - job: Windows_Python_Reference_App
         displayName: "Build: windows python reference app image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          name: Azure-Pipelines-Windows-CI-Test-EO
           os: windows
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
@@ -657,8 +655,7 @@ extends:
       - job: SDL_Policheck_Scan
         displayName: "SDL: policheck scanning"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          name: Azure-Pipelines-Windows-CI-Test-EO
           os: windows
         variables:
           skipComponentGovernanceDetection: true
@@ -1456,7 +1453,7 @@ extends:
       - job: Windows2019_Prometheus_Collector
         displayName: "Build: windows 2019 prometheus-collector image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          name: Azure-Pipelines-Windows-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
@@ -1624,7 +1621,7 @@ extends:
       - job: Windows2022_Prometheus_Collector
         displayName: "Build: windows 2022 prometheus-collector image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          name: Azure-Pipelines-Windows-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
@@ -1792,7 +1789,7 @@ extends:
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          name: Azure-Pipelines-Windows-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
