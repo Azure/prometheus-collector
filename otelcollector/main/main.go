@@ -144,7 +144,7 @@ func main() {
 
 	fmt.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {
-		if osType == "windows" {
+		if osType == "windows" && !otlpEnabled {
 			tokenConfigPath := "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
 
 			startME := func() {
