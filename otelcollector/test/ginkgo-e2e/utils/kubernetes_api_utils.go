@@ -18,6 +18,7 @@ import (
 
 	"bytes"
 	"fmt"
+	"regexp"
 )
 
 /*
@@ -63,6 +64,47 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 			}
 		}
 	}
+	return nil
+}
+
+/*
+ * Checks that the logs of all containers in all pods with the given label contain a key=value statement.
+ * The match is whitespace-tolerant around '=' and is case-sensitive for both key and value.
+ * Example: key="MINIMAL_INGESTION_PROFILE", expectedValue="true" will match lines like
+ * "MINIMAL_INGESTION_PROFILE=true" or "MINIMAL_INGESTION_PROFILE = true".
+ */
+func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespace, labelName, labelValue, key, expectedValue string) error {
+	// Get all pods with the given label
+	pods, err := GetPodsWithLabel(clientset, namespace, labelName, labelValue)
+	if err != nil {
+		return err
+	}
+
+	// Build a regex that tolerates spaces around '=' and treats key/value literally
+	// Pattern: \b<key>\s*=\s*<value>\b (multiline)
+	pattern := fmt.Sprintf(`(?m)\b%s\s*=\s*%s\b`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
+	re := regexp.MustCompile(pattern)
+
+	var missing []string
+
+	// Check the logs of each container in each pod for the key=value statement
+	for _, pod := range pods {
+		for _, container := range pod.Spec.Containers {
+			logs, err := getContainerLogs(clientset, pod.Namespace, pod.Name, container.Name)
+			if err != nil {
+				return err
+			}
+
+			if !re.MatchString(logs) {
+				missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, container.Name))
+			}
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("logs do not contain '%s=%s' for: %s", key, expectedValue, strings.Join(missing, "; "))
+	}
+
 	return nil
 }
 
