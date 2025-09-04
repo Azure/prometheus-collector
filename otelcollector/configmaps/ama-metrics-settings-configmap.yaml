@@ -85,6 +85,7 @@ data:
     podannotations = "30s"
   debug-mode: |-
     enabled = false
+  # Note that below section is a yaml configuration
   ksm-config: |-
     resources: 
       secrets: {}
