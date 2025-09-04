@@ -90,10 +90,10 @@ data:
     resources: 
       secrets: {}
       configmaps: {}
-    labels_allow_list:
+    labels_allow_list: # object name and label names
       pods: 
       - app8
-    annotations_allow_list:
+    annotations_allow_list: # object name and annotation names
       namespaces:
       - kube-system
       - default
