@@ -9,7 +9,7 @@ replace prometheus-collector/otelcollector/test/utils => ../utils
 require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/prometheus/prometheus v0.304.3-0.20250703114031-419d436a447a
 	k8s.io/client-go v0.32.3
 	prometheus-collector/otelcollector/test/utils v0.0.0-00010101000000-000000000000
@@ -129,7 +129,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/prometheus/sigv4 v0.2.0 // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.33 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

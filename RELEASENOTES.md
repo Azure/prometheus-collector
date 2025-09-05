@@ -1,5 +1,16 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 09-04-2025
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images:
+  + fix: bleu cloud for linux and windows (<https://github.com/Azure/prometheus-collector/pull/1280>)
+* Pipeline/Docs/Templates Updates:
+  + infra: CI/CD and test fixes (<https://github.com/Azure/prometheus-collector/pull/1279>)
+
 ## Release 08-13-2025
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
@@ -7,14 +18,14 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images:
-  + feat: Add support for Container Storage's storage operator (https://github.com/Azure/prometheus-collector/pull/1224)
-  + feat: Upgrade Pod and Service Monitor CRD (https://github.com/Azure/prometheus-collector/pull/1223)
-  + feat: Upgrade otelcollector to v0.131.0 (https://github.com/Azure/prometheus-collector/pull/1257)
+  + feat: Add support for Container Storage's storage operator (<https://github.com/Azure/prometheus-collector/pull/1224>)
+  + feat: Upgrade Pod and Service Monitor CRD (<https://github.com/Azure/prometheus-collector/pull/1223>)
+  + feat: Upgrade otelcollector to v0.131.0 (<https://github.com/Azure/prometheus-collector/pull/1257>)
   + fix: Remove fatal error on fluent bit startup (<https://github.com/Azure/prometheus-collector/pull/1256>)
 * Pipeline/Docs/Templates Updates:
   + fix: update recommended alert arm template to use clustername variable (<https://github.com/Azure/prometheus-collector/pull/1249>)
-  + fix: improve upgrade bot (https://github.com/Azure/prometheus-collector/pull/1225)
-  + feat: use managed sdp and region agnostic for release (https://github.com/Azure/prometheus-collector/pull/1259)
+  + fix: improve upgrade bot (<https://github.com/Azure/prometheus-collector/pull/1225>)
+  + feat: use managed sdp and region agnostic for release (<https://github.com/Azure/prometheus-collector/pull/1259>)
 
 ## Release 07-24-2025
 
