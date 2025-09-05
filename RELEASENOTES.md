@@ -8,6 +8,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images:
   + fix: bleu cloud for linux and windows (<https://github.com/Azure/prometheus-collector/pull/1280>)
+  + build(deps): Upgrade otelcollector to v0.132.0(<https://github.com/Azure/prometheus-collector/pull/1283>)
 * Pipeline/Docs/Templates Updates:
   + infra: CI/CD and test fixes (<https://github.com/Azure/prometheus-collector/pull/1279>)
 
