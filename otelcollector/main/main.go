@@ -144,41 +144,8 @@ func main() {
 
 	fmt.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {
-		if osType == "windows" && !otlpEnabled {
-			tokenConfigPath := "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
-
-			startME := func() {
-				// Log the time when Metrics Extension is starting initially
-				fmt.Printf("[%s] Starting Metrics Extension (overlay) with config overrides...\n", time.Now().Format(time.RFC3339))
-				if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
-					// Do not terminate the process from a goroutine; log the error for investigation
-					log.Printf("Error starting MetricsExtension (overlay): %v\n", err)
-				}
-			}
-
-			if _, err := os.Stat(tokenConfigPath); err == nil {
-				// File already exists; log detection time and start immediately
-				fmt.Printf("[%s] TokenConfig detected at %s. Starting Metrics Extension (overlay) now...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-				startME()
-			} else {
-				// Wait asynchronously until the file exists
-				go func() {
-					fmt.Printf("[%s] TokenConfig not found yet at %s. Will start Metrics Extension when it appears...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-					ticker := time.NewTicker(5 * time.Second)
-					defer ticker.Stop()
-					for range ticker.C {
-						if _, err := os.Stat(tokenConfigPath); err == nil {
-							fmt.Printf("[%s] TokenConfig detected at %s. Starting Metrics Extension (overlay)...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-							startME()
-							return
-						}
-					}
-				}()
-			}
-		} else {
-			if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
-				log.Fatalf("Error starting MetricsExtension: %v\n", err)
-			}
+		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
+			log.Fatalf("Error starting MetricsExtension: %v\n", err)
 		}
 	} else {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile, meDCRConfigDirectory, meLocalControl)
