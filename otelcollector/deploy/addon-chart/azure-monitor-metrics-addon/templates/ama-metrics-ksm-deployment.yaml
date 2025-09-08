@@ -43,7 +43,6 @@ spec:
         args:
         - --port=8080
         - --config=/etc/config/settings/ksm-config
-        # - --config=/ksm-config/config
         - --continue-without-config=true
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
@@ -71,10 +70,7 @@ spec:
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
         #image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-        # image: docker.io/rashmichandrashekarms/ksm-cfg:fixes
-        #image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:mount-test-2
         image: mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.16.0-2
-        #image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:dalec-ksm-2
           {{-  end  }}
         {{-  end  }}
         resources:
@@ -89,9 +85,6 @@ spec:
             drop:
               - ALL
         volumeMounts:
-          # - mountPath: /ksm-config
-          #   name: ksm-config
-          #   readOnly: true
           - mountPath: /etc/config/settings
             name: settings-vol-config
             readOnly: true
@@ -149,10 +142,6 @@ spec:
         - operator: "Exists"
           effect: NoSchedule
       volumes:
-        # - name: ksm-config
-        #   configMap:
-        #     name: ama-metrics-ksm-settings-configmap
-        #     optional: true
         - name: settings-vol-config
           configMap:
             name: ama-metrics-settings-configmap
