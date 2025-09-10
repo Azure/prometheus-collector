@@ -70,7 +70,7 @@ spec:
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
         #image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-        image: mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.16.0-2
+        image: mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.16.0-4
           {{-  end  }}
         {{-  end  }}
         resources:
