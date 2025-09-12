@@ -2,32 +2,71 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "accountName": {
-            "type": "String"
+        "subscriptionId": {
+            "type": "string"
         },
-        "accountLocation": {
-            "type": "String"
+        "resourceGroupName": {
+            "type": "string"
+        },
+        "azureMonitorWorkspaceName": {
+            "type": "string"
+        },
+        "azureMonitorWorkspaceLocation": {
+            "type": "string"
         },
         "maxActiveTimeSeries": {
-            "type": "Int"
+            "type": "int"
         },
         "maxEventsPerMinute": {
-            "type": "Int"
+            "type": "int"
         }
     },
     "variables": {},
     "resources": [
         {
-            "type": "microsoft.monitor/accounts/metricsContainers",
-            "apiVersion": "2025-05-03-preview",
-            "name": "[concat(parameters('accountName'), '/default')]",
-            "location": "[parameters('accountLocation')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "AzureMonitorWorkspaceLimitsNested",
+            "resourceGroup": "[parameters('resourceGroupName')]",
+            "subscriptionId": "[parameters('subscriptionId')]",
             "properties": {
-                "limits": {
-                    "maxActiveTimeSeries": "[parameters('maxActiveTimeSeries')]",
-                    "maxEventsPerMinute": "[parameters('maxEventsPerMinute')]"
+                "mode": "Incremental",
+                "expressionEvaluationOptions": {
+                    "scope": "inner"
+                },
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "azureMonitorWorkspaceName": { "type": "string" },
+                        "maxActiveTimeSeries": { "type": "int" },
+                        "maxEventsPerMinute": { "type": "int" },
+                        "azureMonitorWorkspaceLocation": { "type": "string" }
+                    },
+                    "resources": [
+                        {
+                            "type": "Microsoft.Monitor/accounts/metricsContainers",
+                            "apiVersion": "2025-05-03-preview",
+                            "name": "[concat(parameters('azureMonitorWorkspaceName'), '/default')]",
+                            "location": "[parameters('azureMonitorWorkspaceLocation')]",
+                            "properties": {
+                                "limits": {
+                                    "maxActiveTimeSeries": "[parameters('maxActiveTimeSeries')]",
+                                    "maxEventsPerMinute": "[parameters('maxEventsPerMinute')]"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "parameters": {
+                    "azureMonitorWorkspaceName": { "value": "[parameters('azureMonitorWorkspaceName')]" },
+                    "maxActiveTimeSeries": { "value": "[parameters('maxActiveTimeSeries')]" },
+                    "maxEventsPerMinute": { "value": "[parameters('maxEventsPerMinute')]" },
+                    "azureMonitorWorkspaceLocation": { "value": "[parameters('azureMonitorWorkspaceLocation')]" }
                 }
             }
         }
-    ]
+    ],
+    "outputs": {
+    }
 }
