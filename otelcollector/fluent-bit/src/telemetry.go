@@ -232,6 +232,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
+	CommonProperties["ksmConfigEnabled"] = os.Getenv("AZMON_KSM_CONFIG_ENABLED")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
