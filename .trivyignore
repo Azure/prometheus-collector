@@ -1,5 +1,5 @@
 # This file contains CVEs to be ignored by Trivy
-# Auto-generated on Tue Sep  2 17:37:24 UTC 2025
+# Auto-generated on Sat Sep 13 07:12:21 UTC 2025
 
 # CRITICAL
 
@@ -13,10 +13,6 @@ CVE-2024-33601 #
 CVE-2023-4527 # 
 CVE-2023-4806 # 
 CVE-2024-33600 # 
-# otelcollector
-CVE-2025-54388 # github.com/docker/docker
-# promconfigvalidator
-CVE-2025-54388 # github.com/docker/docker
 
 # LOW
 # kube-state-metrics
