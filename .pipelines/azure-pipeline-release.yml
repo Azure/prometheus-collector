@@ -51,7 +51,8 @@ extends:
     - stage: Push_Images
       displayName: Push Images
       pool:
-        name: Azure-Pipelines-Windows-CI-Test-EO
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
         os: windows
       templateContext:
         cloud: Public
@@ -62,7 +63,8 @@ extends:
       - job: ev2_image_rollout
         displayName: Push to Prod ACR Ev2 Rollout
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-windows-2022
           os: windows
         templateContext:
           type: releaseJob
@@ -94,7 +96,8 @@ extends:
       displayName: Deploy to Prod Clusters
       dependsOn: Push_Images
       pool:
-        name: Azure-Pipelines-Windows-CI-Test-EO
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
         os: windows
       jobs:
       - job: Job_1
@@ -132,8 +135,47 @@ extends:
         - task: Bash@3
           inputs:
             targetType: inline
-            script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
-            workingDirectory: $(Pipeline.Workspace)/ev2Artifact/arc-drop/
+            script: |
+              echo "CHART_TAG: $CHART_TAG"
+              echo "LINUX_TAG: $LINUX_TAG"
+              echo "WINDOWS_TAG: $WINDOWS_TAG"
+              echo "LOOP_COUNTER: $LOOP_COUNTER"
+              echo "MAX_RETRIES: $MAX_RETRIES"
+              echo "SLEEP_INTERVAL: $SLEEP_INTERVAL"
+              
+              # Wait for images and chart to be published to MCR
+              for i in $(seq 1 $MAX_RETRIES)
+              do            
+                  sleep $SLEEP_INTERVAL
+                  echo "Loop iteration: $i"
+                  echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$LINUX_TAG"
+                  echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$WINDOWS_TAG"
+                  echo "Checking: $MCR_REGISTRY$PROD_MCR_CHART_REPO:$CHART_TAG"
+                  
+                  # Get repository responses
+                  output1=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_AGENT_REPO/tags/list)
+                  output2=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_ARC_CHART_REPO/tags/list)
+
+                  # Check if all required tags are present
+                  if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)
+                  then
+                      echo "Images and chart are published to mcr"
+                      echo "##vso[task.setvariable variable=MCRPublishStatus;]success"
+                      exit 0
+                  fi
+              done          
+              echo "Images and chart are not published to mcr within $((MAX_RETRIES * SLEEP_INTERVAL / 60)) minutes"
+              exit 1
+          env:
+            LINUX_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+            WINDOWS_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)-win"
+            CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+            MAX_RETRIES: 10
+            SLEEP_INTERVAL: 30
+            MCR_REGISTRY: "mcr.microsoft.com"
+            PROD_MCR_AGENT_REPO: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+            PROD_MCR_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
+            PROD_MCR_ARC_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
           target:
             container: host
           displayName: Check images and ARC chart are pushed to MCR

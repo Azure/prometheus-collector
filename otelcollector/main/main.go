@@ -34,7 +34,7 @@ func main() {
 	if osType == "windows" {
 		env := strings.ToLower(customEnvironment)
 		switch env {
-		case "usnat", "ussec", "bleu":
+		case "usnat", "ussec", "azurebleucloud":
 			shared.BootstrapCACertificates()
 		default:
 			// non-sovereign cloud
@@ -138,8 +138,13 @@ func main() {
 			shared.PrintMdsdVersion()
 		}
 
-		fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
-		time.Sleep(30 * time.Second)
+		// Wait for MDSD to populate config before starting Metrics Extension.
+		waitDuration := 30 * time.Second
+		if osType == "windows" {
+			waitDuration = 45 * time.Second
+		}
+		fmt.Printf("Waiting for %ds for MDSD to get the config and put them in place for ME\n", int(waitDuration.Seconds()))
+		time.Sleep(waitDuration)
 	}
 
 	fmt.Println("Starting Metrics Extension with config overrides")
