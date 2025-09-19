@@ -140,6 +140,25 @@ func parseOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[str
 	shared.EchoSectionDivider("End Processing - parseOpentelemetryMetricsSettings")
 }
 
+func parseKSMSettings(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseKSMSettings")
+	if _, ok := metricsConfigBySection["ksm-config"]; ok {
+		fmt.Println("ksm-config section found in metricsConfigBySection")
+		file, err := os.Create(ksmConfigEnvVarPath)
+		if err != nil {
+			shared.EchoError(fmt.Sprintf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err))
+			return
+		}
+		defer file.Close()
+
+		file.WriteString(fmt.Sprintf("AZMON_KSM_CONFIG_ENABLED=%v\n", "true"))
+		fmt.Printf("Setting AZMON_KSM_CONFIG_ENABLED environment variable: %v\n", "true")
+		handleEnvFileError(ksmConfigEnvVarPath)
+	} else {
+		fmt.Println("ksm-config section NOT found in metricsConfigBySection")
+	}
+}
+
 func handleEnvFileError(filename string) {
 	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -176,13 +195,13 @@ func Configmapparser() {
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		files, err := os.ReadDir("/etc/config/settings")
 		if err == nil {
-		    for _, file := range files {
-		        if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
-		            continue
-		        }
-		        configmapVer = "v1"
-		        break
-		    }
+			for _, file := range files {
+				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
+					continue
+				}
+				configmapVer = "v1"
+				break
+			}
 		}
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIGMAP_VERSION", configmapVer, true)
@@ -192,6 +211,7 @@ func Configmapparser() {
 	parseDefaultScrapeSettings(metricsConfigBySection)
 	parseDebugModeSettings(metricsConfigBySection)
 	parseOpentelemetryMetricsSettings(metricsConfigBySection)
+	parseKSMSettings(metricsConfigBySection)
 
 	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
 	tomlparserScrapeInterval(metricsConfigBySection)

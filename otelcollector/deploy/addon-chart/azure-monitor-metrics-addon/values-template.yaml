@@ -5,8 +5,8 @@ AzureMonitorMetrics:
     #MetricAnnotationsAllowList: ""
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
-# Kube-state-metrics ImageTag - 2.15.0-4, corresponds to chart version - 5.32.0
-    ImageTag: "v2.15.0-4"
+# Kube-state-metrics ImageTag - 2.17.0, corresponds to chart version - 6.2.0
+    ImageTag: "v2.17.0"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -54,7 +54,7 @@ AzureMonitorMetrics:
   ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
-  OperatorTargetsHttpsEnabled: false
+  OperatorTargetsHttpsEnabled: true
   DeploymentReplicas: 2
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
