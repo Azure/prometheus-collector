@@ -109,6 +109,17 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 }
 
 /*
+ * Convenience wrapper that ensures MINIMAL_INGESTION_PROFILE is logged as true for all containers
+ * in all pods matching the provided label selector. This is expected to be true regardless of
+ * whether a settings/config ConfigMap is present (the defaulting logic in the agent forces it to true
+ * unless explicitly set false, which we do not allow). If the statement is missing or appears with a
+ * different value, an error is returned listing the offending pod/container pairs.
+ */
+func CheckMinimalIngestionProfileTrue(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
+	return CheckContainerLogsContainKeyValue(clientset, namespace, labelName, labelValue, "MINIMAL_INGESTION_PROFILE", "true")
+}
+
+/*
  * Returns all pods in the given namespace with the given label.
  */
 func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKey string, labelValue string) ([]corev1.Pod, error) {

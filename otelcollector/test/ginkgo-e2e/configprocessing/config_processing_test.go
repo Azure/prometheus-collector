@@ -122,6 +122,29 @@ var _ = DescribeTable("The container logs should not contain errors",
 )
 
 /*
+ * Ensure MINIMAL_INGESTION_PROFILE is always logged as true (both without and with configmaps).
+ * This validates the defaulting logic and explicit config handling.
+ */
+var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be true in logs",
+	func(namespace string, controllerLabelName string, controllerLabelValue string) {
+		err := utils.CheckMinimalIngestionProfileTrue(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	},
+	// No configmaps scenario
+	Entry("rs pod (no configmaps)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonNoConfigMaps)),
+	Entry("linux ds pod (no configmaps)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonNoConfigMaps)),
+	Entry("windows ds pod (no configmaps)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonNoConfigMaps)),
+	// With configmaps scenario
+	Entry("rs pod (with configmaps)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonWithConfigMap)),
+	Entry("linux ds pod (with configmaps)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonWithConfigMap)),
+	Entry("windows ds pod (with configmaps)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonWithConfigMap)),
+	// With v2 configmaps scenario (schema v2)
+	Entry("rs pod (with configmaps v2)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonWithConfigMapV2)),
+	Entry("linux ds pod (with configmaps v2)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonWithConfigMapV2)),
+	Entry("windows ds pod (with configmaps v2)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonWithConfigMapV2)),
+)
+
+/*
  * Following tests make sure the Prometheus config as seen by otelcollector can be unmarshaled and only contain jobs we expect
  */
 
