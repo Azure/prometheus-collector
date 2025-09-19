@@ -146,7 +146,7 @@ func parseKSMSettings(metricsConfigBySection map[string]map[string]string) {
 		fmt.Println("ksm-config section found in metricsConfigBySection")
 		file, err := os.Create(ksmConfigEnvVarPath)
 		if err != nil {
-			shared.EchoError(fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err))
+			shared.EchoError(fmt.Sprintf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err))
 			return
 		}
 		defer file.Close()
