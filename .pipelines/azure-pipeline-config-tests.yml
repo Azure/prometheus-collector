@@ -71,6 +71,23 @@ stages:
               sudo apt-get update
               sudo apt-get install -y testkube
 
+              # Install kubectl and jq if missing
+              if ! command -v kubectl >/dev/null 2>&1; then
+                echo "Installing kubectl..."
+                curl -sLo kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+                chmod +x kubectl
+                sudo mv kubectl /usr/local/bin/
+              else
+                echo "kubectl already present: $(kubectl version --client=true 2>/dev/null | head -n1)"
+              fi
+
+              if ! command -v jq >/dev/null 2>&1; then
+                echo "Installing jq..."
+                sudo apt-get install -y jq
+              else
+                echo "jq already present: $(jq --version)"
+              fi
+
               exit 0
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
