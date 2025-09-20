@@ -33,6 +33,7 @@ const (
 	LinuxDaemonsetCustomConfig                        = "linux-daemonset-custom-config"
 	ConfigProcessingCommonNoConfigMaps                = "config-processing-common-no-config-maps"
 	ConfigProcessingCommonWithConfigMap               = "config-processing-common-with-config-maps"
+	ConfigProcessingCommonWithConfigMapV2             = "config-processing-common-with-config-maps-v2"
 	ConfigProcessingCommonWithErrorConfigMap          = "config-processing-common-with-error-config-maps"
 	ConfigProcessingCommon                            = "config-processing-common"
 	ConfigProcessingNoConfigMaps                      = "config-processing-no-config-maps"
