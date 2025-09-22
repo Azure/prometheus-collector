@@ -15,6 +15,7 @@ var (
 	collectorSettingsMountPath                   = "/etc/config/settings/prometheus-collector-settings"
 	collectorSettingsEnvVarPath                  = "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	opentelemetryMetricsEnvVarPath               = "/opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var"
+	ksmConfigEnvVarPath                          = "/opt/microsoft/configmapparser/config_ksm_config_env_var"
 	configMapKeepListMountPath                   = "/etc/config/settings/default-targets-metrics-keep-list"
 	configMapKeepListEnvVarPath                  = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	configMapScrapeIntervalMountPath             = "/etc/config/settings/default-targets-scrape-interval-settings"
