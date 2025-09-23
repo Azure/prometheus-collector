@@ -399,7 +399,7 @@ spec:
             optional: true
 {{- end }}
 {{- end }}
-        {{- if or (not $arcExtensionSettings.isArcExtension)$arcExtensionSettings.mountUbuntuCerts }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
