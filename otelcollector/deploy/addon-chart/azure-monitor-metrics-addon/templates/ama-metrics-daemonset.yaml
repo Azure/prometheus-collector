@@ -218,18 +218,9 @@ spec:
               readOnly: true
             {{- end }}
           livenessProbe:
-            {{- $version := regexFind "^\\d+\\.\\d+\\.\\d+" .Values.AzureMonitorMetrics.ImageTag }}
-            {{- if semverCompare ">=6.9.0" $version }}
             httpGet:
               path: /health
               port: 8080
-            {{- else }}
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
-            {{- end }}
             initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5
@@ -537,18 +528,9 @@ spec:
               readOnly: true
           {{- end }}
           livenessProbe:
-            {{- $version := regexFind "^\\d+\\.\\d+\\.\\d+" .Values.AzureMonitorMetrics.ImageTagWin }}
-            {{- if semverCompare ">=6.14.0" $version }}
             httpGet:
               path: /health
               port: 8080
-            {{- else }}
-            exec:
-              command:
-                - cmd
-                - /c
-                - C:\opt\microsoft\scripts\livenessprobe.cmd
-            {{- end }}
             periodSeconds: 60
             initialDelaySeconds: 300
             timeoutSeconds: 60
