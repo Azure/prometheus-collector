@@ -140,9 +140,9 @@ spec:
           effect: NoExecute
         - operator: "Exists"
           effect: NoSchedule
+      {{- end }}
       volumes:
         - name: settings-vol-config
           configMap:
             name: ama-metrics-settings-configmap
             optional: true
-      {{- end }}
