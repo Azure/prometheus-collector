@@ -142,7 +142,7 @@ spec:
               {{- else }}
               value: "19100"
               {{- end }}
-            {{- if .Values.AzureMonitorMetrics }}
+              {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
@@ -327,7 +327,7 @@ spec:
           effect: "NoSchedule"
         - operator: "Exists"
           effect: "NoExecute"
-        {{- if $arcExtensionSettings.isArcExtension }}
+          {{- if $arcExtensionSettings.isArcExtension }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
@@ -346,7 +346,7 @@ spec:
         - key: "node-role.kubernetes.io/master"
           operator: "Exists"
           effect: "PreferNoSchedule"
-        {{- end }}
+          {{- end }}
       volumes:
         - name: settings-vol-config
           configMap:
