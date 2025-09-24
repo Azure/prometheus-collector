@@ -30,7 +30,7 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
     pip install --upgrade pip
     pip install azure-cli
     pip install azure_cli_core
-    az extension remove aks-preview
+    az extension remove -n aks-preview
     az extension add --source aks_preview-18.0.0b39-py2.py3-none-any.whl -y
    ```
 5. When done with testing, exit the virtual environment via `deactivate`.
