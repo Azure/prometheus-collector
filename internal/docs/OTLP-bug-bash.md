@@ -1,6 +1,7 @@
 <!-- 1. Create AKS cluster in canary region -->
 
 ## Setup (Done for Bug Bash Subscription)
+Note: For Bug Bash use the subscription: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/overview
 ### Public and Private Preview:
 1. Register the features on the subscription:
     ``` sh
@@ -112,6 +113,7 @@ The output should contain settings for:
 ```
 
 ## App Setup
+Have an app instrumented with OTLP in any language.
 1. Create CR for App Insights auto-wiring:
   ```yaml
     apiVersion: monitor.azure.com/v1
