@@ -58,6 +58,22 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
     ```
 
 ## Greenfield Scenarios
+- Only metrics:
+  ```sh
+    az group create --name <resource-group> --location eastus2euap 
+    az aks create -g <resource-group> -n <cluster-name> --location eastus2euap --generate-ssh-keys --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --node-vm-size Standard_DS2_v2
+    ```
+- Only logs/traces:
+  ```sh
+    az group create --name <resource-group> --location eastus2euap 
+    az aks create -g <resource-group> -n <cluster-name> --location eastus2euap --generate-ssh-keys --enable-azure-monitor-app-monitoring --enable-addons monitoring --enable-opentelemetry-logs --workspace-resource-id "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/grace-eastus2euap/providers/microsoft.operationalinsights/workspaces/grace-eastus2euap" --node-vm-size Standard_DS2_v2
+    ```
+- Necessary for e2e:
+    ```sh
+    az group create --name <resource-group> --location eastus2euap 
+    az aks create -g <resource-group> -n <cluster-name> --location eastus2euap --generate-ssh-keys --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-addons monitoring --enable-opentelemetry-logs --workspace-resource-id "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/grace-eastus2euap/providers/microsoft.operationalinsights/workspaces/grace-eastus2euap" --node-vm-size Standard_DS2_v2
+    ```
+
 - All settings:
     ```sh
     az group create --name <resource-group> --location eastus2euap 
@@ -66,10 +82,24 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 - Extra settings for `enable-azure-monitor-metrics` like `--azure-monitor-workspace` work.
 - Extra settings for `enable-addons monitoring` like `--workspace-resource-id` work.
 ## Brownfield Scenarios
+- Necessary for e2e without addons enabled:
+    ```sh
+    az aks addon enable -a monitoring
+    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-opentelemetry-logs
+    ```
+- Just metrics:
+  ```sh
+    az aks update -g <resource-group> -n <cluster-name> --location eastus2euap --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics 
+    ```
+- Just logs:
+    ```sh
+    az aks addon enable -a monitoring
+    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-opentelemetry-logs
+    ```
 - All settings:
     ```sh
     az aks addon enable -a monitoring
-    az aks update -g grace-win -n grace-win --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-opentelemetry-logs --opentelemetry-metrics-port 23450 --opentelemetry-logs-port 23451
+    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-opentelemetry-logs --opentelemetry-metrics-port 23450 --opentelemetry-logs-port 23451
     ```
 - With addons already enabled:
     ```sh
