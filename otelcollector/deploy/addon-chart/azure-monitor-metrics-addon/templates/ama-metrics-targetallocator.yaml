@@ -168,6 +168,9 @@ spec:
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
         - name: OPERATOR_TARGETS_HTTPS_ENABLED
           value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
+        ports:
+        - containerPort: 8081
+          name: health
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config

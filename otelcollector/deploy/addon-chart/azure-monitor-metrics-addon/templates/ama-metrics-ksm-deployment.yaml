@@ -10,6 +10,7 @@ metadata:
     app.kubernetes.io/part-of: ama-metrics-ksm
     app.kubernetes.io/version: 2.17.0
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+    kubernetes.azure.com/managedby: aks
 spec:
   selector:
     matchLabels:
@@ -24,6 +25,7 @@ spec:
         app.kubernetes.io/part-of: ama-metrics-ksm
         app.kubernetes.io/version: 2.17.0
         helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+        kubernetes.azure.com/managedby: aks
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
@@ -34,7 +36,7 @@ spec:
         fsGroup: 65534
         runAsGroup: 65534
         runAsUser: 65534
-      dnsPolicy: ClusterFirst
+        dnsPolicy: ClusterFirst
       containers:
       - name: ama-metrics-ksm
         env:
