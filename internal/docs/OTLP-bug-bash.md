@@ -74,6 +74,40 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 - Extra settings for `enable-azure-monitor-metrics` like `--azure-monitor-workspace` work.
 - Extra settings for `enable monitoring` like `--workspace-resource-id` work.
 
+## Cluster Profile
+The output should contain settings for:
+```
+  "azureMonitorProfile": {
+    "appMonitoring": {
+      "autoInstrumentation": {
+        "enabled": true
+      },
+      "openTelemetryLogs": {
+        "enabled": true,
+        "port": null
+      },
+      "openTelemetryMetrics": {
+        "enabled": true,
+        "port": null
+      }
+    },
+    "containerInsights": {
+      "disableCustomMetrics": null,
+      "disablePrometheusMetricsScraping": null,
+      "enabled": true,
+      "logAnalyticsWorkspaceResourceId": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/grace-eastus2euap/providers/microsoft.operationalinsights/workspaces/grace-eastus2euap",
+      "syslogPort": null
+    },
+    "metrics": {
+      "enabled": true,
+      "kubeStateMetrics": {
+        "metricAnnotationsAllowList": "",
+        "metricLabelsAllowlist": ""
+      }
+    }
+  },
+```
+
 ## App Instrumentation
 Follow the onboarding for Auto-Instrumentation from the docs [here](https://learn.microsoft.com/en-us/azure/azure-monitor/app/kubernetes-codeless#namespace-wide-onboarding).
 
