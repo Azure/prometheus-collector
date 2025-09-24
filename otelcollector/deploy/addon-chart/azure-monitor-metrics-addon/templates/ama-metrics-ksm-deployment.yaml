@@ -42,6 +42,8 @@ spec:
             value: "false"
         args:
         - --port=8080
+        - --config=/etc/config/settings/ksm-config
+        - --continue-without-config=true
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
@@ -81,6 +83,10 @@ spec:
           capabilities:
             drop:
               - ALL
+        volumeMounts:
+          - mountPath: /etc/config/settings
+            name: settings-vol-config
+            readOnly: true
         ports:
         - containerPort: 8080
           name: "http"
@@ -134,4 +140,9 @@ spec:
           effect: NoExecute
         - operator: "Exists"
           effect: NoSchedule
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: ama-metrics-settings-configmap
+            optional: true
       {{- end }}
