@@ -54,10 +54,12 @@ func NewPrometheusCRWatcher(
 	promLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slogger := slog.New(logr.ToSlogHandler(logger))
 	var resourceSelector *prometheus.ResourceSelector
+
 	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
 	if err != nil {
 		return nil, err
 	}
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
