@@ -4,16 +4,19 @@
 ### Public and Private Preview:
 1. Register the features on the subscription:
     ``` sh
-    az feature register --namespace  "Microsoft.Insights" --name "Amcs20240311"
-    az provider register --namespace "Microsoft.Insights"
+    az feature register --namespace  "Microsoft.Insights" --name "Amcs20240311" # DCR
 
-    az feature register --namespace "Microsoft.ContainerService" --name "AzureMonitorAppMonitoringPreview"
+    az feature register --namespace "Microsoft.ContainerService" --name "AzureMonitorAppMonitoringPreview" # App monitoring addon
     az provider register --namespace "Microsoft.ContainerService"
+
+    az feature register --name OtlpApplicationInsights --namespace Microsoft.Insights # App Insights
+    az feature register --name testingLogsOtelManagedResourcesEnabled --namespace Microsoft.Insights # App Insights managed resources in Canary
+
+    az provider register --namespace "Microsoft.Insights"
     ```
 ### Private Preview Only:
-2. Subscription needs to be allow-listed on AppInsights backend.
-3. Logs and Metrics AKS image toggles applied to subscriptions or clusters.
-4. App Monitoring AKS preview toggle applied to subscriptions or clusters.
+2. Logs and Metrics AKS image toggles applied to subscriptions or clusters.
+3. App Monitoring AKS preview toggle applied to subscriptions or clusters.
 
 ## CLI Setup (Bug Bash Only)
 These instructions are taken from the AKS guide [here](https://dev.azure.com/msazure/CloudNativeCompute/_wiki/wikis/CloudNativeCompute.wiki/358311/AZCLI-Coding-Handbook?anchor=setup#pre-steps---install-python-and-set-up-a-virtual-environment).
