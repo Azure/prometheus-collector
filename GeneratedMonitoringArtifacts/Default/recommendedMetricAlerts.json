@@ -27,14 +27,14 @@
     },
     "variables": {
         "clusterName": "[last(split(parameters('clusterResourceId'), '/'))]",
-        "kubernetesAlertRuleGroup": "KubernetesAlert-RecommendedMetricAlerts",
-        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), variables('clusterName'))]",
+        "kubernetesAlertRuleGroup": "Prometheus Recommended",
+        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'))]",
         "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-RecommendedMetricAlerts",
         "version": " - 0.1"
     },
     "resources": [
         {
-            "name": "[concat(variables('kubernetesAlertRuleGroupName'), '-Cluster-level')]",
+            "name": "[concat(variables('kubernetesAlertRuleGroupName'), ' Cluster level Alerts - ', variables('clusterName'))]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
@@ -293,7 +293,7 @@
             }
         },
         {
-            "name": "[concat(variables('kubernetesAlertRuleGroupName'), '-Node-level')]",
+            "name": "[concat(variables('kubernetesAlertRuleGroupName'), ' Node level Alerts - ', variables('clusterName'))]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
@@ -376,7 +376,7 @@
             }
         },
         {
-            "name": "[concat(variables('kubernetesAlertRuleGroupName'), '-Pod-level')]",
+            "name": "[concat(variables('kubernetesAlertRuleGroupName'), ' Pod level Alerts - ', variables('clusterName'))]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
