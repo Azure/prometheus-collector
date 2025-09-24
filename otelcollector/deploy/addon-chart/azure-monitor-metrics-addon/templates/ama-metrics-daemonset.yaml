@@ -52,7 +52,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          image: "{{ $.Values.AzureMonitorMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTag }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -72,36 +72,36 @@ spec:
               {{- if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.resourceId }}"
               {{- else }}
-              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              value: "{{ $.Values.global.commonGlobals.Customer.AzureResourceID }}"
               {{- end }}
             - name: AKSREGION
               {{- if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.region }}"
               {{- else }}
-              value: "{{ .Values.global.commonGlobals.Region }}"
+              value: "{{ $.Values.global.commonGlobals.Region }}"
               {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if $.Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
               {{- else if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.cloudEnvironment }}"
               {{- else }}
-              value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
+              value: "{{ lower $.Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
-            {{- if eq .Values.AzureMonitorMetrics.isArcACluster true }}
+              {{- if eq $.Values.AzureMonitorMetrics.isArcACluster true }}
             - name: customRegionalEndpoint
-              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" $.Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
             - name: customGlobalEndpoint
-              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" $.Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
             - name: customResourceEndpoint
               value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
-            {{- end }}
+              {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -142,10 +142,10 @@ spec:
               {{- else }}
               value: "19100"
               {{- end }}
-              {{- if .Values.AzureMonitorMetrics }}
-              {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+              {{- if $.Values.AzureMonitorMetrics }}
+              {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+              value: "{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
@@ -155,7 +155,7 @@ spec:
               value: ""
               {{- end }}
             - name: AGENT_VERSION
-              value: {{ .Values.AzureMonitorMetrics.ImageTag }}
+              value: {{ $.Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: WINMODE
@@ -244,7 +244,7 @@ spec:
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
             - --restart-pod-waiting-minutes-on-broken-connection=240
-          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+          image: "{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -287,6 +287,7 @@ spec:
                   {{- if not $arcExtensionSettings.isArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+                  {{- end }}
                   {{- if $useDaemonSetSizing -}}
                   {{- if eq $size.name $singleSize.name -}}
                   {{/* Target non-Karpenter nodes */}}
@@ -610,3 +611,5 @@ spec:
           hostPath:
             path: C:\ca
       {{- end }}
+{{- end }}
+
