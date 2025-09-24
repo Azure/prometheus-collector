@@ -81,7 +81,7 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
  * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
  */
 var _ = DescribeTable("The Prometheus UI API should return a valid config",
-	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, jobList []string) {
 		time.Sleep(120 * time.Second)
 		var apiResponse utils.APIResponse
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
@@ -96,10 +96,14 @@ var _ = DescribeTable("The Prometheus UI API should return a valid config",
 		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(prometheusConfig).NotTo(BeNil())
+
+		for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+			Expect(jobList).To(ContainElement(scrapeJob.JobName))
+		}
 	},
-	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
-	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
-	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.WindowsLabel)),
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, []string{"kubelet", "cadvisor", "node", "networkobservability-retina", "networkobservability-hubble", "networkobservability-cilium"}),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, []string{"kubelet", "kappie-basic", "networkobservability-retina"}, Label(utils.WindowsLabel)),
 )
 
 /*
