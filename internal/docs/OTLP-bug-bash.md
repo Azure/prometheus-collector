@@ -51,9 +51,9 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
             }
         }'
     ```
-2. After the cluster has been created or if using an existing cluster, associate Managed DCR to the AKS cluster
+2. After the cluster has been created or if using an existing cluster, associate Managed DCR to the AKS cluster. This is the DCR in the App Insights Overview in OTLP connection info
     ``` sh
-    az monitor data-collection rule association create --name "otel-test-ai" --rule-id "/subscriptions/<subscriptionId>/resourceGroups/<managedResourceGroup>/providers/microsoft.insights/dataCollectionRules/<dcrName> " --resource "/subscriptions/<subscriptionId>/resourcegroups/<resourceGroup>/providers/Microsoft.ContainerService/managedClusters/<clusterName>"
+    az monitor data-collection rule association create --name "otel-test-ai" --rule-id "<DCR resource ID" --resource "<cluster resource ID"
     ```
 
 ## Greenfield Scenarios
@@ -79,7 +79,7 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 
 ## Cluster Profile
 The output should contain settings for:
-```
+```json
   "azureMonitorProfile": {
     "appMonitoring": {
       "autoInstrumentation": {
@@ -111,8 +111,31 @@ The output should contain settings for:
   },
 ```
 
-## App Instrumentation
-Follow the onboarding for Auto-Instrumentation from the docs [here](https://learn.microsoft.com/en-us/azure/azure-monitor/app/kubernetes-codeless#namespace-wide-onboarding).
+## App Setup
+1. Create CR for App Insights auto-wiring:
+  ```yaml
+    apiVersion: monitor.azure.com/v1
+    kind: Instrumentation
+    metadata:
+      name: cr1
+      namespace: <namespace>
+    spec:
+      settings:
+        autoInstrumentationPlatforms: []
+      destination: # required
+        applicationInsightsConnectionString: "<appInsights connection string from Overview blade of App Insights resource>"
+  ```
+2. Add anotation to deployment to enable auto-wiring:
+  ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    ...
+    spec:
+      template:
+        metadata:
+          annotations:
+            instrumentation.opentelemetry.io/inject-configuration: "cr1"
+  ```
 
 ## Consumption
 1. Go to the managed log analytics workspace and query the tables:
