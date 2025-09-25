@@ -71,7 +71,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		registry)
 	apiServerManager := (*apiserver.Manager)(nil)
 	apiServerCfg := cfg.APIServer.Get()
-	if apiServerCfg {
+	if apiServerCfg != nil {
 		apiServerManager = apiserver.NewManager(set, apiServerCfg, &baseCfg, registry, registerer)
 	}
 	pr := &pReceiver{
@@ -202,7 +202,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	}()
 
 	apiServerCfg := r.cfg.APIServer.Get()
-	if apiServerCfg {
+	if apiServerCfg != nil {
 		err = r.apiServerManager.Start(ctx, host, r.scrapeManager)
 		if err != nil {
 			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
