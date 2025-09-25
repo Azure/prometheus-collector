@@ -10,7 +10,6 @@ import (
 )
 
 type Config struct {
-	Enabled      bool                    `mapstructure:"enabled"`
 	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
 }
 
