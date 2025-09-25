@@ -24,14 +24,14 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 1. Install python version >= 3.7
 2. Create a virtual env: `python3 -m venv azenv`
 3. Activate the virtual environment via `source azenv/bin/activate` (from ubuntu bash) or `.\azenv\Scripts\activate` (from windows cmd).
-4. Download the wheel file from [here](https://github.com/Azure/prometheus-collector/releases/download/v6.22.0-main-09-22-2025-d6dc0fac/aks_preview-18.0.0b39-py2.py3-none-any.whl).
+4. Download the wheel file from [here](https://github.com/Azure/prometheus-collector/releases/download/v6.22.0-main-09-22-2025-d6dc0fac/aks_preview-18.0.0b40-py2.py3-none-any.whl).
 4. Install azure cli and aks-preview extension with pre-release changes.
    ```sh
     pip install --upgrade pip
     pip install azure-cli
     pip install azure_cli_core
     az extension remove -n aks-preview
-    az extension add --source aks_preview-18.0.0b39-py2.py3-none-any.whl -y
+    az extension add --source aks_preview-18.0.0b40-py2.py3-none-any.whl -y
    ```
 5. When done with testing, exit the virtual environment via `deactivate`.
 
