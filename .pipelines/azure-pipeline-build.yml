@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - grace/aks-chart-otlp-match
 pr:
   autoCancel: true
   branches:
@@ -25,7 +24,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'aks-chart-otlp-match')]
-  IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
+  IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.24.6'
