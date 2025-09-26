@@ -251,6 +251,10 @@ spec:
         {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
       volumes:
       - name: settings-vol-config
         configMap:
