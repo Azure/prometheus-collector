@@ -94,7 +94,7 @@ extends:
                 onlyCCPRelease: "${{ lower(parameters.onlyCCPRelease) }}"
     - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
-      dependsOn: Push_Images
+      trigger: none
       pool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
@@ -129,6 +129,8 @@ extends:
               done
               echo "Sleep completed."
         - task: HelmInstaller@1
+          inputs: 
+            helmVersionToInstall: 3.19.0  # Latest installs 4.0.0-alpha which has issues with some commands
           target:
             container: host
           displayName: Install Helm
