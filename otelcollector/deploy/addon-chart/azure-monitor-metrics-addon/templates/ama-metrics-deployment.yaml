@@ -342,10 +342,12 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+          {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
           effect: "NoSchedule"
         - operator: "Exists"
           effect: "NoExecute"
+          {{- end }}
 {{- if $arcExtensionSettings.isArcExtension }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
