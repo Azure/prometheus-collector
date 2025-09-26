@@ -1,7 +1,7 @@
 {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 {{/* Get sizes */}}
 {{- $useDaemonSetSizing := and .Values.global.commonGlobals.isAutomaticSKU .Values.AzureMonitorMetrics.enableDaemonSetSizing -}}
-{{- $singleSize := dict "containers" (dict "addon-token-adapter" (dict "cpuLimit" "500m" "memoryLimit" "500Mi" "cpuRequest" "20m" "memoryRequest" "30Mi") "prometheus-collector" (dict "cpuLimit" .Values.AzureMonitorMetrics.DsCPULimitLinux "memoryLimit" .Values.AzureMonitorMetrics.DsMemoryLimitLinux "cpuRequest" "50m" "memoryRequest" "150Mi")) -}}
+{{- $singleSize := dict "containers" (dict "addon-token-adapter" (dict "cpuLimit" "500m" "memoryLimit" "500Mi" "cpuRequest" "20m" "memoryRequest" "30Mi") "prometheus-collector" (dict "cpuLimit" .Values.AzureMonitorMetrics.DsCPULimitLinux "memoryLimit" .Values.AzureMonitorMetrics.DsMemoryLimitLinux "cpuRequest" .Values.AzureMonitorMetrics.DsCPURequestLinux "memoryRequest" .Values.AzureMonitorMetrics.DsMemoryRequestLinux)) -}}
 {{- $sizes := list ($singleSize) -}}
 {{- if $useDaemonSetSizing -}}
   {{- $singleSize = .Values.AzureMonitorMetrics.daemonSetSizingValues.singleSize -}}
