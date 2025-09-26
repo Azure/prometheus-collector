@@ -563,6 +563,55 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
+	// Add ztunnel support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		ztunnelMetricsKeepListRegex, exists := regexHash["ZTUNNEL_METRICS_KEEP_LIST_REGEX"]
+		ztunnelScrapeInterval, intervalExists := intervalHash["ZTUNNEL_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			fullZtunnelPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, ztunnelDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullZtunnelPath, ztunnelScrapeInterval)
+			}
+			if exists && ztunnelMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullZtunnelPath, ztunnelMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullZtunnelPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullZtunnelPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullZtunnelPath)
+					fmt.Printf("MERGE: Added ztunnel config file: %s\n", fullZtunnelPath)
+				}
+			}
+		}
+	}
+
+	// Add istio-cni support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		istiocniMetricsKeepListRegex, exists := regexHash["ISTIOCNI_METRICS_KEEP_LIST_REGEX"]
+		istiocniScrapeInterval, intervalExists := intervalHash["ISTIOCNI_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			fullIstioCniPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, istioCniDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullIstioCniPath, istiocniScrapeInterval)
+			}
+			if exists && istiocniMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullIstioCniPath, istiocniMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullIstioCniPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullIstioCniPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullIstioCniPath)
+				}
+			}
+		}
+	}
+
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		prometheusCollectorHealthInterval, intervalExists := intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 		if intervalExists {
@@ -712,9 +761,6 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	// if mergedDefaultConfigs != nil {
-	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	// }
 }
 
 func populateDefaultPrometheusConfigWithOperator() {
@@ -1034,6 +1080,54 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
+	// Add ztunnel support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		ztunnelMetricsKeepListRegex, exists := regexHash["ZTUNNEL_METRICS_KEEP_LIST_REGEX"]
+		ztunnelScrapeInterval, intervalExists := intervalHash["ZTUNNEL_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || (currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+			fullZtunnelPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, ztunnelDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullZtunnelPath, ztunnelScrapeInterval)
+			}
+			if exists && ztunnelMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullZtunnelPath, ztunnelMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullZtunnelPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullZtunnelPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullZtunnelPath)
+				}
+			}
+		}
+	}
+
+	// Add istio-cni support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		istiocniMetricsKeepListRegex, exists := regexHash["ISTIOCNI_METRICS_KEEP_LIST_REGEX"]
+		istiocniScrapeInterval, intervalExists := intervalHash["ISTIOCNI_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || (currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+			fullIstioCniPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, istioCniDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullIstioCniPath, istiocniScrapeInterval)
+			}
+			if exists && istiocniMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullIstioCniPath, istiocniMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullIstioCniPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullIstioCniPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullIstioCniPath)
+				}
+			}
+		}
+	}
+
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		prometheusCollectorHealthInterval, intervalExists := intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 		if intervalExists {
@@ -1188,9 +1282,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	// if mergedDefaultConfigs != nil {
-	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	// }
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
@@ -1209,8 +1300,6 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 			mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, defaultConfigYaml)
 		}
 	}
-
-	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
 
 	return mergedDefaultConfigs
 }
@@ -1264,7 +1353,9 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
-	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
+	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "true" {
+		mergedDefaultConfigs = nil
+	} else {
 		loadRegexHash()
 		loadIntervalHash()
 		if operatorEnabled {
@@ -1288,8 +1379,6 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 
 			return mergedDefaultConfigs
 		}
-	} else {
-		mergedDefaultConfigs = nil
 	}
 	fmt.Printf("Done creating default targets file\n")
 	return nil
@@ -1454,5 +1543,4 @@ func prometheusConfigMerger(operatorEnabled bool) {
 		writeDefaultScrapeTargetsFile(operatorEnabled)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}
-
 }
