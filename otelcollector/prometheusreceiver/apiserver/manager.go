@@ -73,7 +73,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
 	var corsOriginRegexp *grafanaRegexp.Regexp
 	corsConfig := m.cfg.ServerConfig.CORS.Get()
-	if len(corsConfig.AllowedOrigins) > 0 {
+	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
 		var combinedOriginsBuilder strings.Builder
 		combinedOriginsBuilder.WriteString(corsConfig.AllowedOrigins[0])
 		for _, origin := range corsConfig.AllowedOrigins[1:] {
