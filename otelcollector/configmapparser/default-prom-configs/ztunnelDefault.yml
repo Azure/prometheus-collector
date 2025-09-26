@@ -1,0 +1,27 @@
+scrape_configs:
+  - job_name: ztunnel
+    honor_labels: true
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    scheme: http
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - applink-system
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: applink-system
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: ztunnel
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: ztunnel-stats
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: instance
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node

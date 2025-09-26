@@ -20,6 +20,7 @@ var (
 	networkobservabilityCiliumRegex, podAnnotationsRegex                string
 	acstorCapacityProvisionerRegex, acstorMetricsExporterRegex          string
 	localCSIDriverRegex                                                 string
+	ztunnelRegex, istioCniRegex                                         string
 	kubeletRegex_minimal_mac                                            = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase"
 	coreDNSRegex_minimal_mac                                            = "coredns_build_info|coredns_panics_total|coredns_dns_responses_total|coredns_forward_responses_total|coredns_dns_request_duration_seconds|coredns_dns_request_duration_seconds_bucket|coredns_dns_request_duration_seconds_sum|coredns_dns_request_duration_seconds_count|coredns_forward_request_duration_seconds|coredns_forward_request_duration_seconds_bucket|coredns_forward_request_duration_seconds_sum|coredns_forward_request_duration_seconds_count|coredns_dns_requests_total|coredns_forward_requests_total|coredns_cache_hits_total|coredns_cache_misses_total|coredns_cache_entries|coredns_plugin_enabled|coredns_dns_request_size_bytes|coredns_dns_request_size_bytes_bucket|coredns_dns_request_size_bytes_sum|coredns_dns_request_size_bytes_count|coredns_dns_response_size_bytes|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
 	cadvisorRegex_minimal_mac                                           = "container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds"
@@ -38,6 +39,8 @@ var (
 	//These metrics are somewhere getting transformed from rpc_server.duration_milliseconds_bucket to rpc.server.duration_milliseconds_bucket.
 	// It's not clear where this is happening, so we are keeping both regexes for now. Once we find the root cause, we can remove one of them.
 	localCsiDriver_minimal_mac = "rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count"
+	ztunnel_minimal_mac        = "istio_build|istio_xds_.*|istio_tcp_.*|istio_on_demand_dns|istio_dns_.*|workload_manager_.*"
+	istioCni_minimal_mac       = "istio_cni_install_ready|istio_cni_installs_total|nodeagent_reconcile_events_total|ztunnel_connected"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -120,6 +123,8 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		acstorcapacityprovisioner:  getStringValue(keeplist["acstor-capacity-provisioner"]),
 		acstormetricsexporter:      getStringValue(keeplist["acstor-metrics-exporter"]),
 		localcsidriver:             getStringValue(keeplist["local-csi-driver"]),
+		ztunnel:                    getStringValue(keeplist["ztunnel"]),
+		istiocni:                   getStringValue(keeplist["istio-cni"]),
 		minimalingestionprofile:    minimalingestionprofile_value,
 	}
 
@@ -152,6 +157,8 @@ func validateRegexValues(regexValues RegexValues) error {
 		"acstor-capacity-provisioner": regexValues.acstorcapacityprovisioner,
 		"acstor-metrics-exporter":     regexValues.acstormetricsexporter,
 		"local-csi-driver":            regexValues.localcsidriver,
+		"ztunnel":                     regexValues.ztunnel,
+		"istio-cni":                   regexValues.istiocni,
 	}
 
 	// Iterate over the fields and validate each regex
@@ -183,6 +190,8 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		acstorCapacityProvisionerRegex = fmt.Sprintf("%s|%s", regexValues.acstorcapacityprovisioner, acstorCapacityProvisionerRegex_minimal_mac)
 		acstorMetricsExporterRegex = fmt.Sprintf("%s|%s", regexValues.acstormetricsexporter, acstorMetricsExporter_minimal_mac)
 		localCSIDriverRegex = fmt.Sprintf("%s|%s", regexValues.localcsidriver, localCsiDriver_minimal_mac)
+		ztunnelRegex = fmt.Sprintf("%s|%s", regexValues.ztunnel, ztunnel_minimal_mac)
+		istioCniRegex = fmt.Sprintf("%s|%s", regexValues.istiocni, istioCni_minimal_mac)
 
 	} else {
 		log.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
@@ -204,6 +213,8 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		acstorCapacityProvisionerRegex = regexValues.acstorcapacityprovisioner
 		acstorMetricsExporterRegex = regexValues.acstormetricsexporter
 		localCSIDriverRegex = regexValues.localcsidriver
+		ztunnelRegex = regexValues.ztunnel
+		istioCniRegex = regexValues.istiocni
 	}
 }
 
@@ -239,6 +250,8 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 		"ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX":           acstorCapacityProvisionerRegex,
 		"ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX":              acstorMetricsExporterRegex,
 		"LOCALCSIDRIVER_KEEP_LIST_REGEX":                     localCSIDriverRegex,
+		"ZTUNNEL_METRICS_KEEP_LIST_REGEX":                    ztunnelRegex,
+		"ISTIOCNI_METRICS_KEEP_LIST_REGEX":                   istioCniRegex,
 	}
 
 	out, err := yaml.Marshal(data)

@@ -32,6 +32,8 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+    ztunnel = true
+    istio-cni = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -52,6 +54,8 @@ data:
     networkobservabilityRetina = ""
     networkobservabilityHubble = ""
     networkobservabilityCilium = ""
+    ztunnel = ""
+    istio-cni = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -75,6 +79,8 @@ data:
     networkobservabilityRetina = "30s"
     networkobservabilityHubble = "30s"
     networkobservabilityCilium = "30s"
+    ztunnel = "30s"
+    istio-cni = "30s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
