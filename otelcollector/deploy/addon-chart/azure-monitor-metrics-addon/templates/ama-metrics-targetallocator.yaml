@@ -243,6 +243,12 @@ spec:
                     operator: Exists
                   {{- end }}
       tolerations:
+        {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
       volumes:
