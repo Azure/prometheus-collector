@@ -2388,6 +2388,7 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
         templateContext:
             type: releaseJob
@@ -2801,7 +2802,7 @@ extends:
         condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
         variables:
           skipComponentGovernanceDetection: true
-          TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
+          TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
         templateContext:
           type: releaseJob
           isProduction: false

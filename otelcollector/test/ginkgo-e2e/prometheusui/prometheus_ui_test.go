@@ -97,8 +97,15 @@ var _ = DescribeTable("The Prometheus UI API should return a valid config",
 		Expect(err).NotTo(HaveOccurred())
 		Expect(prometheusConfig).NotTo(BeNil())
 
-		for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
-			Expect(jobList).To(ContainElement(scrapeJob.JobName))
+		for _, expectedJob := range jobList {
+			found := false
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				if scrapeJob.JobName == expectedJob {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeTrue(), fmt.Sprintf("Expected job '%s' was not found in scrape configs", expectedJob))
 		}
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}),
