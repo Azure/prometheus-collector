@@ -10,7 +10,7 @@ metadata:
 spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-  {{- if $arcExtensionSettings.hpaEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
+  {{- if or .Values.AzureMonitorMetrics.CollectorHPAEnabled $arcExtensionSettings.hpaEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
   {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
     {{- if $currentSpec }}
     # in if check
@@ -78,17 +78,17 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
-            {{- if $arcExtensionSettings.operatorEnabled }}
+              {{- if or .Values.AzureMonitorMetrics.TargetAllocatorEnabled $arcExtensionSettings.operatorEnabled }}
               value: "true"
-            {{- else }}
+              {{- else }}
               value: "false"
-            {{- end }}
+              {{- end }}
             - name: AZMON_COLLECTOR_HPA_ENABLED
-            {{- if $arcExtensionSettings.hpaEnabled }}
+              {{- if or .Values.AzureMonitorMetrics.CollectorHPAEnabled $arcExtensionSettings.hpaEnabled }}
               value: "true"
-            {{- else }}
+              {{- else }}
               value: "false"
-            {{- end }}
+              {{- end }}
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
@@ -99,14 +99,14 @@ spec:
               {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
-            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
             - name: customRegionalEndpoint
               value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
             - name: customGlobalEndpoint
               value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
             - name: customResourceEndpoint
               value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
-            {{- end }}
+              {{- end }}
             - name: CONTROLLER_TYPE
               value: "ReplicaSet"
             - name: NODE_IP
@@ -161,7 +161,7 @@ spec:
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
-            {{- if .Values.AzureMonitorMetrics }}
+              {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
             - name: OPERATOR_TARGETS_TA_IMG_VERSION
               value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
@@ -170,9 +170,13 @@ spec:
               {{-  end  }}
             - name: OPERATOR_TARGETS_HTTPS_ENABLED
               value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
-            {{-  end  }}
+              {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "{{ $arcExtensionSettings.nodeExporterVersion }}"
+              {{- if $arcExtensionSettings.isArcExtension }}
+              value: {{ $arcExtensionSettings.nodeExporterVersion }}
+              {{- else }}
+              value: ""
+              {{- end }}
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -205,10 +209,12 @@ spec:
             - mountPath: /etc/prometheus/certs
               name: ama-metrics-tls-secret-volume
               readOnly: true
+{{- if .Values.AzureMonitorMetrics }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
             - mountPath: /etc/operator-targets/client/certs
               name: ama-metrics-operator-targets-client-tls-secret-volume
               readOnly: true
+{{- end }}
 {{- end }}
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
@@ -219,12 +225,12 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-            {{- if $arcExtensionSettings.mountMarinerCerts }}
+            {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountMarinerCerts }}
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
             {{- end }}
-            {{- if $arcExtensionSettings.mountUbuntuCerts }}
+            {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountUbuntuCerts }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
@@ -260,6 +266,7 @@ spec:
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
+            - --restart-pod-waiting-minutes-on-broken-connection=240
           image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
           imagePullPolicy: IfNotPresent
           env:
@@ -335,14 +342,13 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+          {{- if or (not $arcExtensionSettings.isArcExtension) (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
         - operator: "Exists"
           effect: "NoSchedule"
         - operator: "Exists"
           effect: "NoExecute"
-        - operator: "Exists"
-          effect: "PreferNoSchedule" 
-        {{- end }}
+          {{- end }}
+{{- if $arcExtensionSettings.isArcExtension }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
@@ -361,6 +367,7 @@ spec:
         - key: "node-role.kubernetes.io/master"
           operator: "Exists"
           effect: "PreferNoSchedule"
+{{- end }}
       volumes:
         - name: settings-vol-config
           configMap:
@@ -376,7 +383,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
-        {{- if $arcExtensionSettings.mountMarinerCerts }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountMarinerCerts }}
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/source/anchors/
@@ -386,13 +393,15 @@ spec:
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
+{{- if .Values.AzureMonitorMetrics }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
         - name: ama-metrics-operator-targets-client-tls-secret-volume
           secret:
             secretName: ama-metrics-operator-targets-client-tls-secret
             optional: true
 {{- end }}
-        {{- if $arcExtensionSettings.mountUbuntuCerts }}
+{{- end }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/

@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/component: ama-metrics
     app.kubernetes.io/name: ama-metrics-ksm
     app.kubernetes.io/part-of: ama-metrics-ksm
-    app.kubernetes.io/version: 2.12.0
+    app.kubernetes.io/version: 2.17.0
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
   annotations:
     prometheus.io/scrape: 'true'

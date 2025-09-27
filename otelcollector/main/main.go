@@ -93,6 +93,13 @@ func main() {
 	var fluentBitConfigFile string
 	var meDCRConfigDirectory string
 	var meLocalControl bool
+
+	// AZMON_FULL_OTLP_ENABLED is set from configmap.
+	// Also set to true if APPMONITORING_OPENTELEMETRYMETRICS_ENABLED is true for backward compatibility with configmap
+	// APPMONITORING_OPENTELEMETRYMETRICS_ENABLED is set in AKS RP when opentelemetry-metrics is enabled for a cluster
+	if strings.ToLower(shared.GetEnv("APPMONITORING_OPENTELEMETRYMETRICS_ENABLED", "false")) == "true" {
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_FULL_OTLP_ENABLED", "true", true)
+	}
 	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 
 	meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl = shared.DetermineConfigFiles(controllerType, clusterOverride, otlpEnabled)

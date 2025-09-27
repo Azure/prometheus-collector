@@ -116,9 +116,9 @@ spec:
           {{- end }}
         - name: AKSREGION
           {{- if $arcExtensionSettings.isArcExtension }}
-          value: "{{ .Values.Azure.Cluster.Region }}"
-          {{- else }}
           value: "{{ $arcExtensionSettings.region}}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Region }}"
           {{- end }}
         - name: NODE_IP
           valueFrom:
@@ -168,6 +168,9 @@ spec:
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
         - name: OPERATOR_TARGETS_HTTPS_ENABLED
           value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
+        ports:
+        - containerPort: 8081
+          name: health
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config
@@ -196,7 +199,7 @@ spec:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 100
+          initialDelaySeconds: 120
           periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
@@ -240,6 +243,12 @@ spec:
                     operator: Exists
                   {{- end }}
       tolerations:
+        {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
         {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
