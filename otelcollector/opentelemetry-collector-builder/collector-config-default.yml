@@ -36,7 +36,6 @@ processors:
 receivers:
     prometheus:
       api_server:
-        enabled: true
         server_config:
           endpoint: "localhost:9092"
       config:
