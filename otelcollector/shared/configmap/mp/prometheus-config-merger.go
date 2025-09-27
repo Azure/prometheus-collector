@@ -761,6 +761,9 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
+	// if mergedDefaultConfigs != nil {
+	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
+	// }
 }
 
 func populateDefaultPrometheusConfigWithOperator() {
@@ -1282,6 +1285,9 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
+	// if mergedDefaultConfigs != nil {
+	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
+	// }
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
@@ -1300,6 +1306,8 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 			mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, defaultConfigYaml)
 		}
 	}
+
+	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
 
 	return mergedDefaultConfigs
 }
@@ -1353,9 +1361,7 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
-	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "true" {
-		mergedDefaultConfigs = nil
-	} else {
+	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
 		loadRegexHash()
 		loadIntervalHash()
 		if operatorEnabled {
@@ -1379,6 +1385,8 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 
 			return mergedDefaultConfigs
 		}
+	} else {
+		mergedDefaultConfigs = nil
 	}
 	fmt.Printf("Done creating default targets file\n")
 	return nil
