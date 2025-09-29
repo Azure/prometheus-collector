@@ -24,14 +24,14 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 1. Install python version >= 3.7
 2. Create a virtual env: `python3 -m venv azenv`
 3. Activate the virtual environment via `source azenv/bin/activate` (from ubuntu bash) or `.\azenv\Scripts\activate` (from windows cmd).
-4. Download the wheel file from [here](https://github.com/Azure/prometheus-collector/releases/download/v6.22.0-main-09-22-2025-d6dc0fac/aks_preview-18.0.0b40-py2.py3-none-any.whl).
+4. Download the wheel file from [here](https://github.com/Azure/prometheus-collector/releases/download/v6.22.0-main-09-22-2025-d6dc0fac/aks_preview-18.0.0b41-py2.py3-none-any.whl).
 4. Install azure cli and aks-preview extension with pre-release changes.
    ```sh
     pip install --upgrade pip
     pip install azure-cli
     pip install azure_cli_core
     az extension remove -n aks-preview
-    az extension add --source aks_preview-18.0.0b40-py2.py3-none-any.whl -y
+    az extension add --source aks_preview-18.0.0b41-py2.py3-none-any.whl -y
    ```
 5. When done with testing, exit the virtual environment via `deactivate`.
 
@@ -84,8 +84,7 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
 ## Brownfield Scenarios
 - Necessary for e2e without addons enabled:
     ```sh
-    az aks addon enable -a monitoring
-    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-opentelemetry-logs
+    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-azure-monitor-logs --enable-opentelemetry-metrics --enable-opentelemetry-logs
     ```
 - Just metrics:
   ```sh
@@ -93,20 +92,18 @@ These instructions are taken from the AKS guide [here](https://dev.azure.com/msa
     ```
 - Just logs:
     ```sh
-    az aks addon enable -a monitoring
-    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-opentelemetry-logs
+    az aks update -g <resource-group> -n <cluster-name> --enable-opentelemetry-logs --enable-azure-monitor-logs
     ```
 - All settings:
     ```sh
-    az aks addon enable -a monitoring
-    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-opentelemetry-metrics --enable-opentelemetry-logs --opentelemetry-metrics-port 23450 --opentelemetry-logs-port 23451
+    az aks update -g <resource-group> -n <cluster-name> --enable-azure-monitor-app-monitoring --enable-azure-monitor-metrics --enable-azure-monitor-logs --enable-opentelemetry-metrics --enable-opentelemetry-logs --opentelemetry-metrics-port 23450 --opentelemetry-logs-port 23451
     ```
 - With addons already enabled:
     ```sh
     az aks update -g <resource-group> -n <cluster-name> --enable-opentelemetry-metrics --enable-opentelemetry-logs
     ```
 - Extra settings for `enable-azure-monitor-metrics` like `--azure-monitor-workspace` work.
-- Extra settings for `enable monitoring` like `--workspace-resource-id` work.
+- Extra settings for `--enable-azure-monitor-logs` like `--workspace-resource-id` work.
 
 ## Cluster Profile
 The output should contain settings for:
