@@ -243,31 +243,33 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
         {{- if $arcExtensionSettings.isArcExtension }}
-          {{- if (eq .Values.Azure.Cluster.Distribution "openshift") }}
-        - name: msi-adapter
+          {{- if (eq $arcExtensionSettings.distribution "openshift") }}
+        - name: arc-msi-adapter
           env:
-          - name: AZMON_COLLECT_ENV
-            value: "false"
           - name: TOKEN_NAMESPACE
-            value: azure-arc
+            value: "azure-arc"
+          - name: LIVENESS_PROBE_PORT
+            value: "9999"
+          - name: EXTENSION_ARMID
+            value: {{ $arcExtensionSettings.resourceId }}
+          - name: EXTENSION_NAME
+            value: {{ $.Values.Azure.Extension.Name }}
           - name: CLUSTER_IDENTITY
             value: "false"
           - name: CLUSTER_TYPE
-            value: {{ (split "/" .Values.Azure.Cluster.ResourceId)._7 }}
-          - name: EXTENSION_ARMID
-            value: {{ .Values.Azure.Extension.ResourceId }}
-          - name: EXTENSION_NAME
-            value: {{ .Values.Azure.Extension.Name }}
-          - name: MSI_ADAPTER_LISTENING_PORT
-            value: "8421"
+            value: {{ (split "/" $arcExtensionSettings.resourceId)._7 }}
           - name: MANAGED_IDENTITY_AUTH
             value: "true"
+          - name: MSI_ADAPTER_LISTENING_PORT
+            value: "8421"
           - name: MSI_ADAPTER_LIVENESS_PORT
-            value: "9090"
+            value: "9999"
           - name: TEST_MODE
             value: "false"
           - name: TEST_FILE
             value: /data/token
+          - name: LIVENESS_PROBE_ENABLED
+            value: "true"
           image: mcr.microsoft.com/azurearck8s/msi-adapter:1.29.3
           securityContext:
             privileged: true
@@ -279,7 +281,7 @@ spec:
             failureThreshold: 3
             httpGet:
               path: /healthz
-              port: 9090
+              port: 9999
               scheme: "HTTP"
             initialDelaySeconds: 10
             periodSeconds: 15
