@@ -20,7 +20,7 @@ var (
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet
-		"Failed to reach Target Allocator endpoint with HTTPS, retrying in 30s (1/2)",
+		"Failed to reach Target Allocator endpoint with HTTPS",
 	}
 )
 
