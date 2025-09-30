@@ -1,11 +1,32 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 09-04-2025
+## Release 09-29-2025
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images :
+  + fix: increase tokenconfig download wait time to 45 sec for windows (<https://github.com/Azure/prometheus-collector/pull/1301>)
+  + feat: Ability to update kube-state-metrics startup parameters using configmap (<https://github.com/Azure/prometheus-collector/pull/1292>)
+  + fix: add missing data plane metrics(<https://github.com/Azure/prometheus-collector/pull/1293>)
+  + chart: Match AKS RP chart for values and daemonset yaml (<https://github.com/Azure/prometheus-collector/pull/1298>)
+  + build(deps): Upgrade otelcollector to v0.135.0 (<https://github.com/Azure/prometheus-collector/pull/1303>)
+* Pipeline/Docs/Templates Updates:
+  + fix: KSM on Arc, CI/CD retina version, release prod cluster deployment(<https://github.com/Azure/prometheus-collector/pull/1306>)
+  + test: add two new error exclusions (<https://github.com/Azure/prometheus-collector/pull/1309>)
+  + fix: Values context for Arc chart (<https://github.com/Azure/prometheus-collector/pull/1312>)
+
+## Release 09-04-2025
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3`
+
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-win`
+
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-targetallocator`
+
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-cfg`
+
 * AKS and Arc Container Images :
   + fix: bleu cloud for linux and windows (<https://github.com/Azure/prometheus-collector/pull/1280>)
   + build(deps): Upgrade otelcollector to v0.132.0(<https://github.com/Azure/prometheus-collector/pull/1283>)
