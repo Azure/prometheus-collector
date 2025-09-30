@@ -2059,17 +2059,17 @@ extends:
                         "artifactEndpoints": [
                             {
                                 "Regions": [
-                                    "westcentralus"
+                                    "uksouth"
                                 ],
                                 "Releasetrains": [
-                                    "pipeline"
+                                    "test"
                                 ],
                                 "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
                                 "ExtensionUpdateFrequencyInMinutes": 5,
-                                "IsCustomerHidden": true,
+                                "IsCustomerHidden": false,
                                 "ReadyforRollout": true,
                                 "RollbackVersion": null,
-                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625"
                             }
                         ]
                       }
