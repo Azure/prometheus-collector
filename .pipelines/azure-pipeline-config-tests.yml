@@ -55,6 +55,8 @@ stages:
     timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
     condition: succeeded()
     variables:
       skipComponentGovernanceDetection: true
