@@ -83,6 +83,7 @@ stages:
           - task: AzureCLI@2
             displayName: Get kubeconfig
             inputs:
+                scriptType: 'bash'
                 azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
                 scriptLocation: 'inlineScript'
                 inlineScript: 'az aks get-credentials -g ${{ parameters.clusterResourceGroup }} -n ${{ parameters.clusterName }}'
