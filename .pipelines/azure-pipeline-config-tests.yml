@@ -80,7 +80,7 @@ stages:
             inputs:
               version: '1.22.7'
 
-          - task: AzureCLI@1
+          - task: AzureCLI@2
             displayName: Get kubeconfig
             inputs:
                 azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
