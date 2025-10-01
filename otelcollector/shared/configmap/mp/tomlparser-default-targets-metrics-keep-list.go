@@ -123,7 +123,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		acstormetricsexporter:      getStringValue(keeplist["acstor-metrics-exporter"]),
 		localcsidriver:             getStringValue(keeplist["local-csi-driver"]),
 		ztunnel:                    getStringValue(keeplist["ztunnel"]),
-		istiocni:                   getStringValue(keeplist["istiocni"]),
+		istiocni:                   getStringValue(keeplist["istio-cni"]),
 		minimalingestionprofile:    minimalingestionprofile_value,
 	}
 
@@ -157,7 +157,7 @@ func validateRegexValues(regexValues RegexValues) error {
 		"acstor-metrics-exporter":     regexValues.acstormetricsexporter,
 		"local-csi-driver":            regexValues.localcsidriver,
 		"ztunnel":                     regexValues.ztunnel,
-		"istiocni":                    regexValues.istiocni,
+		"istio-cni":                   regexValues.istiocni,
 	}
 
 	// Iterate over the fields and validate each regex

@@ -28,8 +28,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
 	config["local-csi-driver"] = "true"
-	config["ztunnel"] = "true"
-	config["istiocni"] = "true"
+	config["ztunnel"] = "false"
+	config["istio-cni"] = "false"
 
 	return config, nil
 }
@@ -55,8 +55,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
 	config["local-csi-driver"] = "true"
-	config["ztunnel"] = "true"
-	config["istiocni"] = "true"
+	config["ztunnel"] = "false"
+	config["istio-cni"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -166,9 +166,9 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for ztunnel: %v\n", cp.Ztunnel)
 	}
 
-	if val, ok := parsedConfig["istiocni"]; ok && val != "" {
+	if val, ok := parsedConfig["istio-cni"]; ok && val != "" {
 		cp.IstioCni = val
-		fmt.Printf("config:: Using scrape settings for istiocni: %v\n", cp.IstioCni)
+		fmt.Printf("config:: Using scrape settings for istio-cni: %v\n", cp.IstioCni)
 	}
 
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
