@@ -192,6 +192,8 @@ spec:
           capabilities:
             drop:
               - ALL
+            add:
+              - DAC_OVERRIDE
         livenessProbe:
           httpGet:
             path: /health
