@@ -28,6 +28,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
 	config["local-csi-driver"] = "true"
+	config["ztunnel"] = "false"
+	config["istio-cni"] = "false"
 
 	return config, nil
 }
@@ -53,6 +55,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
 	config["local-csi-driver"] = "true"
+	config["ztunnel"] = "false"
+	config["istio-cni"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -157,6 +161,16 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for local-csi-driver: %v\n", cp.LocalCSIDriver)
 	}
 
+	if val, ok := parsedConfig["ztunnel"]; ok && val != "" {
+		cp.Ztunnel = val
+		fmt.Printf("config:: Using scrape settings for ztunnel: %v\n", cp.Ztunnel)
+	}
+
+	if val, ok := parsedConfig["istio-cni"]; ok && val != "" {
+		cp.IstioCni = val
+		fmt.Printf("config:: Using scrape settings for istio-cni: %v\n", cp.IstioCni)
+	}
+
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
@@ -199,6 +213,8 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED=%v\n", cp.AcstorCapacityProvisioner))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED=%v\n", cp.AcstorMetricsExporter))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_LOCALCSIDRIVER_SCRAPING_ENABLED=%v\n", cp.LocalCSIDriver))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED=%v\n", cp.Ztunnel))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED=%v\n", cp.IstioCni))
 
 	return nil
 }
