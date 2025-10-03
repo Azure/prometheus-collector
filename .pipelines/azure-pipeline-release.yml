@@ -94,7 +94,6 @@ extends:
                 onlyCCPRelease: "${{ lower(parameters.onlyCCPRelease) }}"
     - stage: Deploy_to_Prod_Clusters
       displayName: Deploy to Prod Clusters
-      trigger: none
       pool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022

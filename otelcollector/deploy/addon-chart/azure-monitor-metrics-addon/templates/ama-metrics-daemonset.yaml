@@ -1,15 +1,37 @@
 {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+{{/* Get sizes */}}
+{{- $useDaemonSetSizing := and .Values.global.commonGlobals.isAutomaticSKU .Values.AzureMonitorMetrics.enableDaemonSetSizing -}}
+{{- $singleSize := dict "containers" (dict "addon-token-adapter" (dict "cpuLimit" "500m" "memoryLimit" "500Mi" "cpuRequest" "20m" "memoryRequest" "30Mi") "prometheus-collector" (dict "cpuLimit" .Values.AzureMonitorMetrics.DsCPULimitLinux "memoryLimit" .Values.AzureMonitorMetrics.DsMemoryLimitLinux "cpuRequest" .Values.AzureMonitorMetrics.DsCPURequestLinux "memoryRequest" .Values.AzureMonitorMetrics.DsMemoryRequestLinux)) -}}
+{{- $sizes := list ($singleSize) -}}
+{{- if $useDaemonSetSizing -}}
+  {{- $singleSize = .Values.AzureMonitorMetrics.daemonSetSizingValues.singleSize -}}
+  {{- $sizes = list ($singleSize) -}}
+  {{- $sizes = prepend .Values.AzureMonitorMetrics.daemonSetSizingValues.tShirtSizes $singleSize -}}
+{{- end -}}
+{{/* Generate DaemonSets */}}
+{{- $prevMaxCPU := 0 -}}
+{{- range $index, $size := $sizes -}}
+{{- if gt $index 0 }}
+---
+{{ end -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ama-metrics-node
+  name: ama-metrics-node{{- if and $useDaemonSetSizing $size.name }}-{{ $size.name }}{{- end }}
   namespace: kube-system
   labels:
     component: ama-metrics
+    kubernetes.azure.com/managedby: aks
+    {{- if and $useDaemonSetSizing $size.name }}
+    kubernetes.azure.com/ds-tshirt-size: {{ $size.name }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
       dsName: ama-metrics-node
+      {{- if and $useDaemonSetSizing $size.name }}
+      kubernetes.azure.com/ds-tshirt-size: {{ $size.name }}
+      {{- end }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -19,6 +41,9 @@ spec:
       labels:
         dsName: ama-metrics-node
         kubernetes.azure.com/managedby: aks
+        {{- if and $useDaemonSetSizing $size.name }}
+        kubernetes.azure.com/ds-tshirt-size: {{ $size.name }}
+        {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
@@ -27,16 +52,16 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          # image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.11-rashmi-upgrades-04-24-05-13-2024-9cabda9d"
+          image: "{{ $.Values.AzureMonitorMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTag }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: {{ .Values.AzureMonitorMetrics.DsCPULimitLinux }}
-              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
+              {{- $containerResources := index $size.containers "prometheus-collector" }}
+              cpu: {{ $containerResources.cpuLimit }}
+              memory: {{ $containerResources.memoryLimit }}
             requests:
-              cpu: {{ .Values.AzureMonitorMetrics.DsCPURequestLinux }}
-              memory: {{ .Values.AzureMonitorMetrics.DsMemoryRequestLinux }}
+              cpu: {{ $containerResources.cpuRequest }}
+              memory: {{ $containerResources.memoryRequest }}
           {{- if $arcExtensionSettings.isProxyEnabled }}
           envFrom:
             - secretRef:
@@ -47,36 +72,36 @@ spec:
               {{- if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.resourceId }}"
               {{- else }}
-              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              value: "{{ $.Values.global.commonGlobals.Customer.AzureResourceID }}"
               {{- end }}
             - name: AKSREGION
               {{- if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.region }}"
               {{- else }}
-              value: "{{ .Values.global.commonGlobals.Region }}"
+              value: "{{ $.Values.global.commonGlobals.Region }}"
               {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if $.Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
               {{- else if $arcExtensionSettings.isArcExtension }}
               value: "{{ $arcExtensionSettings.cloudEnvironment }}"
               {{- else }}
-              value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
+              value: "{{ lower $.Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
-            {{- if eq .Values.AzureMonitorMetrics.isArcACluster true }}
+              {{- if eq $.Values.AzureMonitorMetrics.isArcACluster true }}
             - name: customRegionalEndpoint
-              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" $.Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
             - name: customGlobalEndpoint
-              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" $.Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
             - name: customResourceEndpoint
-              value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
-            {{- end }}
+              value: {{ required "customResourceEndpoint is required in Arc Autonomous" $.Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+              {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -117,16 +142,20 @@ spec:
               {{- else }}
               value: "19100"
               {{- end }}
-            {{- if .Values.AzureMonitorMetrics }}
-              {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+              {{- if $.Values.AzureMonitorMetrics }}
+              {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+              value: "{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
+              {{- if $arcExtensionSettings.isArcExtension }}
               value: {{ $arcExtensionSettings.nodeExporterVersion }}
+              {{- else }}
+              value: ""
+              {{- end }}
             - name: AGENT_VERSION
-              value: {{ .Values.AzureMonitorMetrics.ImageTag }}
+              value: {{ $.Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: WINMODE
@@ -134,11 +163,22 @@ spec:
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
             - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
-              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+              value: "{{ $.Values.AppmonitoringAgent.enabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
-              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+              value: "{{ $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
-              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
+              value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
+          {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
+          ports:
+            - name: otlp-http-port
+              containerPort: 56681
+              hostPort: {{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}
+              protocol: TCP
+            - name: otlp-grpc-port
+              containerPort: 56680
+              hostPort: 28334
+              protocol: TCP
+          {{- end }}
           securityContext:
             privileged: false
             capabilities:
@@ -162,12 +202,12 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-            {{- if $arcExtensionSettings.mountMarinerCerts }}
+            {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountMarinerCerts }}
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
             {{- end }}
-            {{- if $arcExtensionSettings.mountUbuntuCerts }}
+            {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountUbuntuCerts }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
@@ -258,7 +298,8 @@ spec:
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+            - --restart-pod-waiting-minutes-on-broken-connection=240
+          image: "{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -271,11 +312,12 @@ spec:
             periodSeconds: 60
           resources:
             limits:
-              cpu: 500m
-              memory: 500Mi
+              {{- $containerResources := index $size.containers "addon-token-adapter" }}
+              cpu: {{ $containerResources.cpuLimit }}
+              memory: {{ $containerResources.memoryLimit }}
             requests:
-              cpu: 20m
-              memory: 30Mi
+              cpu: {{ $containerResources.cpuRequest }}
+              memory: {{ $containerResources.memoryRequest }}
           securityContext:
             capabilities:
               drop:
@@ -301,17 +343,40 @@ spec:
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
+                  {{- if $useDaemonSetSizing -}}
+                  {{- if eq $size.name $singleSize.name -}}
+                  {{/* Target non-Karpenter nodes */}}
+                  - key: karpenter.azure.com/aksnodeclass
+                    operator: DoesNotExist
+                  {{- else }}
+                  {{/* Target Karpenter nodes with CPU range */}}
+                  {{- if gt $prevMaxCPU 0 -}}
+                  - key: karpenter.azure.com/sku-cpu
+                    operator: Gt
+                    values:
+                    - "{{ $prevMaxCPU }}"
+                  {{- end -}}
+                  {{/* Add new line. */}}
+                  {{- if and $prevMaxCPU $size.maxCPU }}
+                  {{ end -}}
+                  {{- if $size.maxCPU -}}
+                  - key: karpenter.azure.com/sku-cpu
+                    operator: Lt
+                    values:
+                    - "{{ add ($size.maxCPU | int) 1 }}"
+                  {{- end -}}
+                  {{- end -}}
+                  {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) (eq (default $.Values.tolerationsOnlyForControlPlane false) false) }}
         - operator: "Exists"
           effect: "NoSchedule"
         - operator: "Exists"
           effect: "NoExecute"
-        - operator: "Exists"
-          effect: "PreferNoSchedule"
         {{- end }}
+          {{- if $arcExtensionSettings.isArcExtension }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
@@ -330,6 +395,7 @@ spec:
         - key: "node-role.kubernetes.io/master"
           operator: "Exists"
           effect: "PreferNoSchedule"
+          {{- end }}
       volumes:
         - name: settings-vol-config
           configMap:
@@ -349,13 +415,13 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
-        {{- if $arcExtensionSettings.mountMarinerCerts }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountMarinerCerts }}
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/source/anchors/
             type: DirectoryOrCreate
         {{- end }}
-        {{- if $arcExtensionSettings.mountUbuntuCerts }}
+        {{- if or (not $arcExtensionSettings.isArcExtension) $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
@@ -367,6 +433,10 @@ spec:
             secretName: ama-metrics-proxy-cert
             optional: true
         {{- end }}
+{{- if and (ne (default "" $size.name) (default "" $singleSize.name)) $size.maxCPU }}
+{{- $prevMaxCPU = $size.maxCPU | int }}
+{{- end }}
+{{- end }}
 {{- if not $arcExtensionSettings.isArcExtension }}
 ---
 apiVersion: apps/v1
@@ -376,6 +446,7 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
+    kubernetes.azure.com/managedby: aks
 spec:
   selector:
     matchLabels:
@@ -397,23 +468,23 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagWin }}"
+          image: "{{ $.Values.AzureMonitorMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTagWin }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu:  {{ .Values.AzureMonitorMetrics.DsCPULimitWindows }}
-              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitWindows }}
+              cpu:  {{ $.Values.AzureMonitorMetrics.DsCPULimitWindows }}
+              memory: {{ $.Values.AzureMonitorMetrics.DsMemoryLimitWindows }}
           env:
             - name: CLUSTER
-              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              value: "{{ $.Values.global.commonGlobals.Customer.AzureResourceID }}"
             - name: AKSREGION
-              value: "{{ .Values.global.commonGlobals.Region }}"
+              value: "{{ $.Values.global.commonGlobals.Region }}"
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
+              value: "{{ $.Values.global.commonGlobals.CloudEnvironment | lower }}"
             - name: OMS_TLD
               value: "opinsights.azure.com"
             - name: CONTROLLER_TYPE
@@ -452,16 +523,16 @@ spec:
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
               value: "19100"
-            {{- if .Values.AzureMonitorMetrics }}
-              {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+            {{- if $.Values.AzureMonitorMetrics }}
+              {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
+              value: "{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.6.0" # Replace this with the version shipped by default
+              value: "" # Replace this with the version shipped by default
             - name: AGENT_VERSION
-              value: {{ .Values.AzureMonitorMetrics.ImageTag }}
+              value: {{ $.Values.AzureMonitorMetrics.ImageTagWin }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: WINMODE
@@ -469,11 +540,22 @@ spec:
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
             - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
-              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+              value: "{{ $.Values.AppmonitoringAgent.enabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
-              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+              value: "{{ $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
-              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
+              value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
+          {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
+          ports:
+            - name: otlp-http-port
+              containerPort: 56681
+              hostPort: {{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}
+              protocol: TCP
+            - name: otlp-grpc-port
+              containerPort: 56680
+              hostPort: 28334
+              protocol: TCP
+          {{- end }}
           securityContext:
             privileged: false
             capabilities:
@@ -497,12 +579,18 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+          {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
+          {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "bleu") }}
+            - mountPath: C:\ca
+              name: ca-certs
+              readOnly: true
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 300
             periodSeconds: 60
+            initialDelaySeconds: 300
             timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
@@ -513,7 +601,8 @@ spec:
            - --secret-name=aad-msi-auth-token
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999
-          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
+           - --restart-pod-waiting-minutes-on-broken-connection=240
+          image: "{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
           imagePullPolicy: IfNotPresent
           livenessProbe:
            httpGet:
@@ -573,4 +662,11 @@ spec:
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
+      {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
+      {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "bleu") }}
+        - name: ca-certs
+          hostPath:
+            path: C:\ca
+      {{- end }}
 {{- end }}
+

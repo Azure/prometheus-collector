@@ -1,5 +1,5 @@
 {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
-{{- if $arcExtensionSettings.operatorEnabled }}
+{{- if or .Values.AzureMonitorMetrics.TargetAllocatorEnabled $arcExtensionSettings.operatorEnabled }}
 apiVersion: v1
 kind: Service
 metadata:
