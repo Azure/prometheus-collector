@@ -78,6 +78,8 @@ var (
 	ZtunnelKeepListRegex string
 	// Istio CNI metrics keep list regex
 	IstioCniKeepListRegex string
+	// Waypoint Proxy metrics keep list regex
+	WaypointProxyKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
 	NetworkObservabilityCiliumKeepListRegex string
 	// Network Observability Hubble metrics keep list regex
@@ -119,6 +121,8 @@ var (
 	ZtunnelScrapeInterval string
 	// Istio CNI scrape interval
 	IstioCniScrapeInterval string
+	// Waypoint Proxy scrape interval
+	WaypointProxyScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
 	NetworkObservabilityCiliumScrapeInterval string
 	// Network Observability Hubble metrics scrape interval
@@ -376,6 +380,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			LocalCSIDriverKeepListRegex = regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
 			ZtunnelKeepListRegex = regexHash["ZTUNNEL_METRICS_KEEP_LIST_REGEX"]
 			IstioCniKeepListRegex = regexHash["ISTIOCNI_METRICS_KEEP_LIST_REGEX"]
+			WaypointProxyKeepListRegex = regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
@@ -410,6 +415,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			LocalCSIDriverScrapeInterval = intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
 			ZtunnelScrapeInterval = intervalHash["ZTUNNEL_SCRAPE_INTERVAL"]
 			IstioCniScrapeInterval = intervalHash["ISTIOCNI_SCRAPE_INTERVAL"]
+			WaypointProxyScrapeInterval = intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
 			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
@@ -940,6 +946,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if IstioCniKeepListRegex != "" {
 					metric.Properties["IstioCniKeepListRegex"] = IstioCniKeepListRegex
 				}
+				if WaypointProxyKeepListRegex != "" {
+					metric.Properties["WaypointProxyKeepListRegex"] = WaypointProxyKeepListRegex
+				}
 				if NetworkObservabilityCiliumKeepListRegex != "" {
 					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex
 				}
@@ -997,6 +1006,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if IstioCniScrapeInterval != "" {
 					metric.Properties["IstioCniScrapeInterval"] = IstioCniScrapeInterval
+				}
+				if WaypointProxyScrapeInterval != "" {
+					metric.Properties["WaypointProxyScrapeInterval"] = WaypointProxyScrapeInterval
 				}
 				if NetworkObservabilityCiliumScrapeInterval != "" {
 					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval

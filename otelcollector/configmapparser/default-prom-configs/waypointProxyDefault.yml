@@ -1,0 +1,27 @@
+scrape_configs:
+  - job_name: waypoint
+    honor_labels: true
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    scheme: http
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    kubernetes_sd_configs:
+      - role: pod
+        # Don't restrict namespaces - waypoints can be anywhere
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_gateway_istio_io_managed]
+        action: keep
+        regex: istio\.io-mesh-controller
+      - source_labels: [__meta_kubernetes_pod_label_gateway_networking_k8s_io_gateway_name]
+        action: keep
+        regex: .*waypoint.*
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: http-envoy-prom
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: instance
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace

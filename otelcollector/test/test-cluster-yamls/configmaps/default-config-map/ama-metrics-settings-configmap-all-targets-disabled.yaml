@@ -25,6 +25,7 @@ data:
     networkobservabilityCilium = false
     ztunnel = false
     istio-cni = false
+    waypoint-proxy = false
     prometheuscollectorhealth = false
     controlplane-apiserver = false
     controlplane-cluster-autoscaler = false
@@ -56,6 +57,7 @@ data:
     networkobservabilityCilium = ""
     ztunnel = ""
     istio-cni = ""
+    waypoint-proxy = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -81,6 +83,7 @@ data:
     networkobservabilityCilium = "30s"
     ztunnel = "30s"
     istio-cni = "30s"
+    waypoint-proxy = "30s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
