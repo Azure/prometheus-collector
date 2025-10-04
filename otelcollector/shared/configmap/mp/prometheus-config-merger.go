@@ -611,6 +611,30 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
+	// Add waypoint-proxy support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		waypointproxyMetricsKeepListRegex, exists := regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
+		waypointproxyScrapeInterval, intervalExists := intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			fullWaypointProxyPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, waypointProxyDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullWaypointProxyPath, waypointproxyScrapeInterval)
+			}
+			if exists && waypointproxyMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullWaypointProxyPath, waypointproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullWaypointProxyPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullWaypointProxyPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullWaypointProxyPath)
+				}
+			}
+		}
+	}
+
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		prometheusCollectorHealthInterval, intervalExists := intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 		if intervalExists {
@@ -1125,6 +1149,30 @@ func populateDefaultPrometheusConfigWithOperator() {
 				err = os.WriteFile(fullIstioCniPath, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, fullIstioCniPath)
+				}
+			}
+		}
+	}
+
+	// Add waypoint-proxy support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		waypointproxyMetricsKeepListRegex, exists := regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
+		waypointproxyScrapeInterval, intervalExists := intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || (currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+			fullWaypointProxyPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, waypointProxyDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullWaypointProxyPath, waypointproxyScrapeInterval)
+			}
+			if exists && waypointproxyMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullWaypointProxyPath, waypointproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullWaypointProxyPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullWaypointProxyPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullWaypointProxyPath)
 				}
 			}
 		}

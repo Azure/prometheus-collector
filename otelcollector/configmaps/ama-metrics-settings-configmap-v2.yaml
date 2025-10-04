@@ -27,6 +27,7 @@ data:
       local-csi-driver = true
       ztunnel = false
       istio-cni = false
+      waypoint-proxy = false
       prometheuscollectorhealth = false
     pod-annotation-based-scraping: |-
       podannotationnamespaceregex = ""
@@ -50,6 +51,7 @@ data:
       local-csi-driver = ""
       ztunnel = ""
       istio-cni = ""
+      waypoint-proxy = ""
     minimal-ingestion-profile: |-
       enabled = true
     default-targets-scrape-interval-settings: |-
@@ -71,6 +73,7 @@ data:
       local-csi-driver = "30s"  
       ztunnel = "30s"
       istio-cni = "30s"
+      waypoint-proxy = "30s"
       prometheuscollectorhealth = "30s"
       podannotations = "30s"
   controlplane-metrics: |-
