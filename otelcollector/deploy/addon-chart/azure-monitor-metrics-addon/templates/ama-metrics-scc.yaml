@@ -1,4 +1,5 @@
-{{- if eq .Values.Azure.Cluster.Distribution "openshift" }}
+{{- if $arcExtensionSettings.isArcExtension }}
+{{- if (eq $arcExtensionSettings.distribution "openshift") }}
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
@@ -24,4 +25,5 @@ volumes:
 - secret
 users:
 - system:serviceaccount:kube-system:ama-metrics-serviceaccount
+{{- end }}
 {{- end }}

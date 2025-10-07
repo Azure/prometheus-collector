@@ -195,8 +195,10 @@ spec:
           capabilities:
             drop:
               - ALL
+            {{- if $arcExtensionSettings.isArcExtension }}
             add:
               - DAC_OVERRIDE
+            {{- end }}
         livenessProbe:
           httpGet:
             path: /health
