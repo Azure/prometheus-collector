@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "azureMonitorWorkspaceResourceId": {
+      "value": "/subscriptions/1a3fd8b1-7a92-4730-8e47-dec9e67f49a9/resourcegroups/azmondemorg/providers/microsoft.monitor/accounts/azmondemoamw"
+    },
+    "actionGroupResourceId": {
+      "value": "/subscriptions/1a3fd8b1-7a92-4730-8e47-dec9e67f49a9/resourceGroups/AzMonDemoRG/providers/microsoft.insights/actiongroups/RecommendedAlertRules-AG-1"
+    }
+  }
+}
