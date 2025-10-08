@@ -344,8 +344,8 @@ extends:
                       echo "ERROR: Failed to register arc extension"
                       exit 1
                     fi
-                  target:
-                    container: host
+                target:
+                  container: host
                 displayName: Create Arc staging extension
               - task: AzureCLI@2
                 displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
