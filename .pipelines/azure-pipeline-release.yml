@@ -400,8 +400,8 @@ extends:
                       --cluster-type connectedClusters \
                       --version $CHART_TAG \
                       --release-train staging
-                  env:
-                    CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
-                  target:
-                    container: host
-                  displayName: Install extension on ci-prod-arc-wcus
+                env:
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                target:
+                  container: host
+                displayName: Install extension on ci-prod-arc-wcus
