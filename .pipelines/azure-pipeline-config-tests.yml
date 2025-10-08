@@ -75,6 +75,22 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
 
+          - bash: |
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              sudo mv kubectl /usr/local/bin/
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install kubectl CLI"
+
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
           - task: GoTool@0
             displayName: "Build: specify golang version"
             inputs:
@@ -774,3 +790,161 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone global ext labels"
+
+          - bash: |
+              # Collect all testkube results into a single aggregated result
+              mkdir -p $(Build.ArtifactStagingDirectory)
+              
+              # Define array of test suite names that were executed
+              test_suites=(
+                "config-tests-no-configmaps"
+                "config-tests-all-targets-disabled"
+                "config-tests-def-targets-on-configmap"
+                "config-tests-all-rs-targets-enabled"
+                "config-tests-all-ds-targets-enabled"
+                "config-tests-all-targets-enabled"
+                "config-tests-custom-configmap-all-actions"
+                "config-tests-global-ext-labels"
+                "config-tests-node-configmaps"
+                "config-tests-error-settings-configmap"
+                "config-tests-custom-configmap-error"
+                "config-global-ext-labels-error"
+              )
+              
+              # Initialize counters
+              total_tests=0
+              passed_tests=0
+              failed_tests=0
+              overall_status="passed"
+              
+              # Start building the JSON result
+              echo "{" > $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"environment\": \"ConfigTests\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"pipeline\": \"azure-pipeline-config-tests\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"tests\": [" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              
+              # Check each test suite result
+              first=true
+              for suite in "${test_suites[@]}"; do
+                if [ "$first" = false ]; then
+                  echo "," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                fi
+                first=false
+                
+                total_tests=$((total_tests + 1))
+                
+                # Try to get the latest execution for this test suite
+                echo "    {" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                echo "      \"name\": \"$suite\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                
+                # Get the execution status
+                execution_status=$(kubectl testkube get testsuiteexecutions --test-suite "$suite" --limit 1 2>/dev/null | grep -E "^[a-zA-Z0-9]" | awk '{print $3}' | head -1 || echo "unknown")
+                
+                if [[ "$execution_status" == "passed" ]]; then
+                  echo "      \"status\": \"passed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                  passed_tests=$((passed_tests + 1))
+                elif [[ "$execution_status" == "failed" ]]; then
+                  echo "      \"status\": \"failed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                  failed_tests=$((failed_tests + 1))
+                  overall_status="failed"
+                else
+                  echo "      \"status\": \"unknown\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                  failed_tests=$((failed_tests + 1))
+                  overall_status="failed"
+                fi
+                
+                echo "    }" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              done
+              
+              echo "  ]," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"status\": \"$overall_status\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  \"summary\": {" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "    \"total\": $total_tests," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "    \"passed\": $passed_tests," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "    \"failed\": $failed_tests" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              echo "  }," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              
+              if [[ "$overall_status" == "passed" ]]; then
+                echo "  \"message\": \"All $total_tests configuration tests passed successfully\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              else
+                echo "  \"message\": \"$failed_tests out of $total_tests configuration tests failed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              fi
+              
+              echo "}" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              
+              echo "Created testkube results summary with actual test statuses:"
+              cat $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              
+              echo ""
+              echo "Test Results Summary:"
+              echo "Total tests: $total_tests"
+              echo "Passed: $passed_tests"
+              echo "Failed: $failed_tests"
+              echo "Overall status: $overall_status"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" ]; then
+                # Read the JSON content and set it as a pipeline variable
+                TESTKUBE_RESULTS_CONFIG=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | jq -c . | tr -d '\n\r')
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_CONFIG;isOutput=true]$TESTKUBE_RESULTS_CONFIG"
+                echo "TestKube Config tests results set as pipeline variable"
+                echo $TESTKUBE_RESULTS_CONFIG
+              else
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_CONFIG;isOutput=true]{\"environment\":\"ConfigTests\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                echo "TestKube Config tests results file not found, setting default failure result"
+              fi
+            displayName: "Set TestKube Config Results as Pipeline Variable"
+            condition: always()
+            name: testkube_results
+
+  - job: TestKube_Summary
+    displayName: "Send TestKube Summary Notification"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Testkube
+    condition: always()
+    variables:
+      skipComponentGovernanceDetection: true
+      TESTKUBE_RESULTS_CONFIG: $[ dependencies.Testkube.outputs['Testkube.testkube_results.TESTKUBE_RESULTS_CONFIG'] ]
+    steps:
+    - checkout: self
+      persistCredentials: true
+
+    - bash: |
+        # Create results directory
+        mkdir -p "$(Pipeline.Workspace)/testkube-results"
+        echo "Results directory created"
+      displayName: "Create TestKube Results Directory"
+
+    # Write Config tests results directly to file if available using PowerShell
+    - task: PowerShell@2
+      displayName: "Write Config Tests Results"
+      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_CONFIG'], ''))
+      env:
+        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_CONFIG)
+      inputs:
+        targetType: 'inline'
+        script: |
+          $content = $env:TESTKUBE_RESULTS
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ConfigTests.json" -Value $content
+
+    # List created files
+    - bash: |
+        echo "Results files created:"
+        ls -la "$(Pipeline.Workspace)/testkube-results/"
+      displayName: "List Results Files"
+
+    - bash: |
+        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+        export BUILD_REASON="$(Build.Reason)"
+        export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+        export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+        export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
+        ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "Send TestKube Summary Notification"
