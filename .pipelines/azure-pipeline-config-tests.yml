@@ -804,11 +804,11 @@ stages:
             continueOnError: true
 
           - bash: |
-              # Collect all testkube results into a single aggregated result
+              # Collect all testkube results using the same approach as run-testkube-workflow.sh
               mkdir -p $(Build.ArtifactStagingDirectory)
               
-              # Define array of test suite names that were executed
-              test_suites=(
+              # Define all test suites that were executed
+              declare -a test_suites=(
                 "config-tests-no-configmaps"
                 "config-tests-all-targets-disabled"
                 "config-tests-def-targets-on-configmap"
@@ -824,75 +824,117 @@ stages:
               )
               
               # Initialize counters
-              total_tests=0
+              total_tests=${#test_suites[@]}
               passed_tests=0
               failed_tests=0
-              overall_status="passed"
+              unknown_tests=0
               
-              # Start building the JSON result
-              echo "{" > $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"environment\": \"ConfigTests\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"pipeline\": \"azure-pipeline-config-tests\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"tests\": [" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              # Array to store detailed test results
+              declare -a test_results=()
               
-              # Check each test suite result
-              first=true
-              for suite in "${test_suites[@]}"; do
-                if [ "$first" = false ]; then
-                  echo "," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                fi
-                first=false
+              echo "Collecting detailed results for $total_tests test suites..."
+              
+              # Process each test suite individually
+              for test_suite in "${test_suites[@]}"; do
+                echo "Processing test suite: $test_suite"
                 
-                total_tests=$((total_tests + 1))
+                # Get the latest execution ID for this test suite (same approach as workflow script)
+                execution_id=$(kubectl testkube get testsuiteexecutions --test-suite "$test_suite" --limit 1 2>/dev/null | grep "$test_suite" | awk '{print $1}' || echo "")
                 
-                # Try to get the latest execution for this test suite
-                echo "    {" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                echo "      \"name\": \"$suite\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                
-                # Get the execution status
-                execution_status=$(kubectl testkube get testsuiteexecutions --test-suite "$suite" --limit 1 2>/dev/null | grep -E "^[a-zA-Z0-9]" | awk '{print $3}' | head -1 || echo "unknown")
-                
-                if [[ "$execution_status" == "passed" ]]; then
-                  echo "      \"status\": \"passed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                  passed_tests=$((passed_tests + 1))
-                elif [[ "$execution_status" == "failed" ]]; then
-                  echo "      \"status\": \"failed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                  failed_tests=$((failed_tests + 1))
-                  overall_status="failed"
+                if [[ -n "$execution_id" ]]; then
+                  echo "Found execution ID: $execution_id for test suite: $test_suite"
+                  
+                  # Get the detailed results (same as workflow script)
+                  if kubectl testkube get testsuiteexecution "$execution_id" --output json > "testkube-${test_suite}-result.json" 2>/dev/null; then
+                    # Extract status from the JSON result
+                    test_status=$(jq -r '.status // "unknown"' "testkube-${test_suite}-result.json" 2>/dev/null || echo "unknown")
+                    
+                    echo "Test suite $test_suite status: $test_status"
+                    
+                    # Count the results
+                    case "$test_status" in
+                      "passed")
+                        passed_tests=$((passed_tests + 1))
+                        ;;
+                      "failed")
+                        failed_tests=$((failed_tests + 1))
+                        # Get failed test details like the workflow script
+                        failed_test_names=$(jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | .execution.testName' "testkube-${test_suite}-result.json" 2>/dev/null | paste -sd ", " - || echo "")
+                        if [[ -n "$failed_test_names" ]]; then
+                          echo "Failed tests in $test_suite: $failed_test_names"
+                        fi
+                        ;;
+                      *)
+                        unknown_tests=$((unknown_tests + 1))
+                        test_status="unknown"
+                        ;;
+                    esac
+                    
+                    # Store result for JSON output
+                    test_results+=("{\"name\": \"$test_suite\", \"status\": \"$test_status\", \"execution_id\": \"$execution_id\"}")
+                  else
+                    echo "Failed to get detailed results for $test_suite execution $execution_id"
+                    unknown_tests=$((unknown_tests + 1))
+                    test_results+=("{\"name\": \"$test_suite\", \"status\": \"unknown\", \"execution_id\": \"$execution_id\"}")
+                  fi
                 else
-                  echo "      \"status\": \"unknown\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-                  failed_tests=$((failed_tests + 1))
-                  overall_status="failed"
+                  echo "No execution found for test suite: $test_suite"
+                  unknown_tests=$((unknown_tests + 1))
+                  test_results+=("{\"name\": \"$test_suite\", \"status\": \"not_found\", \"execution_id\": \"\"}")
                 fi
                 
-                echo "    }" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                echo "---"
               done
               
-              echo "  ]," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"status\": \"$overall_status\"," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  \"summary\": {" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "    \"total\": $total_tests," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "    \"passed\": $passed_tests," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "    \"failed\": $failed_tests" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              echo "  }," >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
-              
-              if [[ "$overall_status" == "passed" ]]; then
-                echo "  \"message\": \"All $total_tests configuration tests passed successfully\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              # Determine overall status
+              if [[ $failed_tests -gt 0 ]]; then
+                overall_status="failed"
+                message="$failed_tests out of $total_tests configuration tests failed"
+              elif [[ $unknown_tests -gt 0 ]]; then
+                overall_status="partial"
+                message="$passed_tests passed, $unknown_tests unknown status out of $total_tests configuration tests"
               else
-                echo "  \"message\": \"$failed_tests out of $total_tests configuration tests failed\"" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+                overall_status="passed"
+                message="All $total_tests configuration tests passed successfully"
               fi
               
-              echo "}" >> $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
+              # Build test results JSON array
+              test_results_json="["
+              for ((i=0; i<${#test_results[@]}; i++)); do
+                test_results_json+="${test_results[i]}"
+                if [[ $i -lt $((${#test_results[@]} - 1)) ]]; then
+                  test_results_json+=","
+                fi
+              done
+              test_results_json+="]"
               
-              echo "Created testkube results summary with actual test statuses:"
+              # Create comprehensive JSON result matching the workflow script pattern
+              cat > $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json << EOF
+              {
+                "environment": "ConfigTests",
+                "pipeline": "azure-pipeline-config-tests",
+                "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+                "status": "$overall_status",
+                "summary": {
+                  "total": $total_tests,
+                  "passed": $passed_tests,
+                  "failed": $failed_tests,
+                  "unknown": $unknown_tests
+                },
+                "message": "$message",
+                "tests": $test_results_json
+              }
+              EOF
+              
+              echo "Created testkube results summary:"
               cat $(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json
               
               echo ""
               echo "Test Results Summary:"
               echo "Total tests: $total_tests"
-              echo "Passed: $passed_tests"
+              echo "Passed: $passed_tests"  
               echo "Failed: $failed_tests"
+              echo "Unknown: $unknown_tests"
               echo "Overall status: $overall_status"
             displayName: "Create TestKube Results Summary"
             condition: always()
