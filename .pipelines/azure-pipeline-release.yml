@@ -184,41 +184,6 @@ extends:
                 target:
                   container: host
                 displayName: Check images and ARC chart are pushed to MCR
-              - task: AzureCLI@2
-                displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-                continueOnError: true
-                inputs:
-                  azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-                  scriptType: 'pscore'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    try {
-                      $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                      Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                      Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-                    } catch {
-                      Write-Host "Failed to fetch subscription id."
-                      Write-Host $_.Exception.Message
-                      exit 0
-                    }
-              - task: 1ESGPTRunTask@3.0.314
-                displayName: Service Connection Environment Verification (1ES PT)
-                continueOnError: true
-                target:
-                  container: host
-                env:
-                  SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-                  SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-                  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-                  IS_PRODUCTION: false
-                  TASK_NAME: HelmDeploy@0
-                  SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-                  SYSTEM_DEFINITIONID: $(System.DefinitionId)
-                inputs:
-                  repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-                  path: serviceConnectionEnvironmentVerification.ps1
               - task: HelmDeploy@0
                 inputs:
                   azureSubscriptionEndpoint: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
@@ -235,41 +200,6 @@ extends:
                 target:
                   container: host
                 displayName: Deploy to ci-prod-aks-mac-weu
-              - task: AzureCLI@2
-                displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-                continueOnError: true
-                inputs:
-                  azureSubscription: prometheus-arc-dev-release-mi
-                  scriptType: 'pscore'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    try {
-                      $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                      Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                      Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-                    } catch {
-                      Write-Host "Failed to fetch subscription id."
-                      Write-Host $_.Exception.Message
-                      exit 0
-                    }
-              - task: 1ESGPTRunTask@3.0.314
-                displayName: Service Connection Environment Verification (1ES PT)
-                continueOnError: true
-                target:
-                  container: host
-                env:
-                  SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-                  SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-                  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-                  IS_PRODUCTION: false
-                  TASK_NAME: AzureCLI@2
-                  SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-                  SYSTEM_DEFINITIONID: $(System.DefinitionId)
-                inputs:
-                  repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-                  path: serviceConnectionEnvironmentVerification.ps1
               - task: AzureCLI@2
                 env:
                   CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
@@ -347,41 +277,6 @@ extends:
                 target:
                   container: host
                 displayName: Create Arc staging extension
-              - task: AzureCLI@2
-                displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-                continueOnError: true
-                inputs:
-                  azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-                  scriptType: 'pscore'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    try {
-                      $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                      Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                      Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                      Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-                    } catch {
-                      Write-Host "Failed to fetch subscription id."
-                      Write-Host $_.Exception.Message
-                      exit 0
-                    }
-              - task: 1ESGPTRunTask@3.0.314
-                displayName: Service Connection Environment Verification (1ES PT)
-                continueOnError: true
-                target:
-                  container: host
-                env:
-                  SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-                  SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-                  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-                  IS_PRODUCTION: false
-                  TASK_NAME: AzureCLI@2
-                  SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-                  SYSTEM_DEFINITIONID: $(System.DefinitionId)
-                inputs:
-                  repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-                  path: serviceConnectionEnvironmentVerification.ps1
               - task: AzureCLI@2
                 inputs:
                   connectedServiceNameARM: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
