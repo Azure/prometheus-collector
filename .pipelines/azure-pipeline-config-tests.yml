@@ -163,6 +163,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for no configmaps"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -219,6 +220,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all targets disabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -275,6 +277,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all default targets in settings cfg map enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -331,6 +334,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all rs targets in settings cfg map enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -387,6 +391,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all ds targets in settings cfg map enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -443,6 +448,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for all targets in settings cfg map enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -503,6 +509,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for custom configmap with all actions enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -559,6 +566,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for global ext labels enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -616,6 +624,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for custom node configmap enabled"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -675,6 +684,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone settings configmap"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -733,6 +743,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone custom configmap"
+            continueOnError: true
 
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
@@ -790,6 +801,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
             displayName: "Run tests for errorprone global ext labels"
+            continueOnError: true
 
           - bash: |
               # Collect all testkube results into a single aggregated result
