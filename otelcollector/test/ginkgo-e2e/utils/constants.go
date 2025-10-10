@@ -17,6 +17,8 @@ var (
 		"stat /etc/config/settings/ksm-config: no such file or directory",
 		// Target allocator
 		"client connection lost",
+		"remote error: tls: bad certificate",
+		"local error: tls: bad record",
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet

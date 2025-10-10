@@ -2522,6 +2522,20 @@ extends:
                 displayName: "Set TestKube AKS Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2583,6 +2597,20 @@ extends:
                 displayName: "Set TestKube OTel Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
@@ -2644,6 +2672,20 @@ extends:
                 displayName: "Set TestKube ARC Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
@@ -2707,6 +2749,20 @@ extends:
                 displayName: "Set TestKube Upgrade Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
@@ -2718,7 +2774,7 @@ extends:
         - Testkube_ARC
         - Testkube
         - Testkube_OTel
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
         variables:
           skipComponentGovernanceDetection: true
           TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]

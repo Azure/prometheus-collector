@@ -93,232 +93,210 @@ extends:
                 NEChartTag: "${{ parameters.NEChartTag }}"
                 onlyCCPRelease: "${{ lower(parameters.onlyCCPRelease) }}"
     - stage: Deploy_to_Prod_Clusters
+      dependsOn: [] 
       displayName: Deploy to Prod Clusters
       pool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
         os: windows
       jobs:
-      - job: Job_1
+      - deployment: Job_1
         displayName: Deploy to Prod Clusters
         condition: succeeded()
         timeoutInMinutes: '0'
-        steps:
-        - task: DownloadPipelineArtifact@2
-          displayName: ⏬ Pipeline Artifact Download
-          inputs:
-            buildType: specific
-            project: $(resources.pipeline._Azureprometheus-collector.projectID)
-            definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
-            allowFailedBuilds: false
-            buildVersionToDownload: specific
-            pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
-            pipeline: _Azureprometheus-collector
-            targetPath: $(Pipeline.Workspace)/ev2Artifact
-        - task: Bash@3
-          displayName: Sleep for 5 minutes
-          inputs:
-            targetType: inline
-            script: |
-              echo "Starting sleep for 5 minutes..."
-              for i in {1..5}
-              do
-                echo "Minute $i of 5 elapsed..."
-                sleep 60
-              done
-              echo "Sleep completed."
-        - task: HelmInstaller@1
-          inputs: 
-            helmVersionToInstall: 3.19.0  # Latest installs 4.0.0-alpha which has issues with some commands
-          target:
-            container: host
-          displayName: Install Helm
-        - task: Bash@3
-          inputs:
-            targetType: inline
-            script: |
-              echo "CHART_TAG: $CHART_TAG"
-              echo "LINUX_TAG: $LINUX_TAG"
-              echo "WINDOWS_TAG: $WINDOWS_TAG"
-              echo "LOOP_COUNTER: $LOOP_COUNTER"
-              echo "MAX_RETRIES: $MAX_RETRIES"
-              echo "SLEEP_INTERVAL: $SLEEP_INTERVAL"
-              
-              # Wait for images and chart to be published to MCR
-              for i in $(seq 1 $MAX_RETRIES)
-              do            
-                  sleep $SLEEP_INTERVAL
-                  echo "Loop iteration: $i"
-                  echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$LINUX_TAG"
-                  echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$WINDOWS_TAG"
-                  echo "Checking: $MCR_REGISTRY$PROD_MCR_CHART_REPO:$CHART_TAG"
-                  
-                  # Get repository responses
-                  output1=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_AGENT_REPO/tags/list)
-                  output2=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_ARC_CHART_REPO/tags/list)
+        environment: Prometheus-Manual-Approval
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - task: DownloadPipelineArtifact@2
+                displayName: ⏬ Pipeline Artifact Download
+                inputs:
+                  buildType: specific
+                  project: $(resources.pipeline._Azureprometheus-collector.projectID)
+                  definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+                  allowFailedBuilds: false
+                  buildVersionToDownload: specific
+                  pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+                  pipeline: _Azureprometheus-collector
+                  targetPath: $(Pipeline.Workspace)/ev2Artifact
+              - task: Bash@3
+                displayName: Sleep for 5 minutes
+                inputs:
+                  targetType: inline
+                  script: |
+                    echo "Starting sleep for 5 minutes..."
+                    for i in {1..5}
+                    do
+                      echo "Minute $i of 5 elapsed..."
+                      sleep 60
+                    done
+                    echo "Sleep completed."
+              - task: HelmInstaller@1
+                inputs: 
+                  helmVersionToInstall: 3.19.0  # Latest installs 4.0.0-alpha which has issues with some commands
+                target:
+                  container: host
+                displayName: Install Helm
+              - task: Bash@3
+                inputs:
+                  targetType: inline
+                  script: |
+                    echo "CHART_TAG: $CHART_TAG"
+                    echo "LINUX_TAG: $LINUX_TAG"
+                    echo "WINDOWS_TAG: $WINDOWS_TAG"
+                    echo "MAX_RETRIES: $MAX_RETRIES"
+                    echo "SLEEP_INTERVAL: $SLEEP_INTERVAL"
+                    
+                    # Wait for images and chart to be published to MCR
+                    for i in $(seq 1 $MAX_RETRIES)
+                    do            
+                        sleep $SLEEP_INTERVAL
+                        echo "Loop iteration: $i"
+                        echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$LINUX_TAG"
+                        echo "Checking: $MCR_REGISTRY$PROD_MCR_AGENT_REPO:$WINDOWS_TAG"
+                        echo "Checking: $MCR_REGISTRY$PROD_MCR_CHART_REPO:$CHART_TAG"
+                        
+                        # Get repository responses
+                        output1=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_AGENT_REPO/tags/list)
+                        output2=$(curl -s https://$MCR_REGISTRY/v2$PROD_MCR_ARC_CHART_REPO/tags/list)
 
-                  # Check if all required tags are present
-                  if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)
-                  then
-                      echo "Images and chart are published to mcr"
-                      echo "##vso[task.setvariable variable=MCRPublishStatus;]success"
-                      exit 0
-                  fi
-              done          
-              echo "Images and chart are not published to mcr within $((MAX_RETRIES * SLEEP_INTERVAL / 60)) minutes"
-              exit 1
-          env:
-            LINUX_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
-            WINDOWS_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)-win"
-            CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
-            MAX_RETRIES: 10
-            SLEEP_INTERVAL: 30
-            MCR_REGISTRY: "mcr.microsoft.com"
-            PROD_MCR_AGENT_REPO: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
-            PROD_MCR_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
-            PROD_MCR_ARC_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
-          target:
-            container: host
-          displayName: Check images and ARC chart are pushed to MCR
-        - task: AzureCLI@2
-          displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-          continueOnError: true
-          inputs:
-            azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              try {
-                $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-              } catch {
-                Write-Host "Failed to fetch subscription id."
-                Write-Host $_.Exception.Message
-                exit 0
-              }
-        - task: 1ESGPTRunTask@3.0.314
-          displayName: Service Connection Environment Verification (1ES PT)
-          continueOnError: true
-          target:
-            container: host
-          env:
-            SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-            SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-            IS_PRODUCTION: false
-            TASK_NAME: HelmDeploy@0
-            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-            SYSTEM_DEFINITIONID: $(System.DefinitionId)
-          inputs:
-            repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-            path: serviceConnectionEnvironmentVerification.ps1
-        - task: HelmDeploy@0
-          inputs:
-            azureSubscriptionEndpoint: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-            azureResourceGroup: ci-prod-aks-mac-weu-rg
-            kubernetesCluster: ci-prod-aks-mac-weu
-            useClusterAdmin: true
-            namespace: default
-            command: upgrade
-            chartType: FilePath
-            chartPath: $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon
-            releaseName: ama-metrics
-            waitForExecution: false
-            arguments: --values $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon/values.yaml --dependency-update
-          target:
-            container: host
-          displayName: Deploy to ci-prod-aks-mac-weu
-        - task: AzureCLI@2
-          displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-          continueOnError: true
-          inputs:
-            azureSubscription: prometheus-arc-dev-release-mi
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              try {
-                $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-              } catch {
-                Write-Host "Failed to fetch subscription id."
-                Write-Host $_.Exception.Message
-                exit 0
-              }
-        - task: 1ESGPTRunTask@3.0.314
-          displayName: Service Connection Environment Verification (1ES PT)
-          continueOnError: true
-          target:
-            container: host
-          env:
-            SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-            SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-            IS_PRODUCTION: false
-            TASK_NAME: AzureCLI@2
-            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-            SYSTEM_DEFINITIONID: $(System.DefinitionId)
-          inputs:
-            repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-            path: serviceConnectionEnvironmentVerification.ps1
-        - task: AzureCLI@2
-          inputs:
-            connectedServiceNameARM: prometheus-arc-dev-release-mi
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: " # Create JSON request body\ncat <<EOF > \"request.json\"\n        {\n          \"artifactEndpoints\": [\n              {\n                  \"Regions\": [\n                      \"westcentralus\"\n                  ],\n                  \"Releasetrains\": [\n                      \"pipeline\",\"staging\"\n                  ],\n                  \"FullPathToHelmChart\": \"https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc\",\n                  \"ExtensionUpdateFrequencyInMinutes\": 5,\n                  \"IsCustomerHidden\": true,\n                  \"ReadyforRollout\": true,\n                  \"RollbackVersion\": null,\n                  \"PackageConfigName\": \"Microsoft.AzureMonitor.Containers.Metrics-Prom041823\"\n              }\n          ]\n        }\nEOF\n      # Send Request\n      export SUBSCRIPTION=\"b9842c7c-1a38-4385-8f39-a51314758bcf\"\n      export RESOURCE_AUDIENCE=\"c699bf69-fb1d-4eaf-999b-99e6b2ae4d85\"\n      export SPN_CLIENT_ID=\"9a4c55e9-576a-450a-88bd-53bd634db38d\"\n      export SPN_TENANT_ID=\"72f988bf-86f1-41af-91ab-2d7cd011db47\"\n      export METHOD=\"PUT\"\n      echo \"Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $(ChartTag), SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID\"\n      #az login --identity --allow-no-subscriptions\n      #if [ $? -eq 0 ]; then\n       # echo \"Logged in successfully\"\n      #else\n       # echo \"-e error failed to login to az with managed identity credentials\"\n        #exit 1\n      #fi    \n      ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)\n      if [ $? -eq 0 ]; then\n        echo \"get access token from resource:$RESOURCE_AUDIENCE successfully.\"\n      else\n        echo \"-e error get access token from resource:$RESOURCE_AUDIENCE failed.\"\n        exit 1\n      fi   \n      ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '\"' | tr -d '\"\\r\\n')\n      echo $ACCESS_TOKEN \n      ARC_API_URL=\"https://eastus2euap.dp.kubernetesconfiguration.azure.com\"\n      EXTENSION_NAME=\"microsoft.azuremonitor.containers.metrics\"\n      API_VERSION=\"2021-05-01\"\n      echo \"start send request\"\n      az rest --method $METHOD --headers \"{\\\"Authorization\\\": \\\"Bearer $ACCESS_TOKEN\\\", \\\"Content-Type\\\": \\\"application/json\\\"}\" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$(ChartTag)?api-version=$API_VERSION\n      if [ $? -eq 0 ]; then\n        echo \"arc extension registered successfully\"\n      else\n        echo \"-e error failed to register arc extension\"\n        exit 1\n      fi"
-          target:
-            container: host
-          displayName: Create Arc staging extension
-        - task: AzureCLI@2
-          displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-          continueOnError: true
-          inputs:
-            azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              try {
-                $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-                Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-                Write-Host "Tenant ID: $($accountInfo.tenantId)"
-                Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-              } catch {
-                Write-Host "Failed to fetch subscription id."
-                Write-Host $_.Exception.Message
-                exit 0
-              }
-        - task: 1ESGPTRunTask@3.0.314
-          displayName: Service Connection Environment Verification (1ES PT)
-          continueOnError: true
-          target:
-            container: host
-          env:
-            SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-            SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-            IS_PRODUCTION: false
-            TASK_NAME: AzureCLI@2
-            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-            SYSTEM_DEFINITIONID: $(System.DefinitionId)
-          inputs:
-            repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-            path: serviceConnectionEnvironmentVerification.ps1
-        - task: AzureCLI@2
-          inputs:
-            connectedServiceNameARM: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: >-
-              az config set extension.use_dynamic_install=yes_without_prompt
-
-              az k8s-extension update --name azuremonitor-metrics --resource-group ci-prod-arc-wcus --cluster-name ci-prod-arc-wcus --cluster-type connectedClusters --version $(ChartTag) --release-train staging
-          target:
-            container: host
-          displayName: Install extension on ci-prod-arc-wcus
+                        # Check if all required tags are present
+                        if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)
+                        then
+                            echo "Images and chart are published to mcr"
+                            echo "##vso[task.setvariable variable=MCRPublishStatus;]success"
+                            exit 0
+                        fi
+                    done          
+                    echo "Images and chart are not published to mcr within $((MAX_RETRIES * SLEEP_INTERVAL / 60)) minutes"
+                    exit 1
+                env:
+                  LINUX_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                  WINDOWS_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)-win"
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                  MAX_RETRIES: 10
+                  SLEEP_INTERVAL: 30
+                  MCR_REGISTRY: "mcr.microsoft.com"
+                  PROD_MCR_AGENT_REPO: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+                  PROD_MCR_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
+                  PROD_MCR_ARC_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
+                target:
+                  container: host
+                displayName: Check images and ARC chart are pushed to MCR
+              - task: HelmDeploy@0
+                inputs:
+                  azureSubscriptionEndpoint: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+                  azureResourceGroup: ci-prod-aks-mac-weu-rg
+                  kubernetesCluster: ci-prod-aks-mac-weu
+                  useClusterAdmin: true
+                  namespace: default
+                  command: upgrade
+                  chartType: FilePath
+                  chartPath: $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon
+                  releaseName: ama-metrics
+                  waitForExecution: false
+                  arguments: --values $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon/values.yaml --dependency-update
+                target:
+                  container: host
+                displayName: Deploy to ci-prod-aks-mac-weu
+              - task: AzureCLI@2
+                env:
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                inputs:
+                  connectedServiceNameARM: prometheus-arc-dev-release-mi
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    # Create JSON request body
+                    cat <<EOF > "request.json"
+                    {
+                      "artifactEndpoints": [
+                          {
+                              "Regions": [
+                                  "westcentralus"
+                              ],
+                              "Releasetrains": [
+                                  "pipeline","staging"
+                              ],
+                              "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
+                              "ExtensionUpdateFrequencyInMinutes": 5,
+                              "IsCustomerHidden": true,
+                              "ReadyforRollout": true,
+                              "RollbackVersion": null,
+                              "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                          }
+                      ]
+                    }
+                    EOF
+                    
+                    # Send Request
+                    export SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
+                    export RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+                    export SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
+                    export SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
+                    export METHOD="PUT"
+                    
+                    echo "Request parameter preparation:"
+                    echo "  SUBSCRIPTION: $SUBSCRIPTION"
+                    echo "  RESOURCE_AUDIENCE: $RESOURCE_AUDIENCE"
+                    echo "  CHART_VERSION: $CHART_TAG"
+                    echo "  SPN_CLIENT_ID: $SPN_CLIENT_ID"
+                    echo "  SPN_TENANT_ID: $SPN_TENANT_ID"
+                    
+                    # Get access token
+                    ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
+                    if [ $? -eq 0 ]; then
+                      echo "Successfully got access token from resource: $RESOURCE_AUDIENCE"
+                    else
+                      echo "ERROR: Failed to get access token from resource: $RESOURCE_AUDIENCE"
+                      exit 1
+                    fi
+                    
+                    # Clean up access token
+                    ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '\r\n')
+                    
+                    # Set API parameters
+                    ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
+                    EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
+                    API_VERSION="2021-05-01"
+                    
+                    echo "Sending request to register Arc extension..."
+                    az rest \
+                      --method $METHOD \
+                      --headers '{"Authorization": "Bearer '$ACCESS_TOKEN'", "Content-Type": "application/json"}' \
+                      --body @request.json \
+                      --uri "$ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$CHART_TAG?api-version=$API_VERSION"
+                    
+                    if [ $? -eq 0 ]; then
+                      echo "SUCCESS: Arc extension registered successfully"
+                    else
+                      echo "ERROR: Failed to register arc extension"
+                      exit 1
+                    fi
+                target:
+                  container: host
+                displayName: Create Arc staging extension
+              - task: AzureCLI@2
+                inputs:
+                  connectedServiceNameARM: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    # Enable dynamic extension installation
+                    az config set extension.use_dynamic_install=yes_without_prompt
+                    
+                    # Update Arc extension with new version
+                    echo "Updating azuremonitor-metrics extension to version: $CHART_TAG"
+                    az k8s-extension update \
+                      --name azuremonitor-metrics \
+                      --resource-group ci-prod-arc-wcus \
+                      --cluster-name ci-prod-arc-wcus \
+                      --cluster-type connectedClusters \
+                      --version $CHART_TAG \
+                      --release-train staging
+                env:
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                target:
+                  container: host
+                displayName: Install extension on ci-prod-arc-wcus
