@@ -52,6 +52,9 @@ var (
 	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
 	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
 	LocalCSIDriverDefaultFile                    = "localCSIDriverDefaultFile.yml"
+	ztunnelDefaultFile                           = "ztunnelDefault.yml"
+	istioCniDefaultFile                          = "istioCniDefault.yml"
+	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
 )
 
 type RegexValues struct {
@@ -73,6 +76,9 @@ type RegexValues struct {
 	acstorcapacityprovisioner  string
 	acstormetricsexporter      string
 	localcsidriver             string
+	ztunnel                    string
+	istiocni                   string
+	waypoint                   string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -115,6 +121,9 @@ type ConfigProcessor struct {
 	AcstorCapacityProvisioner  string
 	AcstorMetricsExporter      string
 	LocalCSIDriver             string
+	Ztunnel                    string
+	IstioCni                   string
+	WaypointProxy              string
 }
 
 // ConfigParser is an interface for parsing configurations.
