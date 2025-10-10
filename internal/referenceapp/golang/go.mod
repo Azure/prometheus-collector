@@ -1,6 +1,6 @@
 module github.com/vishiy/opentelemetry-collector-builder
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/prometheus/client_golang v1.23.2
@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.38.0
 	go.opentelemetry.io/otel/sdk v1.38.0
 	go.opentelemetry.io/otel/sdk/metric v1.38.0
-	google.golang.org/grpc v1.75.1
+	google.golang.org/grpc v1.76.0
 )
 
 require (
