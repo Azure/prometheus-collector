@@ -1,0 +1,29 @@
+{{- if $arcExtensionSettings.isArcExtension }}
+{{- if (eq $arcExtensionSettings.distribution "openshift") }}
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: ama-metrics-scc
+allowPrivilegedContainer: true
+allowPrivilegeEscalation: true
+allowHostDirVolumePlugin: true
+allowedCapabilities:
+- NET_ADMIN
+- NET_RAW
+readOnlyRootFilesystem: false
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- hostPath
+- configMap
+- secret
+users:
+- system:serviceaccount:kube-system:ama-metrics-serviceaccount
+{{- end }}
+{{- end }}
