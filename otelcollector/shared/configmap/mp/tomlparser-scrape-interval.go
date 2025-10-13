@@ -1,7 +1,7 @@
 package configmapsettings
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -63,7 +63,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		return intervalHash
 	}
 
-	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
+	log.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
 	// Set each value in intervalHash to "30s" from default
 	keys := []string{
 		"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
@@ -101,7 +101,7 @@ func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]strin
 	intervalHash := processConfigMap(metricsConfigBySection)
 	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
 	if err != nil {
-		fmt.Printf("Error writing to file: %v\n", err)
+		log.Printf("Error writing to file: %v\n", err)
 		return
 	}
 	shared.EchoSectionDivider("End Processing - tomlparserScrapeInterval")

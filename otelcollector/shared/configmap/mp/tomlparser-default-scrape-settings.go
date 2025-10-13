@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -67,94 +68,94 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 		}
 	}
 
-	fmt.Println("Using configmap for default scrape settings...")
+	log.Println("Using configmap for default scrape settings...")
 	return config, nil
 }
 
 func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
 	if val, ok := parsedConfig["kubelet"]; ok && val != "" {
 		cp.Kubelet = val
-		fmt.Printf("config::Using scrape settings for kubelet: %v\n", cp.Kubelet)
+		log.Printf("config::Using scrape settings for kubelet: %v\n", cp.Kubelet)
 	}
 
 	if val, ok := parsedConfig["coredns"]; ok && val != "" {
 		cp.Coredns = val
-		fmt.Printf("config::Using scrape settings for coredns: %v\n", cp.Coredns)
+		log.Printf("config::Using scrape settings for coredns: %v\n", cp.Coredns)
 	}
 
 	if val, ok := parsedConfig["cadvisor"]; ok && val != "" {
 		cp.Cadvisor = val
-		fmt.Printf("config::Using scrape settings for cadvisor: %v\n", cp.Cadvisor)
+		log.Printf("config::Using scrape settings for cadvisor: %v\n", cp.Cadvisor)
 	}
 
 	if val, ok := parsedConfig["kubeproxy"]; ok && val != "" {
 		cp.Kubeproxy = val
-		fmt.Printf("config::Using scrape settings for kubeproxy: %v\n", cp.Kubeproxy)
+		log.Printf("config::Using scrape settings for kubeproxy: %v\n", cp.Kubeproxy)
 	}
 
 	if val, ok := parsedConfig["apiserver"]; ok && val != "" {
 		cp.Apiserver = val
-		fmt.Printf("config::Using scrape settings for apiserver: %v\n", cp.Apiserver)
+		log.Printf("config::Using scrape settings for apiserver: %v\n", cp.Apiserver)
 	}
 
 	if val, ok := parsedConfig["kubestate"]; ok && val != "" {
 		cp.Kubestate = val
-		fmt.Printf("config::Using scrape settings for kubestate: %v\n", cp.Kubestate)
+		log.Printf("config::Using scrape settings for kubestate: %v\n", cp.Kubestate)
 	}
 
 	if val, ok := parsedConfig["nodeexporter"]; ok && val != "" {
 		cp.NodeExporter = val
-		fmt.Printf("config::Using scrape settings for nodeexporter: %v\n", cp.NodeExporter)
+		log.Printf("config::Using scrape settings for nodeexporter: %v\n", cp.NodeExporter)
 	}
 
 	if val, ok := parsedConfig["prometheuscollectorhealth"]; ok && val != "" {
 		cp.PrometheusCollectorHealth = val
-		fmt.Printf("config::Using scrape settings for prometheuscollectorhealth: %v\n", cp.PrometheusCollectorHealth)
+		log.Printf("config::Using scrape settings for prometheuscollectorhealth: %v\n", cp.PrometheusCollectorHealth)
 	}
 
 	if val, ok := parsedConfig["windowsexporter"]; ok && val != "" {
 		cp.Windowsexporter = val
-		fmt.Printf("config::Using scrape settings for windowsexporter: %v\n", cp.Windowsexporter)
+		log.Printf("config::Using scrape settings for windowsexporter: %v\n", cp.Windowsexporter)
 	}
 
 	if val, ok := parsedConfig["windowskubeproxy"]; ok && val != "" {
 		cp.Windowskubeproxy = val
-		fmt.Printf("config::Using scrape settings for windowskubeproxy: %v\n", cp.Windowskubeproxy)
+		log.Printf("config::Using scrape settings for windowskubeproxy: %v\n", cp.Windowskubeproxy)
 	}
 
 	if val, ok := parsedConfig["kappiebasic"]; ok && val != "" {
 		cp.Kappiebasic = val
-		fmt.Printf("config::Using scrape settings for kappiebasic: %v\n", cp.Kappiebasic)
+		log.Printf("config::Using scrape settings for kappiebasic: %v\n", cp.Kappiebasic)
 	}
 
 	if val, ok := parsedConfig["networkobservabilityRetina"]; ok && val != "" {
 		cp.NetworkObservabilityRetina = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityRetina: %v\n", cp.NetworkObservabilityRetina)
+		log.Printf("config::Using scrape settings for networkobservabilityRetina: %v\n", cp.NetworkObservabilityRetina)
 	}
 
 	if val, ok := parsedConfig["networkobservabilityHubble"]; ok && val != "" {
 		cp.NetworkObservabilityHubble = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityHubble: %v\n", cp.NetworkObservabilityHubble)
+		log.Printf("config::Using scrape settings for networkobservabilityHubble: %v\n", cp.NetworkObservabilityHubble)
 	}
 
 	if val, ok := parsedConfig["networkobservabilityCilium"]; ok && val != "" {
 		cp.NetworkObservabilityCilium = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityCilium: %v\n", cp.NetworkObservabilityCilium)
+		log.Printf("config::Using scrape settings for networkobservabilityCilium: %v\n", cp.NetworkObservabilityCilium)
 	}
 
 	if val, ok := parsedConfig["acstor-capacity-provisioner"]; ok && val != "" {
 		cp.AcstorCapacityProvisioner = val
-		fmt.Printf("config:: Using scrape settings for acstor-capacity-provisioner: %v\n", cp.AcstorCapacityProvisioner)
+		log.Printf("config:: Using scrape settings for acstor-capacity-provisioner: %v\n", cp.AcstorCapacityProvisioner)
 	}
 
 	if val, ok := parsedConfig["acstor-metrics-exporter"]; ok && val != "" {
 		cp.AcstorMetricsExporter = val
-		fmt.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
+		log.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
 	}
 
 	if val, ok := parsedConfig["local-csi-driver"]; ok && val != "" {
 		cp.LocalCSIDriver = val
-		fmt.Printf("config:: Using scrape settings for local-csi-driver: %v\n", cp.LocalCSIDriver)
+		log.Printf("config:: Using scrape settings for local-csi-driver: %v\n", cp.LocalCSIDriver)
 	}
 
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
@@ -170,7 +171,7 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 	}
 
 	if cp.NoDefaultsEnabled {
-		fmt.Printf("No default scrape configs enabled")
+		log.Printf("No default scrape configs enabled")
 	}
 }
 
@@ -206,7 +207,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
-	fmt.Printf("Start prometheus-collector-settings Processing\n")
+	log.Printf("Start prometheus-collector-settings Processing\n")
 
 	// Load default settings based on the schema version
 	var defaultSettings map[string]string
@@ -218,7 +219,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	}
 
 	if err != nil {
-		fmt.Printf("Error loading default settings: %v\n", err)
+		log.Printf("Error loading default settings: %v\n", err)
 		return
 	}
 
@@ -236,17 +237,17 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
 		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
 		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
-		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
+		log.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
 	}
 
 	// Write default scrape settings to file
 	err = c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath, c.ConfigParser)
 	if err != nil {
-		fmt.Printf("Error writing default scrape settings to file: %v\n", err)
+		log.Printf("Error writing default scrape settings to file: %v\n", err)
 		return
 	}
 
-	fmt.Printf("End prometheus-collector-settings Processing\n")
+	log.Printf("End prometheus-collector-settings Processing\n")
 }
 
 func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
