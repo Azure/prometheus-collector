@@ -32,6 +32,7 @@ data:
     controlplane-etcd = false
     acstor-capacity-provisioner = false
     acstor-metrics-exporter = false
+    local-csi-driver = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
