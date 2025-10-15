@@ -3,6 +3,7 @@ package configmapsettings
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"strings"
 
@@ -184,7 +185,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		localCSIDriverRegex = fmt.Sprintf("%s|%s", regexValues.localcsidriver, localCsiDriver_minimal_mac)
 
 	} else {
-		fmt.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
+		log.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
 
 		kubeletRegex = regexValues.kubelet
 		coreDNSRegex = regexValues.coredns
@@ -214,7 +215,7 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 
 	regexValues, err := populateKeepList(metricsConfigBySection)
 	if err != nil {
-		fmt.Println("Error populating keep list:", err)
+		log.Println("Error populating keep list:", err)
 		return
 	}
 	populateRegexValuesWithMinimalIngestionProfile(regexValues)
@@ -242,13 +243,13 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 
 	out, err := yaml.Marshal(data)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return
 	}
 
 	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
-		fmt.Printf("Exception while writing to file: %v\n", err)
+		log.Printf("Exception while writing to file: %v\n", err)
 		return
 	}
 
