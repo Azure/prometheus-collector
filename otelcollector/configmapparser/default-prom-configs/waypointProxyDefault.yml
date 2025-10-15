@@ -3,6 +3,7 @@ scrape_configs:
     honor_labels: true
     scrape_interval: $$SCRAPE_INTERVAL$$
     scheme: http
+    metrics_path: /stats/prometheus
     label_limit: 63
     label_name_length_limit: 511
     label_value_length_limit: 1023
@@ -21,7 +22,19 @@ scrape_configs:
         regex: http-envoy-prom
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: instance
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
       - source_labels: [__meta_kubernetes_pod_node_name]
         target_label: node
       - source_labels: [__meta_kubernetes_namespace]
         target_label: namespace
+    metric_relabel_configs:
+      # Drop SPIFFE identity labels 
+      - regex: 'source_principal|destination_principal'
+        action: labeldrop
+      # Drop version/revision labels
+      - regex: 'source_version|destination_version|source_canonical_revision|destination_canonical_revision'
+        action: labeldrop
+      # Drop redundant service labels
+      - regex: 'source_canonical_service|destination_canonical_service|destination_service|destination_service_name|destination_service_namespace'
+        action: labeldrop
