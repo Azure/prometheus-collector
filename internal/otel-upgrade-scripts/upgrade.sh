@@ -613,4 +613,27 @@ else
     fi
 fi
 
+# Replace prometheus-operator dependency in go.mod in folder - otel-allocator
+echo "Adding prometheus-operator fork replace directive to otel-allocator/go.mod..."
+
+GO_MOD_FILE="otelcollector/otel-allocator/go.mod"
+REPLACE_BLOCK="// pointing to this fork for prometheus-operator since we need fixes for asset store which is only available from v0.84.0 of prometheus-operator
+// targetallocator cannot upgrade to v0.84.0 because of this issue - https://github.com/open-telemetry/opentelemetry-operator/issues/4196
+// this commit is from this repository -https://github.com/rashmichandrashekar/prometheus-operator/tree/rashmi/v0.81.0-patch-assetstore - which only has the asset store fixes on top of v0.81.0 of prometheus-operator
+replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138
+"
+
+# Insert before the first 'require' line
+awk -v block="$REPLACE_BLOCK" '
+    BEGIN { inserted=0 }
+    /^require / && !inserted {
+        print block
+        inserted=1
+    }
+    { print }
+' "$GO_MOD_FILE" > "${GO_MOD_FILE}.tmp" && mv "${GO_MOD_FILE}.tmp" "$GO_MOD_FILE"
+
+echo "Added prometheus-operator fork replace directive."
+
+
 echo "Upgrade process complete!"
