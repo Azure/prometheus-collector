@@ -520,5 +520,4 @@ func prometheusConfigMerger(operatorEnabled bool) {
 		writeDefaultScrapeTargetsFile(operatorEnabled)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}
-
 }
