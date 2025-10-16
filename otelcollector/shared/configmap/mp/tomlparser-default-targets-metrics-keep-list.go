@@ -21,50 +21,50 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	case shared.SchemaVersion.V1:
 		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
 		if err != nil {
-			fmt.Println("Invalid value for minimalingestionprofile in v1:", err.Error())
+			log.Println("Invalid value for minimalingestionprofile in v1:", err.Error())
 			metricsConfigBySection = map[string]map[string]string{}
 		} else {
 			minimalProfileEnabled = minimalProfileEnabledBool
-			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
+			log.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 		}
 	case shared.SchemaVersion.V2:
 		minimalProfileEnabledBool, err := strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 		if err != nil {
-			fmt.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+			log.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 			metricsConfigBySection = map[string]map[string]string{}
 		} else {
 			minimalProfileEnabled = minimalProfileEnabledBool
-			fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
+			log.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 		}
 	default:
-		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchemaVersion)
+		log.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchemaVersion)
 		metricsConfigBySection = map[string]map[string]string{}
 	}
 
 	for jobName, job := range shared.DefaultScrapeJobs {
 		job.KeepListRegex = ""
 		if setting, ok := keeplist[jobName]; ok {
-			fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
+			log.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
 			if !shared.IsValidRegex(setting) {
-				fmt.Printf("parseConfigMapForKeepListRegex::Invalid regex for job %s: %s\n", jobName, setting)
+				log.Printf("parseConfigMapForKeepListRegex::Invalid regex for job %s: %s\n", jobName, setting)
 				continue // Skip invalid regex
 			}
 			job.CustomerKeepListRegex = setting
-			fmt.Printf("populateSettingValuesFromConfigMap::%s: %s\n", jobName, job.CustomerKeepListRegex)
+			log.Printf("populateSettingValuesFromConfigMap::%s: %s\n", jobName, job.CustomerKeepListRegex)
 		}
 
 		if minimalProfileEnabled {
-			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
+			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
 			job.KeepListRegex = "|" + job.MinimalKeepListRegex
-			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal Keep List Regex:", job.MinimalKeepListRegex)
+			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal Keep List Regex:", job.MinimalKeepListRegex)
 		} else {
-			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, using configmap values")
+			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, using configmap values")
 		}
 
 		job.KeepListRegex = job.CustomerKeepListRegex + job.KeepListRegex
 	}
 
-	fmt.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
+	log.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
 	return nil
 }
 
@@ -73,7 +73,7 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 
 	err := populateKeepList(metricsConfigBySection, configSchemaVersion)
 	if err != nil {
-		fmt.Printf("Error populating keep list: %s\n", err.Error())
+		log.Printf("Error populating keep list: %s\n", err.Error())
 	}
 	// Write settings to a YAML file
 	data := map[string]string{}

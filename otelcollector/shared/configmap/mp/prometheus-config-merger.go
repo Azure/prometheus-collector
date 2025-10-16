@@ -31,7 +31,7 @@ func parseConfigMap() string {
 		}
 	}()
 
-	fmt.Println("Starting to parse prometheus configmap", configMapMountPath)
+	log.Println("Starting to parse prometheus configmap", configMapMountPath)
 	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
 		shared.EchoWarning("Custom prometheus config does not exist, using only default scrape targets if they are enabled")
 		return ""
@@ -265,13 +265,13 @@ func processDefaultJob(job *shared.DefaultScrapeJob) {
 
 	if job.ControllerType == shared.ControllerType.DaemonSet {
 		if err := UpdatePlaceholders(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"}); err != nil {
-			fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
+			log.Printf("Error updating placeholders for DaemonSet: %v\n", err)
 		}
 	}
 
 	if job.PlaceholderNames != nil {
 		if err := UpdatePlaceholders(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.PlaceholderNames); err != nil {
-			fmt.Printf("Error updating placeholders: %v\n", err)
+			log.Printf("Error updating placeholders: %v\n", err)
 		}
 	}
 }
@@ -345,7 +345,7 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
-	fmt.Println("No Default Scraping Enabled:", noDefaultScrapingEnabled)
+	log.Println("No Default Scraping Enabled:", noDefaultScrapingEnabled)
 	if noDefaultScrapingEnabled != "true" {
 		populateDefaultPrometheusConfig()
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
@@ -380,13 +380,13 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 			currentFile := scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile
 			contents, err := os.ReadFile(currentFile)
 			if err != nil {
-				fmt.Printf("Error reading file %s: %v\n", currentFile, err)
+				log.Printf("Error reading file %s: %v\n", currentFile, err)
 				continue
 			}
 			contents = []byte(strings.Replace(string(contents), "$$SCRAPE_INTERVAL$$", scrapeInterval, -1))
 			err = os.WriteFile(currentFile, contents, fs.FileMode(0644))
 			if err != nil {
-				fmt.Printf("Error writing to file %s: %v\n", currentFile, err)
+				log.Printf("Error writing to file %s: %v\n", currentFile, err)
 			}
 		}
 	}

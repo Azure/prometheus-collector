@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -28,7 +29,7 @@ func checkDuration(duration string) string {
 func processConfigMap(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 
 	if configSchemaVersion == shared.SchemaVersion.Nil {
-		fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
+		log.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
 		metricsConfigBySection = map[string]map[string]string{}
 	}
 
@@ -61,7 +62,7 @@ func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]strin
 	}
 	err := writeIntervalHashToFile(data, scrapeIntervalEnvVarPath)
 	if err != nil {
-		fmt.Printf("Error writing to file: %v\n", err)
+		log.Printf("Error writing to file: %v\n", err)
 	}
 	shared.EchoSectionDivider("End Processing - tomlparserScrapeInterval")
 }

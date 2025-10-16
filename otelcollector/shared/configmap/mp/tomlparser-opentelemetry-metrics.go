@@ -39,7 +39,7 @@ func populateOpentelemetryMetricsSettingValuesFromConfigMap(metricsConfigBySecti
 	if val, ok := innerMap["enabled"]; ok {
 		enabledBool, err := strconv.ParseBool(val)
 		if err != nil {
-			fmt.Printf("Invalid value for opentelemetry-metrics enabled: %s, defaulting to %v\n", err.Error(), enabled)
+			log.Printf("Invalid value for opentelemetry-metrics enabled: %s, defaulting to %v\n", err.Error(), enabled)
 			return enabled
 		}
 		enabled = enabledBool
