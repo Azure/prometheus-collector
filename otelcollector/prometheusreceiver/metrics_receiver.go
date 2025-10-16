@@ -70,8 +70,9 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		prometheus.Labels{"receiver": set.ID.String()},
 		registry)
 	apiServerManager := (*apiserver.Manager)(nil)
-	if cfg.APIServer != nil && cfg.APIServer.Enabled {
-		apiServerManager = apiserver.NewManager(set, cfg.APIServer, &baseCfg, registry, registerer)
+	apiServerCfg := cfg.APIServer.Get()
+	if apiServerCfg != nil {
+		apiServerManager = apiserver.NewManager(set, apiServerCfg, &baseCfg, registry, registerer)
 	}
 	pr := &pReceiver{
 		cfg:          cfg,
@@ -82,7 +83,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		registry:     registry,
 		targetAllocatorManager: targetallocator.NewManager(
 			set,
-			cfg.TargetAllocator,
+			cfg.TargetAllocator.Get(),
 			&baseCfg,
 			enableNativeHistogramsGate.IsEnabled(),
 		),
@@ -164,18 +165,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		return err
 	}
 
-	opts := &scrape.Options{
-		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
-		HTTPClientOptions: []commonconfig.HTTPClientOption{
-			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
-		},
-		EnableCreatedTimestampZeroIngestion: useCreatedMetricGate.IsEnabled(),
-	}
-
-	if enableNativeHistogramsGate.IsEnabled() {
-		opts.EnableNativeHistogramsIngestion = true
-	}
+	opts := r.initScrapeOptions()
 
 	// for testing only
 	if r.skipOffsetting {
@@ -211,7 +201,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		}
 	}()
 
-	if r.cfg.APIServer != nil && r.cfg.APIServer.Enabled {
+	apiServerCfg := r.cfg.APIServer.Get()
+	if apiServerCfg != nil {
 		err = r.apiServerManager.Start(ctx, host, r.scrapeManager)
 		if err != nil {
 			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
@@ -219,6 +210,20 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	}
 
 	return nil
+}
+
+func (r *pReceiver) initScrapeOptions() *scrape.Options {
+	opts := &scrape.Options{
+		PassMetadataInContext: true,
+		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
+		HTTPClientOptions: []commonconfig.HTTPClientOption{
+			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
+		},
+		EnableCreatedTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
+		EnableNativeHistogramsIngestion:     enableNativeHistogramsGate.IsEnabled(),
+	}
+
+	return opts
 }
 
 // gcInterval returns the longest scrape interval used by a scrape config,

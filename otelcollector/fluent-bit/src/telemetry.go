@@ -73,6 +73,8 @@ var (
 	AcstorCapacityProvisionerKeepListRegex string
 	// ACStor Metrics Exporter keep list regex
 	AcstorMetricsExporterKeepListRegex string
+	// Local CSI Driver  keep list regex
+	LocalCSIDriverKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
 	NetworkObservabilityCiliumKeepListRegex string
 	// Network Observability Hubble metrics keep list regex
@@ -108,6 +110,8 @@ var (
 	AcstorCapacityProvisionerScrapeInterval string
 	// ACStor Metrics Exporter scrape interval
 	AcstorMetricsExporterScrapeInterval string
+	// Local CSI Driver  scrape interval
+	LocalCSIDriverScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
 	NetworkObservabilityCiliumScrapeInterval string
 	// Network Observability Hubble metrics scrape interval
@@ -229,6 +233,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
+	CommonProperties["ksmConfigEnabled"] = os.Getenv("AZMON_KSM_CONFIG_ENABLED")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -361,6 +366,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
 			AcstorCapacityProvisionerKeepListRegex = regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
 			AcstorMetricsExporterKeepListRegex = regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+			LocalCSIDriverKeepListRegex = regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
@@ -392,6 +398,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 			AcstorCapacityProvisionerScrapeInterval = intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
 			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
+			LocalCSIDriverScrapeInterval = intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
 			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]

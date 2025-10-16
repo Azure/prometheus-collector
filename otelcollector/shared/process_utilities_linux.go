@@ -18,7 +18,7 @@ func IsProcessRunning(processName string) bool {
 	pid := os.Getpid()
 	processes, err := os.ReadDir("/proc")
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Printf("Error:", err)
 		return false
 	}
 
@@ -50,7 +50,7 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	// Set the environment variable
 	err := os.Setenv(key, value)
 	if err != nil {
-		fmt.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:", value, ":error:", err)
+		log.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:", value, ":error:", err)
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
@@ -139,14 +139,14 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 	go func() {
 		defer wg.Done()
 		if _, err := io.Copy(file, stdout); err != nil {
-			fmt.Printf("Error copying stdout to file: %v\n", err)
+			log.Printf("Error copying stdout to file: %v\n", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
 		if _, err := io.Copy(file, stderr); err != nil {
-			fmt.Printf("Error copying stderr to file: %v\n", err)
+			log.Printf("Error copying stderr to file: %v\n", err)
 		}
 	}()
 
@@ -170,20 +170,20 @@ func StartCommand(command string, args ...string) {
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		log.Printf("Error creating stdout pipe: %v\n", err)
 		return
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		log.Printf("Error creating stderr pipe: %v\n", err)
 		return
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting command: %v\n", err)
+		log.Printf("Error starting command: %v\n", err)
 		return
 	}
 
@@ -248,7 +248,7 @@ func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {
 
 	_, err := io.Copy(multiWriter, src)
 	if err != nil {
-		fmt.Printf("Error copying output: %v\n", err)
+		log.Printf("Error copying output: %v\n", err)
 	}
 }
 
@@ -256,7 +256,7 @@ func copyOutputPipe(src io.Reader, dest io.Writer) {
 	_, err := io.Copy(dest, src)
 
 	if err != nil {
-		fmt.Printf("Error copying output: %v\n", err)
+		log.Printf("Error copying output: %v\n", err)
 	}
 }
 
@@ -264,7 +264,7 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	_, err := io.Copy(file, src)
 
 	if err != nil {
-		fmt.Printf("Error copying output: %v\n", err)
+		log.Printf("Error copying output: %v\n", err)
 	}
 }
 
@@ -310,12 +310,12 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		log.Printf("Error creating stdout pipe: %v\n", err)
 		return
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		log.Printf("Error creating stderr pipe: %v\n", err)
 		return
 	}
 
@@ -335,19 +335,19 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting MetricsExtension: %v\n", err)
+		log.Printf("Error starting MetricsExtension: %v\n", err)
 		return
 	}
 }
 
 func StartMA() {
-	fmt.Println("Should never reach here, defining function since main.go expects it")
+	log.Println("Should never reach here, defining function since main.go expects it")
 }
 
 func StartMdsdForOverlay() {
 	mdsdLog := os.Getenv("MDSD_LOG")
 	if mdsdLog == "" {
-		fmt.Println("MDSD_LOG environment variable is not set")
+		log.Println("MDSD_LOG environment variable is not set")
 		return
 	}
 
@@ -357,7 +357,7 @@ func StartMdsdForOverlay() {
 	// Start the command
 	err := cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting mdsd: %v\n", err)
+		log.Printf("Error starting mdsd: %v\n", err)
 		return
 	}
 }
@@ -381,13 +381,13 @@ func StartMdsdForUnderlay() {
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		log.Printf("Error creating stdout pipe: %v\n", err)
 		return
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		log.Printf("Error creating stderr pipe: %v\n", err)
 		return
 	}
 
@@ -407,7 +407,7 @@ func StartMdsdForUnderlay() {
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting mdsd: %v\n", err)
+		log.Printf("Error starting mdsd: %v\n", err)
 		return
 	}
 }
@@ -462,15 +462,15 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 }
 
 func StartFluentBit(fluentBitConfigFile string) {
-	fmt.Println("Starting fluent-bit")
+	log.Printf("Starting fluent-bit\n")
 
 	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
-		log.Fatalf("Error creating directory: %v\n", err)
+		log.Printf("Error creating directory: %v\n", err)
 	}
 
 	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
 	if err != nil {
-		log.Fatalf("Error creating log file: %v\n", err)
+		fmt.Errorf("Error creating log file: %v\n", err)
 	}
 	defer logFile.Close()
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
@@ -485,6 +485,6 @@ func StartFluentBit(fluentBitConfigFile string) {
 	fluentBitCmd.Stdout = os.Stdout
 	fluentBitCmd.Stderr = os.Stderr
 	if err := fluentBitCmd.Start(); err != nil {
-		log.Fatalf("Error starting fluent-bit: %v\n", err)
+		fmt.Errorf("Error starting fluent-bit: %v\n", err)
 	}
 }

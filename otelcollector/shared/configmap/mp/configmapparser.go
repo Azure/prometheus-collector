@@ -3,6 +3,7 @@ package configmapsettings
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -57,7 +58,7 @@ func setConfigFileVersionEnv() {
 func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
 	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
-		fmt.Printf("%v\n", err)
+		log.Printf("%v\n", err)
 		return
 	}
 	handlePodAnnotationsFile(podAnnotationEnvVarPath)
@@ -68,14 +69,14 @@ func handlePodAnnotationsFile(filename string) {
 	// Check if the file exists
 	_, e := os.Stat(filename)
 	if os.IsNotExist(e) {
-		fmt.Printf("File does not exist: %s\n", filename)
+		log.Printf("File does not exist: %s\n", filename)
 		return
 	}
 
 	// Open the file for reading
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Printf("Error opening file: %s\n", err)
+		log.Printf("Error opening file: %s\n", err)
 		return
 	}
 	defer file.Close()
@@ -86,7 +87,7 @@ func handlePodAnnotationsFile(filename string) {
 		line := scanner.Text()
 		index := strings.Index(line, "=")
 		if index == -1 {
-			fmt.Printf("Skipping invalid line: %s\n", line)
+			log.Printf("Skipping invalid line: %s\n", line)
 			continue
 		}
 
@@ -102,7 +103,7 @@ func handlePodAnnotationsFile(filename string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading file: %s\n", err)
+		log.Printf("Error reading file: %s\n", err)
 	}
 }
 
@@ -139,10 +140,29 @@ func parseOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[str
 	shared.EchoSectionDivider("End Processing - parseOpentelemetryMetricsSettings")
 }
 
+func parseKSMSettings(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseKSMSettings")
+	if _, ok := metricsConfigBySection["ksm-config"]; ok {
+		log.Println("ksm-config section found in metricsConfigBySection")
+		file, err := os.Create(ksmConfigEnvVarPath)
+		if err != nil {
+			shared.EchoError(fmt.Sprintf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err))
+			return
+		}
+		defer file.Close()
+
+		file.WriteString(fmt.Sprintf("AZMON_KSM_CONFIG_ENABLED=%v\n", "true"))
+		log.Printf("Setting AZMON_KSM_CONFIG_ENABLED environment variable: %v\n", "true")
+		handleEnvFileError(ksmConfigEnvVarPath)
+	} else {
+		log.Println("ksm-config section NOT found in metricsConfigBySection")
+	}
+}
+
 func handleEnvFileError(filename string) {
 	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
-		fmt.Printf("Error when setting env for %s: %v\n", filename, err)
+		log.Printf("Error when setting env for %s: %v\n", filename, err)
 	}
 }
 
@@ -158,18 +178,18 @@ func processConfigFiles() {
 		filePaths := []string{configSettingsPrefix + "cluster-metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			fmt.Printf("Error parsing files: %v\n", err)
+			log.Printf("Error parsing files: %v\n", err)
 			return
 		}
 	case shared.SchemaVersion.V1:
 		configDir := configSettingsPrefix
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			fmt.Printf("Error parsing config: %v\n", err)
+			log.Printf("Error parsing config: %v\n", err)
 			return
 		}
 	default:
-		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
+		log.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
 	// Detect configmap presence and set CONFIGMAP_VERSION
@@ -186,6 +206,13 @@ func processConfigFiles() {
 				configmapVer = "v1"
 				break
 			}
+			for _, file := range files {
+				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
+					continue
+				}
+				configmapVer = "v1"
+				break
+			}
 		}
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIGMAP_VERSION", configmapVer, true)
@@ -195,6 +222,7 @@ func processConfigFiles() {
 	parseDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	parseDebugModeSettings(metricsConfigBySection)
 	parseOpentelemetryMetricsSettings(metricsConfigBySection)
+	parseKSMSettings(metricsConfigBySection)
 
 	tomlparserTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
 	tomlparserScrapeInterval(metricsConfigBySection, schemaVersion)
@@ -225,14 +253,14 @@ func Configmapparser() {
 				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
 			)
 			if err != nil {
-				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
-				fmt.Printf("Command execution failed: %v\n", err)
+				log.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
+				log.Printf("Command execution failed: %v\n", err)
 				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true)
 				if shared.FileExists(mergedDefaultConfigPath) {
-					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
+					log.Println("prom-config-validator::Running validator on just default scrape configs")
 					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 					if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
-						fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+						log.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 					} else {
 						shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 					}
@@ -243,19 +271,19 @@ func Configmapparser() {
 			}
 		}
 	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
-		fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
+		log.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
 		err := shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 		if err != nil {
-			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-			fmt.Printf("Command execution failed: %v\n", err)
+			log.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+			log.Printf("Command execution failed: %v\n", err)
 		} else {
-			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
+			log.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
 			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	} else {
 		// This else block is needed, when there is no custom config mounted as config map or default configs enabled
-		fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
+		log.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	}
 
@@ -297,15 +325,15 @@ func Configmapparser() {
 		filename := "/opt/microsoft/prom_config_validator_env_var"
 		err = shared.SetEnvVarsFromFile(filename)
 		if err != nil {
-			fmt.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
+			log.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
 		}
 
 		filename = "/opt/envvars.env"
 		err = shared.SetEnvVarsFromFile(filename)
 		if err != nil {
-			fmt.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
+			log.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
 		}
 	}
 
-	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
+	log.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
 }

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+if [ $ONLY_CCP_RELASE == "true" ] && [[ $IMAGE_TAG != *"ccp"* ]]; then
+  echo "Skipping image push - not a CCP image"
+  exit 0
+fi
+
 if [ -z $IMAGE_TAG ]; then
   echo "-e error value of IMAGE_TAG variable shouldnt be empty. Check release variables"
   exit 1

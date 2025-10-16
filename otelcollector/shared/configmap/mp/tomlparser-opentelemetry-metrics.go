@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 )
@@ -21,7 +22,7 @@ func ConfigureOpentelemetryMetricsSettings(metricsConfigBySection map[string]map
 
 	file.WriteString(fmt.Sprintf("AZMON_FULL_OTLP_ENABLED=%v\n", enabled))
 
-	fmt.Printf("Setting AZMON_FULL_OTLP_ENABLED environment variable: %v\n", enabled)
+	log.Printf("Setting AZMON_FULL_OTLP_ENABLED environment variable: %v\n", enabled)
 
 	return nil
 }
@@ -42,7 +43,7 @@ func populateOpentelemetryMetricsSettingValuesFromConfigMap(metricsConfigBySecti
 			return enabled
 		}
 		enabled = enabledBool
-		fmt.Printf("Using configmap setting for opentelemetry-metrics: %v\n", enabled)
+		log.Printf("Using configmap setting for opentelemetry-metrics: %v\n", enabled)
 	}
 	return enabled
 }

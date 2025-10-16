@@ -143,7 +143,7 @@ func SetEnvVariablesForWindows() {
 	nodeName := os.Getenv("NODE_NAME")
 	if mac == "" {
 		if cluster == "" {
-			fmt.Printf("CLUSTER is empty or not set. Using %s as CLUSTER\n", nodeName)
+			log.Printf("CLUSTER is empty or not set. Using %s as CLUSTER\n", nodeName)
 			os.Setenv("customResourceId", nodeName)
 			SetEnvAndSourceBashrcOrPowershell("customResourceId", nodeName, true)
 		} else {
@@ -219,11 +219,11 @@ func GetMcsEndpoints(customEnvironment string) (string, string) {
 	case "ussec":
 		mcsEndpoint = "https://monitor.azure.microsoft.scloud/"
 		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.microsoft.scloud/"
-	case "bleu":
+	case "azurebleucloud":
 		mcsEndpoint = "https://monitor.sovcloud-api.fr/"
 		mcsGlobalEndpoint = "https://global.handler.control.monitor.sovcloud-api.fr"
 	default:
-		fmt.Printf("Unknown customEnvironment: %s, setting mcs endpoint to default azurepubliccloud values\n", customEnvironment)
+		log.Printf("Unknown customEnvironment: %s, setting mcs endpoint to default azurepubliccloud values\n", customEnvironment)
 		mcsEndpoint = "https://monitor.azure.com/"
 		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.com"
 	}

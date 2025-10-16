@@ -33,6 +33,7 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+    local-csi-driver = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -61,6 +62,7 @@ data:
     controlplane-etcd = ""
     acstor-capacity-provisioner = ""
     acstor-metrics-exporter = ""
+    local-csi-driver = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -79,9 +81,26 @@ data:
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
+    local-csi-driver = "30s"
     podannotations = "30s"
   debug-mode: |-
     enabled = false
+  # Note that below section (ksm-config) is a yaml configuration, the settings override the configuration provided by optional parameters during 
+  # onboarding for kube-state-metrics, only uncomment and use them if the collection needs to be customized.
+  # Default settings - https://github.com/Azure/prometheus-collector/blob/e40947f3eaee8843021c90bd8645ce7875ad1fcf/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml#L2
+  # https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=cli#optional-parameters
+  # OSS documentation for kube-state-metrics resources and the metrics - https://github.com/kubernetes/kube-state-metrics/tree/main/docs#exposed-metrics
+  # ksm-config: |-
+  #   resources: 
+  #     secrets: {}
+  #     configmaps: {}
+  #   labels_allow_list: # object name and label names
+  #     pods: 
+  #     - app8
+  #   annotations_allow_list: # object name and annotation names
+  #     namespaces:
+  #     - kube-system
+  #     - default
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system

@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -99,7 +100,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	// Populate and print setting values
 	err = PopulateSettingValues(metricsConfigBySection, configSchemaVersion)
 	if err != nil {
-		fmt.Printf("Error loading default settings: %v\n", err)
+		log.Printf("Error loading default settings: %v\n", err)
 		return
 	}
 
@@ -114,17 +115,17 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
 		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
 		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
-		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
+		log.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
 	}
 
 	// Write default scrape settings to file
 	err = c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath, c.ConfigParser)
 	if err != nil {
-		fmt.Printf("Error writing default scrape settings to file: %v\n", err)
+		log.Printf("Error writing default scrape settings to file: %v\n", err)
 		return
 	}
 
-	fmt.Printf("End prometheus-collector-settings Processing\n")
+	log.Printf("End prometheus-collector-settings Processing\n")
 }
 
 func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {

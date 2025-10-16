@@ -3,6 +3,7 @@ package configmapsettings
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -82,13 +83,13 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 
 	out, err := yaml.Marshal(data)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return
 	}
 
 	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
-		fmt.Printf("Exception while writing to file: %v\n", err)
+		log.Printf("Exception while writing to file: %v\n", err)
 		return
 	}
 

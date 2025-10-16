@@ -66,6 +66,15 @@ spec:
           value: "azmonitoring.coreos.com"
         - name: AGENT_VERSION
           value: {{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}
+        ports:
+        - containerPort: 8081
+          name: health-ta
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+{{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext:
@@ -79,11 +88,6 @@ spec:
         - mountPath: /etc/operator-targets/server/certs
           name: ama-metrics-operator-targets-server-tls-secret-volume
           readOnly: true
-        ports:
-        - containerPort: 8080
-          name: http
-        - containerPort: 8443
-          name: https
 {{- end }}
         livenessProbe:
           httpGet:
@@ -112,9 +116,9 @@ spec:
           {{- end }}
         - name: AKSREGION
           {{- if $arcExtensionSettings.isArcExtension }}
-          value: "{{ .Values.Azure.Cluster.Region }}"
-          {{- else }}
           value: "{{ $arcExtensionSettings.region}}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Region }}"
           {{- end }}
         - name: NODE_IP
           valueFrom:
@@ -164,6 +168,9 @@ spec:
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
         - name: OPERATOR_TARGETS_HTTPS_ENABLED
           value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
+        ports:
+        - containerPort: 8081
+          name: health
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config
@@ -188,11 +195,15 @@ spec:
           capabilities:
             drop:
               - ALL
+            {{- if $arcExtensionSettings.isArcExtension }}
+            add:
+              - DAC_OVERRIDE
+            {{- end }}
         livenessProbe:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 100
+          initialDelaySeconds: 120
           periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
@@ -236,6 +247,12 @@ spec:
                     operator: Exists
                   {{- end }}
       tolerations:
+        {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
         {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}

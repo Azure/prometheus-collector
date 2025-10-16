@@ -1,0 +1,103 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",
+  "contentVersion": "0.0.0.1",
+  "scopeBindings": [
+    {
+      "scopeTagName": "Global",
+      "bindings": [
+        {
+          "find": "__ACR_REGISTRY__",
+          "replaceWith": "$config(acrRegistry)"
+        },
+        {
+          "find": "__PROD_ACR_AGENT_REPOSITORY__",
+          "replaceWith": "$config(prodACRAgentRepository)"
+        },
+        {
+          "find": "__PROD_ACR_CHART_REPOSITORY__",
+          "replaceWith": "$config(prodACRChartRepository)"
+        },
+        {
+          "find": "__PROD_ACR_NE_REPOSITORY__",
+          "replaceWith": "$config(prodACRNodeExporterRepository)"
+        },
+        {
+          "find": "__MANAGED_IDENTITY__",
+          "replaceWith": "$config(managedIdentity)"
+        },
+        {
+          "find": "__MCR_REGISTRY__",
+          "replaceWith": "$config(mcrRegistry)"
+        },
+        {
+          "find": "__DEV_MCR_AGENT_REPOSITORY__",
+          "replaceWith": "$config(devMCRAgentRepository)"
+        },
+        {
+          "find": "__DEV_MCR_NE_REPOSITORY__",
+          "replaceWith": "$config(devMCRNodeExporterRepository)"
+        },
+        {
+          "find": "__LINUX_TAG__",
+          "replaceWith": "$config(linuxTag)"
+        },
+        {
+          "find": "__LINUX_CCP_TAG__",
+          "replaceWith": "$config(linuxCCPTag)"
+        },
+        {
+          "find": "__WINDOWS_TAG__",
+          "replaceWith": "$config(windowsTag)"
+        },
+        {
+          "find": "__TARGETALLOCATOR_TAG__",
+          "replaceWith": "$config(targetAllocatorTag)"
+        },
+        {
+          "find": "__CONFIGREADER_TAG__",
+          "replaceWith": "$config(configReaderTag)"
+        },
+        {
+          "find": "__PROD_MCR_AGENT_REPOSITORY__",
+          "replaceWith": "$config(prodMCRAgentRepository)"
+        },
+        {
+          "find": "__DEV_MCR_CHART_REPOSITORY__",
+          "replaceWith": "$config(devMCRChartRepository)"
+        },
+        {
+          "find": "__PROD_MCR_CHART_REPOSITORY__",
+          "replaceWith": "$config(prodMCRChartRepository)"
+        },
+        {
+          "find": "__PROD_MCR_NE_REPOSITORY__",
+          "replaceWith": "$config(prodMCRNodeExporterRepository)"
+        },
+        {
+          "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",
+          "replaceWith": "$config(mcrRepositoryHelmDependencies)"
+        },
+        {
+          "find": "__CHART_TAG__",
+          "replaceWith": "$config(chartTag)"
+        },
+        {
+          "find": "__PUSH_NEW_NE_CHART__",
+          "replaceWith": "$config(pushNewNEChart)"
+        },
+        {
+          "find": "__NE_CHART_TAG__",
+          "replaceWith": "$config(NEChartTag)"
+        },
+        {
+          "find": "__ARC_HELM_CHART_NAME__",
+          "replaceWith": "$config(arcHelmChartName)"
+        },
+        {
+          "find": "__ONLY_CCP_RELEASE__",
+          "replaceWith": "$config(onlyCCPRelease)"
+        }
+      ]
+    }
+  ]
+}

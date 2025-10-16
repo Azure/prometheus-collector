@@ -58,12 +58,12 @@ func isConfigReaderSidecar() bool {
 }
 
 func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
-	fmt.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
+	log.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
 
 	// Read YAML config file
 	data, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+		log.Printf("Error reading config file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 	var config map[string]interface{}
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+		log.Printf("Error unmarshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				fmt.Printf("scrapeInterval %s\n", scrapeIntervalSetting)
+				log.Printf("scrapeInterval %s\n", scrapeIntervalSetting)
 				scfgMap["scrape_interval"] = scrapeIntervalSetting
 			}
 		}
@@ -87,23 +87,23 @@ func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 		// Marshal updated config back to YAML
 		cfgYamlWithScrapeConfig, err := yaml.Marshal(config)
 		if err != nil {
-			fmt.Printf("Error marshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+			log.Printf("Error marshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 			return
 		}
 
 		// Write updated YAML back to file
 		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithScrapeConfig), fs.FileMode(0644))
 		if err != nil {
-			fmt.Printf("Error writing to file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+			log.Printf("Error writing to file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 			return
 		}
 	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The scrape interval will not be updated.\n")
+		log.Printf("No 'scrape_configs' found in the YAML. The scrape interval will not be updated.\n")
 	}
 }
 
 func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
-	fmt.Printf("Starting to append keep list regex or minimal ingestion regex to %s\n", yamlConfigFile)
+	log.Printf("Starting to append keep list regex or minimal ingestion regex to %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
@@ -156,7 +156,7 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 		// Write updated scrape_configs back to config
 		config["scrape_configs"] = scrapeConfigs
 	} else {
-		fmt.Println("No 'scrape_configs' found in the YAML. Skipping updates.")
+		log.Println("No 'scrape_configs' found in the YAML. Skipping updates.")
 		return nil
 	}
 
@@ -173,12 +173,12 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 }
 
 func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]interface{}, keepRegex string) {
-	fmt.Printf("Adding relabel config for %s\n", yamlConfigFile)
+	log.Printf("Adding relabel config for %s\n", yamlConfigFile)
 
 	// Read YAML config file
 	data, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
+		log.Printf("Error reading config file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 		return
 	}
 
@@ -186,7 +186,7 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 	var config map[string]interface{}
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
+		log.Printf("Error unmarshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 		return
 	}
 
@@ -209,18 +209,18 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 		// Marshal updated config back to YAML
 		cfgYamlWithRelabelConfig, err := yaml.Marshal(config)
 		if err != nil {
-			fmt.Printf("Error marshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
+			log.Printf("Error marshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 			return
 		}
 
 		// Write updated YAML back to file
 		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithRelabelConfig), fs.FileMode(0644))
 		if err != nil {
-			fmt.Printf("Error writing to file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
+			log.Printf("Error writing to file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 			return
 		}
 	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The relabel config will not be added.\n")
+		log.Printf("No 'scrape_configs' found in the YAML. The relabel config will not be added.\n")
 	}
 }
 
@@ -238,7 +238,6 @@ func populateDefaultPrometheusConfig() {
 			defaultConfigs = append(defaultConfigs, scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile)
 		}
 	}
-
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 }
 
@@ -292,7 +291,7 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 		}
 	}
 
-	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
+	log.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
 
 	return mergedDefaultConfigs
 }
@@ -350,16 +349,16 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 	if noDefaultScrapingEnabled != "true" {
 		populateDefaultPrometheusConfig()
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
+			log.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err != nil {
-				fmt.Printf("Error marshalling merged default prometheus config: %v\n", err)
+				log.Printf("Error marshalling merged default prometheus config: %v\n", err)
 				return nil
 			}
 
 			err = os.WriteFile(mergedDefaultConfigPath, mergedDefaultConfigYaml, fs.FileMode(0644))
 			if err != nil {
-				fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
+				log.Printf("Error writing merged default prometheus config to file: %v\n", err)
 				return nil
 			}
 
@@ -368,7 +367,7 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 	} else {
 		mergedDefaultConfigs = make(map[interface{}]interface{})
 	}
-	fmt.Printf("Done creating default targets file\n")
+	log.Printf("Done creating default targets file\n")
 	return nil
 }
 
@@ -473,7 +472,7 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 	var customConfig map[interface{}]interface{}
 	err := yaml.Unmarshal([]byte(configString), &customConfig)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error:", err)
 		return ""
 	}
 
@@ -498,7 +497,7 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 
 	updatedConfig, err := yaml.Marshal(customConfig)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error:", err)
 		return ""
 	}
 

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package apiserver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
+package apiserver
 
 import (
 	"context"
@@ -72,10 +72,11 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
 	var corsOriginRegexp *grafanaRegexp.Regexp
-	if m.cfg.ServerConfig.CORS != nil && len(m.cfg.ServerConfig.CORS.AllowedOrigins) > 0 {
+	corsConfig := m.cfg.ServerConfig.CORS.Get()
+	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
 		var combinedOriginsBuilder strings.Builder
-		combinedOriginsBuilder.WriteString(m.cfg.ServerConfig.CORS.AllowedOrigins[0])
-		for _, origin := range m.cfg.ServerConfig.CORS.AllowedOrigins[1:] {
+		combinedOriginsBuilder.WriteString(corsConfig.AllowedOrigins[0])
+		for _, origin := range corsConfig.AllowedOrigins[1:] {
 			combinedOriginsBuilder.WriteString("|")
 			combinedOriginsBuilder.WriteString(origin)
 		}
@@ -179,7 +180,8 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.AcceptRemoteWriteProtoMsgs,
 		o.EnableOTLPWriteReceiver,
 		o.ConvertOTLPDelta,
-		false,
+		o.NativeOTLPDeltaIngestion,
+		o.CTZeroIngestionEnabled,
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579

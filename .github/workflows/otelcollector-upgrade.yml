@@ -9,7 +9,14 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Upgrade otel
         id: upgrade
         run: |
@@ -37,20 +44,50 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
             rm -f TargetAllocatorCHANGELOG.md
           fi
+      
+      - name: Check if an existing PR with this version already exists but hasn't been merged
+        if: ${{ env.ISNEWVERSION == 'true' }}
+        id: check_existing_pr
+        run: |
+          PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
+          echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+
+      - name: Close older upgrade PRs
+        if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
+        run: |
+          echo "Checking for older otelcollector upgrade PRs..."
+          OLDER_PRS=$(gh pr list --search "is:open head:bot/otelcollector-upgrade-" --json number,headRefName)
+          if [ "$(echo $OLDER_PRS | jq 'length')" -gt 0 ]; then
+            echo "Found older upgrade PRs, closing them..."
+            echo $OLDER_PRS | jq -c '.[]' | while read PR; do
+              PR_NUM=$(echo $PR | jq -r '.number')
+              PR_BRANCH=$(echo $PR | jq -r '.headRefName')
+              if [ "$PR_BRANCH" != "bot/otelcollector-upgrade-${{ env.VERSION }}" ]; then
+                echo "Closing PR #$PR_NUM ($PR_BRANCH) as a newer version is available"
+                gh pr close $PR_NUM --comment "Closing in favor of a newer otelcollector version upgrade (${{ env.VERSION }})"
+              fi
+            done
+          else
+            echo "No older upgrade PRs found"
+          fi
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Create Pull Request
-        if: ${{ env.ISNEWVERSION == 'true' }}
+        if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           commit-message: Upgrade otelcollector to ${{ env.VERSION }}
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           signoff: false
           branch: bot/otelcollector-upgrade-${{ env.VERSION }}
           delete-branch: true
-          title: '[chore]: Upgrade otelcollector to ${{ env.VERSION }}'
+          title: 'build(deps): Upgrade otelcollector to ${{ env.VERSION }}'
           body: |
             This PR upgrades the otelcollector to the latest version available for the opentelemetry-collector and opentelemetry-operator.
 
@@ -60,22 +97,22 @@ jobs:
             ${{ steps.upgrade.outputs.prometheusreceiver_changelog }}
 
             ${{ steps.upgrade.outputs.target_allocator_changelog }}
-          draft: true
+          draft: false
 
-      - name: Check if PR exists
-        id: check_pr
+      - name: Check if the new PR exists
+        id: check_new_pr
         run: |
           PR_EXISTS=$(gh pr list --head bot/otelcollector-upgrade-${{ env.VERSION }} --json number | jq length)
           echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Checkout PR branch if it exists
-        uses: actions/checkout@v4
-        if: steps.check_pr.outputs.exists != '0'
+        uses: actions/checkout@v5
+        if: steps.check_new_pr.outputs.exists != '0'
         with:
           ref: bot/otelcollector-upgrade-${{ env.VERSION }}
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Build otelcollector and related go binaries
         if: ${{ steps.cpr.outputs.pull-request-number }}
@@ -95,9 +132,9 @@ jobs:
 
       - name: Comment Build Failed on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'true' }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ⚠️ Building the otelcollector failed. Manual review for breaking changes is required. View build errors below.
@@ -112,9 +149,9 @@ jobs:
 
       - name: Comment Build Succeeded on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ✅ Building the otelcollector and related go binaries succeeded. No breaking changes were detected.
@@ -141,9 +178,9 @@ jobs:
 
       - name: Comment CVE changes on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
           body: |
             ## CVE Changes Report
@@ -163,18 +200,4 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .trivyignore
           git commit -m "Update .trivyignore with new CVEs from version ${{ env.VERSION }}" || echo "No changes to commit"
-          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}
-
-      - name: Wait for 1 minute for all commits to be processed
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        run: sleep 60
-        shell: bash
-
-      - name: Comment azp run on PR
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
-          issue-number: ${{ steps.cpr.outputs.pull-request-number }}
-          body: |
-            /azp run
+          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}    

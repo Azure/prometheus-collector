@@ -1,5 +1,5 @@
 {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
-{{- if $arcExtensionSettings.hpaEnabled }}
+{{- if or .Values.AzureMonitorMetrics.CollectorHPAEnabled $arcExtensionSettings.hpaEnabled }}
 {{- $amaMetricsHpa := include "ama-metrics-merge-custom-hpa" . | fromYaml }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

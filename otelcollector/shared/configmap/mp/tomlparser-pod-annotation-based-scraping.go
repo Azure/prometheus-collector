@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 
@@ -20,7 +21,7 @@ func isValidRegex(str string) bool {
 }
 
 func writeConfigToFile(podannotationNamespaceRegex string) error {
-	fmt.Printf("Writing configuration to file: %s\n", podAnnotationEnvVarPath)
+	log.Printf("Writing configuration to file: %s\n", podAnnotationEnvVarPath)
 	file, err := os.Create(podAnnotationEnvVarPath)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v", err)
@@ -45,7 +46,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 			return fmt.Errorf("error writing to file: %v", err)
 		}
 
-		fmt.Println("Configuration written to file successfully.")
+		log.Println("Configuration written to file successfully.")
 	}
 	return nil
 }
@@ -68,19 +69,19 @@ func populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection map[stri
 	// Access the nested map and value
 	innerMap, ok := metricsConfigBySection["pod-annotation-based-scraping"]
 	if !ok {
-		fmt.Println("Pod annotation namespace regex configuration not found")
+		log.Println("Pod annotation namespace regex configuration not found")
 		return "", fmt.Errorf("pod annotation namespace regex configuration not found")
 	}
 
 	regex, ok := innerMap["podannotationnamespaceregex"]
 	if !ok || regex == "" {
-		fmt.Println("Pod annotation namespace regex does not have a value")
+		log.Println("Pod annotation namespace regex does not have a value")
 		return "", fmt.Errorf("pod annotation namespace regex does not have a value")
 	}
 
 	// Validate the regex
 	if isValidRegex(regex) {
-		fmt.Printf("Using configmap namespace regex for pod annotations: %s\n", regex)
+		log.Printf("Using configmap namespace regex for pod annotations: %s\n", regex)
 		return regex, nil
 	} else {
 		return "", fmt.Errorf("Invalid namespace regex for pod annotations: %s", regex)

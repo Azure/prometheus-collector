@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -28,7 +29,7 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		if _, err := os.Stat(configMapDebugMountPath); os.IsNotExist(err) {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+			log.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 	}
 
@@ -43,13 +44,13 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 	//} else {
 	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
 
-	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
+	log.Printf("Setting debug mode environment variable: %v\n", enabled)
 	//}
 
 	if enabled {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
-			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
+			log.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
 			var config shared.OtelConfig
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
@@ -77,7 +78,7 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
-			fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
+			log.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 		}
 	}
 
@@ -89,7 +90,7 @@ func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[st
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	if configSchemaVersion == "" {
-		fmt.Println("AZMON_AGENT_CFG_SCHEMA_VERSION environment variable is not set. Using default value: false")
+		log.Println("AZMON_AGENT_CFG_SCHEMA_VERSION environment variable is not set. Using default value: false")
 		return false
 	}
 
@@ -98,13 +99,13 @@ func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[st
 	if configSchemaVersion == "v1" {
 		debugModeSection, ok := metricsConfigBySection["debug-mode"]
 		if !ok {
-			fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+			log.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
 			return false
 		}
 
 		val, ok := debugModeSection["enabled"]
 		if !ok {
-			fmt.Println("The 'enabled' field in 'debug-mode' section is not present in the parsed data. Using default value: false")
+			log.Println("The 'enabled' field in 'debug-mode' section is not present in the parsed data. Using default value: false")
 			return false
 		}
 		debugSettings = val
@@ -112,23 +113,23 @@ func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[st
 	} else if configSchemaVersion == "v2" {
 		prometheusSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
 		if !ok {
-			fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
+			log.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
 			return false
 		}
 
 		val, ok := prometheusSettings["debug-mode"]
 		if !ok {
-			fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+			log.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
 			return false
 		}
 		debugSettings = val
 
 	} else {
-		fmt.Printf("Unsupported config schema version: %s. Using default value: false\n", configSchemaVersion)
+		log.Printf("Unsupported config schema version: %s. Using default value: false\n", configSchemaVersion)
 		return false
 	}
 
 	enabled := strings.ToLower(debugSettings) == "true"
-	fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
+	log.Printf("Using configmap setting for debug mode: %v\n", enabled)
 	return enabled
 }

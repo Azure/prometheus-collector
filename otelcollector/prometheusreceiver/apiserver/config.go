@@ -10,15 +10,10 @@ import (
 )
 
 type Config struct {
-	Enabled      bool                    `mapstructure:"enabled"`
 	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
 }
 
 func (cfg *Config) Validate() error {
-	if !cfg.Enabled {
-		return nil
-	}
-
 	if cfg.ServerConfig.Endpoint == "" {
 		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
 	}
