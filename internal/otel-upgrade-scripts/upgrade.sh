@@ -635,5 +635,9 @@ awk -v block="$REPLACE_BLOCK" '
 
 echo "Added prometheus-operator fork replace directive."
 
+echo "Running go mod tidy in otelcollector/otel-allocator..."
+(cd otelcollector/otel-allocator && go mod tidy)
+echo "go mod tidy completed."
+
 
 echo "Upgrade process complete!"
