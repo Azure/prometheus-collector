@@ -639,5 +639,291 @@ echo "Running go mod tidy in otelcollector/otel-allocator..."
 (cd otelcollector/otel-allocator && go mod tidy)
 echo "go mod tidy completed."
 
+# Update promOperator.go to include secretinformer changes
+echo "Updating promOperator.go to include secretinformer changes..."
+PROM_OP_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
+
+# In file otelcollector/otel-allocator/internal/watcher/promOperator.go -
+
+# * Add imports for the below -
+
+# ```
+# promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+# "k8s.io/client-go/metadata"
+# ```
+
+# * In NewPrometheusCRWatcher method add this before GetAllowDenyLists() -
+
+# ```
+# mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
+#  if err != nil {
+#   return nil, err
+#  }
+# ```
+
+# Update the below lines with the following lines -
+
+# ```
+# factory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
+
+#  monitoringInformers, err := getInformers(factory, cfg.ClusterConfig, promLogger)
+# ```
+
+# ```
+# monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
+#  metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+#  monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
+# ```
+
+# * Update group. Name value from "monitoring.coreos.com" to promMonitoring. GroupName in the method checkCRDAvailability
+
+# * Add additional function parameters in the function getInformers - metaDataInformerFactory informers. FactoriesForNamespaces
+
+# * Add the below code before return statement of the method getInformers
+
+# ```
+#  secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+#  if err != nil {
+#   return nil, err
+#  }
+#  if secretInformers != nil {
+#   informersMap[string(v1.ResourceSecrets)] = secretInformers
+#  }
+# ```
+
+# * In the function Watch(), replace this code -
+
+# ```
+# // only send an event notification if there isn't one already
+#   resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+#    // these functions only write to the notification channel if it's empty to avoid blocking
+#    // if scrape config updates are being rate-limited
+#    AddFunc: func(obj interface{}) {
+#     select {
+#     case notifyEvents <- struct{}{}:
+#     default:
+#     }
+#    },
+#    UpdateFunc: func(oldObj, newObj interface{}) {
+#     select {
+#     case notifyEvents <- struct{}{}:
+#     default:
+#     }
+#    },
+#    DeleteFunc: func(obj interface{}) {
+#     select {
+#     case notifyEvents <- struct{}{}:
+#     default:
+#     }
+#    },
+#   })
+# ```
+
+# with the below code -
+
+# ```
+# // Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
+#   if name == string(v1.ResourceSecrets) {
+#    w.logger.Info("Using custom event handler for secrets informer", "informer", name)
+#    // only send an event notification if there isn't one already
+#    resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+#     // these functions only write to the notification channel if it's empty to avoid blocking
+#     // if scrape config updates are being rate-limited
+#     AddFunc: func(obj interface{}) {
+#      select {
+#      case notifyEvents <- struct{}{}:
+#      default:
+#      }
+#     },
+#     UpdateFunc: func(oldObj, newObj interface{}) {
+#      oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
+#      newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
+#      secretName := newMeta.GetObjectMeta().GetName()
+#      secretNamespace := newMeta.GetObjectMeta().GetNamespace()
+#      _, exists, err := w.store.GetObject(&v1.Secret{
+#       ObjectMeta: metav1.ObjectMeta{
+#        Name:      secretName,
+#        Namespace: secretNamespace,
+#       },
+#      })
+#      if !exists || err != nil {
+#       if err != nil {
+#        w.logger.Error("unexpected store error when checking if secret exists, skipping update", secretName, "error", err)
+#        return
+#       }
+#       // if the secret does not exist in the store, we skip the update
+#       return
+#      }
+
+#      newSecret, err := w.store.GetSecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+
+#      if err != nil {
+#       w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
+#       return
+#      }
+
+#      w.logger.Info("Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
+#      if err := w.store.UpdateObject(newSecret); err != nil {
+#       w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+#      } else {
+#       w.logger.Info(
+#        "Successfully updated store, sending update event to notifyEvents channel",
+#        "oldObjName", oldMeta.GetObjectMeta().GetName(),
+#        "oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+#        "newObjName", newMeta.GetObjectMeta().GetName(),
+#        "newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+#       )
+#       select {
+#       case notifyEvents <- struct{}{}:
+#       default:
+#       }
+#      }
+#     },
+#     DeleteFunc: func(obj interface{}) {
+#      secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
+
+#      secretName := secretMeta.GetObjectMeta().GetName()
+#      secretNamespace := secretMeta.GetObjectMeta().GetNamespace()
+
+#      // check if the secret exists in the store
+#      secretObj := &v1.Secret{
+#       ObjectMeta: metav1.ObjectMeta{
+#        Name:      secretName,
+#        Namespace: secretNamespace,
+#       },
+#      }
+#      _, exists, err := w.store.GetObject(secretObj)
+#      // if the secret does not exist in the store, we skip the delete
+#      if !exists || err != nil {
+#       if err != nil {
+#        w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+#        return
+#       }
+#       // if the secret does not exist in the store, we skip the delete
+#       return
+#      }
+#      w.logger.Info("Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+#      // if the secret exists in the store, we delete it
+#      // and send an event notification to the notifyEvents channel
+#      if err := w.store.DeleteObject(secretObj); err != nil {
+#       w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+#       //return
+#      } else {
+#       w.logger.Info(
+#        "Successfully removed secret from store, sending update event to notifyEvents channel",
+#        "objName", secretMeta.GetObjectMeta().GetName(),
+#        "objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+#       )
+#       select {
+#       case notifyEvents <- struct{}{}:
+#       default:
+#       }
+#      }
+#     },
+#    })
+#   } else {
+#    w.logger.Info("Using default event handler for informer", "informer", name)
+#    // only send an event notification if there isn't one already
+#    resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+#     // these functions only write to the notification channel if it's empty to avoid blocking
+#     // if scrape config updates are being rate-limited
+#     AddFunc: func(obj interface{}) {
+#      select {
+#      case notifyEvents <- struct{}{}:
+#      default:
+#      }
+#     },
+#     UpdateFunc: func(oldObj, newObj interface{}) {
+#      select {
+#      case notifyEvents <- struct{}{}:
+#      default:
+#      }
+#     },
+#     DeleteFunc: func(obj interface{}) {
+#      select {
+#      case notifyEvents <- struct{}{}:
+#      default:
+#      }
+#     },
+#    })
+#   }
+
+# ```
+# Add imports to promOperator.go
+PROM_OP_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
+
+awk '
+/^import \(/ && !added {
+    print
+    print "\tpromMonitoring \"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring\""
+    print "\t\"k8s.io/client-go/metadata\""
+    added=1
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+echo "Added imports to promOperator.go."
+# Update NewPrometheusCRWatcher method
+# Add mdClient initialization after resourceSelector declaration in NewPrometheusCRWatcher
+awk '
+/resourceSelector .*/ && !added {
+    print
+    print ""
+    print "	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)"
+    print "	if err != nil {"
+    print "		return nil, err"
+    print "	}"
+    added=1
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Replace factory and monitoringInformers initialization in promOperator.go
+awk '
+/factory := informers\.NewMonitoringInformerFactories\(allowList, denyList, monitoringclient, allocatorconfig\.DefaultResyncTime, nil\)/ {
+    print "	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)"
+    print "	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)"
+    next
+}
+/monitoringInformers, err := getInformers\(factory, cfg\.ClusterConfig, promLogger\)/ {
+    print "	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)"
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Update group.Name to promMonitoring.GroupName in checkCRDAvailability
+awk '
+/group\.Name == "monitoring\.coreos\.com" {/ {
+    gsub(/group\.Name == "monitoring\.coreos\.com"/, "group.Name == promMonitoring.GroupName")
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Update getInformers function signature to add metaDataInformerFactory parameter
+awk '
+/func getInformers\(/ && !updated {
+    sub(/\) \(/, ", metaDataInformerFactory informers.FactoriesForNamespaces) (")
+    updated=1
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Insert secret informer logic before return statement in getInformers
+awk '
+/return informersMap, nil/ && !added {
+    print "	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)"
+    print "	if err != nil {"
+    print "		return nil, err"
+    print "	}"
+    print "	if secretInformers != nil {"
+    print "		informersMap[string(v1.ResourceSecrets)] = secretInformers"
+    print "	}"
+    added=1
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
 
 echo "Upgrade process complete!"

@@ -4,6 +4,8 @@
 package watcher
 
 import (
+	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	"k8s.io/client-go/metadata"
 	"context"
 	"fmt"
 	"log/slog"
@@ -53,11 +55,17 @@ func NewPrometheusCRWatcher(
 	slogger := slog.New(logr.ToSlogHandler(logger))
 	var resourceSelector *prometheus.ResourceSelector
 
+	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
-	factory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
+	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
+	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
 
-	monitoringInformers, err := getInformers(factory, cfg.ClusterConfig, promLogger)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +204,7 @@ func checkCRDAvailability(dcl discovery.DiscoveryInterface, resourceName string)
 
 	apiGroups := apiList.Groups
 	for _, group := range apiGroups {
-		if group.Name == "monitoring.coreos.com" {
+		if group.Name == promMonitoring.GroupName {
 			for _, version := range group.Versions {
 				resources, err := dcl.ServerResourcesForGroupVersion(version.GroupVersion)
 				if err != nil {
@@ -246,7 +254,7 @@ func createInformerIfAvailable(
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.Config, logger *slog.Logger) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.Config, logger *slog.Logger, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	informersMap := make(map[string]*informers.ForResource)
 
 	// Get the discovery client
@@ -307,6 +315,13 @@ func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.
 		informersMap[promv1alpha1.ScrapeConfigName] = scrapeConfigInformer
 	}
 
+	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+	if err != nil {
+		return nil, err
+	}
+	if secretInformers != nil {
+		informersMap[string(v1.ResourceSecrets)] = secretInformers
+	}
 	return informersMap, nil
 }
 
