@@ -19,7 +19,7 @@ func PrintMdsdVersion() {
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("Error getting MDSD version: %v\n", err)
+		log.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
 	FmtVar("MDSD_VERSION", string(output))
@@ -34,21 +34,21 @@ func ReadVersionFile(filePath string) (string, error) {
 }
 
 func FmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"\n", name, value)
+	log.Printf("%s=\"%s\"\n", name, value)
 }
 
 func ExistsAndNotEmpty(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
-		fmt.Println("ExistsAndNotEmpty: file:", filename, "doesn't exist")
+		log.Println("ExistsAndNotEmpty: file:", filename, "doesn't exist")
 		return false
 	}
 	if err != nil {
-		fmt.Println("ExistsAndNotEmpty: path:", filename, ":error:", err)
+		log.Println("ExistsAndNotEmpty: path:", filename, ":error:", err)
 		return false
 	}
 	if info.Size() == 0 {
-		fmt.Println("ExistsAndNotEmpty: file size is 0 for:", filename)
+		log.Println("ExistsAndNotEmpty: file size is 0 for:", filename)
 		return false
 	}
 	return true
@@ -123,7 +123,7 @@ func SetEnvVarsFromFile(filename string) error {
 		line := scanner.Text()
 		parts := strings.Split(line, "=")
 		if len(parts) != 2 {
-			fmt.Printf("Skipping invalid line: %s\n", line)
+			log.Printf("Skipping invalid line: %s\n", line)
 			continue
 		}
 
@@ -142,12 +142,12 @@ func SetEnvVarsFromFile(filename string) error {
 
 func Inotify(outputFile string, location string) error {
 	// Start inotify to watch for changes
-	fmt.Println("Starting inotify for watching config map update")
+	log.Println("Starting inotify for watching config map update")
 
 	_, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
-		fmt.Println("Error creating inotify output file:", err)
+		log.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify
@@ -167,7 +167,7 @@ func Inotify(outputFile string, location string) error {
 	err = inotifyCommand.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process: %v\n", err)
-		fmt.Println("Error starting inotify process:", err)
+		log.Println("Error starting inotify process:", err)
 	}
 
 	return nil
@@ -175,12 +175,12 @@ func Inotify(outputFile string, location string) error {
 
 func InotifyCCP(outputFile string, location string) error {
 	// Start inotify to watch for changes
-	fmt.Println("Starting inotify for watching config map update for ccp")
+	log.Println("Starting inotify for watching config map update for ccp")
 
 	_, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
-		fmt.Println("Error creating inotify output file:", err)
+		log.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify
@@ -201,7 +201,7 @@ func InotifyCCP(outputFile string, location string) error {
 	err = inotifyCommand.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process: %v\n", err)
-		fmt.Println("Error starting inotify process:", err)
+		log.Println("Error starting inotify process:", err)
 	}
 
 	return nil
@@ -211,7 +211,7 @@ func HasConfigChanged(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
-			fmt.Println("Error getting file info:", err)
+			log.Println("Error getting file info:", err)
 			os.Exit(1)
 		}
 

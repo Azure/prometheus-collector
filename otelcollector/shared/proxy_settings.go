@@ -2,7 +2,6 @@ package shared
 
 import (
 	"encoding/base64"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -79,14 +78,14 @@ func ConfigureEnvironment() error {
 	if os.Getenv("HTTP_PROXY_ENABLED") == "true" {
 		proxyProtocol := strings.ToLower(strings.Split(os.Getenv("HTTPS_PROXY"), "://")[0])
 		if proxyProtocol != "http" && proxyProtocol != "https" {
-			fmt.Println("HTTP Proxy specified does not include http:// or https://")
+			log.Println("HTTP Proxy specified does not include http:// or https://")
 		}
 
 		urlParts := strings.SplitN(strings.TrimPrefix(os.Getenv("HTTPS_PROXY"), proxyProtocol+"://"), "@", 2)
 		hostPort := urlParts[len(urlParts)-1]
 		host := strings.Split(hostPort, "/")[0]
 		if host == "" {
-			fmt.Println("HTTP Proxy specified does not include a host")
+			log.Println("HTTP Proxy specified does not include a host")
 		}
 
 		password := base64.StdEncoding.EncodeToString([]byte(strings.SplitN(urlParts[0], ":", 2)[1]))

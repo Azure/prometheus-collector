@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-
 pr:
   autoCancel: true
   branches:
@@ -2069,7 +2068,7 @@ extends:
                                 "IsCustomerHidden": true,
                                 "ReadyforRollout": true,
                                 "RollbackVersion": null,
-                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625"
                             }
                         ]
                       }

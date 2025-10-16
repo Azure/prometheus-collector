@@ -2,6 +2,7 @@ package configmapsettings
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -12,7 +13,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
-			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
+			log.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
 		}
 	}
 
@@ -20,11 +21,11 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["cluster_alias"]; ok {
 			cp.ClusterAlias = strings.TrimSpace(value)
-			fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
+			log.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
 			if cp.ClusterAlias != "" {
 				cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
 				cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")
-				fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
+				log.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
 			}
 		}
 	}
@@ -35,7 +36,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 			if value, ok := settings["operator_enabled"]; ok {
 				cp.IsOperatorEnabled = value == "true"
-				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
+				log.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
 			}
 		}
 	} else {
@@ -50,9 +51,9 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 				if strings.ToLower(value) == "false" {
 					cp.TargetallocatorHttpsEnabled = false
 				}
-				fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
+				log.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
 			}
-			fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
+			log.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
 		}
 	} else {
 		cp.TargetallocatorHttpsEnabledChartSetting = false
@@ -82,7 +83,7 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 
 func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	fmt.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", configSchemaVersion)
+	log.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", configSchemaVersion)
 
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
 		if len(metricsConfigBySection) > 0 {
@@ -90,7 +91,7 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 		}
 	} else {
 		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+			log.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 	}
 
@@ -103,15 +104,15 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 
 	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
 		c.ConfigParser.ClusterLabel = c.ConfigParser.ClusterAlias
-		fmt.Printf("Using clusterLabel from cluster_alias: %s\n", c.ConfigParser.ClusterAlias)
+		log.Printf("Using clusterLabel from cluster_alias: %s\n", c.ConfigParser.ClusterAlias)
 	}
 
-	fmt.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
-	fmt.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
+	log.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
+	log.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
 
 	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath, c.ConfigParser)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		log.Printf("%v\n", err)
 		return
 	}
 }
