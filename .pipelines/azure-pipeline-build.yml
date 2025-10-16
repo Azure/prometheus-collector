@@ -32,6 +32,7 @@ variables:
   TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
+  HELM_VERSION: '3.12.3'
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -245,7 +246,7 @@ extends:
         - task: HelmInstaller@1
           displayName: Install Helm version
           inputs:
-            helmVersionToInstall: 3.12.3
+            helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             # Get all releases and filter for proper semver versions (no pre-release tags)
             RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
@@ -295,6 +296,40 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+
+      - job: Helm_Lint
+        displayName: "CI/CD: Helm lint charts"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn: Image_Tags_and_Ev2_Artifacts
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        steps:
+        - checkout: self
+        - task: HelmInstaller@1
+          displayName: Install Helm version
+          inputs:
+            helmVersionToInstall: $(HELM_VERSION)
+        - bash: |
+            # Lint ama-metrics-arc chart (already substituted in Ev2 artifacts task)
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-arc
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics-arc chart"
+              exit 1
+            fi
+            
+            # Lint ama-metrics chart (already substituted in Ev2 artifacts task)
+            cd $(Build.ArtifactStagingDirectory)/azure-monitor-metrics-addon
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics chart"
+              exit 1
+            fi
+            
+            echo "All Helm charts passed linting!"
+          displayName: "CI/CD: Run helm lint on all charts"
 
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
@@ -1983,7 +2018,7 @@ extends:
         - task: HelmInstaller@1
           displayName: 'Build: install Helm version'
           inputs:
-            helmVersionToInstall: 3.12.3
+            helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
             envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
@@ -2158,7 +2193,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2254,7 +2289,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2337,7 +2372,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2433,7 +2468,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
