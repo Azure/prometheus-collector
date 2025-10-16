@@ -195,6 +195,31 @@ extends:
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
+        - task: HelmInstaller@1
+          displayName: 'CI/CD: Install Helm version for linting'
+          condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+          inputs:
+            helmVersionToInstall: $(HELM_VERSION)
+        - bash: |
+            # Lint ama-metrics-arc chart (ARC extension)
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-arc
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics-arc chart"
+              exit 1
+            fi
+            
+            # Lint ama-metrics chart (AKS addon)
+            cd $(Build.ArtifactStagingDirectory)/azure-monitor-metrics-addon
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics chart"
+              exit 1
+            fi
+            
+            echo "All Helm charts passed linting!"
+          displayName: "CI/CD: Lint Helm charts"
+          condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
             tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
@@ -296,40 +321,6 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
-
-      - job: Helm_Lint
-        displayName: "CI/CD: Helm lint charts"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-        steps:
-        - checkout: self
-        - task: HelmInstaller@1
-          displayName: Install Helm version
-          inputs:
-            helmVersionToInstall: $(HELM_VERSION)
-        - bash: |
-            # Lint ama-metrics-arc chart (already substituted in Ev2 artifacts task)
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-arc
-            helm lint .
-            if [ $? -ne 0 ]; then
-              echo "Error: Helm lint failed for ama-metrics-arc chart"
-              exit 1
-            fi
-            
-            # Lint ama-metrics chart (already substituted in Ev2 artifacts task)
-            cd $(Build.ArtifactStagingDirectory)/azure-monitor-metrics-addon
-            helm lint .
-            if [ $? -ne 0 ]; then
-              echo "Error: Helm lint failed for ama-metrics chart"
-              exit 1
-            fi
-            
-            echo "All Helm charts passed linting!"
-          displayName: "CI/CD: Run helm lint on all charts"
 
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
