@@ -65,7 +65,6 @@ func NewPrometheusCRWatcher(
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
-
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
@@ -323,6 +322,7 @@ func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.
 	if secretInformers != nil {
 		informersMap[string(v1.ResourceSecrets)] = secretInformers
 	}
+
 	return informersMap, nil
 }
 
