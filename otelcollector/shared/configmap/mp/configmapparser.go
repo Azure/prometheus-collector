@@ -114,9 +114,9 @@ func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings(metricsConfigBySection)
+	tomlparserDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
@@ -125,7 +125,6 @@ func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string)
 	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
 	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
-		return
 	}
 	handleEnvFileError(debugModeEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
@@ -167,26 +166,30 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func Configmapparser() {
+func processConfigFiles() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
-	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
+	switch schemaVersion {
+	case shared.SchemaVersion.V2:
+		filePaths := []string{configSettingsPrefix + "cluster-metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			log.Printf("Using defaults as error parsing files: %v\n", err)
+			log.Printf("Error parsing files: %v\n", err)
+			return
 		}
-	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		configDir := "/etc/config/settings"
+	case shared.SchemaVersion.V1:
+		configDir := configSettingsPrefix
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			log.Printf("Using defaults as error parsing config: %v\n", err)
+			log.Printf("Error parsing config: %v\n", err)
+			return
 		}
-	} else {
-		log.Println("Invalid schema version. Using defaults.")
+	default:
+		log.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
 	// Detect configmap presence and set CONFIGMAP_VERSION
@@ -203,19 +206,26 @@ func Configmapparser() {
 				configmapVer = "v1"
 				break
 			}
+			for _, file := range files {
+				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
+					continue
+				}
+				configmapVer = "v1"
+				break
+			}
 		}
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIGMAP_VERSION", configmapVer, true)
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
-	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	parseDebugModeSettings(metricsConfigBySection)
 	parseOpentelemetryMetricsSettings(metricsConfigBySection)
 	parseKSMSettings(metricsConfigBySection)
 
-	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
-	tomlparserScrapeInterval(metricsConfigBySection)
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
+	tomlparserScrapeInterval(metricsConfigBySection, schemaVersion)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")
@@ -228,6 +238,11 @@ func Configmapparser() {
 
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+}
+
+func Configmapparser() {
+
+	processConfigFiles()
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {

@@ -1,0 +1,30 @@
+schema-version:
+  v2
+config-version:
+  ver1
+cluster-metrics: |-
+  default-targets-scrape-enabled:
+    kubelet = false
+    coredns = false
+    cadvisor = false
+    kubeproxy = false
+    apiserver = false
+    kubestate = false
+    nodeexporter = false
+    windowsexporter = false
+    windowskubeproxy = false
+    kappiebasic = false
+    networkobservabilityRetina = false
+    networkobservabilityHubble = false
+    networkobservabilityCilium = false
+    acstor-capacity-provisioner = false
+    acstor-metrics-exporter = false
+    prometheuscollectorhealth = false
+controlplane-metrics: |-
+  default-targets-scrape-enabled: |-
+    apiserver = false
+    cluster-autoscaler = false
+    node-auto-provisioning = false
+    kube-scheduler = false
+    kube-controller-manager = false
+    etcd = false
