@@ -18,6 +18,7 @@
 * Pipeline/Docs/Templates Updates:
   + Update azure-pipeline-release.yml for Azure Pipelines (<https://github.com/Azure/prometheus-collector/pull/1314>)
   + ci/cd: fixes for tests + release (<https://github.com/Azure/prometheus-collector/pull/1323>)
+  + fix: helm lint+dry-run check for PRs + arc fixes + build fixes(<https://github.com/Azure/prometheus-collector/pull/1326>)
 
 ## Release 09-29-2025
 
