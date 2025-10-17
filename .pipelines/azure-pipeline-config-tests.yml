@@ -99,8 +99,8 @@ stages:
               wget https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
               sudo rm -rf /usr/local/go
               sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz --verbose
-              NEW_PATH="/usr/local/go/bin" 
-              echo "##vso[task.prependpath]${NEW_PATH}"
+              export PATH="/usr/local/go/bin:${PATH}"
+              echo "##vso[task.prependpath]/usr/local/go/bin"
               go version
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Build: install golang $(GOLANG_VERSION)"
