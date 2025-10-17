@@ -18,6 +18,7 @@ scrape_configs:
   - namespaces:
       names:
       - acstor
+      - kube-system
     role: pod
   metric_relabel_configs:
   - action: keep
@@ -26,11 +27,11 @@ scrape_configs:
     - __name__
   relabel_configs:
   - action: keep
-    regex: acstor
+    regex: acstor|kube-system
     source_labels:
     - __meta_kubernetes_namespace
   - action: keep
-    regex: metrics-exporter;monitor
+    regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
     source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_name
     - __meta_kubernetes_pod_label_app_kubernetes_io_component

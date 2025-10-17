@@ -248,9 +248,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
-				acstor-capacity-provisioner = "test.*|test2"
-    			acstor-metrics-exporter = "test.*|test2"
-				prometheuscollectorhealth = "test.*|test2"
+				ztunnel = "test.*|test2"
+				istio-cni = "test.*|test2"
+				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = true
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
@@ -271,6 +271,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				podannotations = "15s"
 				acstor-capacity-provisioner = "15s"
     			acstor-metrics-exporter = "15s"
+				ztunnel = "15s"
+				istio-cni = "15s"
+				waypoint-proxy = "15s"
 			`)
 			isDefaultConfig = false
 			useConfigFiles = false
@@ -336,9 +339,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
-				acstor-capacity-provisioner = "test.*|test2"
-    			acstor-metrics-exporter = "test.*|test2"
-				prometheuscollectorhealth = "test.*|test2"
+				ztunnel = "test.*|test2"
+				istio-cni = "test.*|test2"
+				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = true
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
@@ -359,6 +362,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				podannotations = "15s"
 				acstor-capacity-provisioner = "15s"
     			acstor-metrics-exporter = "15s"
+				ztunnel = "15s"
+				istio-cni = "15s"
+				waypoint-proxy = "15s"
 			`)
 			isDefaultConfig = false
 			useConfigFiles = false
@@ -492,6 +498,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
+				ztunnel = "test.*|test2"
+				istio-cni = "test.*|test2"
+				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = false
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
@@ -798,6 +807,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					acstor-capacity-provisioner = "test.*|test2"
 					acstor-metrics-exporter = "test.*|test2"
 					prometheuscollectorhealth = "test.*|test2"
+					ztunnel = "test.*|test2"
+					istio-cni = "test.*|test2"
+					waypoint-proxy = "test.*|test2"
 				minimal-ingestion-profile: |-
 					enabled = true
 				default-targets-scrape-interval-settings: |-
@@ -818,6 +830,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					podannotations = "15s"
 					acstor-capacity-provisioner = "15s"
 					acstor-metrics-exporter = "15s"
+					ztunnel = "15s"
+					istio-cni = "15s"
+					waypoint-proxy = "15s"
 			`)
 			configMapMountPath = "./testdata/advanced-linux-rs.yaml"
 			isDefaultConfig = false
