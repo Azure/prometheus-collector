@@ -714,10 +714,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             sudo apt-get install build-essential -y
             make
@@ -778,10 +782,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -819,10 +827,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: 'Build: specify golang version'
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
@@ -863,10 +875,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: 'Build: specify golang version'
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1027,10 +1043,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1197,10 +1217,14 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1230,10 +1254,14 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -1275,10 +1303,14 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1381,10 +1413,14 @@ extends:
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1497,18 +1533,24 @@ extends:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - task: GoTool@0
-          displayName: "Build: specify fluent-bit golang version"
-          inputs:
-            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
+            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1665,18 +1707,24 @@ extends:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - task: GoTool@0
-          displayName: "Build: specify fluent-bit golang version"
-          inputs:
-            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
+            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1844,10 +1892,13 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
             export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
