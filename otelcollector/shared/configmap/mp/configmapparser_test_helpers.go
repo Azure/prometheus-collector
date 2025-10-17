@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -259,34 +260,47 @@ func setSetupEnvVars(controllertype string, os string) {
 	setEnvVars(envVars)
 }
 
-func getDefaultExpectedEnvVars() map[string]string {
-	return map[string]string{
-		"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
-		"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
-		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "",
-		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
-		"AZMON_CLUSTER_LABEL":                                          "",
-		"AZMON_CLUSTER_ALIAS":                                          "",
-		"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "true",
-		"AZMON_OPERATOR_ENABLED":                                       "true",
-		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
-		"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
-		"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":                    "false",
-		"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":                   "true",
-		"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":                  "false",
-		"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":                  "false",
-		"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":                  "true",
-		"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":               "true",
-		"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED":           "",
-		"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":             "",
-		"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":            "false",
-		"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED":           "false",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-		"DEBUG_MODE_ENABLED":                                           "false",
+func getScrapeEnabledEnvVarName(jobName string) string {
+	return fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED", strings.ToUpper(jobName))
+}
+
+func cloneDefaultScrapeJobStates() map[string]bool {
+	values := make(map[string]bool, len(shared.DefaultScrapeJobs))
+	for jobName, job := range shared.DefaultScrapeJobs {
+		values[jobName] = job.Enabled
 	}
+	return values
+}
+
+func buildScrapeEnvVarOverridesFromBoolMap(values map[string]bool) map[string]string {
+	overrides := make(map[string]string, len(values))
+	for jobName, enabled := range values {
+		overrides[getScrapeEnabledEnvVarName(jobName)] = strconv.FormatBool(enabled)
+	}
+	return overrides
+}
+
+func getDefaultExpectedEnvVars() map[string]string {
+	expectedEnvVars := map[string]string{
+		"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
+		"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "",
+		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
+		"AZMON_CLUSTER_LABEL":                              "",
+		"AZMON_CLUSTER_ALIAS":                              "",
+		"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
+		"AZMON_OPERATOR_ENABLED":                           "true",
+		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":           "",
+		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
+		"DEBUG_MODE_ENABLED":                               "false",
+	}
+
+	for jobName, job := range shared.DefaultScrapeJobs {
+		keyName := getScrapeEnabledEnvVarName(jobName)
+		expectedEnvVars[keyName] = strconv.FormatBool(job.Enabled)
+	}
+
+	return expectedEnvVars
 }
 
 // Helper function to generate standard expected keep list map

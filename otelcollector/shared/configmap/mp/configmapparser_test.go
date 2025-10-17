@@ -182,24 +182,39 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_CLUSTER_LABEL":                              "alias",
 				"AZMON_CLUSTER_ALIAS":                              "alias",
 				"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":   "true",
-				//"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "true",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "true",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-				"DEBUG_MODE_ENABLED": "true",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
+				"DEBUG_MODE_ENABLED":                               "true",
 			}
+
+			scrapeOverrides := cloneDefaultScrapeJobStates()
+			for _, job := range []string{
+				"podannotations",
+				"kubelet",
+				"coredns",
+				"cadvisor",
+				"kubeproxy",
+				"apiserver",
+				"kubestate",
+				"nodeexporter",
+				"windowsexporter",
+				"windowskubeproxy",
+				"kappiebasic",
+				"networkobservabilityRetina",
+				"networkobservabilityHubble",
+				"networkobservabilityCilium",
+				"acstor-capacity-provisioner",
+				"local-csi-driver",
+				"acstor-metrics-exporter",
+				"prometheuscollectorhealth",
+			} {
+				scrapeOverrides[job] = true
+			}
+
+			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+				extraEnvVars[key] = value
+			}
+
 			for k, v := range extraEnvVars {
 				expectedEnvVars[k] = v
 			}
@@ -305,19 +320,17 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		BeforeEach(func() {
 			expectedEnvVars = getDefaultExpectedEnvVars()
 			extraEnvVars := map[string]string{
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
-				//"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "'.*|value'",
 				"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
-				//"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
-				"DEBUG_MODE_ENABLED":                           "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
+				"DEBUG_MODE_ENABLED":                               "true",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
+			expectedEnvVars[getScrapeEnabledEnvVarName("podannotations")] = "true"
 			expectedKeepListHashMap = getExpectedKeepListMap(true, "test.*|test2")
 			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("15s")
 
@@ -402,27 +415,23 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		BeforeEach(func() {
 			expectedEnvVars = getDefaultExpectedEnvVars()
 			extraEnvVars := map[string]string{
-				"AZMON_AGENT_CFG_SCHEMA_VERSION":                 "v1",
-				"AZMON_AGENT_CFG_FILE_VERSION":                   "ver1",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":           "true",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":      "false",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":      "false",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":     "false",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":    "false",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":    "false",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":    "false",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED": "false",
-				//"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
-				//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "false",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "true",
-				"DEBUG_MODE_ENABLED": "false",
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
+				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "true",
+				"DEBUG_MODE_ENABLED":                               "false",
 			}
+
+			scrapeOverrides := cloneDefaultScrapeJobStates()
+			for jobName := range scrapeOverrides {
+				scrapeOverrides[jobName] = false
+			}
+
+			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+				extraEnvVars[key] = value
+			}
+
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
@@ -611,30 +620,23 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			BeforeEach(func() {
 				expectedEnvVars := getDefaultExpectedEnvVars()
 				extraEnvVars := map[string]string{
-					"AZMON_AGENT_CFG_SCHEMA_VERSION":                     "v1",
-					"AZMON_AGENT_CFG_FILE_VERSION":                       "ver1",
-					"AZMON_OPERATOR_ENABLED_CHART_SETTING":               "true",
-					"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":          "false",
-					"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":          "false",
-					"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":         "false",
-					"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":        "false",
-					"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":        "false",
-					"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":        "false",
-					"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":     "false",
-					"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "",
-					"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
-					"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
-					"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
-					//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
-					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "false",
-					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "false",
-					"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "false",
-					"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "true",
-					"DEBUG_MODE_ENABLED": "false",
-					//"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":                       "false",
-					//"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                            "true",
-					//"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":                          "true",
+					"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
+					"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
+					"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
+					"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "",
+					"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "true",
+					"DEBUG_MODE_ENABLED":                               "false",
 				}
+
+				scrapeOverrides := cloneDefaultScrapeJobStates()
+				for jobName := range scrapeOverrides {
+					scrapeOverrides[jobName] = false
+				}
+
+				for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+					extraEnvVars[key] = value
+				}
+
 				for key, value := range extraEnvVars {
 					expectedEnvVars[key] = value
 				}
@@ -745,24 +747,39 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_CLUSTER_LABEL":                              "alias",
 				"AZMON_CLUSTER_ALIAS":                              "alias",
 				"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "true",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":   "true",
-				//"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "true",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "true",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-				"DEBUG_MODE_ENABLED": "true",
+				"AZMON_PROMETHEUS_PODANNOTATIONS_SCRAPING_ENABLED": "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
+				"DEBUG_MODE_ENABLED":                               "true",
 			}
+
+			scrapeOverrides := cloneDefaultScrapeJobStates()
+			for _, job := range []string{
+				"kubelet",
+				"coredns",
+				"cadvisor",
+				"kubeproxy",
+				"apiserver",
+				"kubestate",
+				"nodeexporter",
+				"windowsexporter",
+				"windowskubeproxy",
+				"kappiebasic",
+				"networkobservabilityRetina",
+				"networkobservabilityHubble",
+				"networkobservabilityCilium",
+				"podannotations",
+				"acstor-capacity-provisioner",
+				"local-csi-driver",
+				"acstor-metrics-exporter",
+			} {
+				scrapeOverrides[job] = true
+			}
+			scrapeOverrides["prometheuscollectorhealth"] = false
+
+			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+				extraEnvVars[key] = value
+			}
+
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
@@ -874,26 +891,40 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		BeforeEach(func() {
 			expectedEnvVars := getDefaultExpectedEnvVars()
 			extraEnvVars := map[string]string{
-				"AZMON_AGENT_CFG_SCHEMA_VERSION":                 "v2",
-				"AZMON_AGENT_CFG_FILE_VERSION":                   "ver1",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":           "true",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":      "true",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":     "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "true",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
-				"DEBUG_MODE_ENABLED": "false",
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":               "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":                 "ver1",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":         "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
+				"DEBUG_MODE_ENABLED":                           "false",
 			}
+
+			scrapeOverrides := cloneDefaultScrapeJobStates()
+			for _, job := range []string{
+				"kubelet",
+				"coredns",
+				"cadvisor",
+				"kubeproxy",
+				"apiserver",
+				"kubestate",
+				"nodeexporter",
+				"windowsexporter",
+				"windowskubeproxy",
+				"kappiebasic",
+				"networkobservabilityRetina",
+				"networkobservabilityHubble",
+				"networkobservabilityCilium",
+				"acstor-capacity-provisioner",
+				"local-csi-driver",
+				"acstor-metrics-exporter",
+			} {
+				scrapeOverrides[job] = true
+			}
+			scrapeOverrides["prometheuscollectorhealth"] = false
+
+			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+				extraEnvVars[key] = value
+			}
+
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
