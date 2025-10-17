@@ -94,6 +94,7 @@ stages:
             displayName: "Install Azure CLI"
 
           - bash: |
+              set -e
               echo "executing the script to install golang $(GOLANG_VERSION)"
               wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
               sudo rm -rf /usr/local/go
