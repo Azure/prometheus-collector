@@ -230,7 +230,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	if err := ioutil.WriteFile(outputFilePath, mergedConfig, 0644); err != nil {
 		return err
 	}
-	fmt.Printf("prom-config-validator::Successfully generated otel config\n")
+	log.Printf("prom-config-validator::Successfully generated otel config\n")
 	return nil
 }
 
@@ -260,7 +260,7 @@ func main() {
 		os.Exit(1)
 	}
 	if promFilePath != "" {
-		fmt.Printf("prom-config-validator::Config file provided - %s\n", promFilePath)
+		log.Printf("prom-config-validator::Config file provided - %s\n", promFilePath)
 
 		outputFilePath := *outFilePtr
 		if outputFilePath == "" {
@@ -310,7 +310,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("prom-config-validator::Loading configuration...\n")
+		log.Printf("prom-config-validator::Loading configuration...\n")
 		cfg, err := cp.Get(context.Background(), factories)
 		if err != nil {
 			logFatalError(fmt.Sprintf("prom-config-validator::Cannot load configuration: %v", err))
@@ -326,6 +326,6 @@ func main() {
 		logFatalError("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
-	fmt.Printf("prom-config-validator::Successfully loaded and validated prometheus config\n")
+	log.Printf("prom-config-validator::Successfully loaded and validated prometheus config\n")
 	os.Exit(0)
 }

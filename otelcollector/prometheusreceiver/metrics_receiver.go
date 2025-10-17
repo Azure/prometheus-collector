@@ -34,10 +34,6 @@ import (
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-
-	// Use same settings as Prometheus web server
-	maxConnections     = 512
-	readTimeoutMinutes = 10
 )
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.

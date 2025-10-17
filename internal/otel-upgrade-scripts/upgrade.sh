@@ -613,4 +613,111 @@ else
     fi
 fi
 
+# Replace prometheus-operator dependency in go.mod in folder - otel-allocator
+echo "Adding prometheus-operator fork replace directive to otel-allocator/go.mod..."
+
+GO_MOD_FILE="otelcollector/otel-allocator/go.mod"
+REPLACE_BLOCK="// pointing to this fork for prometheus-operator since we need fixes for asset store which is only available from v0.84.0 of prometheus-operator
+// targetallocator cannot upgrade to v0.84.0 because of this issue - https://github.com/open-telemetry/opentelemetry-operator/issues/4196
+// this commit is from this repository -https://github.com/rashmichandrashekar/prometheus-operator/tree/rashmi/v0.81.0-patch-assetstore - which only has the asset store fixes on top of v0.81.0 of prometheus-operator
+replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250715221118-b55ea6d3c138
+"
+
+# Insert before the first 'require' line
+awk -v block="$REPLACE_BLOCK" '
+    BEGIN { inserted=0 }
+    /^require / && !inserted {
+        print block
+        inserted=1
+    }
+    { print }
+' "$GO_MOD_FILE" > "${GO_MOD_FILE}.tmp" && mv "${GO_MOD_FILE}.tmp" "$GO_MOD_FILE"
+
+echo "Added prometheus-operator fork replace directive."
+
+echo "Running go mod tidy in otelcollector/otel-allocator..."
+(cd otelcollector/otel-allocator && go mod tidy)
+echo "go mod tidy completed."
+
+# Update promOperator.go to include secretinformer changes
+echo "Updating promOperator.go to include secretinformer changes..."
+PROM_OP_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
+
+# Add imports to promOperator.go
+PROM_OP_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
+
+awk '
+/^import \(/ && !added {
+    print
+    print "\tpromMonitoring \"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring\""
+    print "\t\"k8s.io/client-go/metadata\""
+    added=1
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+echo "Added imports to promOperator.go."
+# Update NewPrometheusCRWatcher method
+# Add mdClient initialization after resourceSelector declaration in NewPrometheusCRWatcher
+awk '
+/resourceSelector .*/ && !added {
+    print
+    print ""
+    print "	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)"
+    print "	if err != nil {"
+    print "		return nil, err"
+    print "	}"
+    added=1
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Replace factory and monitoringInformers initialization in promOperator.go
+awk '
+/factory := informers\.NewMonitoringInformerFactories\(allowList, denyList, monitoringclient, allocatorconfig\.DefaultResyncTime, nil\)/ {
+    print "	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)"
+    print "	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)"
+    next
+}
+/monitoringInformers, err := getInformers\(factory, cfg\.ClusterConfig, promLogger\)/ {
+    print "	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)"
+    next
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Update group.Name to promMonitoring.GroupName in checkCRDAvailability
+awk '
+/group\.Name == "monitoring\.coreos\.com" {/ {
+    gsub(/group\.Name == "monitoring\.coreos\.com"/, "group.Name == promMonitoring.GroupName")
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Update getInformers function signature to add metaDataInformerFactory parameter
+awk '
+/func getInformers\(/ && !updated {
+    sub(/\) \(/, ", metaDataInformerFactory informers.FactoriesForNamespaces) (")
+    updated=1
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
+# Insert secret informer logic before return statement in getInformers
+awk '
+/return informersMap, nil/ && !added {
+    print "	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)"
+    print "	if err != nil {"
+    print "		return nil, err"
+    print "	}"
+    print "	if secretInformers != nil {"
+    print "		informersMap[string(v1.ResourceSecrets)] = secretInformers"
+    print "	}"
+    added=1
+}
+{ print }
+' "$PROM_OP_FILE" > "${PROM_OP_FILE}.tmp" && mv "${PROM_OP_FILE}.tmp" "$PROM_OP_FILE"
+
 echo "Upgrade process complete!"

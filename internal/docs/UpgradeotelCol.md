@@ -296,3 +296,75 @@ with the below code -
 ## Note about $ $$ changes that we need to test
 
 During upgrades make sure that the environment variable substitution works for the daemonset and shows the substituted value in the prometheus UX as well as in the metrics in Grafana, whereas for the replicaset the environment variable substitution is not expected to work as shows up as ${env:env_var_name} at all places.
+
+---
+
+## Web Handler Refactoring (Custom Changes)
+These changes are based on commit 49202c2 pattern.
+
+### New Files Added
+
+Create a new folder at `otelcollector/prometheusreceiver/apiserver/` containing:
+
+1. **config.go**
+2. **manager.go**.
+
+Copy over these files from the previous changes in main.
+
+### Key Files Modified
+
+#### 1. `otelcollector/prometheusreceiver/config.go`
+
+**Changed**:
+```go
+// Before:
+APIServer APIServer `mapstructure:"api_server"`
+
+// After:
+APIServer configoptional.Optional[apiserver.Config] `mapstructure:"api_server"`
+```
+
+**Removed**: Old `APIServer` struct with `Enabled` boolean field
+
+**Added import**: 
+```go
+"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
+```
+
+#### 2. `otelcollector/prometheusreceiver/metrics_receiver.go`
+
+**Removed** (~20 imports related to web/HTTP handling):
+- `net/http`, `net/url`, `strings`, `runtime`, `runtime/debug`, `os`
+- `github.com/grafana/regexp`
+- `github.com/mwitkow/go-conntrack`
+- Prometheus web/API packages
+- OpenTelemetry HTTP packages
+
+**Changed struct field**:
+```go
+// Before:
+apiServer *http.Server
+
+// After:
+apiServerManager *apiserver.Manager
+```
+
+**Modified functions**:
+
+- `newPrometheusReceiver()` - Now uses `cfg.APIServer.Get()` and creates Manager instance
+- `initPrometheusComponents()` - Calls `apiServerManager.Start()` instead of inline initialization
+- `Shutdown()` - Uses `apiServerManager.Shutdown()`
+
+**Removed functions** (~150 lines):
+- `initAPIServer()` - All functionality moved to `apiserver.Manager.Start()`
+- `setPathWithPrefix()` - Moved to apiserver package
+
+**Type casting fix** in `gcInterval()`:
+```go
+promCfg := (*promconfig.Config)(cfg)
+// Use promCfg instead of cfg for accessing Prometheus config fields
+```
+
+#### 3. Deleted File
+
+- `otelcollector/prometheusreceiver/metricsreceiver_api_server_test.go` - Removed (old test file)

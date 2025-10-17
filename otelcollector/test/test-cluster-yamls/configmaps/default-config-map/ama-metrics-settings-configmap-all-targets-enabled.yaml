@@ -32,6 +32,9 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+    ztunnel = true
+    istio-cni = true
+    waypoint-proxy = true
     local-csi-driver = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
@@ -53,6 +56,9 @@ data:
     networkobservabilityRetina = ""
     networkobservabilityHubble = ""
     networkobservabilityCilium = ""
+    ztunnel = ""
+    istio-cni = ""
+    waypoint-proxy = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -76,6 +82,9 @@ data:
     networkobservabilityRetina = "30s"
     networkobservabilityHubble = "30s"
     networkobservabilityCilium = "30s"
+    ztunnel = "30s"
+    istio-cni = "30s"
+    waypoint-proxy = "30s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"

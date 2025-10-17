@@ -1,0 +1,42 @@
+scrape_configs:
+  - job_name: ztunnel
+    honor_labels: true
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    scheme: http
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - applink-system
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: applink-system
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: ztunnel
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: ztunnel-stats
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: instance
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+    metric_relabel_configs:
+      # Drop zones
+      - regex: 'source_zone|destination_zone'
+        action: labeldrop
+      # Drop identity
+      - regex: 'source_principal|destination_principal'
+        action: labeldrop  
+      # Drop all version/revision labels
+      - regex: 'source_version|destination_version|source_canonical_revision|destination_canonical_revision'
+        action: labeldrop
+      # Drop all redundant service labels
+      - regex: 'source_canonical_service|destination_canonical_service|destination_service|destination_service_name|destination_service_namespace'
+        action: labeldrop
