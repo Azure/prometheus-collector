@@ -818,6 +818,7 @@ extends:
 
             sudo rm -rf /usr/local/go
             sudo tar -C /usr/local -xzf "${ARCHIVE}"
+            export PATH="/usr/local/go/bin:${PATH}"
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
@@ -1321,6 +1322,7 @@ extends:
 
             sudo rm -rf /usr/local/go
             sudo tar -C /usr/local -xzf "${ARCHIVE}"
+            export PATH="/usr/local/go/bin:${PATH}"
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
