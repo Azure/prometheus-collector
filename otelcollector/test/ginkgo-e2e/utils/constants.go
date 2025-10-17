@@ -19,6 +19,7 @@ var (
 		"client connection lost",
 		"remote error: tls: bad certificate",
 		"local error: tls: bad record",
+		"client sent an HTTP request to an HTTPS server"
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet
