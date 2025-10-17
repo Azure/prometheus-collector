@@ -182,6 +182,8 @@ extends:
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
             export ARC_EXTENSION=true
             export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
+            export ARC_REGION="westcentralus"
             envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
             tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
             cd $(Build.ArtifactStagingDirectory)
