@@ -26,6 +26,9 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+    istio-cni = false
+    waypoint-proxy = false
+    local-csi-driver = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
