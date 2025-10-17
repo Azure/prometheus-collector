@@ -133,7 +133,7 @@ COPY --from=configuration-reader-builder /src/configuration-reader-builder/confi
 COPY --from=builder /opt/*.sh $tmpdir/
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+RUN [ "/bin/bash", "-c", "chown 0.0 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 
 ENTRYPOINT ["./opt/configurationreader"]
