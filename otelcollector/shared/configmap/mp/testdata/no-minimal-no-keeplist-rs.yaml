@@ -1,28 +1,4 @@
 scrape_configs:
-- honor_labels: true
-  job_name: acstor-metrics-exporter
-  kubernetes_sd_configs:
-  - namespaces:
-      names:
-      - acstor
-      - kube-system
-    role: pod
-  relabel_configs:
-  - action: keep
-    regex: acstor|kube-system
-    source_labels:
-    - __meta_kubernetes_namespace
-  - action: keep
-    regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
-    source_labels:
-    - __meta_kubernetes_pod_label_app_kubernetes_io_name
-    - __meta_kubernetes_pod_label_app_kubernetes_io_component
-  - action: keep
-    regex: metrics
-    source_labels:
-    - __meta_kubernetes_pod_container_port_name
-  scheme: http
-  scrape_interval: 30s
 - job_name: kube-state-metrics
   label_limit: 63
   label_name_length_limit: 511
@@ -47,6 +23,52 @@ scrape_configs:
     regex: capacity-provisioner;capacity-provisoner
     source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_name
+    - __meta_kubernetes_pod_label_app_kubernetes_io_component
+  - action: keep
+    regex: metrics
+    source_labels:
+    - __meta_kubernetes_pod_container_port_name
+  scheme: http
+  scrape_interval: 30s
+- honor_labels: true
+  job_name: acstor-metrics-exporter
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - acstor
+      - kube-system
+    role: pod
+  relabel_configs:
+  - action: keep
+    regex: acstor|kube-system
+    source_labels:
+    - __meta_kubernetes_namespace
+  - action: keep
+    regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
+    source_labels:
+    - __meta_kubernetes_pod_label_app_kubernetes_io_name
+    - __meta_kubernetes_pod_label_app_kubernetes_io_component
+  - action: keep
+    regex: metrics
+    source_labels:
+    - __meta_kubernetes_pod_container_port_name
+  scheme: http
+  scrape_interval: 30s
+- honor_labels: true
+  job_name: local-csi-driver
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - kube-system
+    role: pod
+  relabel_configs:
+  - action: keep
+    regex: kube-system
+    source_labels:
+    - __meta_kubernetes_namespace
+  - action: keep
+    regex: csi-local-node
+    source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_component
   - action: keep
     regex: metrics

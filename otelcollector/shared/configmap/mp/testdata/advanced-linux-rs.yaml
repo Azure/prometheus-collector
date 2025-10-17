@@ -52,7 +52,7 @@ scrape_configs:
     role: pod
   metric_relabel_configs:
   - action: keep
-    regex: test.*|test2|disk_pool_ready_state|disk_read_operations_completed_total|disk_write_operations_completed_total|disk_read_operations_time_seconds_total|disk_write_operations_time_seconds_total|disk_errors_total|disk_read_bytes_total|disk_written_bytes_total|disk_readonly_errors_gauge
+    regex: test.*|test2|disk_read_operations_completed_total|disk_write_operations_completed_total|disk_read_operations_time_seconds_total|disk_write_operations_time_seconds_total|disk_read_bytes_total|disk_written_bytes_total|disk_reads_merged_total|disk_writes_merged_total|disk_io_now|disk_io_time_seconds_total|disk_io_time_weighted_seconds_total|disk_discard_operations_completed_total|disk_discards_merged_total|disk_discarded_sectors_total|disk_discard_operations_time_seconds_total|disk_flush_requests_total|disk_flush_requests_time_seconds_total|disk_errors_total|disk_readonly_errors_gauge|disk_readonly_status_gauge
     source_labels:
     - __name__
   relabel_configs:
@@ -133,6 +133,33 @@ scrape_configs:
     regex: capacity-provisioner;capacity-provisoner
     source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_name
+    - __meta_kubernetes_pod_label_app_kubernetes_io_component
+  - action: keep
+    regex: metrics
+    source_labels:
+    - __meta_kubernetes_pod_container_port_name
+  scheme: http
+  scrape_interval: 15s
+- honor_labels: true
+  job_name: local-csi-driver
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - kube-system
+    role: pod
+  metric_relabel_configs:
+  - action: keep
+    regex: test.*|test2|rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-system
+    source_labels:
+    - __meta_kubernetes_namespace
+  - action: keep
+    regex: csi-local-node
+    source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_component
   - action: keep
     regex: metrics

@@ -13,6 +13,61 @@ scrape_configs:
   - targets:
     - ama-metrics-ksm.kube-system.svc.cluster.local:8080
 - honor_labels: true
+  job_name: acstor-capacity-provisioner
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - acstor
+    role: pod
+  metric_relabel_configs:
+  - action: keep
+    regex: test.*|test2
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: acstor
+    source_labels:
+    - __meta_kubernetes_namespace
+  - action: keep
+    regex: capacity-provisioner;capacity-provisoner
+    source_labels:
+    - __meta_kubernetes_pod_label_app_kubernetes_io_name
+    - __meta_kubernetes_pod_label_app_kubernetes_io_component
+  - action: keep
+    regex: metrics
+    source_labels:
+    - __meta_kubernetes_pod_container_port_name
+  scheme: http
+  scrape_interval: 30s
+- honor_labels: true
+  job_name: local-csi-driver
+  kubernetes_sd_configs:
+  - namespaces:
+      names:
+      - kube-system
+    role: pod
+  metric_relabel_configs:
+  - action: keep
+    regex: test.*|test2
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-system
+    source_labels:
+    - __meta_kubernetes_namespace
+  - action: keep
+    regex: csi-local-node
+    source_labels:
+    - __meta_kubernetes_pod_label_app_kubernetes_io_component
+  - action: keep
+    regex: metrics
+    source_labels:
+    - __meta_kubernetes_pod_container_port_name
+  scheme: http
+  scrape_interval: 30s
+- honor_labels: true
   job_name: acstor-metrics-exporter
   kubernetes_sd_configs:
   - namespaces:
@@ -32,34 +87,6 @@ scrape_configs:
     - __meta_kubernetes_namespace
   - action: keep
     regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
-    source_labels:
-    - __meta_kubernetes_pod_label_app_kubernetes_io_name
-    - __meta_kubernetes_pod_label_app_kubernetes_io_component
-  - action: keep
-    regex: metrics
-    source_labels:
-    - __meta_kubernetes_pod_container_port_name
-  scheme: http
-  scrape_interval: 30s
-- honor_labels: true
-  job_name: acstor-capacity-provisioner
-  kubernetes_sd_configs:
-  - namespaces:
-      names:
-      - acstor
-    role: pod
-  metric_relabel_configs:
-  - action: keep
-    regex: test.*|test2
-    source_labels:
-    - __name__
-  relabel_configs:
-  - action: keep
-    regex: acstor
-    source_labels:
-    - __meta_kubernetes_namespace
-  - action: keep
-    regex: capacity-provisioner;capacity-provisoner
     source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_name
     - __meta_kubernetes_pod_label_app_kubernetes_io_component
