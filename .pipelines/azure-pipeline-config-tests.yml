@@ -1000,14 +1000,14 @@ stages:
         ls -la "$(Pipeline.Workspace)/testkube-results/"
       displayName: "List Results Files"
 
-    # - bash: |
-    #     export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
-    #     export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
-    #     export BUILD_REASON="$(Build.Reason)"
-    #     export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
-    #     export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
-    #     export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
-    #     chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
-    #     ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-    #   workingDirectory: $(Build.SourcesDirectory)
-    #   displayName: "Send TestKube Summary Notification"
+    - bash: |
+        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+        export BUILD_REASON="$(Build.Reason)"
+        export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+        export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+        export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
+        ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "Send TestKube Summary Notification"

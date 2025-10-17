@@ -33,9 +33,9 @@ data:
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
     local-csi-driver = true
+    ztunnel = true
     istio-cni = true
     waypoint-proxy = true
-    local-csi-driver = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
