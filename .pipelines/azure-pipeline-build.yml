@@ -783,10 +783,41 @@ extends:
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
         - bash: |
-            set -e
-            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            set -euo pipefail
+
+            VERSION="$(GOLANG_VERSION)"
+            ARCHIVE="go${VERSION}.linux-arm64.tar.gz"
+            TEMP_DIR="${AGENT_TEMPDIRECTORY:-/tmp}/go-install"
+            mkdir -p "${TEMP_DIR}"
+            cd "${TEMP_DIR}"
+
+            if ! command -v curl >/dev/null 2>&1; then
+              sudo apt-get update -y
+              sudo apt-get install -y curl
+            fi
+
+            urls=(
+              "https://go.dev/dl/${ARCHIVE}"
+              "https://storage.googleapis.com/golang/${ARCHIVE}"
+            )
+
+            for url in "${urls[@]}"; do
+              echo "Attempting to download Go ${VERSION} from ${url}"
+              if curl -fsSL --retry 5 --retry-delay 2 "${url}" -o "${ARCHIVE}"; then
+                echo "Downloaded Go ${VERSION} successfully"
+                break
+              fi
+              echo "Failed to download from ${url}. Trying next mirror..."
+              rm -f "${ARCHIVE}"
+            done
+
+            if [ ! -f "${ARCHIVE}" ]; then
+              echo "Error: unable to download Go ${VERSION} for linux-arm64"
+              exit 1
+            fi
+
             sudo rm -rf /usr/local/go
-            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo tar -C /usr/local -xzf "${ARCHIVE}"
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
@@ -1255,10 +1286,41 @@ extends:
         - checkout: self
           persistCredentials: true
         - bash: |
-            set -e
-            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            set -euo pipefail
+
+            VERSION="$(GOLANG_VERSION)"
+            ARCHIVE="go${VERSION}.linux-arm64.tar.gz"
+            TEMP_DIR="${AGENT_TEMPDIRECTORY:-/tmp}/go-install"
+            mkdir -p "${TEMP_DIR}"
+            cd "${TEMP_DIR}"
+
+            if ! command -v curl >/dev/null 2>&1; then
+              sudo apt-get update -y
+              sudo apt-get install -y curl
+            fi
+
+            urls=(
+              "https://go.dev/dl/${ARCHIVE}"
+              "https://storage.googleapis.com/golang/${ARCHIVE}"
+            )
+
+            for url in "${urls[@]}"; do
+              echo "Attempting to download Go ${VERSION} from ${url}"
+              if curl -fsSL --retry 5 --retry-delay 2 "${url}" -o "${ARCHIVE}"; then
+                echo "Downloaded Go ${VERSION} successfully"
+                break
+              fi
+              echo "Failed to download from ${url}. Trying next mirror..."
+              rm -f "${ARCHIVE}"
+            done
+
+            if [ ! -f "${ARCHIVE}" ]; then
+              echo "Error: unable to download Go ${VERSION} for linux-arm64"
+              exit 1
+            fi
+
             sudo rm -rf /usr/local/go
-            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo tar -C /usr/local -xzf "${ARCHIVE}"
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
