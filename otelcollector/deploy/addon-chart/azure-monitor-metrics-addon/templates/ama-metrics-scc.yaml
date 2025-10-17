@@ -1,3 +1,4 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 {{- if $arcExtensionSettings.isArcExtension }}
 {{- if (eq $arcExtensionSettings.distribution "openshift") }}
 apiVersion: security.openshift.io/v1

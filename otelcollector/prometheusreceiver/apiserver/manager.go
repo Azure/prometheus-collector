@@ -182,6 +182,8 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.ConvertOTLPDelta,
 		o.NativeOTLPDeltaIngestion,
 		o.CTZeroIngestionEnabled,
+		5*time.Minute, // LookbackDelta - Using the default value of 5 minutes
+		o.EnableTypeAndUnitLabels,
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
