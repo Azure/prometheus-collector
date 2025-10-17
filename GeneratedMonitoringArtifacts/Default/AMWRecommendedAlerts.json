@@ -1,0 +1,175 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "actionGroupResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Action Group ResourceId"
+            }
+        },
+        "azureMonitorWorkspaceResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
+            }
+        }
+    },
+    "variables": {
+        "amwName": "[last(split(parameters('azureMonitorWorkspaceResourceId'), '/'))]"
+    },
+    "resources": [
+        {
+            "name": "[concat('AMW Is Approaching Event Ingestion Limit - ', variables('amwName'))]",
+            "type": "Microsoft.Insights/metricAlerts",
+            "apiVersion": "2018-03-01",
+            "location": "global",
+            "tags": {
+                "alertRuleCreatedWithAlertsRecommendations": "true"
+            },
+            "properties": 
+            {
+                "description": "AMW Is Approaching Event Ingestion Limit - Request for an increase https://go.microsoft.com/fwlink/?linkid=2270124",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                    "allOf": [
+                    {
+                        "threshold": 75,
+                        "name": "EventsCriteria",
+                        "metricName": "EventsPerMinuteIngestedPercentUtilization",
+                        "operator": "GreaterThan",
+                        "timeAggregation": "Average",
+                        "criterionType": "StaticThresholdCriterion"
+                    }
+                ],
+                "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                },
+                "actions": [
+                {
+                    "actionGroupId": "[parameters('actionGroupResourceId')]"
+                }
+            ]
+        }
+    },
+    {
+            "name": "[concat('AMW Is Approaching Active TimeSeries Ingestion Limit - ', variables('amwName'))]",
+            "type": "Microsoft.Insights/metricAlerts",
+            "apiVersion": "2018-03-01",
+            "location": "global",
+            "tags": {
+                "alertRuleCreatedWithAlertsRecommendations": "true"
+            },
+            "properties": 
+            {
+                "description": "AMW Is Approaching Active Timeseries Limit - Request for an increase https://go.microsoft.com/fwlink/?linkid=2270124",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                    "allOf": [
+                    {
+                        "threshold": 85,
+                        "name": "TimeSeriesCriteria",
+                        "metricName": "ActiveTimeSeriesPercentUtilization",
+                        "operator": "GreaterThan",
+                        "timeAggregation": "Average",
+                        "criterionType": "StaticThresholdCriterion"
+                    }
+                ],
+                "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                },
+                "actions": [
+                {
+                    "actionGroupId": "[parameters('actionGroupResourceId')]"
+                }
+            ]
+        }
+    },
+    {
+            "name": "[concat('AMW Is At High Risk Of Exceeding Event Ingestion Limit - ', variables('amwName'))]",
+            "type": "Microsoft.Insights/metricAlerts",
+            "apiVersion": "2018-03-01",
+            "location": "global",
+            "tags": {
+                "alertRuleCreatedWithAlertsRecommendations": "true"
+            },
+            "properties": 
+            {
+                "description": "AMW Is At High Risk Of Exceeding Event Ingestion Limit - Request for an increase https://go.microsoft.com/fwlink/?linkid=2270124",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                    "allOf": [
+                    {
+                        "threshold": 95,
+                        "name": "EventsCriteria",
+                        "metricName": "EventsPerMinuteIngestedPercentUtilization",
+                        "operator": "GreaterThan",
+                        "timeAggregation": "Average",
+                        "criterionType": "StaticThresholdCriterion"
+                    }
+                ],
+                "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                },
+                "actions": [
+                {
+                    "actionGroupId": "[parameters('actionGroupResourceId')]"
+                }
+            ]
+        }
+    },
+        {
+            "name": "[concat('AMW Is At High Risk Of Exceeding Active TimeSeries Ingestion Limit - ', variables('amwName'))]",
+            "type": "Microsoft.Insights/metricAlerts",
+            "apiVersion": "2018-03-01",
+            "location": "global",
+            "tags": {
+                "alertRuleCreatedWithAlertsRecommendations": "true"
+            },
+            "properties": 
+            {
+                "description": "AMW Is At High Risk Of Exceeding Active TimeSeries Limit - Request for an increase https://go.microsoft.com/fwlink/?linkid=2270124",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                    "allOf": [
+                    {
+                        "threshold": 95,
+                        "name": "TimeSeriesCriteria",
+                        "metricName": "ActiveTimeSeriesPercentUtilization",
+                        "operator": "GreaterThan",
+                        "timeAggregation": "Average",
+                        "criterionType": "StaticThresholdCriterion"
+                    }
+                ],
+                "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                },
+                "actions": [
+                {
+                    "actionGroupId": "[parameters('actionGroupResourceId')]"
+                }
+            ]
+        }
+    }
+  ]
+}
