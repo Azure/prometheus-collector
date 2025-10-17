@@ -98,7 +98,7 @@ stages:
               echo "executing the script to install golang $(GOLANG_VERSION)"
               wget https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
               sudo rm -rf /usr/local/go
-              sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+              sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz --verbose
               echo "##vso[task.prependpath]/usr/local/go/bin"
               go version
             workingDirectory: $(Build.SourcesDirectory)
