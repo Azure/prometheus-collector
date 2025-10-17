@@ -23,6 +23,9 @@ data:
     networkobservabilityRetina = true
     networkobservabilityHubble = true
     networkobservabilityCilium = true
+    ztunnel = false
+    istio-cni = false
+    waypoint-proxy = false
     prometheuscollectorhealth = false
     controlplane-apiserver = true
     controlplane-cluster-autoscaler = false
@@ -53,6 +56,9 @@ data:
     networkobservabilityRetina = ""
     networkobservabilityHubble = ""
     networkobservabilityCilium = ""
+    ztunnel = ""
+    istio-cni = ""
+    waypoint-proxy = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -77,6 +83,9 @@ data:
     networkobservabilityRetina = "30s"
     networkobservabilityHubble = "30s"
     networkobservabilityCilium = "30s"
+    ztunnel = "30s"
+    istio-cni = "30s"
+    waypoint-proxy = "30s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
