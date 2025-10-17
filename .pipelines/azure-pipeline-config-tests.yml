@@ -91,10 +91,40 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install Azure CLI"
 
-          - task: GoTool@0
-            displayName: "Build: specify golang version"
-            inputs:
-              version: '1.22.7'
+          - bash: |
+              set -euo pipefail
+              VERSION="$(GOLANG_VERSION)"
+              ARCHIVE="go${VERSION}.linux-arm64.tar.gz"
+              TEMP_DIR="${AGENT_TEMPDIRECTORY:-/tmp}/go-install"
+              mkdir -p "${TEMP_DIR}"
+              cd "${TEMP_DIR}"
+              if ! command -v curl >/dev/null 2>&1; then
+                sudo apt-get update -y
+                sudo apt-get install -y curl
+              fi
+              urls=(
+                "https://go.dev/dl/${ARCHIVE}"
+                "https://storage.googleapis.com/golang/${ARCHIVE}"
+              )
+              for url in "${urls[@]}"; do
+                echo "Attempting to download Go ${VERSION} from ${url}"
+                if curl -fsSL --retry 5 --retry-delay 2 "${url}" -o "${ARCHIVE}"; then
+                  echo "Downloaded Go ${VERSION} successfully"
+                  break
+                fi
+                echo "Failed to download from ${url}. Trying next mirror..."
+                rm -f "${ARCHIVE}"
+              done
+              if [ ! -f "${ARCHIVE}" ]; then
+                echo "Error: unable to download Go ${VERSION} for linux-arm64"
+                exit 1
+              fi
+              sudo rm -rf /usr/local/go
+              sudo tar -C /usr/local -xzf "${ARCHIVE}"
+              export PATH="/usr/local/go/bin:${PATH}"
+              echo "##vso[task.prependpath]/usr/local/go/bin"
+              go version
+            displayName: "Build: install golang $(GOLANG_VERSION)"
 
           - task: AzureCLI@2
             displayName: Get kubeconfig
