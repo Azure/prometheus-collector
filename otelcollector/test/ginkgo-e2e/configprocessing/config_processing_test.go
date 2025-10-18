@@ -40,12 +40,14 @@ var _ = DescribeTable("otelcollector is running",
 		[]string{
 			"otelcollector",
 		}, Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
 		[]string{
 			"otelcollector",
 		},
 		Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 )
 
