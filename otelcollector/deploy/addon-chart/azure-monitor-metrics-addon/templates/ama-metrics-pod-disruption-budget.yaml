@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ama-metrics-pdb
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      component: ama-metrics
