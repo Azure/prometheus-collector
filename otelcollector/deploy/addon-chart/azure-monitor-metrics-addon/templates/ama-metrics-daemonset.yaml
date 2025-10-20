@@ -287,7 +287,7 @@ spec:
             value: "azure-arc"
           - name: LIVENESS_PROBE_PORT
             value: "9999"
-          {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
+          {{- $.Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
           {{- end }}
         {{- else }}
         - name: addon-token-adapter

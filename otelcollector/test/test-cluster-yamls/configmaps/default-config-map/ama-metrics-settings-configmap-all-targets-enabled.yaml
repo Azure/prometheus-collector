@@ -32,6 +32,7 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+    local-csi-driver = true
     ztunnel = true
     istio-cni = true
     waypoint-proxy = true
@@ -66,6 +67,7 @@ data:
     controlplane-etcd = ""
     acstor-capacity-provisioner = ""
     acstor-metrics-exporter = ""
+    local-csi-driver = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -88,6 +90,7 @@ data:
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
     podannotations = "30s"
+    local-csi-driver = "30s"
   debug-mode: |-
     enabled = false
 metadata:
