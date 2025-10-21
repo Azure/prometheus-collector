@@ -30,6 +30,10 @@ parameters:
   displayName: 'Azure Client ID'
   type: string
   default: 'f8b1889c-310c-4913-93c5-3faf0f594f34'
+- name: branch
+  displayName: 'Branch to run tests from'
+  type: string
+  default: 'main'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -116,6 +120,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
@@ -177,6 +182,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs.yaml > ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
@@ -234,6 +240,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-crs.yaml > ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
@@ -291,6 +298,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-rs-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -348,6 +356,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-ds-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -405,6 +414,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -462,6 +472,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
@@ -523,6 +534,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
@@ -580,6 +592,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
@@ -638,6 +651,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-settings-error-crs.yaml > ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
@@ -698,6 +712,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-configmap-error-crs.yaml > ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
@@ -757,6 +772,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-ext-labels-error-crs.yaml > ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
