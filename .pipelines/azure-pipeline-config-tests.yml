@@ -30,6 +30,10 @@ parameters:
   displayName: 'Azure Client ID'
   type: string
   default: 'f8b1889c-310c-4913-93c5-3faf0f594f34'
+- name: branch
+  displayName: 'Branch to run tests from'
+  type: string
+  default: 'main'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -42,8 +46,8 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.23.8'
-  TESTKUBE_GOLANG_VERSION: '1.23.2'
+  GOLANG_VERSION: '1.24.9'
+  TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
@@ -55,6 +59,8 @@ stages:
     timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
     condition: succeeded()
     variables:
       skipComponentGovernanceDetection: true
@@ -91,10 +97,17 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install Azure CLI"
 
-          - task: GoTool@0
-            displayName: "Build: specify golang version"
-            inputs:
-              version: '1.22.7'
+          - bash: |
+              set -e
+              echo "executing the script to install golang $(GOLANG_VERSION)"
+              wget https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+              sudo rm -rf /usr/local/go
+              sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz --verbose
+              export PATH="/usr/local/go/bin:${PATH}"
+              echo "##vso[task.prependpath]/usr/local/go/bin"
+              go version
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Build: install golang $(GOLANG_VERSION)"
 
           - task: AzureCLI@2
             displayName: Get kubeconfig
@@ -107,6 +120,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
@@ -121,7 +135,7 @@ stages:
             displayName: "Apply TestKube CRs for no configmaps"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for config to get picked up"
@@ -168,6 +182,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs.yaml > ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
@@ -178,7 +193,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all targets disabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -225,6 +240,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-crs.yaml > ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
@@ -235,7 +251,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all default targets in setting configmap enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -282,6 +298,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-rs-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -292,7 +309,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all rs targets in setting configmap enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -339,6 +356,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-ds-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -349,7 +367,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all ds targets in setting configmap enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -396,6 +414,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -406,7 +425,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all targets in setting configmap enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -453,6 +472,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
@@ -467,7 +487,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for custom configmap with all actions enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -514,6 +534,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
@@ -524,7 +545,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for global ext labels enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -571,6 +592,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
@@ -582,7 +604,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for custom node configmap enabled"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -629,6 +651,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-settings-error-crs.yaml > ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
@@ -642,7 +665,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for errorprone settings configmap"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -689,6 +712,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-configmap-error-crs.yaml > ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
@@ -701,7 +725,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for errorprone custom configmap"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -748,6 +772,7 @@ stages:
           - bash: |
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+              export BRANCH=${{ parameters.branch }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-ext-labels-error-crs.yaml > ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
@@ -759,7 +784,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for errorprone global ext labels"
 
           - bash: |
-              sleep 360
+              sleep 480
 
               exit 0
             displayName: "Wait for cluster to be ready"

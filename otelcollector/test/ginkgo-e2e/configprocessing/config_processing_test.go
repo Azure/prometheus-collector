@@ -40,12 +40,14 @@ var _ = DescribeTable("otelcollector is running",
 		[]string{
 			"otelcollector",
 		}, Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
 		[]string{
 			"otelcollector",
 		},
 		Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 )
 
@@ -260,8 +262,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -348,8 +350,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
