@@ -263,7 +263,7 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 
 		if controllerLabelValue == "ama-metrics" {
 			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint-proxy", "ztunnel"}
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -351,7 +351,7 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 
 		if controllerLabelValue == "ama-metrics" {
 			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint-proxy", "ztunnel"}
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
