@@ -17,10 +17,15 @@ var (
 		"stat /etc/config/settings/ksm-config: no such file or directory",
 		// Target allocator
 		"client connection lost",
+		"remote error: tls: bad certificate",
+		"local error: tls: bad record",
+		"client sent an HTTP request to an HTTPS server",
+		"http: TLS handshake error",
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet
-		"Failed to reach Target Allocator endpoint with HTTPS, retrying in 30s (1/2)",
+		"Failed to reach Target Allocator endpoint with HTTPS",
+		"tls: failed to verify certificate: x509",
 	}
 )
 

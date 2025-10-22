@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -31,7 +32,7 @@ func CheckForFilesystemChanges() {
 		f, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			// Fallback to stdout if file can't be written
-			fmt.Printf("Failed to write debug log: %v\n", err)
+			log.Printf("Failed to write debug log: %v\n", err)
 			return
 		}
 		defer f.Close()

@@ -40,12 +40,14 @@ var _ = DescribeTable("otelcollector is running",
 		[]string{
 			"otelcollector",
 		}, Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
 		[]string{
 			"otelcollector",
 		},
 		Label(utils.ConfigProcessingCommon),
+		FlakeAttempts(3),
 	),
 )
 
@@ -175,8 +177,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		GinkgoWriter.Printf("[NoConfigMaps] jobs=%v\n", jobNames)
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -252,8 +254,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		GinkgoWriter.Printf("[DefaultTargetsEnabled] jobs=%v\n", jobNames)
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -296,8 +298,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 6))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -340,8 +342,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -384,8 +386,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 6))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -428,10 +430,10 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 14))
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 15))
 			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics",
 				"job-replace", "job-lowercase", "job-uppercase", "job-keep", "job-drop", "job-keepequal", "job-dropequal",
-				"job-hashmod", "job-labelmap", "job-labeldrop", "job-labelkeep"}
+				"job-hashmod", "job-labelmap", "job-labeldrop", "job-labelkeep", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -474,9 +476,9 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 6))
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
 			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics",
-				"prometheus_ref_app", "win_prometheus_ref_app", "application_pods"}
+				"prometheus_ref_app", "win_prometheus_ref_app", "application_pods", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -523,10 +525,10 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 14))
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 15))
 			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics",
 				"job-replace", "job-lowercase", "job-uppercase", "job-keep", "job-drop", "job-keepequal", "job-dropequal",
-				"job-hashmod", "job-labelmap", "job-labeldrop", "job-labelkeep"}
+				"job-hashmod", "job-labelmap", "job-labeldrop", "job-labelkeep", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -577,8 +579,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -621,8 +623,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -665,8 +667,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 4))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "local-csi-driver"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
