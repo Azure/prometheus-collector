@@ -8,6 +8,9 @@
 CVE-2024-33599 # 
 CVE-2024-33601 # 
 CVE-2025-4802 # 
+# prometheus-collector
+CVE-2025-9230 
+CVE-2025-9232
 
 # MEDIUM
 # kube-state-metrics
