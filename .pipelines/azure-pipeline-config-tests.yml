@@ -76,24 +76,6 @@ stages:
               echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
               sudo apt-get update
               sudo apt-get install -y testkube
-
-              # Install kubectl and jq if missing
-              if ! command -v kubectl >/dev/null 2>&1; then
-                echo "Installing kubectl..."
-                curl -sLo kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-                chmod +x kubectl
-                sudo mv kubectl /usr/local/bin/
-              else
-                echo "kubectl already present: $(kubectl version --client=true 2>/dev/null | head -n1)"
-              fi
-
-              if ! command -v jq >/dev/null 2>&1; then
-                echo "Installing jq..."
-                sudo apt-get install -y jq
-              else
-                echo "jq already present: $(jq --version)"
-              fi
-
               exit 0
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
@@ -103,34 +85,6 @@ stages:
               chmod +x kubectl
               sudo mv kubectl /usr/local/bin/
 
-<<<<<<< HEAD
-          # Ensure Azure CLI is installed (self-hosted agents may not have it pre-installed)
-          - bash: |
-              set -euo pipefail
-              if command -v az >/dev/null 2>&1; then
-                echo "Azure CLI already installed: $(az version --query 'azure-cli' -o tsv 2>/dev/null || echo present)"
-              else
-                echo "Azure CLI not found. Installing..."
-                curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-                echo "Azure CLI version after install: $(az version --query 'azure-cli' -o tsv)"
-              fi
-            displayName: "Ensure Azure CLI (Linux)"
-            condition: eq(variables['Agent.OS'], 'Linux')
-
-          - pwsh: |
-              $ErrorActionPreference = 'Stop'
-              if (Get-Command az -ErrorAction SilentlyContinue) {
-                Write-Host "Azure CLI already installed: $(az version | ConvertTo-Json -Depth 1)"
-              } else {
-                Write-Host 'Azure CLI not found. Installing via choco...'
-                choco install azure-cli -y --no-progress
-                Write-Host "Azure CLI version after install:" (az version | ConvertTo-Json -Depth 1)
-              }
-            displayName: "Ensure Azure CLI (Windows)"
-            condition: eq(variables['Agent.OS'], 'Windows_NT')
-
-          - task: AzureCLI@1
-=======
               exit 0
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install kubectl CLI"
@@ -155,7 +109,6 @@ stages:
             displayName: "Build: install golang $(GOLANG_VERSION)"
 
           - task: AzureCLI@2
->>>>>>> main
             displayName: Get kubeconfig
             inputs:
                 scriptType: 'bash'
