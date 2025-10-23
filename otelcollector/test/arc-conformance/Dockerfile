@@ -7,7 +7,7 @@ RUN curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 |
     && helm version
 
 RUN apt-get update && apt-get -y upgrade && \
-    apt-get -f -y install curl apt-transport-https lsb-release gnupg python3-pip && \
+    apt-get -f -y install curl apt-transport-https lsb-release gnupg python3-pip jq && \
     curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.asc.gpg && \
     CLI_REPO=$(lsb_release -cs) && \
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ ${CLI_REPO} main" \

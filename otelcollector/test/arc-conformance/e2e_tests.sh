@@ -3,12 +3,6 @@ set -x
 $x &> /dev/null
 results_dir="${RESULTS_DIR:-/tmp/results}"
 
-validateAuthParameters() {
-  if [ -z $WORKLOAD_CLIENT_ID ]; then
-     echo "ERROR: parameter WORKLOAD_CLIENT_ID is required." > ${results_dir}/error
-  fi
-}
-
 validateArcConfTestParameters() {
   if [ -z $SUBSCRIPTION_ID ]; then
      echo "ERROR: parameter SUBSCRIPTION_ID is required." > ${results_dir}/error
@@ -24,9 +18,27 @@ validateArcConfTestParameters() {
 }
 
 login_to_azure() {
-  az login --identity --username $WORKLOAD_CLIENT_ID
-  echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
-  az account set -s $SUBSCRIPTION_ID
+  if [[ -v SYSTEM_ACCESSTOKEN && -n "$SYSTEM_ACCESSTOKEN" &&
+         -v SERVICE_CONNECTION_ID && -n "$SERVICE_CONNECTION_ID" &&
+         -v SYSTEM_OIDCREQUESTURI && -n "$SYSTEM_OIDCREQUESTURI" ]]; then
+    export OIDC_REQUEST_URL="${SYSTEM_OIDCREQUESTURI}?api-version=7.1&serviceConnectionId=${SERVICE_CONNECTION_ID}"
+    echo "OIDC_REQUEST_URL= $OIDC_REQUEST_URL"
+
+    FED_TOKEN=$(curl -s -H "Content-Length: 0" -H "Content-Type: application/json" -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" -X POST $OIDC_REQUEST_URL | jq -r '.oidcToken')
+    echo "FED_TOKEN= $FED_TOKEN"
+
+    echo "logging in using Federated Identity"
+    az login --service-principal -u $FED_CLIENT_ID  --tenant $TENANT_ID --allow-no-subscriptions --federated-token $FED_TOKEN 2> ${results_dir}/error || python3 setup_failure_handler.py
+    echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
+    az account set -s $SUBSCRIPTION_ID
+  elif [[ -v WORKLOAD_CLIENT_ID && -n "$WORKLOAD_CLIENT_ID" ]]; then
+    echo "logging in using Workload Identity"
+    az login --identity --username $WORKLOAD_CLIENT_ID
+    echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
+    az account set -s $SUBSCRIPTION_ID
+  else
+    echo "ERROR: Unable to login to Azure. Missing Federated Identity or Workload Identity parameters." > ${results_dir}/error
+  fi
 }
 
 addArcConnectedK8sExtension() {
@@ -173,8 +185,6 @@ saveResults() {
 
 # Ensure that we tell the Sonobuoy worker we are done regardless of results.
 trap saveResults EXIT
-
-validateAuthParameters
 
 validateArcConfTestParameters
 

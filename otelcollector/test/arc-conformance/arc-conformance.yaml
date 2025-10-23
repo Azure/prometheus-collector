@@ -1,9 +1,9 @@
 sonobuoy-config:
   driver: Job
-  plugin-name: azure-arc-ama-metrics-conformance
+  plugin-name: azure-arc-ama-metrics
   result-format: junit
 spec:
-  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conf-053124
+  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conf-102325
   imagePullPolicy: Always
   name: plugin
   resources: {}
