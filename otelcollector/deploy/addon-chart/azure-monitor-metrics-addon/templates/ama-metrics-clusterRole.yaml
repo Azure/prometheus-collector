@@ -25,7 +25,7 @@ rules:
     verbs: ["list", "get", "watch"]
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
+    resourceNames: ["extensions-aad-msi-token", "ama-metrics-mtls-secret"]
     verbs: ["get", "watch"]
   # This is needed because the prometheus-operator watches for secrets to be able to retrive them for the pod and service monitor's basic auth functionality. Basically the operator watches for secrets so that it can read the value to use in the pod/service monitor - https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#basicauth 
   - apiGroups: [""]

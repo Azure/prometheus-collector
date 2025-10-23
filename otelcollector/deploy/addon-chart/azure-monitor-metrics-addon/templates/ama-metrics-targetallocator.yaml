@@ -195,10 +195,6 @@ spec:
           capabilities:
             drop:
               - ALL
-            {{- if $arcExtensionSettings.isArcExtension }}
-            add:
-              - DAC_OVERRIDE
-            {{- end }}
         livenessProbe:
           httpGet:
             path: /health
@@ -247,18 +243,8 @@ spec:
                     operator: Exists
                   {{- end }}
       tolerations:
-        {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
-        {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
-        - operator: "Exists"
-          effect: "PreferNoSchedule" 
-        {{- end }}
       volumes:
       - name: settings-vol-config
         configMap:
