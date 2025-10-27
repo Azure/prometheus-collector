@@ -151,13 +151,13 @@ spec:
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-                {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+                {{- if .Values.kubeStateMetrics.metricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
+              value: "{{ .Values.kubeStateMetrics.metricLabelsAllowlist }}"
                 {{-  end  }}
-                {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+                {{- if .Values.kubeStateMetrics.metricAnnotationsAllowList }}
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
+              value: "{{ .Values.kubeStateMetrics.metricAnnotationsAllowList }}"
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}

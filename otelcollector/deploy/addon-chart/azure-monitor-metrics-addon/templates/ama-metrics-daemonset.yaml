@@ -163,16 +163,16 @@ spec:
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
             - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
-              value: "{{ $.Values.AppmonitoringAgent.enabled }}"
+              value: "{{ $.Values.appMonitoring.autoInstrumentation.enabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
-              value: "{{ $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}"
+              value: "{{ $.Values.appMonitoring.openTelemetryMetrics.enabled | default false }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
-              value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
-          {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
+              value: "{{ $.Values.appMonitoring.openTelemetryMetrics.port | default 28333 }}"
+          {{- if $.Values.appMonitoring.openTelemetryMetrics.enabled | default false }}
           ports:
             - name: otlp-http-port
               containerPort: 56681
-              hostPort: {{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}
+              hostPort: {{ $.Values.appMonitoring.openTelemetryMetrics.port | default 28333 }}
               protocol: TCP
             - name: otlp-grpc-port
               containerPort: 56680
@@ -540,16 +540,16 @@ spec:
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
             - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
-              value: "{{ $.Values.AppmonitoringAgent.enabled }}"
+              value: "{{ .Values.appMonitoring.autoInstrumentation.enabled }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
-              value: "{{ $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}"
+              value: "{{ .Values.appMonitoring.openTelemetryMetrics.enabled | default false }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
-              value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
-          {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
+              value: "{{ .Values.appMonitoring.openTelemetryMetrics.port | default 28333 }}"
+          {{- if .Values.appMonitoring.openTelemetryMetrics.enabled | default false }}
           ports:
             - name: otlp-http-port
               containerPort: 56681
-              hostPort: {{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}
+              hostPort: {{ .Values.appMonitoring.openTelemetryMetrics.port | default 28333 }}
               protocol: TCP
             - name: otlp-grpc-port
               containerPort: 56680
