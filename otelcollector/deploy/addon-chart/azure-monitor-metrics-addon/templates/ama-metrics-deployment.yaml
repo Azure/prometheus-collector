@@ -399,8 +399,6 @@ spec:
           operator: Exists
           {{- if or (not $arcExtensionSettings.isArcExtension) (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
         - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
           effect: "NoExecute"
           {{- end }}
 {{- if $arcExtensionSettings.isArcExtension }}
