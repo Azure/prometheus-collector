@@ -4,7 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - rashmi/ext-changes-final
+    - aks/alpha-1
 pr:
   autoCancel: true
   branches:
