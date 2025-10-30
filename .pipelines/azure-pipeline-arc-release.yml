@@ -1,6 +1,11 @@
 trigger: none
 
 parameters:
+- name: 'overrideChartVersion'
+  displayName: 'Override Chart Version'
+  type: string
+  default: ''
+
 - name: "forceArtifactRegistration"
   displayName: "Force Artifact Registration"
   type: boolean
@@ -39,7 +44,6 @@ parameters:
   displayName: 'Is Customer Hidden?'
   type: boolean
   default: false
-
 - name: rolloutType
   displayName: Rollout type (normal, emergency or globaloutage)
   type: string
@@ -82,6 +86,12 @@ resources:
     ref: refs/heads/main
 
 variables:
+- ${{ if ne(parameters.overrideChartVersion, '') }}:
+  - name: chartVersionValue
+    value: '${{ parameters.overrideChartVersion }}'
+- ${{ if eq(parameters.overrideChartVersion, '') }}:
+  - name: chartVersionValue
+    value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 - name: deployToProd
   value: ${{ and(ne(parameters.deployTo, 'Fairfax'), ne(parameters.deployTo, 'Mooncake')) }}
 - name: deployToFairfax
@@ -95,7 +105,7 @@ variables:
     {
       "ConfigurationSpecification": {
         "Settings": {
-          "chartVersion": "$(resources.pipeline._Azureprometheus-collector.runName)",
+          "chartVersion": "$(chartVersionValue)",
           "releaseTrain": "${{ parameters.releaseTrain }}",
           "isCustomerHidden": ${{ lower(parameters.isCustomerHidden) }}
           }
