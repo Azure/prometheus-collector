@@ -5,11 +5,11 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 
 	"gopkg.in/yaml.v2"
 )
@@ -58,170 +58,13 @@ func isConfigReaderSidecar() bool {
 }
 
 func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
-	log.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
-
-	// Read YAML config file
-	data, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		log.Printf("Error reading config file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
-		return
-	}
-
-	// Unmarshal YAML data
-	var config map[string]interface{}
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		log.Printf("Error unmarshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
-		return
-	}
-
-	// Update scrape interval config
-	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				log.Printf("scrapeInterval %s\n", scrapeIntervalSetting)
-				scfgMap["scrape_interval"] = scrapeIntervalSetting
-			}
-		}
-
-		// Marshal updated config back to YAML
-		cfgYamlWithScrapeConfig, err := yaml.Marshal(config)
-		if err != nil {
-			log.Printf("Error marshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
-			return
-		}
-
-		// Write updated YAML back to file
-		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithScrapeConfig), fs.FileMode(0644))
-		if err != nil {
-			log.Printf("Error writing to file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
-			return
-		}
-	} else {
-		log.Printf("No 'scrape_configs' found in the YAML. The scrape interval will not be updated.\n")
+	if err := cmcommon.UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting, log.Printf); err != nil {
+		log.Printf("UpdateScrapeIntervalConfig::error updating %s: %v\n", yamlConfigFile, err)
 	}
 }
 
 func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
-	log.Printf("Starting to append keep list regex or minimal ingestion regex to %s\n", yamlConfigFile)
-
-	content, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		return fmt.Errorf("error reading config file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
-
-	var config map[string]interface{}
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		return fmt.Errorf("error unmarshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
-
-	keepListMetricRelabelConfig := map[string]interface{}{
-		"source_labels": []interface{}{"__name__"},
-		"action":        "keep",
-		"regex":         keepListRegex,
-	}
-
-	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for i, scfg := range scrapeConfigs {
-			// Ensure scfg is a map with string keys
-			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				// Convert to map[string]interface{}
-				stringScfgMap := make(map[string]interface{})
-				for k, v := range scfgMap {
-					if key, ok := k.(string); ok {
-						stringScfgMap[key] = v
-					} else {
-						return fmt.Errorf("encountered non-string key in scrape config map: %v", k)
-					}
-				}
-
-				// Update or add metric_relabel_configs
-				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
-					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
-				} else {
-					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
-				}
-
-				// Convert back to map[interface{}]interface{} for YAML marshalling
-				interfaceScfgMap := make(map[interface{}]interface{})
-				for k, v := range stringScfgMap {
-					interfaceScfgMap[k] = v
-				}
-
-				// Update the scrape_configs list
-				scrapeConfigs[i] = interfaceScfgMap
-			}
-		}
-
-		// Write updated scrape_configs back to config
-		config["scrape_configs"] = scrapeConfigs
-	} else {
-		log.Println("No 'scrape_configs' found in the YAML. Skipping updates.")
-		return nil
-	}
-
-	cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("error marshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
-
-	if err := os.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing to file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
-
-	return nil
-}
-
-func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]interface{}, keepRegex string) {
-	log.Printf("Adding relabel config for %s\n", yamlConfigFile)
-
-	// Read YAML config file
-	data, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		log.Printf("Error reading config file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-		return
-	}
-
-	// Unmarshal YAML data
-	var config map[string]interface{}
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		log.Printf("Error unmarshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-		return
-	}
-
-	// Append relabel config for keep list to each scrape config
-	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				relabelCfgs, exists := scfgMap["relabel_configs"]
-				if !exists {
-					scfgMap["relabel_configs"] = relabelConfig
-				} else if relabelCfgsSlice, ok := relabelCfgs.([]interface{}); ok {
-					for _, rc := range relabelConfig {
-						relabelCfgsSlice = append(relabelCfgsSlice, rc)
-					}
-					scfgMap["relabel_configs"] = relabelCfgsSlice
-				}
-			}
-		}
-
-		// Marshal updated config back to YAML
-		cfgYamlWithRelabelConfig, err := yaml.Marshal(config)
-		if err != nil {
-			log.Printf("Error marshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-			return
-		}
-
-		// Write updated YAML back to file
-		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithRelabelConfig), fs.FileMode(0644))
-		if err != nil {
-			log.Printf("Error writing to file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-			return
-		}
-	} else {
-		log.Printf("No 'scrape_configs' found in the YAML. The relabel config will not be added.\n")
-	}
+	return cmcommon.AppendMetricRelabelConfig(yamlConfigFile, keepListRegex, log.Printf)
 }
 
 func populateDefaultPrometheusConfig() {
@@ -242,16 +85,10 @@ func populateDefaultPrometheusConfig() {
 }
 
 func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
-	contents, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		return err
+	if err := cmcommon.ReplacePlaceholders(yamlConfigFile, placeholders); err != nil {
+		return fmt.Errorf("UpdatePlaceholders::%w", err)
 	}
-
-	for _, placeholder := range placeholders {
-		contents = []byte(strings.ReplaceAll(string(contents), fmt.Sprintf("$$%s$$", placeholder), os.Getenv(placeholder)))
-	}
-
-	return os.WriteFile(yamlConfigFile, contents, 0644)
+	return nil
 }
 
 func processDefaultJob(job *shared.DefaultScrapeJob) {
@@ -297,50 +134,13 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 }
 
 func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
-	fileContent, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	var yamlData map[interface{}]interface{}
-	err = yaml.Unmarshal(fileContent, &yamlData)
-	if err != nil {
-		return nil, err
-	}
-
-	return yamlData, nil
+	return cmcommon.LoadYAMLFromFile(filename)
 }
 
 // This needs unit tests
 
 func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
-	for key, sourceValue := range source {
-		targetValue, exists := target[key]
-
-		if !exists {
-			target[key] = sourceValue
-			continue
-		}
-
-		targetMap, targetMapOk := targetValue.(map[interface{}]interface{})
-		sourceMap, sourceMapOk := sourceValue.(map[interface{}]interface{})
-
-		if targetMapOk && sourceMapOk {
-			target[key] = deepMerge(targetMap, sourceMap)
-		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
-			// Both are slices, concatenate them
-			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
-				if sourceSlice, sourceSliceOk := sourceValue.([]interface{}); sourceSliceOk {
-					target[key] = append(targetSlice, sourceSlice...)
-				}
-			}
-		} else {
-			// If types are different, simply overwrite with the source value
-			target[key] = sourceValue
-		}
-	}
-
-	return target
+	return cmcommon.DeepMerge(target, source)
 }
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {

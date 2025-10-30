@@ -3,11 +3,10 @@ package ccpconfigmapsettings
 import (
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 )
 
 var NoDefaultsEnabled bool
@@ -24,38 +23,21 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 		return nil
 	}
 
-	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
-		if schemaVersion == shared.SchemaVersion.V1 {
-			jobName = "controlplane-" + jobName // Prefix for v1 schema
+	if err := cmcommon.UpdateJobEnablement(settings, shared.ControlPlaneDefaultScrapeJobs, schemaVersion, func(jobName string, schema string) string {
+		if schema == shared.SchemaVersion.V1 {
+			return "controlplane-" + jobName
 		}
-
-		if setting, ok := settings[jobName]; ok {
-			var err error
-			job.Enabled, err = strconv.ParseBool(setting)
-			if err != nil {
-				return fmt.Errorf("ParseConfigMapForDefaultScrapeSettings::Error parsing value for %s: %v", jobName, err)
-			}
-			fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Job: %s, Enabled: %t\n", jobName, job.Enabled)
-		}
-	}
-	// Check if no defaults are enabled
-	controllerType := os.Getenv("CONTROLLER_TYPE")
-	containerType := strings.ToLower(os.Getenv("CONTAINER_TYPE"))
-	if containerType == shared.ControllerType.ConfigReaderSidecar {
-		controllerType = shared.ControllerType.ReplicaSet
-	}
-	osType := strings.ToLower(os.Getenv("OS_TYPE"))
-	NoDefaultsEnabled = true
-
-	for _, job := range shared.ControlPlaneDefaultScrapeJobs {
-		if job.ControllerType == controllerType &&
-			job.OSType == osType &&
-			job.Enabled {
-			NoDefaultsEnabled = false
-			break
-		}
+		return jobName
+	}); err != nil {
+		return fmt.Errorf("ParseConfigMapForDefaultScrapeSettings::%w", err)
 	}
 
+	NoDefaultsEnabled = cmcommon.DetermineNoDefaultsEnabled(
+		shared.ControlPlaneDefaultScrapeJobs,
+		os.Getenv("CONTROLLER_TYPE"),
+		os.Getenv("CONTAINER_TYPE"),
+		strings.ToLower(os.Getenv("OS_TYPE")),
+	)
 	if NoDefaultsEnabled {
 		fmt.Printf("No default scrape configs enabled\n")
 	}
@@ -66,18 +48,13 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
 	fmt.Printf("WriteDefaultScrapeSettingsToFile::Writing settings to file: %s\n", filename)
 
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("exception while opening file for writing prometheus-collector config environment variables: %s", err)
-	}
-	defer file.Close()
-
-	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
-		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_ENABLED=%v\n", strings.ToUpper(jobName), job.Enabled))
-		fmt.Println("WriteDefaultScrapeSettingsToFile::Writing setting for job:", jobName, "Enabled:", job.Enabled)
+	formatter := func(jobName string) string {
+		return strings.ToUpper(jobName) + "_ENABLED"
 	}
 
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", NoDefaultsEnabled))
+	if err := cmcommon.WriteEnabledEnvFile(filename, shared.ControlPlaneDefaultScrapeJobs, formatter, NoDefaultsEnabled); err != nil {
+		return err
+	}
 
 	fmt.Println("WriteDefaultScrapeSettingsToFile::Settings written to file successfully")
 	return nil
@@ -104,19 +81,8 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	}
 
 	// Set cluster alias
-	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {
-		fmt.Println("ConfigureDefaultScrapeSettings::MAC environment variable is true")
-		clusterArray := strings.Split(strings.TrimSpace(os.Getenv("CLUSTER")), "/")
-		c.ConfigParser.ClusterAlias = clusterArray[len(clusterArray)-1]
-	} else {
-		c.ConfigParser.ClusterAlias = os.Getenv("CLUSTER")
-	}
-
-	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
-		fmt.Printf("ConfigureDefaultScrapeSettings::Original cluster alias: %s\n", c.ConfigParser.ClusterAlias)
-		// Replace all non-alphanumeric characters with "_"
-		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
-		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
+	c.ConfigParser.ClusterAlias = cmcommon.ComputeClusterAlias(os.Getenv("CLUSTER"), os.Getenv("MAC"))
+	if c.ConfigParser.ClusterAlias != "" {
 		fmt.Printf("ConfigureDefaultScrapeSettings::Sanitized cluster alias: %s\n", c.ConfigParser.ClusterAlias)
 	}
 

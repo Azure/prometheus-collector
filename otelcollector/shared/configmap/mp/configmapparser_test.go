@@ -2,13 +2,13 @@ package configmapsettings
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus-collector/shared"
+	"github.com/prometheus-collector/shared/configmap/common/testhelpers"
 	"gopkg.in/yaml.v2"
 )
 
@@ -67,10 +67,13 @@ var (
 func setupTest() {
 	var originalDefaultScrapeJobs map[string]shared.DefaultScrapeJob
 	BeforeEach(func() {
-		cleanupEnvVars()
+		testhelpers.UnsetEnvVars(testhelpers.DefaultCollectorEnvVarKeys())
 		configSettingsPrefix = "/tmp/settings/"
+		configMapParserPrefix = "/tmp/configmapparser/"
 		configMapMountPath = ""
 		os.RemoveAll(configSettingsPrefix)
+		os.RemoveAll(configMapParserPrefix)
+		_ = os.MkdirAll(configSettingsPrefix, 0755)
 		// Save a copy of the original DefaultScrapeJobs for restoring later
 		originalDefaultScrapeJobs = make(map[string]shared.DefaultScrapeJob)
 		for key, job := range shared.DefaultScrapeJobs {
@@ -78,15 +81,57 @@ func setupTest() {
 		}
 	})
 	AfterEach(func() {
-		cleanupEnvVars()
+		testhelpers.UnsetEnvVars(testhelpers.DefaultCollectorEnvVarKeys())
 		// Remove any temporary files created during the tests
 		os.RemoveAll(configSettingsPrefix)
+		os.RemoveAll(configMapParserPrefix)
 		// Restore the original DefaultScrapeJobs
 		for key, job := range originalDefaultScrapeJobs {
 			shared.DefaultScrapeJobs[key] = &job
 		}
 		os.RemoveAll("../../../configmapparser/default-prom-configs/test/")
 	})
+}
+
+func setupConfigFiles(defaultPath bool) {
+	prefixes := testhelpers.CollectorPrefixesFor(configSettingsPrefix, configMapParserPrefix, true)
+	paths := testhelpers.CollectorConfigPaths{
+		ConfigMapDebugMountPath:            &configMapDebugMountPath,
+		ReplicaSetCollectorConfig:          &replicaSetCollectorConfig,
+		DefaultSettingsMountPath:           &defaultSettingsMountPath,
+		ConfigMapMountPathForPodAnnotation: &configMapMountPathForPodAnnotation,
+		CollectorSettingsMountPath:         &collectorSettingsMountPath,
+		ConfigMapKeepListMountPath:         &configMapKeepListMountPath,
+		ConfigMapScrapeIntervalMountPath:   &configMapScrapeIntervalMountPath,
+		ConfigMapOpentelemetryMetricsPath:  &configMapOpentelemetryMetricsMountPath,
+	}
+
+	if err := testhelpers.SetupCollectorConfigFiles(defaultPath, prefixes, paths); err != nil {
+		panic(err)
+	}
+}
+
+func setupProcessedFiles() {
+	prefixes := testhelpers.CollectorPrefixesFor(configSettingsPrefix, configMapParserPrefix, true)
+	paths := testhelpers.CollectorProcessedPaths{
+		PodAnnotationEnvVarPath:          &podAnnotationEnvVarPath,
+		CollectorSettingsEnvVarPath:      &collectorSettingsEnvVarPath,
+		DefaultSettingsEnvVarPath:        &defaultSettingsEnvVarPath,
+		DebugModeEnvVarPath:              &debugModeEnvVarPath,
+		ConfigMapKeepListEnvVarPath:      &configMapKeepListEnvVarPath,
+		ScrapeIntervalEnvVarPath:         &scrapeIntervalEnvVarPath,
+		OpentelemetryMetricsEnvVarPath:   &opentelemetryMetricsEnvVarPath,
+		KsmConfigEnvVarPath:              &ksmConfigEnvVarPath,
+		ScrapeConfigDefinitionPathPrefix: &scrapeConfigDefinitionPathPrefix,
+		MergedDefaultConfigPath:          &mergedDefaultConfigPath,
+		PromMergedConfigPath:             &promMergedConfigPath,
+		RegexHashFile:                    &regexHashFile,
+		IntervalHashFile:                 &intervalHashFile,
+	}
+
+	if err := testhelpers.SetupCollectorProcessedFiles(prefixes, paths); err != nil {
+		panic(err)
+	}
 }
 
 var _ = Describe("Configmapparser", Ordered, func() {
@@ -96,27 +141,27 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 			isDefaultConfig = true
-			useConfigFiles = true
+			useConfigFiles = false
 		})
 
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			extraEnvVars := map[string]string{
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "true",
 			}
@@ -133,40 +178,52 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 			isDefaultConfig = true
 			useConfigFiles = true
 		})
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
+			extraEnvVars := map[string]string{
+				"CONFIGMAP_VERSION": "v1",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
+			extraEnvVars := map[string]string{
+				"CONFIGMAP_VERSION": "v1",
+			}
+			for key, value := range extraEnvVars {
+				expectedEnvVars[key] = value
+			}
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "true",
+				"CONFIGMAP_VERSION":                            "v1",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
 			expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 			isDefaultConfig := true
 
-			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
+			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 	})
 
@@ -174,7 +231,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, extraEnvVars map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars = map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -185,9 +242,11 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
 				"DEBUG_MODE_ENABLED":                               "true",
+				"AZMON_KSM_CONFIG_ENABLED":                         "true",
+				"CONFIGMAP_VERSION":                                "v1",
 			}
 
-			scrapeOverrides := cloneDefaultScrapeJobStates()
+			scrapeOverrides := testhelpers.CloneJobEnabledStates(shared.DefaultScrapeJobs)
 			for _, job := range []string{
 				"podannotations",
 				"kubelet",
@@ -211,7 +270,10 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				scrapeOverrides[job] = true
 			}
 
-			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+			overrides := testhelpers.BuildEnvVarOverrides(scrapeOverrides, func(jobName string) string {
+				return testhelpers.BuildEnvVarName(jobName, "_SCRAPING_ENABLED")
+			})
+			for key, value := range overrides {
 				extraEnvVars[key] = value
 			}
 
@@ -219,14 +281,16 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				expectedEnvVars[k] = v
 			}
 
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "test.*|test2")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("15s")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "test.*|test2", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "15s")
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", `podannotationnamespaceregex = ".*|value"`)
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `cluster_alias = "alias"`)
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			configMapMountPathForPodAnnotation = testhelpers.MustCreateTempFile(configSettingsPrefix, "pod-annotation-based-scraping", `podannotationnamespaceregex = ".*|value"`)
+			collectorSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", `cluster_alias = "alias"`)
+			ksmConfigYaml := "resources:\n  secrets: {}\n  configmaps: {}\nlabels_allow_list:\n  pods:\n    - app8\nannotations_allow_list:\n  namespaces:\n    - kube-system\n    - default\n"
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "ksm-config", ksmConfigYaml)
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
 				kubelet = true
 				coredns = true
 				cadvisor = true
@@ -245,8 +309,8 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-metrics-exporter = true
 				prometheuscollectorhealth = true
 			`)
-			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			configMapDebugMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				kubelet = "test.*|test2"
 				coredns = "test.*|test2"
 				cadvisor = "test.*|test2"
@@ -270,7 +334,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = true
 			`)
-			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
+			configMapScrapeIntervalMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
 				kubelet = "15s"
 				coredns = "15s"
 				cadvisor = "15s"
@@ -298,17 +362,17 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-linux-rs.yaml", "")
 		})
 
 		It("should process the config for the Linux Daemonset", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-linux-ds.yaml", "")
 		})
 
 		It("should process the config for the Windows Daemonset", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-windows-ds.yaml", "")
 		})
 	})
@@ -318,7 +382,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "'.*|value'",
@@ -326,18 +390,19 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
 				"DEBUG_MODE_ENABLED":                               "true",
+				"CONFIGMAP_VERSION":                                "v1",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedEnvVars[getScrapeEnabledEnvVarName("podannotations")] = "true"
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "test.*|test2")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("15s")
+			expectedEnvVars[testhelpers.BuildEnvVarName("podannotations", "_SCRAPING_ENABLED")] = "true"
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "test.*|test2", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "15s")
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", `podannotationnamespaceregex = ".*|value"`)
-			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configMapMountPathForPodAnnotation = testhelpers.MustCreateTempFile(configSettingsPrefix, "pod-annotation-based-scraping", `podannotationnamespaceregex = ".*|value"`)
+			configMapDebugMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				kubelet = "test.*|test2"
 				coredns = "test.*|test2"
 				cadvisor = "test.*|test2"
@@ -361,7 +426,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = true
 			`)
-			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
+			configMapScrapeIntervalMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", `
 				kubelet = "15s"
 				coredns = "15s"
 				cadvisor = "15s"
@@ -388,17 +453,17 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			useConfigFiles = false
 		})
 		It("should process the config with some sections missing for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/not-all-sections-linux-rs.yaml", "")
 		})
 
 		It("should process the config with some sections missing for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/not-all-sections-linux-ds.yaml", "")
 		})
 
 		It("should process the config with some sections missing for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			extraEnvVars := map[string]string{
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "true",
 			}
@@ -413,7 +478,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -421,25 +486,29 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "true",
 				"DEBUG_MODE_ENABLED":                               "false",
+				"CONFIGMAP_VERSION":                                "v1",
 			}
 
-			scrapeOverrides := cloneDefaultScrapeJobStates()
+			scrapeOverrides := testhelpers.CloneJobEnabledStates(shared.DefaultScrapeJobs)
 			for jobName := range scrapeOverrides {
 				scrapeOverrides[jobName] = false
 			}
 
-			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+			overrides := testhelpers.BuildEnvVarOverrides(scrapeOverrides, func(jobName string) string {
+				return testhelpers.BuildEnvVarName(jobName, "_SCRAPING_ENABLED")
+			})
+			for key, value := range overrides {
 				extraEnvVars[key] = value
 			}
 
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
 				kubelet = false
 				coredns = false
 				cadvisor = false
@@ -463,19 +532,19 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config with no scrape jobs enabled for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with no scrape jobs enabled for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with no scrape jobs enabled for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
@@ -486,16 +555,16 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var useConfigFiles, isDefaultConfig bool
 
 		BeforeEach(func() {
-			expectedKeepListHashMap = getExpectedKeepListMap(false, "test.*|test2")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, false, "test.*|test2", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "")
-			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
-			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", "")
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "")
+			configMapMountPathForPodAnnotation = testhelpers.MustCreateTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
+			collectorSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
+			configMapDebugMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "debug-mode", "")
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				kubelet = "test.*|test2"
 				coredns = "test.*|test2"
 				cadvisor = "test.*|test2"
@@ -519,23 +588,23 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				waypoint-proxy = "test.*|test2"
 				minimalingestionprofile = false
 			`)
-			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
+			configMapScrapeIntervalMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 			useConfigFiles = false
 			isDefaultConfig = false
 		})
 
 		It("should process the scrape jobs enabled for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-linux-rs.yaml", "")
 		})
 
 		It("should process the scrape jobs enabled for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-linux-ds.yaml", "")
 		})
 
 		It("should process the scrape jobs enabled for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-scrape-jobs-linux-rs.yaml", "")
 		})
 	})
@@ -544,36 +613,36 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var useConfigFiles, isDefaultConfig bool
 		BeforeEach(func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
-			expectedKeepListHashMap = getExpectedKeepListMap(false, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, false, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
-			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", "")
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			configMapMountPathForPodAnnotation = testhelpers.MustCreateTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
+			collectorSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
+			configMapDebugMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "debug-mode", "")
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				minimalingestionprofile = false
 			`)
-			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
+			configMapScrapeIntervalMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 			useConfigFiles = false
 			isDefaultConfig = false
 		})
 
 		It("should process the scrape jobs enabled for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-no-keeplist-rs.yaml", "")
 		})
 
 		It("should process the scrape jobs enabled for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-no-keeplist-ds.yaml", "")
 		})
 
 		It("should process the scrape jobs enabled for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-scrape-jobs-linux-rs.yaml", "")
 		})
 	})
@@ -583,28 +652,28 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 			var isDefaultConfig, useConfigFiles bool
 			BeforeEach(func() {
-				expectedEnvVars = getDefaultExpectedEnvVars()
-				expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-				expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+				expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
+				expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+				expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 				isDefaultConfig = true
-				useConfigFiles = true
+				useConfigFiles = false
 			})
 			It("should process the config with defaults for the Linux ReplicaSet", func() {
-				setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 				configMapMountPath = "./testdata/custom-prometheus-config.yaml"
 				expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 				checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-and-defaults-rs.yaml")
 			})
 			It("should process the config with defaults for the Linux DaemonSet", func() {
-				setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 				configMapMountPath = "./testdata/custom-prometheus-config.yaml"
 				expectedContentsFilePath := "./testdata/default-linux-ds.yaml"
 				checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-and-defaults-ds.yaml")
 			})
 			It("should process the config with defaults for the Windows DaemonSet", func() {
-				setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 				configMapMountPath = "./testdata/custom-prometheus-config.yaml"
-				expectedEnvVars := getDefaultExpectedEnvVars()
+				expectedEnvVars := testhelpers.DefaultManagedPrometheusEnvVars()
 				extraEnvVars := map[string]string{
 					"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "true",
 				}
@@ -618,7 +687,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 			var isDefaultConfig, useConfigFiles bool
 			BeforeEach(func() {
-				expectedEnvVars := getDefaultExpectedEnvVars()
+				expectedEnvVars := testhelpers.DefaultManagedPrometheusEnvVars()
 				extraEnvVars := map[string]string{
 					"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 					"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -626,26 +695,30 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED": "",
 					"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "true",
 					"DEBUG_MODE_ENABLED":                               "false",
+					"CONFIGMAP_VERSION":                                "v1",
 				}
 
-				scrapeOverrides := cloneDefaultScrapeJobStates()
+				scrapeOverrides := testhelpers.CloneJobEnabledStates(shared.DefaultScrapeJobs)
 				for jobName := range scrapeOverrides {
 					scrapeOverrides[jobName] = false
 				}
 
-				for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+				overrides := testhelpers.BuildEnvVarOverrides(scrapeOverrides, func(jobName string) string {
+					return testhelpers.BuildEnvVarName(jobName, "_SCRAPING_ENABLED")
+				})
+				for key, value := range overrides {
 					extraEnvVars[key] = value
 				}
 
 				for key, value := range extraEnvVars {
 					expectedEnvVars[key] = value
 				}
-				expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-				expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+				expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+				expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 
-				schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-				configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-				defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
+				schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+				configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+				defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
 					kubelet = false
 					coredns = false
 					cadvisor = false
@@ -669,19 +742,19 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				configMapMountPath = "./testdata/custom-prometheus-config.yaml"
 			})
 			It("should process the config with defaults for the Linux ReplicaSet", func() {
-				setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 				expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 
 				checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-no-defaults-rs.yaml")
 			})
 			It("should process the config with defaults for the Linux DaemonSet", func() {
-				setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 				expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 
 				checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-no-defaults-rs.yaml")
 			})
 			It("should process the config with defaults for the Windows DaemonSet", func() {
-				setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+				Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 				expectedContentsFilePath := "./testdata/no-scrape-jobs-linux-rs.yaml"
 
 				checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "./testdata/custom-prometheus-config-no-defaults-rs.yaml")
@@ -693,38 +766,38 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v2",
-				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				// TODO: investigate
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING": "false",
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":       "v2",
+				"AZMON_AGENT_CFG_FILE_VERSION":         "ver1",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING": "true",
+				"CONFIGMAP_VERSION":                    "v2",
 			}
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
 			isDefaultConfig = true
 			useConfigFiles = true
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
 		})
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/default-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with defaults for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			extraEnvVars := map[string]string{
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "true",
 			}
@@ -739,7 +812,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars = getDefaultExpectedEnvVars()
+			expectedEnvVars = testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -750,9 +823,11 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_PODANNOTATIONS_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
 				"DEBUG_MODE_ENABLED":                               "true",
+				"AZMON_KSM_CONFIG_ENABLED":                         "true",
+				"CONFIGMAP_VERSION":                                "v2",
 			}
 
-			scrapeOverrides := cloneDefaultScrapeJobStates()
+			scrapeOverrides := testhelpers.CloneJobEnabledStates(shared.DefaultScrapeJobs)
 			for _, job := range []string{
 				"kubelet",
 				"coredns",
@@ -776,25 +851,28 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			}
 			scrapeOverrides["prometheuscollectorhealth"] = false
 
-			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+			overrides := testhelpers.BuildEnvVarOverrides(scrapeOverrides, func(jobName string) string {
+				return testhelpers.BuildEnvVarName(jobName, "_SCRAPING_ENABLED")
+			})
+			for key, value := range overrides {
 				extraEnvVars[key] = value
 			}
 
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap = getExpectedKeepListMap(true, "test.*|test2")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("15s")
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, true, "test.*|test2", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "15s")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
 			fmt.Println("Schema version file created at:", schemaVersionFile)
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
 			fmt.Println("Config version file created at:", configVersionFile)
-			_ = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", `
     			cluster_alias = "alias"
    				debug-mode = true
     			https_config = true
 			`)
-			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -810,11 +888,22 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					networkobservabilityHubble = true
 					networkobservabilityCilium = true
 					acstor-capacity-provisioner = true
-				local-csi-driver = true
+					local-csi-driver = true
 					acstor-metrics-exporter = true
 					prometheuscollectorhealth = false
 				pod-annotation-based-scraping: |-
 					podannotationnamespaceregex = ".*|value"
+				ksm-config: |-
+					resources:
+					  secrets: {}
+					  configmaps: {}
+					labels_allow_list:
+					  pods:
+					    - app8
+					annotations_allow_list:
+					  namespaces:
+					    - kube-system
+					    - default
 				default-targets-metrics-keep-list: |-
 					kubelet = "test.*|test2"
 					coredns = "test.*|test2"
@@ -868,19 +957,19 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config with custom settings for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/advanced-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with custom settings for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/advanced-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the config with custom settings for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-windows-ds.yaml", "")
 		})
 	})
@@ -889,16 +978,17 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		var expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap map[string]string
 		var isDefaultConfig, useConfigFiles bool
 		BeforeEach(func() {
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			expectedEnvVars := testhelpers.DefaultManagedPrometheusEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":               "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":                 "ver1",
 				"AZMON_OPERATOR_ENABLED_CHART_SETTING":         "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
 				"DEBUG_MODE_ENABLED":                           "false",
+				"CONFIGMAP_VERSION":                            "v2",
 			}
 
-			scrapeOverrides := cloneDefaultScrapeJobStates()
+			scrapeOverrides := testhelpers.CloneJobEnabledStates(shared.DefaultScrapeJobs)
 			for _, job := range []string{
 				"kubelet",
 				"coredns",
@@ -921,20 +1011,23 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			}
 			scrapeOverrides["prometheuscollectorhealth"] = false
 
-			for key, value := range buildScrapeEnvVarOverridesFromBoolMap(scrapeOverrides) {
+			overrides := testhelpers.BuildEnvVarOverrides(scrapeOverrides, func(jobName string) string {
+				return testhelpers.BuildEnvVarName(jobName, "_SCRAPING_ENABLED")
+			})
+			for key, value := range overrides {
 				extraEnvVars[key] = value
 			}
 
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap = getExpectedKeepListMap(false, "")
-			expectedScrapeIntervalHashMap = getExpectedScrapeIntervalMap("")
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			expectedKeepListHashMap = testhelpers.ExpectedKeepListMap(shared.DefaultScrapeJobs, false, "", true)
+			expectedScrapeIntervalHashMap = testhelpers.ExpectedScrapeIntervalMap(shared.DefaultScrapeJobs, "")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
 			fmt.Println("Schema version file created at:", schemaVersionFile)
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
 			fmt.Println("Config version file created at:", configVersionFile)
-			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -961,19 +1054,19 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			useConfigFiles = false
 		})
 		It("should process the settings for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.ConfigReaderSidecar, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/advanced-no-minimal-linux-rs.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the settings for the Linux DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Linux)).To(Succeed())
 			expectedContentsFilePath := "./testdata/advanced-no-minimal-linux-ds.yaml"
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, expectedContentsFilePath, "")
 		})
 
 		It("should process the settings for the Windows DaemonSet", func() {
-			setSetupEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)
+			Expect(testhelpers.SetManagedPrometheusEnvVars(shared.ControllerType.DaemonSet, shared.OSType.Windows)).To(Succeed())
 			checkResults(useConfigFiles, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-no-minimal-windows-ds.yaml", "")
 		})
 	})
@@ -986,25 +1079,30 @@ func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map
 	setupProcessedFiles()
 	processConfigFiles()
 
-	err := checkEnvVars(expectedEnvVars)
+	err := testhelpers.CheckEnvVars(expectedEnvVars)
 	Expect(err).NotTo(HaveOccurred())
 
-	checkHashMaps(configMapKeepListEnvVarPath, expectedKeepListHashMap)
-	checkHashMaps(scrapeIntervalEnvVarPath, expectedScrapeIntervalHashMap)
+	keepListHash, err := testhelpers.ReadYAMLStringMap(configMapKeepListEnvVarPath)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(keepListHash).To(BeComparableTo(expectedKeepListHashMap))
 
-	mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
+	scrapeIntervalHash, err := testhelpers.ReadYAMLStringMap(scrapeIntervalEnvVarPath)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(scrapeIntervalHash).To(BeComparableTo(expectedScrapeIntervalHashMap))
+
+	mergedFileContents, err := os.ReadFile(mergedDefaultConfigPath)
 	Expect(err).NotTo(HaveOccurred())
 	fmt.Println(string(mergedFileContents))
-	expectedDefaultFileContents, err := ioutil.ReadFile(expectedDefaultContentsFilePath)
+	expectedDefaultFileContents, err := os.ReadFile(expectedDefaultContentsFilePath)
 	Expect(err).NotTo(HaveOccurred())
 
 	var customMergedConfigFileContents, expectedCustomMergedConfigFileContents []byte
 	if expectedMergedContentsFilePath != "" {
-		customMergedConfigFileContents, err = ioutil.ReadFile(promMergedConfigPath)
+		customMergedConfigFileContents, err = os.ReadFile(promMergedConfigPath)
 		Expect(err).NotTo(HaveOccurred())
 		fmt.Println(string(customMergedConfigFileContents))
 
-		expectedCustomMergedConfigFileContents, err = ioutil.ReadFile(expectedMergedContentsFilePath)
+		expectedCustomMergedConfigFileContents, err = os.ReadFile(expectedMergedContentsFilePath)
 		Expect(err).NotTo(HaveOccurred())
 	}
 

@@ -10,10 +10,13 @@ replace github.com/prometheus-collector/shared/configmap/mp => ./shared/configma
 
 replace github.com/prometheus-collector/shared/configmap/ccp => ./shared/configmap/ccp
 
+replace github.com/prometheus-collector/shared/configmap/common/testhelpers => ./shared/configmap/common/testhelpers
+
 require (
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/ccp v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/shared/configmap/common/testhelpers v0.0.0-00010101000000-000000000000
 )
 
 require (

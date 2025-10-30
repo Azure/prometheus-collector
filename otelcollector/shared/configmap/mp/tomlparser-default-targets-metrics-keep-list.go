@@ -2,95 +2,36 @@ package configmapsettings
 
 import (
 	"fmt"
-	"io/fs"
 	"log"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
-	"gopkg.in/yaml.v2"
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 )
-
-// populateKeepList initializes the regex keep list with values from metricsConfigBySection.
-func populateKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
-	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
-
-	minimalProfileEnabled := true
-	switch configSchemaVersion {
-	case shared.SchemaVersion.V1:
-		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
-		if err != nil {
-			log.Println("Invalid value for minimalingestionprofile in v1:", err.Error())
-			metricsConfigBySection = map[string]map[string]string{}
-		} else {
-			minimalProfileEnabled = minimalProfileEnabledBool
-			log.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
-		}
-	case shared.SchemaVersion.V2:
-		minimalProfileEnabledBool, err := strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
-		if err != nil {
-			log.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
-			metricsConfigBySection = map[string]map[string]string{}
-		} else {
-			minimalProfileEnabled = minimalProfileEnabledBool
-			log.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
-		}
-	default:
-		log.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchemaVersion)
-		metricsConfigBySection = map[string]map[string]string{}
-	}
-
-	for jobName, job := range shared.DefaultScrapeJobs {
-		job.KeepListRegex = ""
-		if setting, ok := keeplist[jobName]; ok {
-			log.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
-			if !shared.IsValidRegex(setting) {
-				log.Printf("parseConfigMapForKeepListRegex::Invalid regex for job %s: %s\n", jobName, setting)
-				continue // Skip invalid regex
-			}
-			job.CustomerKeepListRegex = setting
-			log.Printf("populateSettingValuesFromConfigMap::%s: %s\n", jobName, job.CustomerKeepListRegex)
-		}
-
-		if minimalProfileEnabled {
-			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
-			job.KeepListRegex = "|" + job.MinimalKeepListRegex
-			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal Keep List Regex:", job.MinimalKeepListRegex)
-		} else {
-			log.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, using configmap values")
-		}
-
-		job.KeepListRegex = job.CustomerKeepListRegex + job.KeepListRegex
-	}
-
-	log.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
-	return nil
-}
 
 func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
-	err := populateKeepList(metricsConfigBySection, configSchemaVersion)
-	if err != nil {
-		log.Printf("Error populating keep list: %s\n", err.Error())
-	}
-	// Write settings to a YAML file
-	data := map[string]string{}
-	for jobName, job := range shared.DefaultScrapeJobs {
-		data[fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))] = job.KeepListRegex
+	formatter := func(jobName string) string {
+		return fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))
 	}
 
-	out, err := yaml.Marshal(data)
-	if err != nil {
-		log.Println(err.Error())
-		return
+	opts := cmcommon.KeepListOptions{
+		Jobs:                      shared.DefaultScrapeJobs,
+		MetricsConfig:             metricsConfigBySection,
+		SchemaVersion:             configSchemaVersion,
+		KeepListSection:           "default-targets-metrics-keep-list",
+		MinimalProfileSection:     "minimal-ingestion-profile",
+		MinimalProfileKeyV1:       "minimalingestionprofile",
+		MinimalProfileKeyV2:       "enabled",
+		OutputPath:                configMapKeepListEnvVarPath,
+		EnvVarFormatter:           func(jobName string) string { return formatter(jobName) },
+		JobKeyFormatter:           func(jobName, _ string) string { return jobName },
+		MinimalProfileDefaultBool: true,
 	}
 
-	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
-	if err != nil {
-		log.Printf("Exception while writing to file: %v\n", err)
-		return
+	if err := cmcommon.PopulateKeepLists(opts); err != nil {
+		log.Printf("tomlparserTargetsMetricsKeepList::error populating keep list: %s\n", err.Error())
 	}
 
 	shared.EchoSectionDivider("End Processing - tomlparserTargetsMetricsKeepList")

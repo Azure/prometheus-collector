@@ -2,6 +2,8 @@ module github.com/prometheus-collector/shared/configmap/ccp
 
 replace github.com/prometheus-collector/shared => ../../../shared
 
+replace github.com/prometheus-collector/shared/configmap/common/testhelpers => ../../../shared/configmap/common/testhelpers
+
 go 1.23.0
 
 toolchain go1.23.2
@@ -10,6 +12,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/shared/configmap/common/testhelpers v0.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v2 v2.4.0
 )

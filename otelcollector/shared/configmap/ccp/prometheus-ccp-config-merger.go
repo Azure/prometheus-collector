@@ -5,87 +5,17 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
-
-	"gopkg.in/yaml.v2"
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 )
 
 var mergedDefaultConfigs map[interface{}]interface{}
 
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
-	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
-
-	content, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-		return
-	}
-
-	var config map[string]interface{}
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-		return
-	}
-
-	keepListMetricRelabelConfig := map[string]interface{}{
-		"source_labels": []interface{}{"__name__"},
-		"action":        "keep",
-		"regex":         keepListRegex,
-	}
-
-	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for i, scfg := range scrapeConfigs {
-			// Ensure scfg is a map with string keys
-			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				// Convert to map[string]interface{}
-				stringScfgMap := make(map[string]interface{})
-				for k, v := range scfgMap {
-					if key, ok := k.(string); ok {
-						stringScfgMap[key] = v
-					} else {
-						fmt.Printf("Encountered non-string key in scrape config map: %v\n", k)
-						return
-					}
-				}
-
-				// Update or add metric_relabel_configs
-				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
-					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
-				} else {
-					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
-				}
-
-				// Convert back to map[interface{}]interface{} for YAML marshalling
-				interfaceScfgMap := make(map[interface{}]interface{})
-				for k, v := range stringScfgMap {
-					interfaceScfgMap[k] = v
-				}
-
-				// Update the scrape_configs list
-				scrapeConfigs[i] = interfaceScfgMap
-			}
-		}
-
-		// Write updated scrape_configs back to config
-		config["scrape_configs"] = scrapeConfigs
-
-		// Marshal the updated config to YAML
-		cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config)
-		if err != nil {
-			fmt.Printf("Error marshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-			return
-		}
-
-		// Write the updated YAML back to the file
-		if err := os.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, fs.FileMode(0644)); err != nil {
-			fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-			return
-		}
-	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The keep list regex will not be used.\n")
+	if err := cmcommon.AppendMetricRelabelConfig(yamlConfigFile, keepListRegex, log.Printf); err != nil {
+		log.Printf("Error updating metric relabel config for %s: %v\n", yamlConfigFile, err)
 	}
 }
 
@@ -103,12 +33,8 @@ func populateDefaultPrometheusConfig() {
 				appendMetricRelabelConfig(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.CustomerKeepListRegex)
 			}
 
-			contents, err := os.ReadFile(scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile)
-			if err == nil {
-				for _, envVarName := range job.PlaceholderNames {
-					contents = []byte(strings.Replace(string(contents), fmt.Sprintf("$$%s$$", envVarName), os.Getenv(envVarName), -1))
-					os.WriteFile(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, contents, fs.FileMode(0644))
-				}
+			if err := cmcommon.ReplacePlaceholders(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.PlaceholderNames); err != nil {
+				log.Printf("Error replacing placeholders for %s: %v\n", jobName, err)
 			}
 			defaultConfigs = append(defaultConfigs, scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile)
 		}
@@ -118,72 +44,25 @@ func populateDefaultPrometheusConfig() {
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
-	mergedDefaultConfigs := make(map[interface{}]interface{})
+	merged := make(map[interface{}]interface{})
 
 	if len(defaultScrapeConfigs) > 0 {
-		mergedDefaultConfigs["scrape_configs"] = make([]interface{}, 0)
+		merged["scrape_configs"] = make([]interface{}, 0)
 
 		for _, defaultScrapeConfig := range defaultScrapeConfigs {
-			defaultConfigYaml, err := loadYAMLFromFile(defaultScrapeConfig)
+			defaultConfigYaml, err := cmcommon.LoadYAMLFromFile(defaultScrapeConfig)
 			if err != nil {
 				log.Printf("Error loading YAML from file %s: %s\n", defaultScrapeConfig, err)
 				continue
 			}
 
-			mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, defaultConfigYaml)
+			merged = cmcommon.DeepMerge(merged, defaultConfigYaml)
 		}
 	}
 
 	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
 
-	return mergedDefaultConfigs
-}
-
-func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
-	fileContent, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	var yamlData map[interface{}]interface{}
-	err = yaml.Unmarshal(fileContent, &yamlData)
-	if err != nil {
-		return nil, err
-	}
-
-	return yamlData, nil
-}
-
-// This needs unit tests
-
-func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
-	for key, sourceValue := range source {
-		targetValue, exists := target[key]
-
-		if !exists {
-			target[key] = sourceValue
-			continue
-		}
-
-		targetMap, targetMapOk := targetValue.(map[interface{}]interface{})
-		sourceMap, sourceMapOk := sourceValue.(map[interface{}]interface{})
-
-		if targetMapOk && sourceMapOk {
-			target[key] = deepMerge(targetMap, sourceMap)
-		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
-			// Both are slices, concatenate them
-			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
-				if sourceSlice, sourceSliceOk := sourceValue.([]interface{}); sourceSliceOk {
-					target[key] = append(targetSlice, sourceSlice...)
-				}
-			}
-		} else {
-			// If types are different, simply overwrite with the source value
-			target[key] = sourceValue
-		}
-	}
-
-	return target
+	return merged
 }
 
 func writeDefaultScrapeTargetsFile() {
@@ -193,14 +72,8 @@ func writeDefaultScrapeTargetsFile() {
 		populateDefaultPrometheusConfig()
 		if len(mergedDefaultConfigs) > 0 {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
-			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
-			if err == nil {
-				err = os.WriteFile(mergedDefaultConfigPath, []byte(mergedDefaultConfigYaml), fs.FileMode(0644))
-				if err != nil {
-					fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
-				}
-			} else {
-				fmt.Printf("Error marshalling merged default prometheus config: %v\n", err)
+			if err := cmcommon.WriteYAML(mergedDefaultConfigPath, mergedDefaultConfigs); err != nil {
+				fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
 			}
 		}
 	} else {

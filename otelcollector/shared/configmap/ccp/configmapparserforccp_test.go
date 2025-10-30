@@ -2,14 +2,13 @@ package ccpconfigmapsettings
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus-collector/shared"
+	"github.com/prometheus-collector/shared/configmap/common/testhelpers"
 	"gopkg.in/yaml.v2"
 )
 
@@ -32,9 +31,13 @@ type TestConfig struct {
 func setupTest() {
 	var originalDefaultScrapeJobs map[string]shared.DefaultScrapeJob
 	BeforeEach(func() {
-		cleanupEnvVars()
+		testhelpers.UnsetEnvVars(testhelpers.DefaultCollectorEnvVarKeys())
 		configSettingsPrefix = "/tmp/settings/"
+		configMapParserPrefix = "/tmp/configmapparser/"
 		os.RemoveAll(configSettingsPrefix)
+		os.RemoveAll(configMapParserPrefix)
+		_ = os.MkdirAll(configSettingsPrefix, 0755)
+		_ = os.MkdirAll(configMapParserPrefix, 0755)
 		// Save a copy of the original DefaultScrapeJobs for restoring later
 		originalDefaultScrapeJobs = make(map[string]shared.DefaultScrapeJob)
 		for key, job := range shared.ControlPlaneDefaultScrapeJobs {
@@ -42,9 +45,10 @@ func setupTest() {
 		}
 	})
 	AfterEach(func() {
-		cleanupEnvVars()
+		testhelpers.UnsetEnvVars(testhelpers.DefaultCollectorEnvVarKeys())
 		// Remove any temporary files created during the tests
 		os.RemoveAll(configSettingsPrefix)
+		os.RemoveAll(configMapParserPrefix)
 		// Restore the original DefaultScrapeJobs
 		for key, job := range originalDefaultScrapeJobs {
 			shared.ControlPlaneDefaultScrapeJobs[key] = &job
@@ -58,11 +62,11 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when the settings configmap does not exist", func() {
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
 
-			expectedEnvVars := getDefaultExpectedEnvVars()
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, true, "", false)
+			expectedScrapeIntervalHashMap := testhelpers.ExpectedScrapeIntervalMap(shared.ControlPlaneDefaultScrapeJobs, "")
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			isDefaultConfig := true
 
@@ -72,11 +76,11 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when the settings configmap sections exist but are empty", func() {
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
 
-			expectedEnvVars := getDefaultExpectedEnvVars()
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, true, "", false)
+			expectedScrapeIntervalHashMap := testhelpers.ExpectedScrapeIntervalMap(shared.ControlPlaneDefaultScrapeJobs, "")
 			expectedContentsFilePath := "./testdata/default-linux-rs.yaml"
 			isDefaultConfig := true
 
@@ -86,8 +90,8 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when the settings configmap sections exist and are not default", func() {
 		It("should process the config for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -103,12 +107,12 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "test.*|test2")
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, true, "test.*|test2", false)
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `cluster_alias = "alias"`)
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			collectorSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", `cluster_alias = "alias"`)
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
 				kubelet = true
 				coredns = false
 				cadvisor = true
@@ -132,7 +136,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				acstor-capacity-provisioner = true
 				acstor-metrics-exporter = true
 			`)
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				kubelet = "test.*|test2"
 				coredns = "test.*|test2"
 				cadvisor = "test.*|test2"
@@ -167,8 +171,8 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when the configmap sections exist but all scrape jobs are false", func() {
 		It("should process the config with no scrape jobs enabled for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v1",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -182,11 +186,11 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, true, "", false)
+			expectedScrapeIntervalHashMap := testhelpers.ExpectedScrapeIntervalMap(shared.ControlPlaneDefaultScrapeJobs, "")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", `
 				kubelet = false
 				coredns = false
 				cadvisor = false
@@ -218,15 +222,15 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when minimal ingestion is not true", func() {
 		It("should handle it being set to false with the keeplist regex values", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
-			expectedKeepListHashMap := getExpectedKeepListMap(false, "test.*|test2")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, false, "test.*|test2", false)
+			expectedScrapeIntervalHashMap := testhelpers.ExpectedScrapeIntervalMap(shared.ControlPlaneDefaultScrapeJobs, "")
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			collectorSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
+			defaultSettingsMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
+			configMapKeepListMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				kubelet = "test.*|test2"
 				coredns = "test.*|test2"
 				cadvisor = "test.*|test2"
@@ -258,9 +262,9 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 
 	Context("when the settings configmap uses v2 and the sections are not default", Label("v2"), func() {
 		It("should process the config with custom settings for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
 
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -276,19 +280,19 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(true, "test.*|test2")
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, true, "test.*|test2", false)
 			expectedContentsFilePath := "./testdata/advanced-linux-rs.yaml"
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
 			fmt.Println("Schema version file created at:", schemaVersionFile)
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
 			fmt.Println("Config version file created at:", configVersionFile)
-			_ = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", `
     			cluster_alias = "alias"
    				debug-mode = true
     			https_config = true
 			`)
-			_ = createTempFile(configSettingsPrefix, "controlplane-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "controlplane-metrics", `
 				default-targets-scrape-enabled: |-
 					apiserver = true
 					cluster-autoscaler = true
@@ -306,7 +310,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				minimal-ingestion-profile: |-
 					enabled = true
 	  		`)
-			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -370,9 +374,9 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, nil, expectedContentsFilePath, "")
 		})
 		It("should process when the minimal ingestion profile is false for CCP", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
 
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -388,19 +392,19 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(false, "test.*|test2")
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, false, "test.*|test2", false)
 			expectedContentsFilePath := "./testdata/advanced-no-minimal-linux-rs.yaml"
 
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
 			fmt.Println("Schema version file created at:", schemaVersionFile)
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
 			fmt.Println("Config version file created at:", configVersionFile)
-			_ = createTempFile(configSettingsPrefix, "prometheus-collector-settings", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "prometheus-collector-settings", `
     			cluster_alias = "alias"
    				debug-mode = true
     			https_config = true
 			`)
-			_ = createTempFile(configSettingsPrefix, "controlplane-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "controlplane-metrics", `
 				default-targets-scrape-enabled: |-
 					apiserver = true
 					cluster-autoscaler = true
@@ -418,7 +422,7 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 				minimal-ingestion-profile: |-
 					enabled = false
 	  		`)
-			_ = createTempFile(configSettingsPrefix, "cluster-metrics", `
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "cluster-metrics", `
 				default-targets-scrape-enabled: |-
 					kubelet = true
 					coredns = true
@@ -482,8 +486,8 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			checkResults(false, isDefaultConfig, expectedEnvVars, expectedKeepListHashMap, nil, expectedContentsFilePath, "")
 		})
 		It("should process the config with no scrape jobs enabled and without all sections for the Linux ReplicaSet", func() {
-			setSetupEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)
-			expectedEnvVars := getDefaultExpectedEnvVars()
+			Expect(testhelpers.SetControlPlaneEnvVars(shared.ControllerType.ReplicaSet, shared.OSType.Linux)).To(Succeed())
+			expectedEnvVars := testhelpers.DefaultControlPlaneEnvVars()
 			extraEnvVars := map[string]string{
 				"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "v2",
 				"AZMON_AGENT_CFG_FILE_VERSION":                     "ver1",
@@ -497,11 +501,11 @@ var _ = Describe("Configmapparserforccp", Ordered, func() {
 			for key, value := range extraEnvVars {
 				expectedEnvVars[key] = value
 			}
-			expectedKeepListHashMap := getExpectedKeepListMap(false, "")
-			expectedScrapeIntervalHashMap := getExpectedScrapeIntervalMap("")
-			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v2")
-			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			_ = createTempFile(configSettingsPrefix, "controlplane-metrics", `
+			expectedKeepListHashMap := testhelpers.ExpectedKeepListMap(shared.ControlPlaneDefaultScrapeJobs, false, "", false)
+			expectedScrapeIntervalHashMap := testhelpers.ExpectedScrapeIntervalMap(shared.ControlPlaneDefaultScrapeJobs, "")
+			schemaVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "schema-version", "v2")
+			configVersionFile = testhelpers.MustCreateTempFile(configSettingsPrefix, "config-version", "ver1")
+			_ = testhelpers.MustCreateTempFile(configSettingsPrefix, "controlplane-metrics", `
 				default-targets-scrape-enabled: |-
 					apiserver = false
 					cluster-autoscaler = false
@@ -529,16 +533,17 @@ func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map
 	processAndMergeConfigFiles()
 
 	if expectedEnvVars != nil {
-		err := checkEnvVars(expectedEnvVars)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(testhelpers.CheckEnvVars(expectedEnvVars)).To(Succeed())
 	}
 
-	checkHashMaps(configMapKeepListEnvVarPath, expectedKeepListHashMap)
+	keepListHash, err := testhelpers.ReadYAMLStringMap(configMapKeepListEnvVarPath)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(keepListHash).To(BeComparableTo(expectedKeepListHashMap))
 
-	mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
+	mergedFileContents, err := os.ReadFile(mergedDefaultConfigPath)
 	Expect(err).NotTo(HaveOccurred())
 	fmt.Println(string(mergedFileContents))
-	expectedDefaultFileContents, err := ioutil.ReadFile(expectedDefaultContentsFilePath)
+	expectedDefaultFileContents, err := os.ReadFile(expectedDefaultContentsFilePath)
 	Expect(err).NotTo(HaveOccurred())
 
 	var mergedConfig, expectedConfig, customMergedConfig, expectedCustomConfig map[string]interface{}
@@ -572,252 +577,33 @@ func checkResults(useConfigFiles bool, isDefaultConfig bool, expectedEnvVars map
 	}
 }
 
-func setEnvVars(envVars map[string]string) {
-	for key, value := range envVars {
-		os.Setenv(key, value)
-	}
-}
-
-func setSetupEnvVars(controllertype string, os string) {
-	var envVars map[string]string
-	switch controllertype {
-	case shared.ControllerType.ReplicaSet:
-		envVars = map[string]string{
-			"AZMON_OPERATOR_ENABLED":    "false",
-			"CONTAINER_TYPE":            "",
-			"CONTROLLER_TYPE":           "ReplicaSet",
-			"OS_TYPE":                   "linux",
-			"MODE":                      "advanced",
-			"KUBE_STATE_NAME":           "ama-metrics-ksm",
-			"POD_NAMESPACE":             "kube-system",
-			"MAC":                       "true",
-			"AZMON_SET_GLOBAL_SETTINGS": "true",
-		}
-	default:
-		envVars = map[string]string{}
-	}
-
-	setEnvVars(envVars)
-}
-
-func getDefaultExpectedEnvVars() map[string]string {
-	return map[string]string{
-		"AZMON_AGENT_CFG_SCHEMA_VERSION":                   "",
-		"AZMON_AGENT_CFG_FILE_VERSION":                     "",
-		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "",
-		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
-		"AZMON_CLUSTER_LABEL":                              "",
-		"AZMON_CLUSTER_ALIAS":                              "",
-		"AZMON_OPERATOR_ENABLED_CHART_SETTING":             "false",
-		"AZMON_OPERATOR_ENABLED":                           "false",
-		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":           "",
-		"AZMON_PROMETHEUS_APISERVER_ENABLED":               "true",
-		"AZMON_PROMETHEUS_CLUSTER-AUTOSCALER_ENABLED":      "false",
-		"AZMON_PROMETHEUS_KUBE-SCHEDULER_ENABLED":          "false",
-		"AZMON_PROMETHEUS_KUBE-CONTROLLER-MANAGER_ENABLED": "false",
-		"AZMON_PROMETHEUS_ETCD_ENABLED":                    "true",
-		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":     "false",
-		"DEBUG_MODE_ENABLED":                               "",
-		"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":           "",
-		"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                "",
-		"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":              "",
-		//"MAC":                                              "true",
-	}
-}
-
-// Helper function to generate standard expected keep list map
-func getExpectedKeepListMap(includeMinimalKeepList bool, value string) map[string]string {
-	expectedKeepListHashMap := make(map[string]string)
-	for jobName, job := range shared.ControlPlaneDefaultScrapeJobs {
-		// TODO: METRICS_KEEP_LIST OR KEEP_LIST_REGEX
-		keyName := fmt.Sprintf("CONTROLPLANE_%s_KEEP_LIST_REGEX", strings.ToUpper(jobName))
-		if includeMinimalKeepList {
-			expectedKeepListHashMap[keyName] = fmt.Sprintf("%s|%s", value, job.MinimalKeepListRegex)
-		} else {
-			expectedKeepListHashMap[keyName] = value
-		}
-	}
-	return expectedKeepListHashMap
-}
-
-// Helper function to generate standard expected scrape interval map
-func getExpectedScrapeIntervalMap(value string) map[string]string {
-	expectedScrapeIntervalHashMap := make(map[string]string)
-	for jobName := range shared.ControlPlaneDefaultScrapeJobs {
-		keyName := fmt.Sprintf("%s_SCRAPE_INTERVAL", strings.ToUpper(jobName))
-		if value == "" {
-			expectedScrapeIntervalHashMap[keyName] = "30s"
-		} else {
-			expectedScrapeIntervalHashMap[keyName] = value
-		}
-	}
-	return expectedScrapeIntervalHashMap
-}
-
-func createTempFile(dir string, name string, content string) string {
-	// Make sure the directory exists
-	fmt.Println("creating file with content", content)
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		GinkgoT().Fatalf("Failed to create directory %s: %v", dir, err)
-	}
-	filepath := dir + name
-	tempFile, err := os.Create(filepath)
-	Expect(err).NotTo(HaveOccurred())
-	_, err = tempFile.WriteString(content)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = tempFile.Close()
-	Expect(err).NotTo(HaveOccurred())
-
-	// Check if the file was created successfully
-	info, err := os.Stat(filepath)
-	if err != nil {
-		GinkgoT().Fatalf("Failed to verify file %s was created: %v", filepath, err)
-	}
-	if info.Size() != int64(len(content)) {
-		GinkgoT().Fatalf("File %s has incorrect size: expected %d, got %d", filepath, len(content), info.Size())
-	}
-	fmt.Printf("Created temp file: %s with content length: %d\n", filepath, info.Size())
-	return filepath // Return the full path instead of just the name
-}
-
 func setupConfigFiles(defaultPath bool) {
-	if defaultPath {
-		defaultSettingsMountPath = "/etc/config/settings/default-scrape-settings"
-		configMapKeepListMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
-		collectorSettingsMountPath = "/etc/config/settings/prometheus-collector-settings"
-		//schemaVersionFile = "/etc/config/settings/schema-version"
-		//configVersionFile = "/etc/config/settings/config-version"
-		createTempFile(configSettingsPrefix, "controlplane-metrics", "")
-		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
-	} else {
-		//schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
-		//configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-		collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
-		defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
-		configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", "")
-		createTempFile(configSettingsPrefix, "cluster-metrics", "")
-		createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
+	prefixes := testhelpers.CollectorPrefixesFor(configSettingsPrefix, configMapParserPrefix, false)
+	paths := testhelpers.CollectorConfigPaths{
+		CollectorSettingsMountPath: &collectorSettingsMountPath,
+		DefaultSettingsMountPath:   &defaultSettingsMountPath,
+		ConfigMapKeepListMountPath: &configMapKeepListMountPath,
 	}
+
+	if err := testhelpers.SetupCollectorConfigFiles(defaultPath, prefixes, paths); err != nil {
+		panic(err)
+	}
+
+	testhelpers.MustCreateTempFile(configSettingsPrefix, "controlplane-metrics", "")
 }
 
 func setupProcessedFiles() {
-	collectorSettingsEnvVarPath = createTempFile(configSettingsPrefix, "collector-settings-envvar", "")
-	defaultSettingsEnvVarPath = createTempFile(configSettingsPrefix, "default-settings-envvar", "")
-	configMapKeepListEnvVarPath = createTempFile(configSettingsPrefix, "keep-list-envvar", "")
-
-	// Create test directory if it doesn't exist
-	testDir := "../../../configmapparser/default-prom-configs/test/"
-	err := os.MkdirAll(testDir, 0755)
-	if err != nil {
-		fmt.Printf("Error creating test directory: %v\n", err)
+	prefixes := testhelpers.CollectorPrefixesFor(configSettingsPrefix, configMapParserPrefix, false)
+	paths := testhelpers.CollectorProcessedPaths{
+		CollectorSettingsEnvVarPath:      &collectorSettingsEnvVarPath,
+		DefaultSettingsEnvVarPath:        &defaultSettingsEnvVarPath,
+		ConfigMapKeepListEnvVarPath:      &configMapKeepListEnvVarPath,
+		ScrapeConfigDefinitionPathPrefix: &scrapeConfigDefinitionPathPrefix,
+		MergedDefaultConfigPath:          &mergedDefaultConfigPath,
+		OpentelemetryMetricsEnvVarPath:   &opentelemetryMetricsEnvVarPath,
 	}
 
-	// Get list of files from source directory
-	srcDir := "../../../configmapparser/default-prom-configs/"
-	files, err := ioutil.ReadDir(srcDir)
-	if err != nil {
-		fmt.Printf("Error reading source directory: %v\n", err)
-	}
-
-	// Copy each file to the test directory
-	for _, file := range files {
-		if !file.IsDir() {
-			srcPath := srcDir + file.Name()
-			dstPath := testDir + file.Name()
-
-			// Read source file
-			data, err := ioutil.ReadFile(srcPath)
-			if err != nil {
-				fmt.Printf("Error reading file %s: %v\n", srcPath, err)
-				continue
-			}
-
-			// Write to destination file
-			err = ioutil.WriteFile(dstPath, data, 0644)
-			if err != nil {
-				fmt.Printf("Error writing file %s: %v\n", dstPath, err)
-			}
-		}
-	}
-
-	scrapeConfigDefinitionPathPrefix = "../../../configmapparser/default-prom-configs/test/"
-	mergedDefaultConfigPath = createTempFile(configSettingsPrefix, "merged-default-config", "")
-}
-
-func checkEnvVars(envVars map[string]string) error {
-	for key, value := range envVars {
-		if os.Getenv(key) != value {
-			return fmt.Errorf("Expected %s to be %s, but got %s", key, value, os.Getenv(key))
-		}
-	}
-	return nil
-}
-
-func checkHashMaps(filepath string, expectedHash map[string]string) {
-	regexFileContents, err := ioutil.ReadFile(filepath)
-	Expect(err).NotTo(HaveOccurred())
-	var hash map[string]string
-	err = yaml.Unmarshal([]byte(regexFileContents), &hash)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(hash).To(BeComparableTo(expectedHash))
-}
-
-func cleanupEnvVars() {
-	allEnvVars := []string{
-		"CONTAINER_TYPE",
-		"CONTROLLER_TYPE",
-		"OS_TYPE",
-		"MODE",
-		"KUBE_STATE_NAME",
-		"POD_NAMESPACE",
-		"MAC",
-		"NODE_NAME",
-		"NODE_IP",
-		"NODE_EXPORTER_TARGETPORT",
-		"AZMON_AGENT_CFG_SCHEMA_VERSION",
-		"AZMON_AGENT_CFG_FILE_VERSION",
-		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX",
-		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME",
-		"AZMON_CLUSTER_LABEL",
-		"AZMON_CLUSTER_ALIAS",
-		"AZMON_OPERATOR_ENABLED_CHART_SETTING",
-		"AZMON_OPERATOR_ENABLED",
-		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",
-		"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED",
-		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED",
-		"DEBUG_MODE_ENABLED",
-		"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG",
-		"CONFIG_VALIDATOR_RUNNING_IN_AGENT",
-		"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG",
-		"AZMON_PROMETHEUS_APISERVER_ENABLED",
-		"AZMON_PROMETHEUS_CLUSTER_AUTOSCALER_ENABLED",
-		"AZMON_PROMETHEUS_KUBESCHEDULER_ENABLED",
-		"AZMON_PROMETHEUS_KUBECONTROLLERMANAGER_ENABLED",
-		"AZMON_PROMETHEUS_ETCD_ENABLED",
-		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED",
-		"DEBUG_MODE_ENABLED",
-		"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG",
-		"CONFIG_VALIDATOR_RUNNING_IN_AGENT",
-		"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG",
-		"MAC",
-	}
-	for _, envVar := range allEnvVars {
-		os.Unsetenv(envVar)
+	if err := testhelpers.SetupCollectorProcessedFiles(prefixes, paths); err != nil {
+		panic(err)
 	}
 }
