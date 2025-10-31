@@ -3,6 +3,15 @@
 # true if Arc Extension is specifically set to true
 {{ $isArcExtension := eq .Values.AzureMonitorMetrics.ArcExtension true }}
 isArcExtension: {{ $isArcExtension }}
+
+# overriding setting here so that it can be set dynamically based on cluster id (needed because the same chart can be used for both Aks and Arc clusters)
+{{- if and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID)) }}
+isArcExtension: false
+{{- else }}
+isArcExtension: true
+{{- end }}
+
+
 resourceId: {{.Values.Azure.Cluster.ResourceId }}
 region: {{ .Values.Azure.Cluster.Region }}
 
