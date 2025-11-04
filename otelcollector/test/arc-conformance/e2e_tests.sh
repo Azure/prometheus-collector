@@ -154,7 +154,7 @@ waitForAMAMetricsExtensionInstalled() {
 }
 
 getAMAMetricsAMWQueryEndpoint() {
-  amw=$(az k8s-extension show --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
+  amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
   echo "Azure Monitor Metrics extension amw: $amw"
   amw=$(echo $amw | tr -d '"\r\n {}')
   amw="${amw##*:}"
