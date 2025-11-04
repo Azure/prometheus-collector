@@ -106,10 +106,24 @@ if [ -z "$RESOURCE_AUDIENCE" ]; then
     exit 1
 fi
 
-RELEASE_TRAIN_PIPELINE="\"pipeline\""
-RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_PIPELINE,\"staging\""
-RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
-RELEASE_TRAINS="$RELEASE_TRAIN_STABLE"
+# Split comma-separated RELEASE_TRAIN values and format with quotes
+if [[ "$RELEASE_TRAIN" == *","* ]]; then
+    # Contains commas - split and format each value
+    IFS=',' read -ra TRAINS <<< "$RELEASE_TRAIN"
+    RELEASE_TRAINS=""
+    for train in "${TRAINS[@]}"; do
+        # Trim whitespace
+        train=$(echo "$train" | xargs)
+        if [ -n "$RELEASE_TRAINS" ]; then
+            RELEASE_TRAINS="$RELEASE_TRAINS,\"$train\""
+        else
+            RELEASE_TRAINS="\"$train\""
+        fi
+    done
+else
+    # Single value
+    RELEASE_TRAINS="\"$RELEASE_TRAIN\""
+fi
 
 echo "Pulling chart from MCR:${HELM_CHART_ENDPOINT} with version ${CHART_VERSION}"
 helm pull oci://${HELM_CHART_ENDPOINT} --version ${CHART_VERSION}
@@ -129,7 +143,7 @@ cat <<EOF > "request.json"
     {
         "Regions": [$REGIONS_LIST],
         "Releasetrains": [
-            "$RELEASE_TRAINS"
+            $RELEASE_TRAINS
         ],
         "FullPathToHelmChart": "$HELM_CHART_ENDPOINT",
         "ExtensionUpdateFrequencyInMinutes": 60,
