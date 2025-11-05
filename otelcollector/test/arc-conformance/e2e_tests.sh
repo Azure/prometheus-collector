@@ -154,10 +154,11 @@ waitForAMAMetricsExtensionInstalled() {
 }
 
 getAMAMetricsAMWQueryEndpoint() {
-  amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
-  echo "Azure Monitor Metrics extension amw: $amw"
-  amw=$(echo $amw | tr -d '"\r\n {}')
-  amw="${amw##*:}"
+  # amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
+  # echo "Azure Monitor Metrics extension amw: $amw"
+  # amw=$(echo $amw | tr -d '"\r\n {}')
+  # amw="${amw##*:}"
+  amw="/subscriptions/db9b3487-ce27-40ac-9e1f-8196f799a029/resourceGroups/DefaultResourceGroup-eastus2euap/providers/microsoft.monitor/accounts/DefaultAzureMonitorWorkspace-eastus2euap"
   echo "extension amw: ${amw}"
   queryEndpoint=$(az monitor account show --ids ${amw} --query "metrics.prometheusQueryEndpoint" -o json | tr -d '"\r\n')
   echo "queryEndpoint: ${queryEndpoint}"
@@ -214,4 +215,4 @@ for file in "${files[@]}"; do
 done
 cd ..
 
-deleteArcAMAMetricsExtension
+# deleteArcAMAMetricsExtension
