@@ -93,7 +93,7 @@ variables:
   - name: chartVersionValue
     value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 - name: deployToProd
-  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Production')) }}
+  value: true
 - name: deployToFairfax
   value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Fairfax')) }}
 - name: deployToMooncake
