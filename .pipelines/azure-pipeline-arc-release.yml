@@ -13,24 +13,23 @@ parameters:
 
 - name: "deployTo"
   displayName: "Select Region(s)"
-  type: object
-  default:
-    - "AllRegions"
+  type: stringList
+  default: AllRegions
   values:
-    - "AllRegions"
-    - "Production"
-    - "Fairfax"
-    - "Mooncake"
-    - "centraluseuap"
-    - "westcentralus"
-    - "uksouth"
-    - "westeurope"
-    - "westus2"
-    - "eastus2"
-    - "eastus"
-    - "southindia"
-    - "italynorth"
-    - "chilecentral"
+  - AllRegions
+  - Production
+  - Fairfax
+  - Mooncake
+  - centraluseuap
+  - westcentralus
+  - uksouth
+  - westeurope
+  - westus2
+  - eastus2
+  - eastus
+  - southindia
+  - italynorth
+  - chilecentral
 
 - name: 'releaseTrain'
   displayName: 'Release Train'
