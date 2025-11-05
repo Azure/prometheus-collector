@@ -12,9 +12,10 @@ parameters:
   default: true
 
 - name: "deployTo"
-  displayName: "Select Region"
-  type: string
-  default: "AllRegions"
+  displayName: "Select Region(s)"
+  type: object
+  default:
+    - "AllRegions"
   values:
     - "AllRegions"
     - "Production"
@@ -93,13 +94,13 @@ variables:
   - name: chartVersionValue
     value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 - name: deployToProd
-  value: ${{ and(ne(parameters.deployTo, 'Fairfax'), ne(parameters.deployTo, 'Mooncake')) }}
+  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Production')) }}
 - name: deployToFairfax
-  value: ${{ or(eq(parameters.deployTo, 'AllRegions'), eq(parameters.deployTo, 'Fairfax')) }}
+  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Fairfax')) }}
 - name: deployToMooncake
-  value: ${{ or(eq(parameters.deployTo, 'AllRegions'), eq(parameters.deployTo, 'Mooncake')) }}
+  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Mooncake')) }}
 - name: useSelectInProd
-  value: ${{ and(ne(parameters.deployTo, 'Production'), ne(parameters.deployTo, 'AllRegions')) }}
+  value: ${{ and(not(containsValue(parameters.deployTo, 'Production')), not(containsValue(parameters.deployTo, 'AllRegions'))) }}
 - name: configurationOverrides
   value: |
     {
@@ -150,7 +151,7 @@ extends:
               ConfigurationOverrides: $(configurationOverrides)
               StageMapName: "Microsoft.Azure.FluxAgent.SDP"
               ${{ if eq(variables.useSelectInProd, true) }}:
-                Select: regions(${{parameters.deployTo}})
+                Select: regions(${{ join(',', parameters.deployTo) }})
  
     - stage: FF_Managed_SDP
       displayName: "FF: Managed SDP"
