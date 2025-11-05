@@ -13,7 +13,7 @@ pr:
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
-  ARC_HELM_CHART_NAME: 'ama-metrics-arc'
+  AKS_ARC_HELM_CHART_NAME: 'ama-metrics'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
@@ -131,7 +131,8 @@ extends:
             LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
             WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
-            ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+            # ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+            AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
             LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
             WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
@@ -158,9 +159,11 @@ extends:
             echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
             echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
             echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
-            echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
+            # echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
+            echo "##vso[task.setvariable variable=AKS_ARC_HELM_CHART_NAME;isOutput=true]$AKS_ARC_HELM_CHART_NAME"
             echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=AKS_ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$AKS_ARC_HELM_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=ARC_CONFORMANCE_FULL_IMAGE_NAME;isOutput=true]$ARC_CONFORMANCE_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_ARM64_FULL_IMAGE_NAME;isOutput=true]$LINUX_ARM64_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_AMD64_FULL_IMAGE_NAME;isOutput=true]$LINUX_AMD64_FULL_IMAGE_NAME"
@@ -182,7 +185,8 @@ extends:
             env
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
             export ARC_EXTENSION=true
-            export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            # export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
             export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
             export ARC_REGION="westcentralus"
             envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
@@ -2038,8 +2042,8 @@ extends:
             DisableRemediation: false
             AcceptableOutdatedSignatureInHours: 48
             TreatAcceptableOutdatedSignatureAs: Warning
-      - job: Arc_Helm_Chart
-        displayName: "Package: Arc helm chart"
+      - job: Aks_Arc_Helm_Chart
+        displayName: "Package: Aks Arc helm chart"
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
@@ -2051,15 +2055,17 @@ extends:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-          ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          ARC_EXTENSION: true
+          # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
+          AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
+          #ARC_EXTENSION: true
           skipComponentGovernanceDetection: true
         templateContext:
           outputs:
           - output: pipelineArtifact
             displayName: 'Ev2: publish helm chart artifacts'
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)/arc-chart'
+            # targetPath: '$(Build.ArtifactStagingDirectory)/arc-chart'
+            targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
             artifactName: arc-drop
         steps:
         - task: HelmInstaller@1
@@ -2067,7 +2073,8 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            # export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
             envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
             helm version
           displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
@@ -2081,9 +2088,12 @@ extends:
           displayName: "Build: package helm chart"
         - bash: |
             helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-            mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
-            echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
+            # helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            # mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
+            mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
+            # echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
+            echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: push helm chart to dev ACR"
       - job: Tag_Github_Commit
@@ -2094,7 +2104,7 @@ extends:
           os: linux
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
-        - Arc_Helm_Chart
+        - Aks_Arc_Helm_Chart
         - Linux_Prometheus_Collector
         - WindowsMultiArch_Prometheus_Collector
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
@@ -2145,7 +2155,7 @@ extends:
                                 "Releasetrains": [
                                     "pipeline"
                                 ],
-                                "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
+                                "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics",
                                 "ExtensionUpdateFrequencyInMinutes": 5,
                                 "IsCustomerHidden": true,
                                 "ReadyforRollout": true,

@@ -22,10 +22,9 @@ version:  ${IMAGE_TAG}
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "${IMAGE_TAG}"
-{{- if not (and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID))) }}
 dependencies:
 - name: prometheus-node-exporter
   version: "4.45.2"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
-  condition: AzureMonitorMetrics.ArcExtension
+  condition: {{- if not(and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID))) }}
   
