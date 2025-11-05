@@ -26,5 +26,5 @@ dependencies:
 - name: prometheus-node-exporter
   version: "4.45.2"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
-  condition: {{- if not(and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID))) }}
+  condition: not (.Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID))))
   
