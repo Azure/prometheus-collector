@@ -11,15 +11,22 @@ parameters:
   type: boolean
   default: true
 
-- name: "deployTo"
-  displayName: "Select Region(s)"
+- name: "deployClouds"
+  displayName: "Select Cloud(s)"
+  type: stringList
+  default: AllClouds
+  values:
+  - AllClouds
+  - Production
+  - Fairfax
+  - Mooncake
+
+- name: "deployRegions"
+  displayName: "Select Region(s) - only used when Production cloud is selected"
   type: stringList
   default: AllRegions
   values:
   - AllRegions
-  - Production
-  - Fairfax
-  - Mooncake
   - centraluseuap
   - westcentralus
   - uksouth
@@ -93,13 +100,13 @@ variables:
   - name: chartVersionValue
     value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 - name: deployToProd
-  value: true
+  value: ${{ or(containsValue(parameters.deployClouds, 'AllClouds'), containsValue(parameters.deployClouds, 'Production')) }}
 - name: deployToFairfax
-  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Fairfax')) }}
+  value: ${{ or(containsValue(parameters.deployClouds, 'AllClouds'), containsValue(parameters.deployClouds, 'Fairfax')) }}
 - name: deployToMooncake
-  value: ${{ or(containsValue(parameters.deployTo, 'AllRegions'), containsValue(parameters.deployTo, 'Mooncake')) }}
+  value: ${{ or(containsValue(parameters.deployClouds, 'AllClouds'), containsValue(parameters.deployClouds, 'Mooncake')) }}
 - name: useSelectInProd
-  value: ${{ and(not(containsValue(parameters.deployTo, 'Production')), not(containsValue(parameters.deployTo, 'AllRegions'))) }}
+  value: ${{ and(or(containsValue(parameters.deployClouds, 'AllClouds'), containsValue(parameters.deployClouds, 'Production')), not(containsValue(parameters.deployRegions, 'AllRegions'))) }}
 - name: configurationOverrides
   value: |
     {
@@ -150,7 +157,7 @@ extends:
               ConfigurationOverrides: $(configurationOverrides)
               StageMapName: "Microsoft.Azure.FluxAgent.SDP"
               ${{ if eq(variables.useSelectInProd, true) }}:
-                Select: regions(${{ join(',', parameters.deployTo) }})
+                Select: regions(${{ join(',', parameters.deployRegions) }})
  
     - stage: FF_Managed_SDP
       displayName: "FF: Managed SDP"
