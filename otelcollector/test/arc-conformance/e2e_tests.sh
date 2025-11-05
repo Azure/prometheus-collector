@@ -117,12 +117,12 @@ createArcAMAMetricsExtension() {
   fi
 
   echo "creating extension type: Microsoft.AzureMonitor.Containers.Metrics"
-  basicparameters="--cluster-name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers.Metrics --scope cluster --name azuremonitor-metrics --allow-preview true"
+  basicparameters="--cluster-name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers.Metrics --scope cluster --name azuremonitor-metrics --auto-upgrade-minor-version false"
   if [ ! -z "$AMA_METRICS_ARC_RELEASE_TRAIN" ]; then
       basicparameters="$basicparameters  --release-train $AMA_METRICS_ARC_RELEASE_TRAIN"
   fi
   if [ ! -z "$AMA_METRICS_ARC_VERSION" ]; then
-      basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION --AutoUpgradeMinorVersion false"
+      basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION"
   fi
   
   az k8s-extension create $basicparameters

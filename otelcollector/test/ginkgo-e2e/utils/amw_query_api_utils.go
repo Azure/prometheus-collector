@@ -35,10 +35,8 @@ type TokenResponse struct {
 func GetAzureCredential() (azcore.TokenCredential, error) {
 	cred, err := newFederatedCredential()
 	if err != nil {
-		return nil, err
-	}
-
-	if cred != nil {
+		fmt.Printf("failed to initialize federated credential, falling back to default: %v\n", err)
+	} else if cred != nil {
 		return cred, nil
 	}
 
@@ -63,7 +61,7 @@ func newFederatedCredential() (azcore.TokenCredential, error) {
 		return cred, nil
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("failed to get federated creds as either clientID or tenantID is empty")
 }
 
 func requestOIDCToken(ctx context.Context) (string, error) {
