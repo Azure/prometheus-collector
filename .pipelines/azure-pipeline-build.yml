@@ -13,7 +13,7 @@ pr:
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
-  AKS_ARC_HELM_CHART_NAME: 'ama-metrics'
+  AKS_ARC_HELM_CHART_NAME: 'ama-metrics-arc'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
