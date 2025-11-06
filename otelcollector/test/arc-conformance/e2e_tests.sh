@@ -153,6 +153,17 @@ waitForAMAMetricsExtensionInstalled() {
   done
 }
 
+applyCustomResourcesForTests() {
+  kubectl apply -f /yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+  kubectl apply -f /yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+  kubectl apply -f /yamls/configmaps/ama-metrics-settings-configmap.yaml
+  kubectl apply -f /yamls/referenceapp/prometheus-reference-app.yaml
+  kubectl apply -f /yamls/customresources/prometheus-reference-app.yaml
+
+  # sleep for 5 minutes to allow resources to be created
+  sleep 5m
+}
+
 getAMAMetricsAMWQueryEndpoint() {
   # amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
   # echo "Azure Monitor Metrics extension amw: $amw"
@@ -204,6 +215,8 @@ createArcAMAMetricsExtension
 showArcAMAMetricsExtension
 
 waitForAMAMetricsExtensionInstalled
+
+applyCustomResourcesForTests
 
 getAMAMetricsAMWQueryEndpoint
 

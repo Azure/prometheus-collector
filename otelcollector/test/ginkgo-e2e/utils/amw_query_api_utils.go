@@ -37,6 +37,7 @@ func GetAzureCredential() (azcore.TokenCredential, error) {
 	if err != nil {
 		fmt.Printf("failed to initialize federated credential, falling back to default: %v\n", err)
 	} else if cred != nil {
+		fmt.Printf("received federated credential\n")
 		return cred, nil
 	}
 
@@ -44,6 +45,7 @@ func GetAzureCredential() (azcore.TokenCredential, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default azure credential: %w", err)
 	}
+	fmt.Printf("received default credential\n")
 
 	return defaultCred, nil
 }
@@ -124,7 +126,7 @@ func GetQueryAccessToken() (string, error) {
 	}
 
 	opts := policy.TokenRequestOptions{
-		Scopes: []string{"https://prometheus.monitor.azure.com"},
+		Scopes: []string{"https://prometheus.monitor.azure.com/.default"},
 	}
 
 	accessToken, err := cred.GetToken(context.Background(), opts)
