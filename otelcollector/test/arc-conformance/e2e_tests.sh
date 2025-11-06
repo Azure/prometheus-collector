@@ -124,6 +124,17 @@ createArcAMAMetricsExtension() {
   if [ ! -z "$AMA_METRICS_ARC_VERSION" ]; then
       basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION"
   fi
+  resourcelocation=$(az connectedk8s show --name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --query location -o json | tr -d '"' | tr -d '"\r\n')
+  echo "cluster resource location: ${resourcelocation}"
+  if [[ "$resourcelocation" == *"euap"* ]]; then
+    resourcelocation="eastus2euap"
+  else 
+    resourcelocation="swedencentral"
+  fi
+  echo "using resource location: ${resourcelocation} for amw resource id"
+  amw_resource_id="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/DefaultResourceGroup-$resourcelocation/providers/microsoft.monitor/accounts/DefaultAzureMonitorWorkspace-$resourcelocation"
+  echo "using amw resource id: ${amw_resource_id}"
+  basicparameters="$basicparameters --configuration-settings azure-monitor-workspace-resource-id=$amw_resource_id"
   
   az k8s-extension create $basicparameters
 }
@@ -165,11 +176,7 @@ applyCustomResourcesForTests() {
 }
 
 getAMAMetricsAMWQueryEndpoint() {
-  # amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
-  # echo "Azure Monitor Metrics extension amw: $amw"
-  # amw=$(echo $amw | tr -d '"\r\n {}')
-  # amw="${amw##*:}"
-  amw="/subscriptions/db9b3487-ce27-40ac-9e1f-8196f799a029/resourceGroups/DefaultResourceGroup-eastus2euap/providers/microsoft.monitor/accounts/DefaultAzureMonitorWorkspace-eastus2euap"
+  amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query "configurationSettings.\"azure-monitor-workspace-resource-id\"" -o tsv)
   echo "extension amw: ${amw}"
   queryEndpoint=$(az monitor account show --ids ${amw} --query "metrics.prometheusQueryEndpoint" -o json | tr -d '"\r\n')
   echo "queryEndpoint: ${queryEndpoint}"
