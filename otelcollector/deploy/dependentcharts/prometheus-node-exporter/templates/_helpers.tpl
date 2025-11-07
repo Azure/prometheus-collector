@@ -44,7 +44,6 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "prometheus-node-exporter.labels" -}}
-test.io/test: {{ .Values.global.commonGlobals.Customer.AzureResourceID }}
 helm.sh/chart: {{ include "prometheus-node-exporter.chart" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/component: metrics
