@@ -6,6 +6,15 @@ Expand the name of the chart.
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{ define "nodeexporter-arc-extension-settings" }}
+# overriding setting here so that it can be set dynamically based on cluster id (needed because the same chart can be used for both Aks and Arc clusters)
+{{- if and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID)) }}
+isArcExtensionNodeExporter: false
+{{- else }}
+isArcExtensionNodeExporter: true
+{{- end }}
+{{- end }}
+
 {{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
@@ -35,6 +44,7 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "prometheus-node-exporter.labels" -}}
+test.io/test: {{ .Values.global.commonGlobals.Customer.AzureResourceID }}
 helm.sh/chart: {{ include "prometheus-node-exporter.chart" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/component: metrics

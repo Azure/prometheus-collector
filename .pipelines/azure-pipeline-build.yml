@@ -13,7 +13,7 @@ pr:
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
-  AKS_ARC_HELM_CHART_NAME: 'ama-metrics-arc'
+  AKS_ARC_HELM_CHART_NAME: 'ama-metrics'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
@@ -162,7 +162,7 @@ extends:
             # echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
             echo "##vso[task.setvariable variable=AKS_ARC_HELM_CHART_NAME;isOutput=true]$AKS_ARC_HELM_CHART_NAME"
             echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
-            echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+            # echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=AKS_ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$AKS_ARC_HELM_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=ARC_CONFORMANCE_FULL_IMAGE_NAME;isOutput=true]$ARC_CONFORMANCE_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_ARM64_FULL_IMAGE_NAME;isOutput=true]$LINUX_ARM64_FULL_IMAGE_NAME"
@@ -176,7 +176,7 @@ extends:
         - bash: |
             cd .pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
+            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-extension -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
             export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
             export HELM_SEMVER=$SETUP_SEMVER
@@ -184,13 +184,13 @@ extends:
             export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
             env
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-            export ARC_EXTENSION=true
+            # export ARC_EXTENSION=true
             # export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
             export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
             export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
             export ARC_REGION="westcentralus"
-            envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
-            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
+            envsubst < ama-metrics-extension/Chart-template.yaml > ama-metrics-extension/Chart.yaml && envsubst < ama-metrics-extension/values-template.yaml > ama-metrics-extension/values.yaml
+            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-extension
             cd $(Build.ArtifactStagingDirectory)
             cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
             export HELM_CHART_NAME="ama-metrics"
@@ -200,7 +200,7 @@ extends:
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
 
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
-            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
+            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - task: HelmInstaller@1
           displayName: 'CI/CD: Install Helm version for linting'
@@ -208,11 +208,11 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            # Lint ama-metrics-arc chart (ARC extension)
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-arc
+            # Lint ama-metrics-extension chart (AKS ARC extension)
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-extension
             helm lint .
             if [ $? -ne 0 ]; then
-              echo "Error: Helm lint failed for ama-metrics-arc chart"
+              echo "Error: Helm lint failed for ama-metrics-extension chart"
               exit 1
             fi
             
@@ -228,8 +228,8 @@ extends:
           displayName: "CI/CD: Lint Helm charts"
           condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-            tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/Scripts
+            tar -czvf ../extension-artifacts.tar.gz aksArcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
         - task: CredScan@3
           displayName: "SDL : Run credscan"
@@ -2057,7 +2057,7 @@ extends:
           IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
           AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
-          #ARC_EXTENSION: true
+          #ARC_EXTENSION: false
           skipComponentGovernanceDetection: true
         templateContext:
           outputs:
@@ -2066,7 +2066,7 @@ extends:
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             # targetPath: '$(Build.ArtifactStagingDirectory)/arc-chart'
             targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
-            artifactName: arc-drop
+            artifactName: aks-arc-drop
         steps:
         - task: HelmInstaller@1
           displayName: 'Build: install Helm version'
@@ -2274,7 +2274,7 @@ extends:
       #         - bash: |
       #             export AKS_REGION="eastus"
       #             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
-      #             export ARC_EXTENSION="false"
+      #             #export ARC_EXTENSION="false"
       #             envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
       #             ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
       #             cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2370,7 +2370,7 @@ extends:
       #         - bash: |
       #             export AKS_REGION="centralus"
       #             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
-      #             export ARC_EXTENSION="false"
+      #             #export ARC_EXTENSION="false"
       #             envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
       #             ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
       #             cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2453,7 +2453,7 @@ extends:
       #         - bash: |
       #             export AKS_REGION="westus3"
       #             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-dev-aks-otlp/providers/Microsoft.ContainerService/managedClusters/ciprom-dev-aks-otlp"
-      #             export ARC_EXTENSION="false"
+      #             #export ARC_EXTENSION="false"
       #             envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
       #             ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
       #             cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2548,7 +2548,7 @@ extends:
       #         - bash: |
       #             export AKS_REGION="westus3"
       #             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-upgrade-bot/providers/Microsoft.ContainerService/managedClusters/ciprom-upgrade-bot"
-      #             export ARC_EXTENSION="false"
+      #             #export ARC_EXTENSION="false"
       #             envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
       #             ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
       #             cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
