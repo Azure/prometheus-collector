@@ -231,7 +231,8 @@ extends:
         - bash: |
             # cd $(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/Scripts
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-            tar -czvf ../extension-artifacts.tar.gz aksArcExtensionRelease.sh
+            # tar -czvf ../extension-artifacts.tar.gz aksArcExtensionRelease.sh
+            tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
         - task: CredScan@3
           displayName: "SDL : Run credscan"
