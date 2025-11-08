@@ -200,7 +200,8 @@ extends:
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
 
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
-            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/buildver.txt"
+            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
+            # echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/aksarc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - task: HelmInstaller@1
           displayName: 'CI/CD: Install Helm version for linting'
