@@ -229,7 +229,8 @@ extends:
           displayName: "CI/CD: Lint Helm charts"
           condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/Scripts
+            # cd $(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/Scripts
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
             tar -czvf ../extension-artifacts.tar.gz aksArcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
         - task: CredScan@3
