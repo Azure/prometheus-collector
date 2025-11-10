@@ -235,4 +235,4 @@ for file in "${files[@]}"; do
 done
 cd ..
 
-# deleteArcAMAMetricsExtension
+deleteArcAMAMetricsExtension
