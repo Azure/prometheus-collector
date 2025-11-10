@@ -2,8 +2,13 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: ama-metrics-pdb
+  namespace: kube-system
+  labels:
+    component: ama-metrics-pdb
+    kubernetes.azure.com/managedby: aks
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      component: ama-metrics
+      rsName: ama-metrics
+  unhealthyPodEvictionPolicy: AlwaysAllow
