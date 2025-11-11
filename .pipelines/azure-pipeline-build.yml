@@ -2061,6 +2061,7 @@ extends:
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
           AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
           #ARC_EXTENSION: false
+          INCLUDE_DEPENDENT_CHARTS: true
           skipComponentGovernanceDetection: true
         templateContext:
           outputs:

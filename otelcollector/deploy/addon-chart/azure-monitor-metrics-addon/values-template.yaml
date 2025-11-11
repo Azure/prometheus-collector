@@ -83,6 +83,7 @@ AzureMonitorMetrics:
     ImageRepositoryWin: "/aks/msi/addon-token-adapter"
     ImageTagWin: "master.250423.2"
   #ArcExtension: ${ARC_EXTENSION}
+  IncludeDependentCharts: ${INCLUDE_DEPENDENT_CHARTS}
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false

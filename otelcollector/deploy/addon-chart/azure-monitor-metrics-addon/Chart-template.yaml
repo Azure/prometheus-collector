@@ -26,5 +26,5 @@ dependencies:
 - name: prometheus-node-exporter
   version: "4.45.2"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
-  condition: AzureMonitorMetrics.ArcExtension
+  condition: AzureMonitorMetrics.IncludeDependentCharts
   
