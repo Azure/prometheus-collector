@@ -11,7 +11,6 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/monitor/azquery"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -248,7 +247,7 @@ var _ = Describe("Regions Suite", func() {
 		})
 
 		It("Query Azure Monitor for AMW usage and limits metrics", func() {
-			cred, err := azidentity.NewDefaultAzureCredential(nil)
+			cred, err := utils.GetAzureCredential()
 			Expect(err).NotTo(HaveOccurred())
 
 			client, err := azquery.NewMetricsClient(cred, nil)
