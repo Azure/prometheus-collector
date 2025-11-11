@@ -1,4 +1,4 @@
-{{- $exporterArcExtensionSettings := include "nodeexporter-nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
 {{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if .Values.service.enabled }}
 apiVersion: v1
