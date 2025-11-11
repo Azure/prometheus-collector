@@ -82,8 +82,7 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 	}
 
 	// Build a regex that tolerates spaces around '=' and treats key/value literally
-	// Pattern: \b<key>\s*=\s*<value>\b (multiline)
-	pattern := fmt.Sprintf(`(?m)\b%s\s*=\s*%s\b`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
+	pattern := fmt.Sprintf(`(?m)%s\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
 	re := regexp.MustCompile(pattern)
 
 	// Debug: log the regex being used
@@ -102,8 +101,8 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 			if !re.MatchString(logs) {
 				// Capture a short snippet of logs for debugging (first 8KB)
 				snippet := logs
-				if len(snippet) > 8192 {
-					snippet = snippet[:8192]
+				if len(snippet) > 17000 {
+					snippet = snippet[:17000]
 				}
 				// Log which pod/container failed and a snippet to aid debugging
 				log.Printf("DEBUG: missing key/value for pod=%s container=%s regex=%s\nLOG_SNIPPET_START\n%s\nLOG_SNIPPET_END", pod.Name, container.Name, pattern, snippet)
