@@ -81,8 +81,11 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 		return err
 	}
 
-	// Build a regex that tolerates spaces and ANSI color codes around '=' and treats key/value literally
-	pattern := fmt.Sprintf(`(?m)%s(?:\x1b\[[0-9;]*[a-zA-Z])*\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
+	// Strip ANSI escape codes from logs before matching for cleaner handling
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+	// Build a regex that tolerates spaces around '=' and treats key/value literally
+	pattern := fmt.Sprintf(`(?m)%s\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
 	re := regexp.MustCompile(pattern)
 
 	// Debug: log the regex being used
@@ -97,7 +100,10 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 			return err
 		}
 
-		if !re.MatchString(logs) {
+		// Strip ANSI codes for matching
+		cleanLogs := ansiRegex.ReplaceAllString(logs, "")
+
+		if !re.MatchString(cleanLogs) {
 			// Capture a short snippet of logs for debugging (first 17KB)
 			snippet := logs
 			if len(snippet) > 17000 {
