@@ -18,7 +18,6 @@ import (
 
 	"bytes"
 	"fmt"
-	"log"
 	"regexp"
 )
 
@@ -88,9 +87,6 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 	pattern := fmt.Sprintf(`(?m)%s\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
 	re := regexp.MustCompile(pattern)
 
-	// Debug: log the regex being used
-	log.Printf("DEBUG: CheckContainerLogsContainKeyValue: regex=%s label=%s=%s namespace=%s container=%s", pattern, labelName, labelValue, namespace, containerName)
-
 	var missing []string
 
 	// For each pod, fetch logs only for the requested container
@@ -104,12 +100,6 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 		cleanLogs := ansiRegex.ReplaceAllString(logs, "")
 
 		if !re.MatchString(cleanLogs) {
-			// Capture a short snippet of logs for debugging (first 17KB)
-			snippet := logs
-			if len(snippet) > 17000 {
-				snippet = snippet[:17000]
-			}
-			log.Printf("DEBUG: missing key/value for pod=%s container=%s regex=%s\nLOG_SNIPPET_START\n%s\nLOG_SNIPPET_END", pod.Name, containerName, pattern, snippet)
 			missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, containerName))
 		}
 	}
