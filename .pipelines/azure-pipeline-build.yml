@@ -4,6 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
+    - grace/proxy-basic-auth
 pr:
   autoCancel: true
   branches:
