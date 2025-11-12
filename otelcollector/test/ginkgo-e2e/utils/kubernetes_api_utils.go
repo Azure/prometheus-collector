@@ -74,7 +74,7 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
  * Example: key="MINIMAL_INGESTION_PROFILE", expectedValue="true" will match lines like
  * "MINIMAL_INGESTION_PROFILE=true" or "MINIMAL_INGESTION_PROFILE = true".
  */
-func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespace, labelName, labelValue, key, expectedValue string) error {
+func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespace, labelName, labelValue, containerName, key, expectedValue string) error {
 	// Get all pods with the given label
 	pods, err := GetPodsWithLabel(clientset, namespace, labelName, labelValue)
 	if err != nil {
@@ -86,28 +86,25 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 	re := regexp.MustCompile(pattern)
 
 	// Debug: log the regex being used
-	log.Printf("DEBUG: CheckContainerLogsContainKeyValue: regex=%s label=%s=%s namespace=%s", pattern, labelName, labelValue, namespace)
+	log.Printf("DEBUG: CheckContainerLogsContainKeyValue: regex=%s label=%s=%s namespace=%s container=%s", pattern, labelName, labelValue, namespace, containerName)
 
 	var missing []string
 
-	// Check the logs of each container in each pod for the key=value statement
+	// For each pod, fetch logs only for the requested container
 	for _, pod := range pods {
-		for _, container := range pod.Spec.Containers {
-			logs, err := getContainerLogs(clientset, pod.Namespace, pod.Name, container.Name)
-			if err != nil {
-				return err
-			}
+		logs, err := getContainerLogs(clientset, pod.Namespace, pod.Name, containerName)
+		if err != nil {
+			return err
+		}
 
-			if !re.MatchString(logs) {
-				// Capture a short snippet of logs for debugging (first 8KB)
-				snippet := logs
-				if len(snippet) > 17000 {
-					snippet = snippet[:17000]
-				}
-				// Log which pod/container failed and a snippet to aid debugging
-				log.Printf("DEBUG: missing key/value for pod=%s container=%s regex=%s\nLOG_SNIPPET_START\n%s\nLOG_SNIPPET_END", pod.Name, container.Name, pattern, snippet)
-				missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, container.Name))
+		if !re.MatchString(logs) {
+			// Capture a short snippet of logs for debugging (first 17KB)
+			snippet := logs
+			if len(snippet) > 17000 {
+				snippet = snippet[:17000]
 			}
+			log.Printf("DEBUG: missing key/value for pod=%s container=%s regex=%s\nLOG_SNIPPET_START\n%s\nLOG_SNIPPET_END", pod.Name, containerName, pattern, snippet)
+			missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, containerName))
 		}
 	}
 
@@ -126,7 +123,7 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
  * different value, an error is returned listing the offending pod/container pairs.
  */
 func CheckMinimalIngestionProfileTrue(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
-	return CheckContainerLogsContainKeyValue(clientset, namespace, labelName, labelValue, "MINIMAL_INGESTION_PROFILE", "true")
+	return CheckContainerLogsContainKeyValue(clientset, namespace, labelName, labelValue, "prometheus-collector", "MINIMAL_INGESTION_PROFILE", "true")
 }
 
 /*
