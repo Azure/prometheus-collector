@@ -81,8 +81,8 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 		return err
 	}
 
-	// Build a regex that tolerates spaces around '=' and treats key/value literally
-	pattern := fmt.Sprintf(`(?m)%s\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
+	// Build a regex that tolerates spaces and ANSI color codes around '=' and treats key/value literally
+	pattern := fmt.Sprintf(`(?m)%s(?:\x1b\[[0-9;]*[a-zA-Z])*\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
 	re := regexp.MustCompile(pattern)
 
 	// Debug: log the regex being used
