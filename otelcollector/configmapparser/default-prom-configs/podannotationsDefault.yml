@@ -27,3 +27,6 @@
     - source_labels: [__meta_kubernetes_pod_name]
       action: replace
       target_label: kubernetes_pod_name
+    - source_labels: [__meta_kubernetes_namespace]
+      action: keep
+      regex: $$AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX$$

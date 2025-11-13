@@ -1,0 +1,8 @@
+schema-version:
+config-version:
+prometheus-collector-settings:
+default-scrape-settings-enabled:
+pod-annotation-based-scraping:
+default-targets-metrics-keep-list:
+default-targets-scrape-interval-settings:
+debug-mode:

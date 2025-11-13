@@ -4,44 +4,22 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
 	"strings"
+
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 )
 
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
-	// Populate default metric account name
-	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
-		if value, ok := settings["default_metric_account_name"]; ok {
-			cp.DefaultMetricAccountName = value
-			log.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
-		}
-	}
+	sharedSettings := cmcommon.CollectorSettings{}
+	cmcommon.PopulateSharedCollectorSettings(&sharedSettings, metricsConfigBySection, func(format string, args ...interface{}) {
+		log.Printf(format, args...)
+	})
 
-	// Populate cluster alias
-	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
-		if value, ok := settings["cluster_alias"]; ok {
-			cp.ClusterAlias = strings.TrimSpace(value)
-			log.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
-			if cp.ClusterAlias != "" {
-				cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
-				cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")
-				log.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
-			}
-		}
-	}
-
-	// Populate operator settings
-	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
-		cp.IsOperatorEnabledChartSetting = true
-		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
-			if value, ok := settings["operator_enabled"]; ok {
-				cp.IsOperatorEnabled = value == "true"
-				log.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
-			}
-		}
-	} else {
-		cp.IsOperatorEnabledChartSetting = false
-	}
+	cp.DefaultMetricAccountName = sharedSettings.MetricAccountName
+	cp.ClusterAlias = sharedSettings.ClusterAlias
+	cp.ClusterLabel = sharedSettings.ClusterLabel
+	cp.IsOperatorEnabled = sharedSettings.OperatorEnabled
+	cp.IsOperatorEnabledChartSetting = sharedSettings.OperatorEnabledChart
 
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
@@ -68,14 +46,18 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	}
 	defer file.Close()
 
-	file.WriteString(fmt.Sprintf("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", configParser.DefaultMetricAccountName))
-	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
-	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
-	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%t\n", configParser.IsOperatorEnabledChartSetting))
-	if configParser.IsOperatorEnabled {
-		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
-		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))
+	sharedSettings := cmcommon.CollectorSettings{
+		MetricAccountName:    configParser.DefaultMetricAccountName,
+		ClusterAlias:         configParser.ClusterAlias,
+		ClusterLabel:         configParser.ClusterLabel,
+		OperatorEnabled:      configParser.IsOperatorEnabled,
+		OperatorEnabledChart: configParser.IsOperatorEnabledChartSetting,
 	}
+
+	if err := cmcommon.WriteSharedCollectorSettings(file, sharedSettings); err != nil {
+		return err
+	}
+
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING=%t\n", configParser.TargetallocatorHttpsEnabledChartSetting))
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	return nil
@@ -85,8 +67,10 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	log.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", configSchemaVersion)
 
-	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
-		if len(metricsConfigBySection) > 0 {
+	trimmedSchemaVersion := strings.TrimSpace(configSchemaVersion)
+	if trimmedSchemaVersion != "" {
+		normalizedSchema := strings.ToLower(trimmedSchemaVersion)
+		if normalizedSchema == "v1" || normalizedSchema == "v2" {
 			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
 	} else {

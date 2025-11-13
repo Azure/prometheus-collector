@@ -1,0 +1,15 @@
+schema-version: 
+  #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+  v2
+config-version:
+cluster-metrics: |-
+  default-targets-scrape-enabled:
+  pod-annotation-based-scraping:
+  default-targets-metrics-keep-list:
+  minimal-ingestion-profile:
+  default-targets-scrape-interval-settings:
+controlplane-metrics: |-
+  default-targets-scrape-enabled:
+  default-targets-metrics-keep-list:
+  minimal-ingestion-profile:
+prometheus-collector-settings:

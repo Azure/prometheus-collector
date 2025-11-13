@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -85,8 +86,8 @@ func TestMergeYAML_WithMultipleJobsEnabled_ThenMergedConfigIsComplete(t *testing
 	}
 
 	// Act
-	mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, config1)
-	mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, config2)
+	mergedDefaultConfigs = cmcommon.DeepMerge(mergedDefaultConfigs, config1)
+	mergedDefaultConfigs = cmcommon.DeepMerge(mergedDefaultConfigs, config2)
 
 	// Assert
 	require.Equal(t, 1, len(mergedDefaultConfigs), "Exactly one root element")
