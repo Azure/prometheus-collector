@@ -18,7 +18,6 @@ import (
 
 	"bytes"
 	"fmt"
-	"log"
 	"regexp"
 )
 
@@ -101,12 +100,6 @@ func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespac
 		cleanLogs := ansiRegex.ReplaceAllString(logs, "")
 
 		if !re.MatchString(cleanLogs) {
-			// Capture a short snippet of logs for debugging (first 20KB)
-			snippet := logs
-			if len(snippet) > 20000 {
-				snippet = snippet[:20000]
-			}
-			log.Printf("DEBUG: missing key/value for pod=%s container=%s regex=%s\nLOG_SNIPPET_START\n%s\nLOG_SNIPPET_END", pod.Name, containerName, pattern, snippet)
 			missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, containerName))
 		}
 	}
