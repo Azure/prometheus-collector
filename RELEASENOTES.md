@@ -7,7 +7,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images :
   + Fix only base image CVEsby rebuilding (https://portal.microsofticm.com/imp/v5/incidents/details/710729648/summary)
-  + 
+
 * Pipeline/Docs/Templates Updates:
   + release: fix script with parameters from new files (https://github.com/Azure/prometheus-collector/pull/1333)
   + test: Added FIC auth support to arc conformance tests (https://github.com/Azure/prometheus-collector/pull/1338)
