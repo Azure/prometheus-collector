@@ -834,6 +834,12 @@ stages:
               export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
               export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
+              # Remove any leftover custom Prometheus configmaps first
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+
+
               # Generate the v2 TestKube CR with envsubst and apply it
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-v2-crs.yaml > ./testkube/testkube-config-test-default-targets-on-v2-crs-ci.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
