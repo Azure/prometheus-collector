@@ -9,7 +9,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Generate a token
         id: generate-token
         uses: actions/create-github-app-token@v2
@@ -108,7 +108,7 @@ jobs:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Checkout PR branch if it exists
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: steps.check_new_pr.outputs.exists != '0'
         with:
           ref: bot/otelcollector-upgrade-${{ env.VERSION }}
