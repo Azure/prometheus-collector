@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"path/filepath"
 
 	"k8s.io/client-go/rest"
@@ -30,6 +31,8 @@ func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
     kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
   }
   flag.Parse()
+
+  fmt.Printf("SetupKubernetesClient: kubeconfig path - %s\n", *kubeconfig)
 
   cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
   if err != nil {

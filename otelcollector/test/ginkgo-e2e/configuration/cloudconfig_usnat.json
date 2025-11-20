@@ -1,0 +1,13 @@
+{
+	"ActiveDirectoryAuthorityHost": "https://login.microsoftonline.eaglex.ic.gov/",
+	"Services": {
+		"resourceManager": {
+			"Endpoint": "https://management.azure.eaglex.ic.gov",
+			"Audience": "https://management.azure.eaglex.ic.gov"
+		},
+		"azqueryMetrics": {
+			"Endpoint": "https://management.azure.eaglex.ic.gov",
+			"Audience": "https://management.azure.eaglex.ic.gov"
+		}
+	}
+}

@@ -1,0 +1,13 @@
+{
+	"ActiveDirectoryAuthorityHost": "https://login.microsoftonline.microsoft.scloud/",
+	"Services": {
+		"resourceManager": {
+			"Endpoint": "https://management.azure.microsoft.scloud",
+			"Audience": "https://management.azure.microsoft.scloud"
+		},
+		"azqueryMetrics": {
+			"Endpoint": "https://management.azure.microsoft.scloud",
+			"Audience": "https://management.azure.microsoft.scloud"
+		}
+	}
+}
