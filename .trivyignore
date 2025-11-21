@@ -11,10 +11,6 @@ CVE-2025-4802 #
 # prometheus-collector
 
 # MEDIUM
-# go-binary otelcollector , prometheusui promconfigvalidator 
-CVE-2025-47914
-CVE-2025-58181
-
 # kube-state-metrics
 CVE-2023-4527 # 
 CVE-2023-4806 # 
