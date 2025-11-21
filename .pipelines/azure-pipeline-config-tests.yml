@@ -794,7 +794,7 @@ stages:
               kubectl testkube run testsuite config-global-ext-labels-error --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-global-ext-labels-error --limit 1 | config-global-ext-labels-error | awk '{print $1}')
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-global-ext-labels-error --limit 1 | grep config-global-ext-labels-error | awk '{print $1}')
 
               # Watch until the all the tests in the test suite finish
               kubectl testkube watch testsuiteexecution $execution_id
