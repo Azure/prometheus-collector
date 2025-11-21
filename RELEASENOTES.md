@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 11-13-2025
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-cfg`
 * AKS and Arc Container Images :
   + Fix only base image CVEsby rebuilding (https://portal.microsofticm.com/imp/v5/incidents/details/710729648/summary)
 
