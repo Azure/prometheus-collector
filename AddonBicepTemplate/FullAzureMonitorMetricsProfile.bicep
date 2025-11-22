@@ -617,7 +617,7 @@ resource uxRecordingRulesRuleGroupWinObj 'Microsoft.AlertsManagement/prometheusR
     rules: [
       {
             record: 'ux:pod_cpu_usage_windows:sum_irate'
-            expression: '''sum by (cluster, pod, namespace, node, created_by_kind, created_by_name, microsoft_resourceid) ((max by (instance, container_id, cluster, microsoft_resourceid) (irate(windows_container_cpu_usage_seconds_total{ container_id != \"\", job = \"windows-exporter\"}[5m])) * on (container_id, cluster, microsoft_resourceid) group_left (container, pod, namespace) (max by (container, container_id, pod, namespace, cluster, microsoft_resourceid) (kube_pod_container_info{container != \"\", pod != \"\", container_id != \"\", job = \"kube-state-metrics\"}))) * on (pod, namespace, cluster, microsoft_resourceid) group_left (node, created_by_name, created_by_kind)(max by (node, created_by_name, created_by_kind, pod, namespace, cluster, microsoft_resourceid) (  kube_pod_info{ pod != \"\", job = \"kube-state-metrics\"})))'''
+            expression: '''sum by (cluster, pod, namespace, node, created_by_kind, created_by_name, microsoft_resourceid) ((max by (instance, container_id, cluster, microsoft_resourceid) (irate(windows_container_cpu_usage_seconds_total{ container_id != "", job = "windows-exporter"}[5m])) * on (container_id, cluster, microsoft_resourceid) group_left (container, pod, namespace) (max by (container, container_id, pod, namespace, cluster, microsoft_resourceid) (kube_pod_container_info{container != "", pod != "", container_id != "", job = "kube-state-metrics"}))) * on (pod, namespace, cluster, microsoft_resourceid) group_left (node, created_by_name, created_by_kind)(max by (node, created_by_name, created_by_kind, pod, namespace, cluster, microsoft_resourceid) (  kube_pod_info{ pod != "", job = "kube-state-metrics"})))'''
           }
           {
             record: 'ux:controller_cpu_usage_windows:sum_irate'
@@ -625,7 +625,7 @@ resource uxRecordingRulesRuleGroupWinObj 'Microsoft.AlertsManagement/prometheusR
           }
           {
             record: 'ux:pod_workingset_memory_windows:sum'
-            expression: '''sum by (cluster, pod, namespace, node, created_by_kind, created_by_name, microsoft_resourceid) ((max by (instance, container_id, cluster, microsoft_resourceid) (windows_container_memory_usage_private_working_set_bytes{ container_id != \"\", job = \"windows-exporter\"}) * on (container_id, cluster, microsoft_resourceid) group_left (container, pod, namespace) (max by (container, container_id, pod, namespace, cluster, microsoft_resourceid) (kube_pod_container_info{container != \"\", pod != \"\", container_id != \"\", job = \"kube-state-metrics\"}))) * on (pod, namespace, cluster, microsoft_resourceid) group_left (node, created_by_name, created_by_kind)(max by (node, created_by_name, created_by_kind, pod, namespace, cluster, microsoft_resourceid) (  kube_pod_info{ pod != \"\", job = \"kube-state-metrics\"})))'''
+            expression: '''sum by (cluster, pod, namespace, node, created_by_kind, created_by_name, microsoft_resourceid) ((max by (instance, container_id, cluster, microsoft_resourceid) (windows_container_memory_usage_private_working_set_bytes{ container_id != "", job = "windows-exporter"}) * on (container_id, cluster, microsoft_resourceid) group_left (container, pod, namespace) (max by (container, container_id, pod, namespace, cluster, microsoft_resourceid) (kube_pod_container_info{container != "", pod != "", container_id != "", job = "kube-state-metrics"}))) * on (pod, namespace, cluster, microsoft_resourceid) group_left (node, created_by_name, created_by_kind)(max by (node, created_by_name, created_by_kind, pod, namespace, cluster, microsoft_resourceid) (  kube_pod_info{ pod != "", job = "kube-state-metrics"})))'''
           }
           {
             record: 'ux:controller_workingset_memory_windows:sum'
@@ -633,19 +633,19 @@ resource uxRecordingRulesRuleGroupWinObj 'Microsoft.AlertsManagement/prometheusR
           }
           {
             record: 'ux:node_cpu_usage_windows:sum_irate'
-            expression: '''sum by (instance, cluster, microsoft_resourceid) ((1 - irate(windows_cpu_time_total{job=\"windows-exporter\", mode=\"idle\"}[5m])))'''
+            expression: '''sum by (instance, cluster, microsoft_resourceid) ((1 - irate(windows_cpu_time_total{job="windows-exporter", mode="idle"}[5m])))'''
           }
           {
             record: 'ux:node_memory_usage_windows:sum'
-            expression: '''sum by (instance, cluster, microsoft_resourceid) ((windows_os_visible_memory_bytes{job = \"windows-exporter\"}- windows_memory_available_bytes{job = \"windows-exporter\"}))'''
+            expression: '''sum by (instance, cluster, microsoft_resourceid) ((windows_os_visible_memory_bytes{job = "windows-exporter"}- windows_memory_available_bytes{job = "windows-exporter"}))'''
           }
           {
             record: 'ux:node_network_packets_received_drop_total_windows:sum_irate'
-            expression: '''sum by (instance, cluster, microsoft_resourceid) (irate(windows_net_packets_received_discarded_total{job=\"windows-exporter\", device!=\"lo\"}[5m]))'''
+            expression: '''sum by (instance, cluster, microsoft_resourceid) (irate(windows_net_packets_received_discarded_total{job="windows-exporter", device!="lo"}[5m]))'''
           }
           {
             record: 'ux:node_network_packets_outbound_drop_total_windows:sum_irate'
-            expression: '''sum by (instance, cluster, microsoft_resourceid) (irate(windows_net_packets_outbound_discarded_total{job=\"windows-exporter\", device!=\"lo\"}[5m]))'''
+            expression: '''sum by (instance, cluster, microsoft_resourceid) (irate(windows_net_packets_outbound_discarded_total{job="windows-exporter", device!="lo"}[5m]))'''
           }
     ]
   }
