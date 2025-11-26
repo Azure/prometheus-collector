@@ -3,7 +3,7 @@
 
 ### Overview
 The Managed Prometheus Addon now supports Horizontal Pod Autoscaling(HPA) for the ama-metrics replicaset pod. This feature is currently in preview.
-With this, the ama-metrics replicaset pod which handles the scraping of prometheus metrics with custom jobs can scale automatically based on the memory utilization. By default, the HPA is configured to support a minimum of 2 replicas (which is our global default) and a maximum of 12 replicas. The customers will also the have capability to set the shards to any number of minimum and maximum repliacas as long as they are within the range of 2 and 12.
+With this, the ama-metrics replicaset pod which handles the scraping of prometheus metrics with custom jobs can scale automatically based on the memory utilization. By default, the HPA is configured to support a minimum of 2 replicas (which is our global default) and a maximum of 30 replicas. The customers will also the have capability to set the shards to any number of minimum and maximum repliacas as long as they are within the range of 2 and 30.
 WIth this, customers do not have to wait for the Managed Prometheus team to increase/decreaset the number of shards and the HPA automatically takes care of scaling based on the memory utlization of the ama-metrics pod to avoid OOMKills.
 Currently the average utilization is set to 5Gi, with the goal of reducing the limits of the ama-metrics replicaset from 14Gi to 8Gi to have the replicasets be smaller in size instead of monolithic replicaset pods that grow vertically in memory usage.
 
@@ -20,7 +20,7 @@ Here's a link to the spec of the HPA object that will be deployed as a part of t
 Currently this feature is in private preview and the Managed Prometheus team needs to enable it on the clusters. This is temporary as the feature is tested out on the currently sharded clusters and will soon be rolled out globally.
 
 ### Update Min and Max shards
-In order to update the min and max shards on the HPA, you can edit the HPA object and it will not be reconciled as long as it is within the supported range of 2 and 12.
+In order to update the min and max shards on the HPA, you can edit the HPA object and it will not be reconciled as long as it is within the supported range of 2 and 30.
 
 **Update Min replicas**
 ```bash
