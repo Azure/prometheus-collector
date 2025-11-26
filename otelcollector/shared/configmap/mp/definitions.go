@@ -55,6 +55,7 @@ var (
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
 	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
+	dcgmExporterDefaultFileDs                    = "dcgmExporterDefaultDs.yml"
 )
 
 type RegexValues struct {
@@ -79,6 +80,7 @@ type RegexValues struct {
 	ztunnel                    string
 	istiocni                   string
 	waypoint                   string
+	dcgmexporter               string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -124,6 +126,7 @@ type ConfigProcessor struct {
 	Ztunnel                    string
 	IstioCni                   string
 	WaypointProxy              string
+	DcgmExporter               string
 }
 
 // ConfigParser is an interface for parsing configurations.

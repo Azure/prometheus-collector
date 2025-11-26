@@ -783,6 +783,32 @@ func populateDefaultPrometheusConfig() {
 		defaultConfigs = append(defaultConfigs, LocalCSIDriverDefaultFile)
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		dcgmexporterMetricsKeepListRegex, exists := regexHash["DCGMEXPORTER_METRICS_KEEP_LIST_REGEX"]
+		dcgmexporterScrapeInterval := intervalHash["DCGMEXPORTER_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType {
+			// Do nothing - DCGM exporter is not supported to be scrapped automatically from rs.
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+		} else {
+			if advancedMode && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+				UpdateScrapeIntervalConfig(dcgmExporterDefaultFileDs, dcgmexporterScrapeInterval)
+				if exists && dcgmexporterMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(dcgmExporterDefaultFileDs, dcgmexporterMetricsKeepListRegex)
+				}
+				contents, err := os.ReadFile(dcgmExporterDefaultFileDs)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$DCGM_EXPORTER_TARGETPORT$$", os.Getenv("DCGM_EXPORTER_TARGETPORT")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(dcgmExporterDefaultFileDs, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, dcgmExporterDefaultFileDs)
+					}
+				}
+			}
+		}
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1329,6 +1355,33 @@ func populateDefaultPrometheusConfigWithOperator() {
 			AppendMetricRelabelConfig(LocalCSIDriverDefaultFile, LocalCSIDriverKeepListRegex)
 		}
 		defaultConfigs = append(defaultConfigs, LocalCSIDriverDefaultFile)
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		dcgmexporterMetricsKeepListRegex, exists := regexHash["DCGMEXPORTER_METRICS_KEEP_LIST_REGEX"]
+		dcgmexporterScrapeInterval := intervalHash["DCGMEXPORTER_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || currentControllerType == replicasetControllerType {
+			// Do nothing - DCGM exporter is not supported to be scrapped automatically from rs.
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+		} else {
+			if advancedMode && currentControllerType == daemonsetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+				log.Printf("path %s: %s\n", "dcgmExporterDefaultFileDs", dcgmExporterDefaultFileDs)
+				UpdateScrapeIntervalConfig(dcgmExporterDefaultFileDs, dcgmexporterScrapeInterval)
+				if exists && dcgmexporterMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(dcgmExporterDefaultFileDs, dcgmexporterMetricsKeepListRegex)
+				}
+				contents, err := os.ReadFile(dcgmExporterDefaultFileDs)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$DCGM_EXPORTER_TARGETPORT$$", os.Getenv("DCGM_EXPORTER_TARGETPORT")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(dcgmExporterDefaultFileDs, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, dcgmExporterDefaultFileDs)
+					}
+				}
+			}
+		}
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)

@@ -147,6 +147,8 @@ spec:
               {{- else }}
               value: "19100"
               {{- end }}
+            - name: DCGM_EXPORTER_TARGETPORT
+              value: "19400"
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION

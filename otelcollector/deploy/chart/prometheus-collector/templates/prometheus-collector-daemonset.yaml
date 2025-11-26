@@ -111,6 +111,8 @@ spec:
               value: {{ include "prometheus-collector.nodeexporterfullname" . }}
             - name: NODE_EXPORTER_TARGETPORT
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+            - name: DCGM_EXPORTER_TARGETPORT
+              value: "19400"
             - name: KUBE_STATE_VERSION
               value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
             - name: NODE_EXPORTER_VERSION

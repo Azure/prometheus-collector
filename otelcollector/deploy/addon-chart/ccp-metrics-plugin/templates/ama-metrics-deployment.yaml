@@ -84,6 +84,8 @@ spec:
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
               value: "19100"
+            - name: DCGM_EXPORTER_TARGETPORT
+              value: "19400"
             - name: NODE_EXPORTER_VERSION
               value: "v1.5.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION

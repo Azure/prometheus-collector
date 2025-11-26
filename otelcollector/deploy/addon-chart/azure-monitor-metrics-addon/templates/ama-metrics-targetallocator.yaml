@@ -152,6 +152,8 @@ spec:
           {{- else }}
           value: "19100"
           {{- end }}
+        - name: DCGM_EXPORTER_TARGETPORT
+          value: "19400"
         - name: customEnvironment
           {{- if .Values.AzureMonitorMetrics.isArcACluster }}
           value: "arcautonomous"
