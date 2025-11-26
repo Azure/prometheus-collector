@@ -13,10 +13,10 @@ We need this step because we need to get the secret created for the addon-token-
 
 
 ### **Step 2: Deploy ARM templates for configuration** 
-Instructions on how to deploy ARM template -
-https://learn.microsoft.com/en-us/azure/azure-monitor/containers/container-insights-prometheus-metrics-addon?tabs=resource-manager#download-and-edit-template-and-parameter-file
+Instructions on how to deploy ARM template(JSON) -
+https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=arm#download-and-edit-template-and-parameter-file
 
-In the ARM template, comment out the section that enables the addon (with name - **"azureMonitorProfile"**(Lines 156 to 196), please comment the section acccordingly if template is updated)
+In the ARM template, comment out the section that enables the addon (with name - **"azuremonitormetrics-profile-"**(Lines 160 to 200), please comment the section acccordingly if template is updated)
 
 ### **Step 3: Go to addon-chart directory**
 ```
@@ -24,7 +24,7 @@ cd prometheus-collector\otelcollector\deploy\addon-chart
 ```
 ### **Step 4: Update the chart/values file accordingly based on what needs to be tested with your backdoor deployment**
 
-Update, local_testing_aks.ps1 within the azure-monitor-metrics-addon/ folder with the apporpritate ImageTag, Cluster Region and Cluster Resource ID (lines 9 to 11). Run the powershell file to generate the Chart and Values from the template files.
+Update, local_testing_aks.ps1 within the azure-monitor-metrics-addon/ folder with the apporpritate ImageTag, Cluster Region and Cluster Resource ID (lines 9 to 11). Run the powershell file to generate the Chart and Values from the template files. (Recommend running this in VSCode )
 
 If you do not run the script and manually generate the Chart, Values yaml files then please do the following :
 
