@@ -6,9 +6,9 @@
 # Chart-template.yaml file.
 
 # Define variables
-$ImageTag = "6.24.0-main-10-20-2025-fe8f6d51"
-$AKSRegion = "westus2"
-$AKSResourceId = "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-operator-cfg/providers/Microsoft.ContainerService/managedClusters/rashmi-operator-cfg"
+$ImageTag = "6.9.0-kaveesh-golang-windows-09-25-2024-5d45d385"
+$AKSRegion = "northeurope"
+$AKSResourceId = "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/Microsoft.ContainerService/managedClusters/kaveeshwin"
 
 # Read files
 $chartTemplatePath = ".\Chart-template.yaml"
