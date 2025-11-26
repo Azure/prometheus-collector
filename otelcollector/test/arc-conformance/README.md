@@ -11,8 +11,7 @@ The Arc team only uses the file [arc-conformance.yaml](./arc-conformance.yaml) t
 ## Building our Sonobuoy plugin image
 From the repository root:
 ```bash
-cd otelcollector/test
-sudo docker build -f arc-conformance/Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag> .
+sudo docker build -f otelcollector/test/arc-conformance/Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag> .
 az acr login -n containerinsightsprod -u containerinsightsprod -p <password>
 docker push containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag>
 ```

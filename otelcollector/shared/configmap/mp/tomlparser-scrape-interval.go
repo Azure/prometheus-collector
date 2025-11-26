@@ -1,7 +1,7 @@
 package configmapsettings
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -59,11 +59,14 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-capacity-provisioner")
 		intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-metrics-exporter")
 		intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "local-csi-driver")
+		intervalHash["ZTUNNEL_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "ztunnel")
+		intervalHash["ISTIOCNI_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "istio-cni")
+		intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "waypoint-proxy")
 
 		return intervalHash
 	}
 
-	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
+	log.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
 	// Set each value in intervalHash to "30s" from default
 	keys := []string{
 		"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
@@ -74,6 +77,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
 		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL", "ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL",
 		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL", "LOCALCSIDRIVER_SCRAPE_INTERVAL",
+		"ZTUNNEL_SCRAPE_INTERVAL", "ISTIOCNI_SCRAPE_INTERVAL", "WAYPOINT_PROXY_SCRAPE_INTERVAL",
 	}
 
 	for _, key := range keys {
@@ -101,7 +105,7 @@ func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]strin
 	intervalHash := processConfigMap(metricsConfigBySection)
 	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
 	if err != nil {
-		fmt.Printf("Error writing to file: %v\n", err)
+		log.Printf("Error writing to file: %v\n", err)
 		return
 	}
 	shared.EchoSectionDivider("End Processing - tomlparserScrapeInterval")

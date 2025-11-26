@@ -15,6 +15,7 @@ var (
 	collectorSettingsMountPath                   = "/etc/config/settings/prometheus-collector-settings"
 	collectorSettingsEnvVarPath                  = "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	opentelemetryMetricsEnvVarPath               = "/opt/microsoft/configmapparser/config_opentelemetry_metrics_env_var"
+	ksmConfigEnvVarPath                          = "/opt/microsoft/configmapparser/config_ksm_config_env_var"
 	configMapKeepListMountPath                   = "/etc/config/settings/default-targets-metrics-keep-list"
 	configMapKeepListEnvVarPath                  = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	configMapScrapeIntervalMountPath             = "/etc/config/settings/default-targets-scrape-interval-settings"
@@ -51,6 +52,9 @@ var (
 	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
 	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
 	LocalCSIDriverDefaultFile                    = "localCSIDriverDefaultFile.yml"
+	ztunnelDefaultFile                           = "ztunnelDefault.yml"
+	istioCniDefaultFile                          = "istioCniDefault.yml"
+	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
 )
 
 type RegexValues struct {
@@ -72,6 +76,9 @@ type RegexValues struct {
 	acstorcapacityprovisioner  string
 	acstormetricsexporter      string
 	localcsidriver             string
+	ztunnel                    string
+	istiocni                   string
+	waypoint                   string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -114,6 +121,9 @@ type ConfigProcessor struct {
 	AcstorCapacityProvisioner  string
 	AcstorMetricsExporter      string
 	LocalCSIDriver             string
+	Ztunnel                    string
+	IstioCni                   string
+	WaypointProxy              string
 }
 
 // ConfigParser is an interface for parsing configurations.

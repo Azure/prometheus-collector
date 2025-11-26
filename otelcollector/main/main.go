@@ -93,11 +93,18 @@ func main() {
 	var fluentBitConfigFile string
 	var meDCRConfigDirectory string
 	var meLocalControl bool
+
+	// AZMON_FULL_OTLP_ENABLED is set from configmap.
+	// Also set to true if APPMONITORING_OPENTELEMETRYMETRICS_ENABLED is true for backward compatibility with configmap
+	// APPMONITORING_OPENTELEMETRYMETRICS_ENABLED is set in AKS RP when opentelemetry-metrics is enabled for a cluster
+	if strings.ToLower(shared.GetEnv("APPMONITORING_OPENTELEMETRYMETRICS_ENABLED", "false")) == "true" {
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_FULL_OTLP_ENABLED", "true", true)
+	}
 	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 
 	meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl = shared.DetermineConfigFiles(controllerType, clusterOverride, otlpEnabled)
-	fmt.Println("meConfigFile:", meConfigFile)
-	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
+	log.Println("meConfigFile:", meConfigFile)
+	log.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
 	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
@@ -116,17 +123,17 @@ func main() {
 		os.Setenv("customRegion", trimmedRegion)
 	}
 
-	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
+	log.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
 	// Start MDSD only if OTLP is not enabled
 	if !otlpEnabled {
 		if ccpMetricsEnabled != "true" {
 			if osType == "linux" {
-				fmt.Println("Starting MDSD")
+				log.Println("Starting MDSD")
 				shared.StartMdsdForOverlay()
 			} else {
-				fmt.Println("Starting MA")
+				log.Println("Starting MA")
 				shared.StartMA()
 			}
 		} else {
@@ -138,47 +145,19 @@ func main() {
 			shared.PrintMdsdVersion()
 		}
 
-		fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
-		time.Sleep(30 * time.Second)
+		// Wait for MDSD to populate config before starting Metrics Extension.
+		waitDuration := 30 * time.Second
+		if osType == "windows" {
+			waitDuration = 45 * time.Second
+		}
+		log.Printf("Waiting for %ds for MDSD to get the config and put them in place for ME\n", int(waitDuration.Seconds()))
+		time.Sleep(waitDuration)
 	}
 
-	fmt.Println("Starting Metrics Extension with config overrides")
+	log.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {
-		if osType == "windows" && !otlpEnabled {
-			tokenConfigPath := "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
-
-			startME := func() {
-				// Log the time when Metrics Extension is starting initially
-				fmt.Printf("[%s] Starting Metrics Extension (overlay) with config overrides...\n", time.Now().Format(time.RFC3339))
-				if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
-					// Do not terminate the process from a goroutine; log the error for investigation
-					log.Printf("Error starting MetricsExtension (overlay): %v\n", err)
-				}
-			}
-
-			if _, err := os.Stat(tokenConfigPath); err == nil {
-				// File already exists; log detection time and start immediately
-				fmt.Printf("[%s] TokenConfig detected at %s. Starting Metrics Extension (overlay) now...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-				startME()
-			} else {
-				// Wait asynchronously until the file exists
-				go func() {
-					fmt.Printf("[%s] TokenConfig not found yet at %s. Will start Metrics Extension when it appears...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-					ticker := time.NewTicker(5 * time.Second)
-					defer ticker.Stop()
-					for range ticker.C {
-						if _, err := os.Stat(tokenConfigPath); err == nil {
-							fmt.Printf("[%s] TokenConfig detected at %s. Starting Metrics Extension (overlay)...\n", time.Now().Format(time.RFC3339), tokenConfigPath)
-							startME()
-							return
-						}
-					}
-				}()
-			}
-		} else {
-			if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
-				log.Fatalf("Error starting MetricsExtension: %v\n", err)
-			}
+		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
+			log.Fatalf("Error starting MetricsExtension: %v\n", err)
 		}
 	} else {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile, meDCRConfigDirectory, meLocalControl)
@@ -187,7 +166,7 @@ func main() {
 	// note : this has to be after MA start so that the TokenConfig.json file is already in place
 	// otherwise the hash generated will be different and cause a restart.
 	if osType == "windows" {
-		fmt.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
+		log.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
 		shared.CheckForFilesystemChanges()
 	}
 
@@ -198,7 +177,7 @@ func main() {
 	var collectorConfig string
 
 	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
-		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
+		log.Println("Starting otelcollector in replicaset with Target allocator settings")
 		if ccpMetricsEnabled == "true" {
 			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
 		} else {
@@ -206,7 +185,7 @@ func main() {
 			configmapsettings.SetGlobalSettingsInCollectorConfig()
 		}
 	} else if azmonUseDefaultPrometheusConfig == "true" {
-		fmt.Println("Starting otelcollector with only default scrape configs enabled")
+		log.Println("Starting otelcollector with only default scrape configs enabled")
 		if ccpMetricsEnabled == "true" {
 			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
 		} else {
@@ -216,7 +195,7 @@ func main() {
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
 	}
 
-	fmt.Println("startCommand otelcollector")
+	log.Println("startCommand otelcollector")
 
 	if controllerType == "replicaset" {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
@@ -226,24 +205,24 @@ func main() {
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {
-			fmt.Printf("Error starting otelcollector: %v\n", err)
+			log.Printf("Error starting otelcollector: %v\n", err)
 		}
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			// starting inotify here so that it doesnt restart when it is written the first time
 			outputFile := "/opt/inotifyoutput.txt"
 			if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
-				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
+				log.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
 			}
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {
-			fmt.Printf("Error starting otelcollector: %v\n", err)
+			log.Printf("Error starting otelcollector: %v\n", err)
 		}
 	}
 
 	if ccpMetricsEnabled != "true" {
-		fmt.Println("startCommand prometheusui")
+		log.Println("startCommand prometheusui")
 		shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
 	}
 
@@ -275,7 +254,7 @@ func main() {
 
 	if osType == "linux" && !otlpEnabled {
 		// Start inotify to watch for changes
-		fmt.Println("Starting inotify for watching mdsd config update")
+		log.Println("Starting inotify for watching mdsd config update")
 
 		// Create an output file for inotify events
 		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
@@ -312,19 +291,19 @@ func main() {
 	// Writing the epoch time to a file
 	file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
 	if err != nil {
-		fmt.Println("Error creating file:", err)
+		log.Println("Error creating file:", err)
 		return
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%d", epochTimeNow))
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		log.Println("Error writing to file:", err)
 		return
 	}
 
 	// Printing the environment variable and the readable time
-	fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
+	log.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
 	shared.FmtVar("AZMON_CONTAINER_START_TIME_READABLE", epochTimeNowReadable)
 
 	// Expose a health endpoint for liveness probe
@@ -339,7 +318,7 @@ func handleShutdown() {
 
 	// Block until a signal is received
 	<-shutdownChan
-	fmt.Println("shutting down")
+	log.Println("shutting down")
 	os.Exit(0) // Exit the application
 }
 
@@ -357,14 +336,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Checking if TokenConfig file exists
 	if _, err := os.Stat(tokenConfigFileLocation); !otlpEnabled && os.IsNotExist(err) {
-		fmt.Println("TokenConfig.json does not exist")
+		log.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
-			fmt.Println("azmon-container-start-time file exists, reading start time")
+			log.Println("azmon-container-start-time file exists, reading start time")
 			azmonContainerStartTimeStr, err := os.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error reading azmon-container-start-time: " + err.Error()
-				fmt.Println(message)
+				log.Println(message)
 				goto response
 			}
 
@@ -372,27 +351,27 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error converting azmon-container-start-time to integer: " + err.Error()
-				fmt.Println(message)
+				log.Println(message)
 				goto response
 			}
 
 			epochTimeNow := int(time.Now().Unix())
 			duration := epochTimeNow - azmonContainerStartTime
 			durationInMinutes := duration / 60
-			fmt.Printf("Container has been running for %d minutes\n", durationInMinutes)
+			log.Printf("Container has been running for %d minutes\n", durationInMinutes)
 
 			if durationInMinutes%5 == 0 {
-				fmt.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+				log.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
 			}
 
 			if durationInMinutes > 15 {
 				status = http.StatusServiceUnavailable
 				message = "No configuration present for the AKS resource"
-				fmt.Println(message)
+				log.Println(message)
 				goto response
 			}
 		} else {
-			fmt.Println("azmon-container-start-time file does not exist")
+			log.Println("azmon-container-start-time file does not exist")
 		}
 	} else {
 		processToCheck = "/usr/sbin/MetricsExtension"
@@ -402,7 +381,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		if !shared.IsProcessRunning(processToCheck) {
 			status = http.StatusServiceUnavailable
 			message = "Metrics Extension is not running (configuration exists)"
-			fmt.Println(message)
+			log.Println(message)
 			goto response
 		}
 
@@ -414,7 +393,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			if !shared.IsProcessRunning(processToCheck) {
 				status = http.StatusServiceUnavailable
 				message = "mdsd not running (configuration exists)"
-				fmt.Println(message)
+				log.Println(message)
 				goto response
 			}
 		}
@@ -423,13 +402,13 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 			status = http.StatusServiceUnavailable
 			message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
-			fmt.Println(message)
+			log.Println(message)
 			goto response
 		}
 		if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
 			status = http.StatusServiceUnavailable
 			message = "inotifyoutput.txt has been updated - config changed"
-			fmt.Println(message)
+			log.Println(message)
 			goto response
 		}
 	} else {
@@ -439,7 +418,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		if shared.HasConfigChanged("C:\\filesystemwatcher.txt") {
 			status = http.StatusServiceUnavailable
 			message = "Config Map Updated or DCR/DCE updated since agent started"
-			fmt.Println(message)
+			log.Println(message)
 			goto response
 		}
 	}
@@ -451,7 +430,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if !shared.IsProcessRunning(processToCheck) {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
-		fmt.Println(message)
+		log.Println(message)
 		goto response
 	}
 
@@ -459,7 +438,7 @@ response:
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
-		fmt.Printf("Health check failed: %d, Message: %s\n", status, message)
+		log.Printf("Health check failed: %d, Message: %s\n", status, message)
 		shared.WriteTerminationLog(message)
 	}
 }

@@ -1,22 +1,79 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 11-13-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-cfg`
+* AKS and Arc Container Images :
+  + Fix only base image CVEsby rebuilding (https://portal.microsofticm.com/imp/v5/incidents/details/710729648/summary)
+  + Upgrade ksm for CVE fixes (https://github.com/Azure/prometheus-collector/pull/1355)
+* Pipeline/Docs/Templates Updates:
+  + release: fix script with parameters from new files (https://github.com/Azure/prometheus-collector/pull/1333)
+  + test: Added FIC auth support to arc conformance tests (https://github.com/Azure/prometheus-collector/pull/1338)
+  + release: update internal doc + fix usage of new Arc API for release trains (https://github.com/Azure/prometheus-collector/pull/1339)
+  + test: Updated the arc conformance image (https://github.com/Azure/prometheus-collector/pull/1342)
+
+
+## Release 10-20-2025
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-cfg`
+* AKS and Arc Container Images :
+  + build(deps): bump google.golang.org/grpc from 1.75.1 to 1.76.0 in /internal/referenceapp/golang(<https://github.com/Azure/prometheus-collector/pull/1321>)
+  + build(deps): bump peter-evans/create-or-update-comment from 4 to 5 (<https://github.com/Azure/prometheus-collector/pull/1318>)
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.25.8 to 4.25.9 in /otelcollector/fluent-bit/src (<https://github.com/Azure/prometheus-collector/pull/1317>)
+  + adding log instead of fmt to get timestamps for all logs (<https://github.com/Azure/prometheus-collector/pull/1324>)
+  + Add arc msi support for openshift clusters (<https://github.com/Azure/prometheus-collector/pull/1310>)
+  + Onboard Applink scrape targets for Istio CNI, Ztunnel and Waypoint Proxy(<https://github.com/Azure/prometheus-collector/pull/1320>)
+  + build(deps): Upgrade otelcollector to v0.136.0(<https://github.com/Azure/prometheus-collector/pull/1325>)
+
+* Pipeline/Docs/Templates Updates:
+  + Update azure-pipeline-release.yml for Azure Pipelines (<https://github.com/Azure/prometheus-collector/pull/1314>)
+  + ci/cd: fixes for tests + release (<https://github.com/Azure/prometheus-collector/pull/1323>)
+  + fix: helm lint+dry-run check for PRs + arc fixes + build fixes(<https://github.com/Azure/prometheus-collector/pull/1326>)
+
+## Release 09-29-2025
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-cfg`
+* AKS and Arc Container Images :
+  + fix: increase tokenconfig download wait time to 45 sec for windows (<https://github.com/Azure/prometheus-collector/pull/1301>)
+  + feat: Ability to update kube-state-metrics startup parameters using configmap (<https://github.com/Azure/prometheus-collector/pull/1292>)
+  + fix: add missing data plane metrics(<https://github.com/Azure/prometheus-collector/pull/1293>)
+  + chart: Match AKS RP chart for values and daemonset yaml (<https://github.com/Azure/prometheus-collector/pull/1298>)
+  + build(deps): Upgrade otelcollector to v0.135.0 (<https://github.com/Azure/prometheus-collector/pull/1303>)
+* Pipeline/Docs/Templates Updates:
+  + fix: KSM on Arc, CI/CD retina version, release prod cluster deployment(<https://github.com/Azure/prometheus-collector/pull/1306>)
+  + test: add two new error exclusions (<https://github.com/Azure/prometheus-collector/pull/1309>)
+  + fix: Values context for Arc chart (<https://github.com/Azure/prometheus-collector/pull/1312>)
+
 ## Release 09-04-2025
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
-* AKS and Arc Container Images:
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3`
+
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-win`
+
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-targetallocator`
+
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.22.0-main-09-05-2025-e40947f3-cfg`
+
+* AKS and Arc Container Images :
   + fix: bleu cloud for linux and windows (<https://github.com/Azure/prometheus-collector/pull/1280>)
+  + build(deps): Upgrade otelcollector to v0.132.0(<https://github.com/Azure/prometheus-collector/pull/1283>)
 * Pipeline/Docs/Templates Updates:
   + infra: CI/CD and test fixes (<https://github.com/Azure/prometheus-collector/pull/1279>)
 
 ## Release 08-13-2025
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.23.0-main-09-29-2025-f7d29698-cfg`
 * AKS and Arc Container Images:
   + feat: Add support for Container Storage's storage operator (<https://github.com/Azure/prometheus-collector/pull/1224>)
   + feat: Upgrade Pod and Service Monitor CRD (<https://github.com/Azure/prometheus-collector/pull/1223>)

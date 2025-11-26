@@ -7,7 +7,7 @@ RUN curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 |
     && helm version
 
 RUN apt-get update && apt-get -y upgrade && \
-    apt-get -f -y install curl apt-transport-https lsb-release gnupg python3-pip && \
+    apt-get -f -y install curl apt-transport-https lsb-release gnupg python3-pip jq && \
     curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.asc.gpg && \
     CLI_REPO=$(lsb_release -cs) && \
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ ${CLI_REPO} main" \
@@ -19,8 +19,13 @@ RUN apt-get update && apt-get -y upgrade && \
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 RUN install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-COPY arc-conformance/e2e_tests.sh /
-COPY ginkgo-e2e ginkgo-e2e/
+COPY otelcollector/test/arc-conformance/e2e_tests.sh /
+COPY otelcollector/test/ginkgo-e2e ginkgo-e2e/
+COPY internal/referenceapp/prometheus-reference-app.yaml /yamls/referenceapp/prometheus-reference-app.yaml
+COPY otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml /yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+COPY otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml /yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+COPY otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml /yamls/configmaps/ama-metrics-settings-configmap.yaml
+COPY otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml /yamls/customresources/prometheus-reference-app.yaml
 RUN ginkgo build -r ./ginkgo-e2e
 RUN mkdir ginkgo-test-binaries && mv ginkgo-e2e/containerstatus/containerstatus.test ginkgo-e2e/livenessprobe/livenessprobe.test ginkgo-e2e/operator/operator.test ginkgo-e2e/prometheusui/prometheusui.test ginkgo-e2e/querymetrics/querymetrics.test ginkgo-test-binaries/
 

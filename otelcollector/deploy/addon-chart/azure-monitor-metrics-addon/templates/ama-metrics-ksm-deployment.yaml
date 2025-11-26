@@ -8,8 +8,9 @@ metadata:
     app.kubernetes.io/component: ama-metrics
     app.kubernetes.io/name: ama-metrics-ksm
     app.kubernetes.io/part-of: ama-metrics-ksm
-    app.kubernetes.io/version: 2.12.0
+    app.kubernetes.io/version: 2.17.0
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+    kubernetes.azure.com/managedby: aks
 spec:
   selector:
     matchLabels:
@@ -22,8 +23,9 @@ spec:
         app.kubernetes.io/component: ama-metrics
         app.kubernetes.io/name: ama-metrics-ksm
         app.kubernetes.io/part-of: ama-metrics-ksm
-        app.kubernetes.io/version: 2.12.0
+        app.kubernetes.io/version: 2.17.0
         helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+        kubernetes.azure.com/managedby: aks
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
@@ -42,6 +44,8 @@ spec:
             value: "false"
         args:
         - --port=8080
+        - --config=/etc/config/settings/ksm-config
+        - --continue-without-config=true
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
@@ -63,17 +67,24 @@ spec:
             {{- end }}
           {{- end }}
         {{- end }}
+        {{- if .Values.AzureMonitorMetrics }}
+          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList }}
+        - --metric-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList | join "," }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
         - --telemetry-port=8081
         imagePullPolicy: IfNotPresent
         {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+        {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
         image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-          {{-  end  }}
+        {{-  end  }}
         {{-  end  }}
         resources:
           limits:
-            cpu: 1
-            memory: 5Gi
+            cpu: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.CPULimit }}
+            memory: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MemoryLimit }}
           requests:
             cpu: 5m
             memory: 50Mi
@@ -81,6 +92,10 @@ spec:
           capabilities:
             drop:
               - ALL
+        volumeMounts:
+          - mountPath: /etc/config/settings
+            name: settings-vol-config
+            readOnly: true
         ports:
         - containerPort: 8080
           name: "http"
@@ -132,6 +147,9 @@ spec:
           operator: Exists
         - operator: "Exists"
           effect: NoExecute
-        - operator: "Exists"
-          effect: NoSchedule
       {{- end }}
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: ama-metrics-settings-configmap
+            optional: true

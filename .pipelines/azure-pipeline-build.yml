@@ -20,18 +20,19 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.15.0-4'
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.17.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.24.6'
+  GOLANG_VERSION: '1.24.9'
   FLUENTBIT_GOLANG_VERSION: '1.24.6'
   TESTKUBE_GOLANG_VERSION: '1.23.10'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
+  HELM_VERSION: '3.12.3'
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -181,6 +182,8 @@ extends:
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
             export ARC_EXTENSION=true
             export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+            export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
+            export ARC_REGION="westcentralus"
             envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
             tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
             cd $(Build.ArtifactStagingDirectory)
@@ -194,6 +197,31 @@ extends:
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
+        - task: HelmInstaller@1
+          displayName: 'CI/CD: Install Helm version for linting'
+          condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+          inputs:
+            helmVersionToInstall: $(HELM_VERSION)
+        - bash: |
+            # Lint ama-metrics-arc chart (ARC extension)
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-arc
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics-arc chart"
+              exit 1
+            fi
+            
+            # Lint ama-metrics chart (AKS addon)
+            cd $(Build.ArtifactStagingDirectory)/azure-monitor-metrics-addon
+            helm lint .
+            if [ $? -ne 0 ]; then
+              echo "Error: Helm lint failed for ama-metrics chart"
+              exit 1
+            fi
+            
+            echo "All Helm charts passed linting!"
+          displayName: "CI/CD: Lint Helm charts"
+          condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
             tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
@@ -245,11 +273,12 @@ extends:
         - task: HelmInstaller@1
           displayName: Install Helm version
           inputs:
-            helmVersionToInstall: 3.12.3
+            helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+            # Get all releases and filter for proper semver versions (no pre-release tags)
+            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION
+            echo $RETINA_VERSION 
             helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
@@ -650,9 +679,9 @@ extends:
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
             docker buildx inspect --bootstrap
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
+            docker buildx build . -f otelcollector/test/arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
             docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+          workingDirectory: $(Build.SourcesDirectory)/
           displayName: "Build: build and push Arc conformance test image to dev ACR"
       - job: SDL_Policheck_Scan
         displayName: "SDL: policheck scanning"
@@ -685,10 +714,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             sudo apt-get install build-essential -y
             make
@@ -749,10 +782,15 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            export PATH="/usr/local/go/bin:${PATH}"
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -790,10 +828,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: 'Build: specify golang version'
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
@@ -834,10 +876,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: 'Build: specify golang version'
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -998,10 +1044,14 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1168,10 +1218,14 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1201,10 +1255,15 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-arm64.tar.gz
+            export PATH="/usr/local/go/bin:${PATH}"
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -1246,10 +1305,14 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1352,10 +1415,14 @@ extends:
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - bash: |
+            set -e
+            wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz
+            echo "##vso[task.prependpath]/usr/local/go/bin"
+            go version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1468,18 +1535,24 @@ extends:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - task: GoTool@0
-          displayName: "Build: specify fluent-bit golang version"
-          inputs:
-            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
+            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1636,18 +1709,24 @@ extends:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - task: GoTool@0
-          displayName: "Build: specify fluent-bit golang version"
-          inputs:
-            version: $(FLUENTBIT_GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
+            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1815,10 +1894,13 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
-        - task: GoTool@0
-          displayName: "Build: specify golang version"
-          inputs:
-            version: $(GOLANG_VERSION)
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
             export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
             export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
@@ -1982,7 +2064,7 @@ extends:
         - task: HelmInstaller@1
           displayName: 'Build: install Helm version'
           inputs:
-            helmVersionToInstall: 3.12.3
+            helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
             envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
@@ -2067,7 +2149,7 @@ extends:
                                 "IsCustomerHidden": true,
                                 "ReadyforRollout": true,
                                 "RollbackVersion": null,
-                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625"
                             }
                         ]
                       }
@@ -2130,9 +2212,9 @@ extends:
                   retryCountOnTaskFailure: 2
 
       - deployment: Deploy_AKS_Chart
-        displayName: "Deploy: AKS dev cluster"
+        displayName: "Deploy/Validate: AKS dev cluster"
         environment: Prometheus-Collector
-        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
+        condition: or(eq(variables.IS_PR, true), and(eq(variables.IS_MAIN_BRANCH, true), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1))))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2157,7 +2239,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2176,6 +2258,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
+                condition: eq(variables.IS_PR, false)
                 retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="eastus"
@@ -2186,8 +2269,17 @@ extends:
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Deploy: substitute chart version for 3p in Chart.yaml and values.yaml"
+              - bash: |
+                  if [ "$(IS_PR)" = "True" ]; then
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]--dry-run"
+                    echo "PR mode: Will validate charts with --dry-run (no actual deployment)"
+                  else
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]"
+                    echo "Main branch: Will perform actual deployment"
+                  fi
+                displayName: "Set dry-run flag based on PR status"
               - task: HelmDeploy@0
-                displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+                displayName: "Deploy/Validate: ci-dev-aks-mac-eus cluster"
                 inputs:
                   connectionType: 'Azure Resource Manager'
                   azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -2199,9 +2291,9 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
               - task: HelmDeploy@1
-                displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
+                displayName: "Deploy/Validate: retina onto ci-dev-aks-mac-eus cluster"
                 inputs:
                   connectionType: 'Azure Resource Manager'
                   azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -2213,12 +2305,12 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
-        displayName: "Deploy: AKS tests cluster"
+        displayName: "Deploy/Validate: AKS tests cluster"
         environment: Prometheus-Collector
-        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_Test_Cluster')), eq(variables['System.StageAttempt'], 1)))
+        condition: or(eq(variables.IS_PR, true), and(eq(variables.IS_MAIN_BRANCH, true), or(not(succeeded('Deploy_AKS_Chart_Test_Cluster')), eq(variables['System.StageAttempt'], 1))))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2243,7 +2335,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2262,6 +2354,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
+                condition: eq(variables.IS_PR, false)
                 retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="centralus"
@@ -2272,8 +2365,17 @@ extends:
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+              - bash: |
+                  if [ "$(IS_PR)" = "True" ]; then
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]--dry-run"
+                    echo "PR mode: Will validate charts with --dry-run (no actual deployment)"
+                  else
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]"
+                    echo "Main branch: Will perform actual deployment"
+                  fi
+                displayName: "Set dry-run flag based on PR status"
               - task: HelmDeploy@0
-                displayName: "Deploy: ci-dev-aks-tests cluster"
+                displayName: "Deploy/Validate: ci-dev-aks-tests cluster"
                 inputs:
                   connectionType: 'Azure Resource Manager'
                   azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -2285,13 +2387,13 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
 
 
       - deployment: Deploy_AKS_Chart_OTel_Cluster
-        displayName: "Deploy: AKS OTEL cluster"
+        displayName: "Deploy/Validate: AKS OTEL cluster"
         environment: Prometheus-Collector
-        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
+        condition: or(eq(variables.IS_PR, true), and(eq(variables.IS_MAIN_BRANCH, true), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1))))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2316,7 +2418,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2335,6 +2437,7 @@ extends:
                       echo "Images are not published to mcr within the timeout"
                       exit 1
                 displayName: "Check images are pushed to dev MCR"
+                condition: eq(variables.IS_PR, false)
                 retryCountOnTaskFailure: 2
               - bash: |
                   export AKS_REGION="westus3"
@@ -2345,8 +2448,17 @@ extends:
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   helm dependency update
                 displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+              - bash: |
+                  if [ "$(IS_PR)" = "True" ]; then
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]--dry-run"
+                    echo "PR mode: Will validate charts with --dry-run (no actual deployment)"
+                  else
+                    echo "##vso[task.setvariable variable=HELM_DRY_RUN_FLAG]"
+                    echo "Main branch: Will perform actual deployment"
+                  fi
+                displayName: "Set dry-run flag based on PR status"
               - task: HelmDeploy@0
-                displayName: "Deploy: ciprom-dev-aks-otlp cluster"
+                displayName: "Deploy/Validate: ciprom-dev-aks-otlp cluster"
                 inputs:
                   connectionType: 'Azure Resource Manager'
                   azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -2358,9 +2470,9 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/azure-monitor-metrics-addon/'
                   releaseName: 'ama-metrics'
                   waitForExecution: false
-                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+                  arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
               - task: HelmDeploy@1
-                displayName: "Deploy: retina onto ciprom-dev-aks-otlp cluster"
+                displayName: "Deploy/Validate: retina onto ciprom-dev-aks-otlp cluster"
                 inputs:
                   connectionType: 'Azure Resource Manager'
                   azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -2372,7 +2484,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2386,6 +2498,7 @@ extends:
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+          RETINA_VERSION: $[ stageDependencies.Build.DevClusterHelmChartFiles.outputs['setup.RETINA_VERSION'] ]
           skipComponentGovernanceDetection: true
         templateContext:
             type: releaseJob
@@ -2401,7 +2514,7 @@ extends:
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
-                  helmVersionToInstall: 3.12.3
+                  helmVersionToInstall: $(HELM_VERSION)
               - bash: |
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
@@ -2519,6 +2632,20 @@ extends:
                 displayName: "Set TestKube AKS Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
@@ -2580,6 +2707,20 @@ extends:
                 displayName: "Set TestKube OTel Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
@@ -2641,6 +2782,20 @@ extends:
                 displayName: "Set TestKube ARC Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
@@ -2704,6 +2859,20 @@ extends:
                 displayName: "Set TestKube Upgrade Results as Pipeline Variable"
                 continueOnError: true
                 name: testkube_results
+              - bash: |
+                  if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" ]; then
+                    TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade.json" | jq -r '.status')
+                    if [ "$TEST_STATUS" = "failed" ]; then
+                      echo "##vso[task.logissue type=error]TestKube tests failed"
+                      echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                      exit 1
+                    fi
+                  else
+                    echo "##vso[task.logissue type=error]TestKube results file not found"
+                    echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                    exit 1
+                  fi
+                displayName: "Fail job if TestKube tests failed"
 
       - job: TestKube_Summary
         displayName: "Send TestKube Summary Notification"
@@ -2715,7 +2884,7 @@ extends:
         - Testkube_ARC
         - Testkube
         - Testkube_OTel
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
         variables:
           skipComponentGovernanceDetection: true
           TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
@@ -2799,7 +2968,7 @@ extends:
         condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
         variables:
           skipComponentGovernanceDetection: true
-          TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
+          TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
         templateContext:
           type: releaseJob
           isProduction: false
