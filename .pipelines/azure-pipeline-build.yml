@@ -2107,6 +2107,7 @@ extends:
             git push origin "v$(HELM_SEMVER)"
           displayName: Tag commit with semver
     - stage: Deploy
+      lockBehavior: sequential
       dependsOn: Build
       jobs:
       - deployment: Deploy_Chart_ARC
