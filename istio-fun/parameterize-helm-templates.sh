@@ -2,6 +2,7 @@
 
 # Parameterize Helm chart templates to support custom namespace via values
 # This implements the proper Helm templating approach using helpers
+# MODIFIED: No backup creation - modifies files directly
 
 set -e
 
@@ -42,20 +43,20 @@ if [ ! -d "$TEMPLATES_DIR" ]; then
     exit 1
 fi
 
-# Create backup
-BACKUP_DIR="${CHART_DIR}.backup-$(date +%s)"
-print_info "Creating backup: ${BACKUP_DIR}"
-cp -r "$CHART_DIR" "$BACKUP_DIR"
+print_warning "This script will modify files directly without creating backups"
+print_warning "Make sure your changes are under version control (git)"
 
 # Step 1: Create or update _helpers.tpl
 print_info "Step 1: Creating/updating _helpers.tpl..."
 
 if [ -f "$HELPERS_FILE" ]; then
-    print_warning "_helpers.tpl already exists, appending to it"
-    echo "" >> "$HELPERS_FILE"
-fi
-
-cat >> "$HELPERS_FILE" << 'EOF'
+    # Check if helpers already exist to avoid duplicates
+    if grep -q "ama-metrics.namespace" "$HELPERS_FILE"; then
+        print_info "Helper templates already exist in _helpers.tpl, skipping"
+    else
+        print_info "_helpers.tpl exists, appending helper templates"
+        echo "" >> "$HELPERS_FILE"
+        cat >> "$HELPERS_FILE" << 'EOF'
 
 {{/*
 Get the namespace for deployment
@@ -79,15 +80,42 @@ Get the configmap namespace (same as deployment namespace)
 {{- include "ama-metrics.namespace" . }}
 {{- end }}
 EOF
+        print_info "✓ Helper templates added to _helpers.tpl"
+    fi
+else
+    # Create new _helpers.tpl file
+    cat > "$HELPERS_FILE" << 'EOF'
+{{/*
+Get the namespace for deployment
+Defaults to kube-system for backward compatibility
+*/}}
+{{- define "ama-metrics.namespace" -}}
+{{- .Values.namespace | default "kube-system" }}
+{{- end }}
 
-print_info "✓ Helper templates added to _helpers.tpl"
+{{/*
+Get the secret namespace (always kube-system for addon-token-adapter)
+*/}}
+{{- define "ama-metrics.secretNamespace" -}}
+kube-system
+{{- end }}
+
+{{/*
+Get the configmap namespace (same as deployment namespace)
+*/}}
+{{- define "ama-metrics.configmapNamespace" -}}
+{{- include "ama-metrics.namespace" . }}
+{{- end }}
+EOF
+    print_info "✓ Created _helpers.tpl with helper templates"
+fi
 
 # Step 2: Update values-template.yaml
 print_info "Step 2: Updating values-template.yaml..."
 
 # Check if namespace parameter already exists
 if grep -q "^namespace:" "$VALUES_FILE"; then
-    print_warning "namespace parameter already exists in values-template.yaml"
+    print_info "namespace parameter already exists in values-template.yaml"
 else
     # Add namespace parameter at the top after any comments
     TEMP_FILE=$(mktemp)
@@ -111,37 +139,16 @@ fi
 # Step 3: Update all template files
 print_info "Step 3: Updating template files..."
 
-TEMPLATE_FILES=(
-    "ama-metrics-serviceAccount.yaml"
-    "ama-metrics-deployment.yaml"
-    "ama-metrics-daemonset.yaml"
-    "ama-metrics-ksm-deployment.yaml"
-    "ama-metrics-ksm-service.yaml"
-    "ama-metrics-ksm-serviceaccount.yaml"
-    "ama-metrics-ksm-clusterrolebinding.yaml"
-    "ama-metrics-clusterRoleBinding.yaml"
-    "ama-metrics-targetallocator.yaml"
-    "ama-metrics-targetallocator-service.yaml"
-    "ama-metrics-secret.yaml"
-    "ama-metrics-collector-hpa.yaml"
-    "ama-metrics-pod-disruption-budget.yaml"
-    "ama-metrics-extensionIdentity.yaml"
-    "ama-metrics-role.yaml"
-    "ama-metrics-roleBinding.yaml"
-)
-
-# Also find any other .yaml files
+# Find all .yaml template files
 ALL_TEMPLATES=$(find "$TEMPLATES_DIR" -name "*.yaml" -type f ! -name "_*")
 
-# Parameterize namespace in metadata
-print_info "  - Parameterizing metadata.namespace..."
+# Parameterize ALL occurrences of "namespace: kube-system" regardless of indentation
+# This uses a more flexible pattern that matches any amount of leading/trailing whitespace
+print_info "  - Parameterizing all namespace: kube-system references..."
 for template in $ALL_TEMPLATES; do
     if [ -f "$template" ]; then
-        # Replace hardcoded namespace in metadata with helper
-        sed -i.bak 's/^  namespace: kube-system$/  namespace: {{ include "ama-metrics.namespace" . }}/g' "$template"
-        
-        # Also handle ClusterRoleBinding subjects namespace
-        sed -i.bak 's/^    namespace: kube-system$/    namespace: {{ include "ama-metrics.namespace" . }}/g' "$template"
+        # Match "namespace: kube-system" with any leading whitespace and optional trailing whitespace
+        sed -i 's/^\([[:space:]]*\)namespace: kube-system[[:space:]]*$/\1namespace: {{ include "ama-metrics.namespace" . }}/g' "$template"
     fi
 done
 
@@ -149,22 +156,18 @@ done
 print_info "  - Parameterizing --configmap-namespace arguments..."
 for template in $ALL_TEMPLATES; do
     if [ -f "$template" ]; then
-        sed -i.bak 's|--configmap-namespace=kube-system|--configmap-namespace={{ include "ama-metrics.configmapNamespace" . }}|g' "$template"
+        sed -i 's|--configmap-namespace=kube-system|--configmap-namespace={{ include "ama-metrics.configmapNamespace" . }}|g' "$template"
     fi
 done
 
 # Keep --secret-namespace as kube-system (addon-token-adapter is always there)
-print_info "  - Keeping --secret-namespace=kube-system (for addon-token-adapter)..."
-# This should already be kube-system, but let's be explicit
+print_info "  - Ensuring --secret-namespace=kube-system (for addon-token-adapter)..."
 for template in $ALL_TEMPLATES; do
     if [ -f "$template" ]; then
         # If someone changed it, revert it back
-        sed -i.bak 's|--secret-namespace=.*|--secret-namespace={{ include "ama-metrics.secretNamespace" . }}|g' "$template"
+        sed -i 's|--secret-namespace=.*|--secret-namespace={{ include "ama-metrics.secretNamespace" . }}|g' "$template"
     fi
 done
-
-# Clean up backup files
-find "$TEMPLATES_DIR" -name "*.bak" -delete
 
 # Step 4: Verify changes
 print_info "Step 4: Verifying changes..."
@@ -182,6 +185,8 @@ if [ $HARDCODED_COUNT -gt 0 ]; then
     print_warning "Found $HARDCODED_COUNT hardcoded kube-system references"
     print_warning "Files with hardcoded namespace:"
     grep -r "namespace: kube-system" "$TEMPLATES_DIR" --include="*.yaml" -l | grep -v "secretNamespace" || true
+    echo ""
+    print_warning "These may need manual review"
 fi
 
 echo ""
@@ -194,8 +199,6 @@ echo "  1. ✓ Created/updated _helpers.tpl with namespace helpers"
 echo "  2. ✓ Added namespace parameter to values-template.yaml"
 echo "  3. ✓ Parameterized all template files"
 echo ""
-print_info "Backup location: ${BACKUP_DIR}"
-echo ""
 print_info "Usage:"
 echo "  1. Set namespace in your values file:"
 echo "     echo 'namespace: \"monitoring\"' > my-values.yaml"
@@ -205,13 +208,13 @@ echo "     helm install ama-metrics ${CHART_DIR} \\"
 echo "       --set namespace=monitoring \\"
 echo "       --namespace monitoring"
 echo ""
-echo "  3. Use with istio-configs/custom-istio-values.yaml:"
+echo "  3. Use with istio-fun/custom-istio-values.yaml:"
 echo "     helm install ama-metrics ${CHART_DIR} \\"
-echo "       --values istio-configs/custom-istio-values.yaml \\"
+echo "       --values istio-fun/custom-istio-values.yaml \\"
 echo "       --namespace monitoring"
 echo ""
 print_warning "Note: addon-token-adapter secret will always reference kube-system"
 echo ""
-print_info "To restore original: cp -r ${BACKUP_DIR}/* ${CHART_DIR}/"
+print_info "To restore original files, use: git checkout ${CHART_DIR}"
 
 exit 0
