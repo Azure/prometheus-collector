@@ -152,6 +152,15 @@ for template in $ALL_TEMPLATES; do
     fi
 done
 
+# Parameterize serviceaccount references in OpenShift SCC (system:serviceaccount:kube-system:...)
+print_info "  - Parameterizing serviceaccount namespace in SCC users..."
+for template in $ALL_TEMPLATES; do
+    if [ -f "$template" ]; then
+        # Match "system:serviceaccount:kube-system:" pattern
+        sed -i 's/system:serviceaccount:kube-system:/system:serviceaccount:{{ include "ama-metrics.namespace" . }}:/g' "$template"
+    fi
+done
+
 # Parameterize --configmap-namespace args
 print_info "  - Parameterizing --configmap-namespace arguments..."
 for template in $ALL_TEMPLATES; do
