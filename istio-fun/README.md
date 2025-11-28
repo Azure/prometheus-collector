@@ -21,7 +21,42 @@ When Istio is enabled with mTLS, it issues certificates based on the **pod's nam
 | `cross-namespace-secret-rbac.yaml` | RBAC - allows reading addon-token-adapter secret from kube-system |
 | `custom-istio-values.yaml` | Helm values - configuration for ama-metrics deployment |
 | `deploy-ama-metrics-istio.sh` | Automated deployment script |
+| `parameterize-helm-templates.sh` | Script to parameterize Helm templates for custom namespace support |
 | `README.md` | This file |
+
+## 🔧 Preparing the Helm Chart (First Time Setup)
+
+**IMPORTANT**: Before deploying, you must first parameterize the Helm chart templates to support custom namespaces.
+
+### Run the Parameterization Script
+
+```bash
+# From the istio-fun directory
+cd prometheus-collector/istio-fun
+
+# Make script executable
+chmod +x parameterize-helm-templates.sh
+
+# Run the script to modify Helm templates
+./parameterize-helm-templates.sh
+```
+
+**What this script does:**
+- Adds helper templates to `_helpers.tpl` for namespace parameterization
+- Updates `values-template.yaml` with a `namespace` parameter
+- Modifies all 16 Helm template files to use `{{ include "ama-metrics.namespace" . }}`
+- Preserves backward compatibility (defaults to `kube-system`)
+
+**Expected output:**
+```
+✓ Helper functions in _helpers.tpl: 2
+✓ Template files using helpers: 16
+✓ Remaining hardcoded kube-system: 0 (should be 0)
+```
+
+**Note**: This only needs to be run **once**. The script modifies files directly. If you need to restore the original files, use: `git checkout ../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/`
+
+---
 
 ## 🚀 Quick Start
 
@@ -32,6 +67,7 @@ When Istio is enabled with mTLS, it issues certificates based on the **pod's nam
 - Helm 3 installed
 - Azure CLI (`az`) installed (optional but recommended)
 - Cluster admin access
+- **Helm chart parameterized** (run `parameterize-helm-templates.sh` first - see above)
 
 ### Option 1: Automated Deployment (Recommended)
 
@@ -48,11 +84,25 @@ chmod +x deploy-ama-metrics-istio.sh
 ./deploy-ama-metrics-istio.sh
 ```
 
-The script will:
-- Create namespace and enable Istio injection
-- Apply all Istio configurations
-- Deploy ama-metrics via Helm
-- Verify the deployment
+**What the script does:**
+1. Creates namespace and enables Istio injection
+2. Updates all YAML configuration files with your chosen namespace
+3. Applies Istio configurations (PeerAuthentication, DestinationRule, AuthorizationPolicy, RBAC)
+4. Checks/enables Azure Monitor addon to create the `addon-token-adapter` secret
+5. Optionally deploys ARM template (creates DCR, DCE, Azure Monitor resources)
+6. **Deploys parameterized Helm chart** with your custom namespace via `custom-istio-values.yaml`
+7. Verifies deployment and Istio sidecar injection
+
+**How it uses the parameterized Helm chart:**
+```bash
+helm upgrade --install ama-metrics \
+  ../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon \
+  --namespace ${NAMESPACE} \
+  --values custom-istio-values.yaml \
+  --create-namespace
+```
+
+The script automatically updates `custom-istio-values.yaml` with `namespace: "${NAMESPACE}"`, and the parameterized Helm templates (created by `parameterize-helm-templates.sh`) read this value to deploy all resources to your custom namespace.
 
 ### Option 2: Manual Deployment
 
