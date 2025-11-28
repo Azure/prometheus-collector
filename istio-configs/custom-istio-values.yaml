@@ -1,0 +1,26 @@
+# Custom namespace for Istio compatibility
+namespace: "monitoring"
+
+AzureMonitorMetrics:
+  # Update these image tags to match your desired version
+  ImageTag: "6.24.1-main-11-14-2025-15146744"
+  ImageTagWin: "6.24.1-main-11-14-2025-15146744-win"
+  ImageTagTargetAllocator: "6.24.1-main-11-14-2025-15146744-targetallocator"
+  ImageTagCfgReader: "6.24.1-main-11-14-2025-15146744-cfg"
+  
+  # Istio-specific annotations (applied via templates)
+  # Note: These need to be added to the Helm chart templates
+  podAnnotations:
+    sidecar.istio.io/inject: "true"
+    traffic.sidecar.istio.io/excludeOutboundIPRanges: "169.254.169.254/32"
+    traffic.sidecar.istio.io/excludeInboundPorts: "8080,8888"
+    sidecar.istio.io/proxyCPU: "100m"
+    sidecar.istio.io/proxyMemory: "128Mi"
+
+global:
+  commonGlobals:
+    CloudEnvironment: "azurepubliccloud"
+    Region: "eastus"  # Change to your cluster region
+    Customer:
+      AzureResourceID: "/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RG/providers/Microsoft.ContainerService/managedClusters/YOUR_CLUSTER"  # Update with your cluster resource ID
+    isAutomaticSKU: false

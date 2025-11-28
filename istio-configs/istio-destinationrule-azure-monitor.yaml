@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: azure-monitor-endpoints
+  namespace: monitoring  # Change this to your chosen namespace
+spec:
+  host: "*.monitor.azure.com"
+  trafficPolicy:
+    tls:
+      mode: SIMPLE  # Use simple TLS, not Istio mTLS
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: azure-monitor-ingestion
+  namespace: monitoring  # Change this to your chosen namespace
+spec:
+  host: "*.ingest.monitor.azure.com"
+  trafficPolicy:
+    tls:
+      mode: SIMPLE  # Use simple TLS, not Istio mTLS
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: azure-monitor-external
+  namespace: monitoring  # Change this to your chosen namespace
+spec:
+  hosts:
+    - "*.monitor.azure.com"
+    - "*.ingest.monitor.azure.com"
+  ports:
+    - number: 443
+      name: https
+      protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS

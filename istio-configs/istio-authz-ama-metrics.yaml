@@ -1,0 +1,19 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ama-metrics-scrape-allow
+  namespace: istio-system  # Apply cluster-wide from istio-system
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: ["monitoring"]  # Change to your ama-metrics namespace
+            principals: ["cluster.local/ns/monitoring/sa/ama-metrics-serviceaccount"]  # Update namespace
+      to:
+        - operation:
+            paths: ["/metrics", "/stats/prometheus"]
+            methods: ["GET"]
+      when:
+        - key: request.headers[user-agent]
+          values: ["Prometheus/*", "OpenTelemetry-Collector/*"]
