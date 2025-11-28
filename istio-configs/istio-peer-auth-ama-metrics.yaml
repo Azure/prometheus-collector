@@ -1,0 +1,11 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: ama-metrics-mtls
+  namespace: monitoring  # Change this to your chosen namespace
+spec:
+  mtls:
+    mode: STRICT  # Enforce mTLS for all ama-metrics pods
+  selector:
+    matchLabels:
+      rsName: ama-metrics  # Matches ama-metrics pods
