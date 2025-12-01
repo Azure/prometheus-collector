@@ -49,11 +49,12 @@ extends:
       jobs:
         - job: SigningJob
           displayName: "Sign necessary artifacts"
-          timeoutInMinutes: 120      
+          timeoutInMinutes: 120
           variables:
             ob_outputDirectory: '$(Build.ArtifactStagingDirectory)'    
             ob_uploadToCloudvault: true
-            ob_uploadToPipelineArtifact: true          
+            ob_uploadToPipelineArtifact: true
+            ob_artifactBaseName: 'drop-prometheus-collector-signed'
           pool:
             type: windows
           steps:
