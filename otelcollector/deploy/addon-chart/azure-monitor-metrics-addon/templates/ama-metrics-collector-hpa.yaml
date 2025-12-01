@@ -5,7 +5,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: ama-metrics-hpa
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
   labels:
     component: ama-metrics-hpa
     kubernetes.azure.com/managedby: aks

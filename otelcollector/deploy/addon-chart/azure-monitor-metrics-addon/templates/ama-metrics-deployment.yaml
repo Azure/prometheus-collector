@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ama-metrics
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
@@ -11,7 +11,7 @@ spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
   {{- if or .Values.AzureMonitorMetrics.CollectorHPAEnabled $arcExtensionSettings.hpaEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
-  {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" .Values.namespace "ama-metrics").spec }}
     {{- if $currentSpec }}
     # in if check
   replicas: {{ $currentSpec.replicas }}
@@ -317,7 +317,7 @@ spec:
           command:
             - /addon-token-adapter
           args:
-            - --secret-namespace=kube-system
+            - --secret-namespace={{ .Values.namespace }}
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
