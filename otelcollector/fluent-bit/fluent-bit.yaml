@@ -104,7 +104,7 @@ pipeline:
       tls.ca_file: /etc/operator-targets/client/certs/ca.crt
       tls.crt_file: /etc/operator-targets/client/certs/client.crt
       tls.key_file: /etc/operator-targets/client/certs/client.key
-      host: ama-metrics-operator-targets.kube-system.svc.cluster.local
+      host: ama-metrics-operator-targets.${POD_NAMESPACE:-kube-system}.svc.cluster.local
       port: ${FLUENT_BIT_OPERATOR_TARGETS_PROMETHEUS_PORT}
       tag: prometheus.metrics.targetallocator
       metrics_path: /metrics

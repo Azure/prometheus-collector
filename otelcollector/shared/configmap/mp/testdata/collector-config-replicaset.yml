@@ -31,7 +31,7 @@ receivers:
   prometheus:
     target_allocator:
       collector_id: ${env:POD_NAME}
-      endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
+      endpoint: http://ama-metrics-operator-targets.${env:POD_NAMESPACE}.svc.cluster.local
       interval: 30s
 service:
   pipelines:
