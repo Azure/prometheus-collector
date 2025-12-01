@@ -7,7 +7,7 @@ metadata:
     component: ama-metrics-operator-targets
     kubernetes.azure.com/managedby: aks
   name: ama-metrics-operator-targets
-  namespace: {{ .Values.namespace }}
+  namespace: {{ $.Values.namespace }}
 spec:
   internalTrafficPolicy: Cluster
   ipFamilies:

@@ -25,6 +25,6 @@ volumes:
 - configMap
 - secret
 users:
-- system:serviceaccount:{{ .Values.namespace }}:ama-metrics-serviceaccount
+- system:serviceaccount:{{ $.Values.namespace }}:ama-metrics-serviceaccount
 {{- end }}
 {{- end }}

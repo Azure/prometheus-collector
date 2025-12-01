@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ama-metrics-ksm
-  namespace: {{ .Values.namespace }}
+  namespace: {{ $.Values.namespace }}
   labels:
     app.kubernetes.io/component: ama-metrics
     app.kubernetes.io/name: ama-metrics-ksm
