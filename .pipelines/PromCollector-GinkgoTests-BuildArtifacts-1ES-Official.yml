@@ -228,7 +228,7 @@ extends:
             inputs:
               targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
               ## ***************************
-              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e" # string. Optional. Working directory.
+              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests" # string. Optional. Working directory.
               ##filePath: # string. Required when targetType = filePath. Script Path. 
               #arguments: # string. Optional. Use when targetType = filePath. Arguments. 
               script: |
