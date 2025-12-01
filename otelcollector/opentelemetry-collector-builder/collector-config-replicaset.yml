@@ -39,7 +39,7 @@ receivers:
         server_config:
           endpoint: "localhost:9092"
       target_allocator:
-        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443
+        endpoint: https://ama-metrics-operator-targets.${env:POD_NAMESPACE}.svc.cluster.local:443
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:

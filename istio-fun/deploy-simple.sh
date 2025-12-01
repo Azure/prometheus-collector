@@ -34,7 +34,7 @@ fi
 # Create values.yaml with custom namespace
 if [ -f "${CHART_DIR}/values-template.yaml" ]; then
     sed -e "s/\${IMAGE_TAG}/${img}/g" \
-        -e 's|${MCR_REPOSITORY}|/azuremonitor/containerinsights/ciprod/prometheus-collector/images|g' \
+        -e 's|${MCR_REPOSITORY}|/azuremonitor/containerinsights/cidev/prometheus-collector/images|g' \
         -e 's/${ARC_EXTENSION}/false/g' \
         -e 's/${AKS_REGION}/westeurope/g' \
         -e 's|${AKS_RESOURCE_ID}|/subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourcegroups/zane-custom-ns/providers/Microsoft.ContainerService/managedClusters/zane-metrics-custom-ns|g' \

@@ -210,9 +210,62 @@ NAMESPACE=my-custom-ns ./deploy-simple.sh
 
 ## Files Modified
 
+### Helm Templates
 - `templates/*.yaml` - All 16+ template files updated with `{{ $.Values.namespace }}`
 - `values-template.yaml` - Added `namespace` field
 - `istio-fun/deploy-simple.sh` - Deployment script with configurable namespace
+
+### Target Allocator Endpoint Hardcoded Namespace Fix (December 1, 2025)
+
+**Problem Discovered:**
+When deploying to a custom namespace, the prometheus-collector pods crashed with:
+```
+Get "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs": 
+dial tcp: lookup ama-metrics-operator-targets.kube-system.svc.cluster.local: no such host
+```
+
+The target allocator service URL was hardcoded to `kube-system` in **9 references across 7 files**.
+
+**Files Fixed:**
+
+| # | File | References | Change |
+|---|------|------------|--------|
+| 1 | `shared/collector_replicaset_config_helper.go` | 2 | Added `getTargetAllocatorNamespace()` helper. Updated HTTP and HTTPS URLs. |
+| 2 | `fluent-bit/src/telemetry.go` | 2 | Added `getTargetAllocatorNamespace()` helper. Updated HTTP and HTTPS URLs. |
+| 3 | `shared/proxy_settings.go` | 1 | Added `getTargetAllocatorNamespace()` helper. Updated NO_PROXY target. |
+| 4 | `opentelemetry-collector-builder/collector-config-replicaset.yml` | 1 | Changed to `${env:POD_NAMESPACE}` |
+| 5 | `opentelemetry-collector-builder/ccp-collector-config-replicaset.yml` | 1 | Changed to `${env:POD_NAMESPACE}` |
+| 6 | `fluent-bit/fluent-bit.yaml` | 1 | Changed to `${POD_NAMESPACE:-kube-system}` |
+| 7 | `shared/configmap/mp/testdata/collector-config-replicaset.yml` | 1 | Changed to `${env:POD_NAMESPACE}` |
+
+**Total: 9 references fixed across 7 files**
+
+**Go Helper Function Added (3 files):**
+```go
+// getTargetAllocatorNamespace returns the namespace for target allocator service
+// Checks OTELCOL_NAMESPACE first (if set), then POD_NAMESPACE, defaults to kube-system
+func getTargetAllocatorNamespace() string {
+    if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
+        return ns
+    }
+    if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+        return ns
+    }
+    return "kube-system"
+}
+```
+
+**Environment Variable Priority:**
+1. `OTELCOL_NAMESPACE` - explicitly set (only in targetallocator container)
+2. `POD_NAMESPACE` - set by Kubernetes downward API (all containers)
+3. `kube-system` - fallback default
+
+**YAML Config Changes:**
+- YAML files use `${env:POD_NAMESPACE}` for OpenTelemetry Collector env substitution
+- fluent-bit.yaml uses `${POD_NAMESPACE:-kube-system}` with bash-style default
+
+**Rebuild Required:**
+After these changes, rebuild the Docker image to include the fixes.
 
 ---
 
