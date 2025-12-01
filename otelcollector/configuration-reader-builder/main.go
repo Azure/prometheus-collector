@@ -52,11 +52,16 @@ var taLivenessCounter = 0
 var taLivenessStartTime = time.Time{}
 var cfgReaderContainerStartTime = time.Time{}
 
-// getNamespace returns the namespace from OTELCOL_NAMESPACE env var, defaulting to kube-system
+// getNamespace returns the namespace from environment variables, defaulting to kube-system
+// Checks OTELCOL_NAMESPACE first (used by targetallocator container), 
+// then POD_NAMESPACE (used by config-reader container)
 func getNamespace() string {
 	namespace := os.Getenv("OTELCOL_NAMESPACE")
 	if namespace == "" {
-		namespace = "kube-system"
+	namespace = os.Getenv("POD_NAMESPACE")
+	}
+	if namespace == "" {
+	namespace = "kube-system"
 	}
 	return namespace
 }
