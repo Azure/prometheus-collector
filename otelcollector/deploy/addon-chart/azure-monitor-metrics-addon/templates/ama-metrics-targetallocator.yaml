@@ -7,7 +7,7 @@ metadata:
     component: ama-metrics-operator-targets
     kubernetes.azure.com/managedby: aks
   name: ama-metrics-operator-targets
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -47,7 +47,7 @@ spec:
             memory: {{ .Values.AzureMonitorMetrics.TargetAllocatorMemoryRequest }}
         env:
         - name: OTELCOL_NAMESPACE
-          value: "kube-system"
+          value: "{{ .Values.namespace }}"
         - name: NODE_IP
           valueFrom:
             fieldRef:
@@ -133,7 +133,7 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: POD_NAMESPACE
-          value: "kube-system"
+          value: "{{ .Values.namespace }}"
         - name: CONTAINER_TYPE
           value: "ConfigReaderSidecar"
         - name: MODE

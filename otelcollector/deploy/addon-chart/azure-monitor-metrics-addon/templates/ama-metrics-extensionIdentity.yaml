@@ -11,7 +11,7 @@ metadata:
 spec:
   serviceAccounts:
     - name: ama-metrics-serviceaccount
-      namespace: kube-system
+      namespace: {{ .Values.namespace }}
   tokenNamespace: azure-arc
 ---
     {{- end }}

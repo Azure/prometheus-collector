@@ -2,7 +2,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: ama-metrics-pdb
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
   labels:
     component: ama-metrics-pdb
     kubernetes.azure.com/managedby: aks
