@@ -1,28 +1,28 @@
 package shared
 
 import (
-"crypto/tls"
-"crypto/x509"
-"fmt"
-"io/ioutil"
-"log"
-"net/http"
-"os"
-"time"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"time"
 
-yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // getTargetAllocatorNamespace returns the namespace for target allocator service
 // Checks OTELCOL_NAMESPACE first (if set), then POD_NAMESPACE, defaults to kube-system
 func getTargetAllocatorNamespace() string {
-if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
-return ns
-}
-if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
-return ns
-}
-return "kube-system"
+	if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
+		return ns
+	}
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+	return "kube-system"
 }
 
 func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
@@ -124,7 +124,7 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 						},
 					}
 					namespace := getTargetAllocatorNamespace()
-				    resp, err = client.Get(fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace))
+					resp, err = client.Get(fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace))
 					if err != nil || resp.StatusCode != http.StatusOK {
 						if i == retries_https {
 							log.Printf("Failed to reach Target Allocator endpoint with HTTPS after %d retries, exiting - %v\n", retries_https, err)
