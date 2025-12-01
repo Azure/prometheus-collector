@@ -2,52 +2,58 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "allowedRegions": {
+      "type": "array",
+      "defaultValue": [
+        "eastus",
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "eastasia",
+        "eastus2",
+        "francecentral",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "koreacentral",
+        "koreasouth",
+        "mexicocentral",
+        "northeurope",
+        "norwayeast",
+        "southafricanorth",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "switzerlandnorth",
+        "taiwannorth",
+        "taiwannorthwest",
+        "uaenorth",
+        "uaecentral",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westeurope",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "metadata": {
+        "description": "The list of valid regions for deployment"
+      }
+    }, 
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "WestUS2",
-      "allowedValues": [
-        "EastUS",
-        "AustraliaCentral",
-        "AustraliaCentral2",
-        "AustraliaEast",
-        "AustraliaSoutheast",
-        "BrazilSouth",
-        "CanadaCentral",
-        "CanadaEast",
-        "CentralIndia",
-        "CentralUS",
-        "EastAsia",
-        "EastUS2",
-        "FranceCentral",
-        "GermanyWestCentral",
-        "IsraelCentral",
-        "ItalyNorth",
-        "JapanEast",
-        "JapanWest",
-        "KoreaCentral",
-        "KoreaSouth",
-        "MexicoCentral",
-        "NorthEurope",
-        "NorwayEast",
-        "SouthAfricaNorth",
-        "SouthCentralUS",
-        "SoutheastAsia",
-        "SouthIndia",
-        "SpainCentral",
-        "SwedenCentral",
-        "SwitzerlandNorth",
-        "TaiwanNorth",
-        "TaiwanNorthWest",
-        "UAENorth",
-        "UAECentral",
-        "UKSouth",
-        "UKWest",
-        "WestCentralUS",
-        "WestEurope",
-        "WestUS",
-        "WestUS2",
-        "WestUS3"
-      ]
+      "defaultValue": "westus3"
     },
     "metricLabelsAllowlist": {
       "type": "string",
@@ -59,65 +65,14 @@
     },
     "clusterName": {
       "type": "string",
-      "defaultValue": "ci-dev-aks-",
+      "defaultValue": "ci-cd-aks-cluster",
       "metadata": {
         "description": "The name of the Managed Cluster resource."
       }
     },
     "clusterLocation": {
-      "defaultValue": "WestUS2",
-      "type": "String",
-      "allowedValues": [
-            "AustraliaCentral",
-            "AustraliaCentral2",
-            "AustraliaEast",
-            "AustraliaSoutheast",
-            "BrazilSouth",
-            "BrazilSoutheast",
-            "CanadaCentral",
-            "CanadaEast",
-            "CentralIndia",
-            "CentralUS",
-            "EastAsia",
-            "EastUS",
-            "EastUS2",
-            "FranceCentral",
-            "FranceSouth",
-            "GermanyNorth",
-            "GermanyWestCentral",
-            "IsraelCentral",
-            "ItalyNorth",
-            "JapanEast",
-            "JapanWest",
-            "JioIndiaCentral",
-            "JioIndiaWest",
-            "KoreaCentral",
-            "KoreaSouth",
-            "MexicoCentral",
-            "NorthCentralUS",
-            "NorthEurope",
-            "NorwayEast",
-            "NorwayWest",
-            "PolandCentral",
-            "QatarCentral",
-            "SouthAfricaNorth",
-            "SouthAfricaWest",
-            "SouthCentralUS",
-            "SouthIndia",
-            "SoutheastAsia",
-            "SpainCentral",
-            "SwedenCentral",
-            "SwitzerlandNorth",
-            "SwitzerlandWest",
-            "UAECentral",
-            "UAENorth",
-            "UKSouth",
-            "UKWest",
-            "WestCentralUS",
-            "WestEurope",
-            "WestUS",
-            "WestUS2",
-            "WestUS3"                ],
+      "defaultValue": "westus3",
+      "type": "string",
       "metadata": {
           "description": "The location of the Managed Cluster resource."
       }
@@ -187,13 +142,62 @@
     },
     "actionGroupId": {
       "type": "string",
-      "defaultValue": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup",
+      "defaultValue": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-ev2/providers/Microsoft.Insights/actiongroups/wtdTestAg",
       "metadata": {
         "description": "Action group used for alerts"
       }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "aksVnet",
+      "metadata": {
+        "description": ""
+      }
+    },
+    "ipAddrNatGateway": {
+      "type": "string",
+      "defaultValue": "ipAddrNatGateway",
+      "metadata": {
+        "description": "public IP address associated with the NAT Gateway"
+      }
+    },
+    "shellExtSubnetName": {
+      "type": "string",
+      "defaultValue": "shellSubnet",
+      "metadata": {
+        "description": "subnet for the shell extension"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "[toLower(concat('stshellextlogs', '12345'))]",
+      "metadata": {
+        "description": "Storage account for archiving shell extension logs"
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS",
+        "Premium_LRS"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "defaultValue": "StorageV2",
+      "allowedValues": [
+        "Storage",
+        "StorageV2",
+        "BlobStorage"
+      ]
     }
   },
   "variables": {
+    "isValidClusterLocation": "[contains(parameters('allowedRegions'), parameters('clusterLocation'))]",
+    "isValidAmwLocation": "[contains(parameters('allowedRegions'), parameters('azureMonitorWorkspaceLocation'))]",
     "resourceIdPrefix": "[resourceGroup().id]",
     "azureMonitorWorkspaceName": "[concat(parameters('clusterName'), '-', 'amw')]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
@@ -212,10 +216,323 @@
     "RecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
     "version": " - 0.1"
   },
+  "functions": [],
   "resources": [
     {
-      "type": "microsoft.monitor/accounts",
-      "apiVersion": "2021-06-03-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2022-07-01",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('clusterLocation')]",
+      "dependsOn": [ "[resourceId('Microsoft.Network/networkSecurityGroups', 'subnet-nsg')]"],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "aksSubnet",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "delegations": [
+                {
+                  "name": "aksDelegation",
+                  "properties": {
+                    "serviceName": "Microsoft.ContainerService/managedClusters"
+                  }
+                }
+              ],
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'subnet-nsg')]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('shellExtSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "delegations": [
+                {
+                  "name": "shellDelegation",
+                  "properties": {
+                    "serviceName": "Microsoft.ContainerInstance/containerGroups"
+                  }
+                }
+              ],
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'subnet-nsg')]"
+              }                           
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('ipAddrNatGateway')]",
+      "sku": {
+          "name": "Standard",
+          "tier": "Regional"
+      },
+      "location": "[parameters('clusterLocation')]",
+      "properties": {
+          "publicIPAddressVersion": "IPv4",
+          "publicIPAllocationMethod": "Static",
+          "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Network/natGateways",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2024-07-01",
+      "name": "shellExtNatGateway",
+      "dependsOn": [
+          "[resourceId('Microsoft.Network/publicIPAddresses', parameters('ipAddrNatGateway'))]",
+          "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "sku": {
+          "name": "Standard"
+      },
+      "location": "[parameters('clusterLocation')]",
+      "properties": {
+          "idleTimeoutInMinutes": 4,
+          "scope": "Public",
+          "publicIpAddresses": [
+              {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('ipAddrNatGateway'))]"
+              }
+          ],
+          "subnets": [
+              {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('shellExtSubnetName'))]"
+              }
+          ]
+      }
+    },
+
+    {
+        "apiVersion": "2024-07-01",
+        "condition": "[variables('isValidClusterLocation')]",    
+        "name": "subnet-nsg",
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "location": "[parameters('clusterLocation')]",
+        "properties": {
+            "securityRules": [
+                {
+                    "name": "NRMS-Rule-101",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "Created by Azure Core Security managed policy, placeholder you can delete, please see aka.ms/cainsgpolicy",
+                        "protocol": "Tcp",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "443",
+                        "sourceAddressPrefix": "VirtualNetwork",
+                        "destinationAddressPrefix": "*",
+                        "access": "Allow",
+                        "priority": 101,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },
+                {
+                    "name": "NRMS-Rule-103",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "*",
+                        "sourceAddressPrefix": "CorpNetPublic",
+                        "destinationAddressPrefix": "*",
+                        "access": "Allow",
+                        "priority": 103,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },            
+                {
+                    "name": "NRMS-Rule-105",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*",
+                        "access": "Deny",
+                        "priority": 105,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [
+                            "1433",
+                            "1434",
+                            "3306",
+                            "4333",
+                            "5432",
+                            "6379",
+                            "7000",
+                            "7001",
+                            "7199",
+                            "9042",
+                            "9160",
+                            "9300",
+                            "16379",
+                            "26379",
+                            "27017"
+                        ],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },            
+                {
+                    "name": "NRMS-Rule-106",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+                        "protocol": "TCP",
+                        "sourcePortRange": "*",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*",
+                        "access": "Deny",
+                        "priority": 106,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [
+                            "22",
+                            "3389"
+                        ],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },            
+                {
+                    "name": "NRMS-Rule-107",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+                        "protocol": "Tcp",
+                        "sourcePortRange": "*",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*",
+                        "access": "Deny",
+                        "priority": 107,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [
+                            "23",
+                            "135",
+                            "445",
+                            "5985",
+                            "5986"
+                        ],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },
+                {
+                    "name": "NRMS-Rule-108",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*",
+                        "access": "Deny",
+                        "priority": 108,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [
+                            "13",
+                            "17",
+                            "19",
+                            "53",
+                            "69",
+                            "111",
+                            "123",
+                            "512",
+                            "514",
+                            "593",
+                            "873",
+                            "1900",
+                            "5353",
+                            "11211"
+                        ],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                },
+                {
+                    "name": "NRMS-Rule-109",
+                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*",
+                        "access": "Deny",
+                        "priority": 109,
+                        "direction": "Inbound",
+                        "sourcePortRanges": [],
+                        "destinationPortRanges": [
+                            "119",
+                            "137",
+                            "138",
+                            "139",
+                            "161",
+                            "162",
+                            "389",
+                            "636",
+                            "2049",
+                            "2301",
+                            "2381",
+                            "3268",
+                            "5800",
+                            "5900"
+                        ],
+                        "sourceAddressPrefixes": [],
+                        "destinationAddressPrefixes": []
+                    }
+                }            
+            ]
+        }
+    },
+
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('clusterLocation')]",
+      "sku": {
+        "name": "[parameters('skuName')]"
+      },
+      "kind": "[parameters('kind')]",
+      "properties": {}
+    },
+
+    {
+      "type": "Microsoft.Monitor/accounts",
+      "condition": "[variables('isValidAmwLocation')]",
+      "apiVersion": "2023-04-03",
       "name": "[variables('azureMonitorWorkspaceName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
@@ -223,7 +540,8 @@
     },
     {
       "type": "Microsoft.ContainerService/managedClusters",
-      "apiVersion": "[parameters('clusterApiVersion')]",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2025-07-01",
       "name": "[parameters('clusterName')]",
       "location": "[parameters('clusterLocation')]",
       "identity": {
@@ -249,9 +567,10 @@
               },
               "backendPoolType": "nodeIPConfiguration"
           },
-          "serviceCidr": "10.0.0.0/16",
-          "dnsServiceIP": "10.0.0.10",
-          "outboundType": "loadBalancer"
+          "serviceCidr": "10.0.2.0/24",
+          "dnsServiceIP": "10.0.2.10",
+          "outboundType": "loadBalancer",
+          "podCidr": ""
         },
         "agentPoolProfiles": [
           {
@@ -268,7 +587,7 @@
               "mode": "System",
               "osType": "Linux",
               "osSKU": "Ubuntu",
-              "enableFIPS": false
+              "enableFIPS": false              
           },
           {
               "name": "agentpool1",
@@ -368,6 +687,17 @@
               "enableFIPS": false
           }
         ],
+        "autoUpgradeProfile": {
+          //"upgradeChannel": "patch",
+          "nodeOSUpgradeChannel": "NodeImage"
+        },
+        "securityProfile": {
+          "defender": {
+            "securityMonitoring": {
+              "enabled": true
+            }
+          }
+        },
         "azureMonitorProfile": {
           "metrics": {
             "enabled": true,
@@ -381,6 +711,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
+      "condition": "[variables('isValidAmwLocation')]",      
       "apiVersion": "2022-06-01",
       "name": "[variables('dceName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
@@ -389,6 +720,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionRules",
+      "condition": "[variables('isValidAmwLocation')]",      
       "apiVersion": "2022-06-01",
       "name": "[variables('dcrName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
@@ -451,6 +783,7 @@
           "resources": [
             {
               "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
+              "condition": "[variables('isValidClusterLocation')]",
               "name": "[concat(parameters('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
               "apiVersion": "2022-06-01",
               "location": "[parameters('clusterLocation')]",
@@ -465,10 +798,10 @@
       }
     },
 
-
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "condition": "[variables('isValidAmwLocation')]",      
       "apiVersion": "2023-03-01",    
       "dependsOn": [
         "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
@@ -534,6 +867,7 @@
     {
       "name": "[variables('kubernetesRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "condition": "[variables('isValidAmwLocation')]",      
       "apiVersion": "2023-03-01",
       "dependsOn": [
         "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
@@ -643,6 +977,7 @@
     {
       "name": "[variables('nodeRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "condition": "[variables('isValidAmwLocation')]",
       "apiVersion": "2023-03-01",
       "dependsOn": [
         "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
@@ -725,6 +1060,7 @@
     {
       "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "condition": "[variables('isValidAmwLocation')]",      
       "apiVersion": "2023-03-01",
       "dependsOn": [
         "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
@@ -813,10 +1149,10 @@
       }
     },
 
-
     {
       "name": "[Concat(parameters('clusterName'), '-dev-alerts')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "condition": "[variables('isValidAmwLocation')]",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "dependsOn": [
@@ -1070,5 +1406,14 @@
       }
     }
   ],
-  "outputs": {}
+  "outputs": {
+    "amwWorkspaceLocationValidationResult": {
+      "type": "string",
+      "value": "[if(variables('isValidAmwLocation'), concat('AMW location ', parameters('azureMonitorWorkspaceLocation'), ' is valid.'), concat('Invalid AMW location: ', parameters('azureMonitorWorkspaceLocation')))]"
+    },
+    "clusterLocationValidationResult": {
+      "type": "string",
+      "value": "[if(variables('isValidClusterLocation'), concat('Cluster location ', parameters('clusterLocation'), ' is valid.'), concat('Invalid cluster location: ', parameters('clusterLocation')))]"
+    }
+  }
 }
