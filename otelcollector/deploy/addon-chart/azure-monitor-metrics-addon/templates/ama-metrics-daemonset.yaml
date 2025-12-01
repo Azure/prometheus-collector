@@ -18,7 +18,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ama-metrics-node{{- if and $useDaemonSetSizing $size.name }}-{{ $size.name }}{{- end }}
-  namespace: {{ .Values.namespace }}
+  namespace: {{ $.Values.namespace }}
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
@@ -294,7 +294,7 @@ spec:
           command:
             - /addon-token-adapter
           args:
-            - --secret-namespace={{ .Values.namespace }}
+            - --secret-namespace={{ $.Values.namespace }}
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
@@ -443,7 +443,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ama-metrics-win-node
-  namespace: {{ .Values.namespace }}
+  namespace: {{ $.Values.namespace }}
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
@@ -597,7 +597,7 @@ spec:
           command:
            - addon-token-adapter-win
           args:
-           - --secret-namespace={{ .Values.namespace }}
+           - --secret-namespace={{ $.Values.namespace }}
            - --secret-name=aad-msi-auth-token
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999
