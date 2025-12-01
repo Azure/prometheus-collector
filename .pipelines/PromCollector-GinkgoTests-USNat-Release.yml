@@ -1,0 +1,67 @@
+trigger: none
+
+parameters:
+ - name: buildVersion
+   type: string
+ - name: cvrpPath
+   type: string
+   default: '.\cvrp.manifest.json'
+ - name: artifactToDeploy
+   type: string
+   default: 'drop-prometheus-collector-signed'
+ - name: deployToRegions
+   type: string
+   default: 'usnateast'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+
+  pipelines:
+    - pipeline: source_pipeline
+      source: "PromCollector-GinkgoTests-Signing-OneBranch"
+      version: ${{ parameters.buildVersion }}
+      trigger: none      
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    ev2ManagedSdpRolloutConfig:
+      rolloutType: normal
+      overrideManagedValidationDuration: false
+      managedValidationOverrideDurationInHours: 0
+      icmIncidentId: 0 
+    stages:
+    - stage: "USNat_EV2_Release"
+      dependsOn: []
+      displayName: "USNat: EV2 Release"
+      variables:
+        ob_release_environment: USNat
+        ob_release_stagetype: deployment
+        ArtifactToDeploy: ${{ parameters.artifactToDeploy }}
+        CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
+      jobs:
+        - job: ReleaseJob
+          pool:
+            type: release
+          steps:
+            - download: source_pipeline
+              artifact: ${{ parameters.artifactToDeploy }}             
+            - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+              displayName: Test_Deploy_Buildout01
+              inputs:
+                EnableStrictValidation: false
+                EndpointProviderType: ApprovalService
+                ApprovalServiceEnvironment: USNat
+                ServiceRootLocation: LinkedArtifact
+                RolloutSpecType: RSPath
+                ForceRegistration: true
+                TaskAction: RegisterAndRollout
+                SkipRegistrationIfExists: true
+                ServiceRootPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot'
+                RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot/Rolloutspecs/RolloutSpec.USNat.json'
+                StageMapName: "Microsoft.Azure.SDP.Standard"
+                Select: regions(${{ parameters.deployToRegions }}) 
