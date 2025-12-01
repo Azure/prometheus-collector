@@ -8,8 +8,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHART_DIR="${SCRIPT_DIR}/../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon"
-NAMESPACE="${NAMESPACE:-ama-metrics-zane-test}"  # Can be overridden via environment variable
-#NAMESPACE="${NAMESPACE:-kube-system}"  # Can be overridden via environment variable
+#NAMESPACE="${NAMESPACE:-ama-metrics-zane-test}"  # Can be overridden via environment variable
+NAMESPACE="${NAMESPACE:-kube-system}"  # Can be overridden via environment variable
 
 
 echo "=========================================="
