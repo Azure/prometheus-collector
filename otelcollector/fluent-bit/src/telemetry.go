@@ -605,23 +605,24 @@ func getTargetAllocatorNamespace() string {
 	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
 		return ns
 	}
-		return "kube-system"
+	return "kube-system"
 }
 
 func addScrapeJobMetadataToTelemetryItem() map[string]string {
 	telemetryPropertiesString := map[string]string{
-	basicAuthEnabled:             "false",
-	bearerTokenEnabledWithFile:   "false",
-	bearerTokenEnabledWithSecret: "false",
-}
+		basicAuthEnabled:             "false",
+		bearerTokenEnabledWithFile:   "false",
+		bearerTokenEnabledWithSecret: "false",
+	}
 
-namespace := getTargetAllocatorNamespace()
-taEndpoint := fmt.Sprintf("http://ama-metrics-operator-targets.%s.svc.cluster.local/scrape_configs", namespace)
-
-// Send metric to app insights for target allocator metrics
-if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-	taEndpoint = fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace)
-}
+	namespace := getTargetAllocatorNamespace()
+	taEndpoint := fmt.Sprintf("http://ama-metrics-operator-targets.%s.svc.cluster.local/scrape_configs", namespace)
+	
+	// Send metric to app insights for target allocator metrics
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		taEndpoint = fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace)}
+	}
+	
 	scrapeJobs := getTargetAllocatorResponse(taEndpoint)
 	if scrapeJobs != nil {
 		var scrapeJobsMap map[string]interface{}

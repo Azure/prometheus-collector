@@ -61,17 +61,6 @@ func setHTTPProxyEnabled() {
 	SetEnvAndSourceBashrcOrPowershell("HTTP_PROXY_ENABLED", httpProxyEnabled, true)
 }
 
-// getTargetAllocatorNamespace returns the namespace for target allocator service
-func getTargetAllocatorNamespace() string {
-	if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
-		return ns
-	}
-	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
-		return ns
-	}
-	return "kube-system"
-}
-
 func ConfigureEnvironment() error {
 	copyCAAnchors()
 
