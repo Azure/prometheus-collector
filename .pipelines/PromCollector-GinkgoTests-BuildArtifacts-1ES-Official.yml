@@ -1,0 +1,326 @@
+#################################################################################
+#                               OneBranch Pipelines                             #
+# Documentation:  https://aka.ms/obpipelines                                    #
+# Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
+# Retail Tasks:   https://aka.ms/obpipelines/tasks                              #
+# Support:        https://aka.ms/onebranchsup                                   #
+#################################################################################
+
+trigger: none  # https://aka.ms/obpipelines/triggers
+
+# global parameteres are configured here and show up in AzDO UI in build queue time. Required for MSBuild and .NET.
+# learn more at https://aka.ms/obpipelines/parameters
+parameters:
+- name: 'debug'
+  displayName: 'Enable debug output'
+  type: boolean
+  default: true
+
+### Specify global variables in this section! ###
+# https://aka.ms/obpipelines/variables
+variables:
+  GOPATH: 'C:\Users\cloudtest\go'
+  GOMODCACHE: '$(GOPATH)\pkg\mod'
+  ManifestGeneratorTaskTimeoutInMinutes: 30
+  1espt.codesignvalidation.enforced: true
+
+  system.debug: ${{ parameters.debug }}
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)]  # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  ENABLE_PRS_DELAYSIGN: 0
+  ROOT: $(Build.SourcesDirectory)
+  REPOROOT: $(Build.SourcesDirectory)
+  OUTPUTROOT: $(REPOROOT)\ServiceGroupRoots
+  NUGET_XMLDOC_MODE: none
+  # Docker image which is used to build the project. More options and info at https://aka.ms/obpipelines/containers
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2019/vse2022:latest'
+  # LinuxContainerImage:
+
+resources:
+  repositories:
+  - repository: templates
+    type: git
+    name: OneBranch.Pipelines/GovernedTemplates
+    ref: refs/heads/main
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+  - repository: prometheus-collector
+    type: github
+    endpoint: github.com_wtdoble
+    name: azure/prometheus-collector
+    ##name: wtdoble/prometheus-collector
+    ref: refs/heads/williamd/agc
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: 1ESPieminiBuildLarge
+      image: 1ESPTGen2Large-ipie-prometheuscollector    ## https://aka.ms/1eshub
+      os: windows
+    sdl:
+      spotBugs:
+        enabled: false
+      sourceAnalysisPool:
+        name: 1ESPieminiBuildLarge
+        image : 1ESPTGen2Large-ipie-prometheuscollector     
+        os: windows
+      codeSignValidation:
+        enabled: true
+        timeoutInMinutes: 30
+        itemPattern: '**/*.ps1'
+        rootPaths: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+      sourceRepositoriesToScan:
+        exclude:
+        - repository: prometheus-collector
+    stages:
+      - stage: Build
+        jobs:
+        - job: Retrieve_Artifacts
+          displayName: "Build: retrieve and publish Ev2 artifacts"
+          timeoutInMinutes: 120      
+          variables:
+            ob_outputDirectory: '$(Build.ArtifactStagingDirectory)'    
+            ob_uploadToCloudvault: true
+            ob_uploadToPipelineArtifact: true         
+          steps:
+          - task: GoTool@0
+            displayName: 'Install Go'             
+            inputs:
+              version: '1.24.4' # string. Required. Version Spec. 
+              checkLatest: true # boolean. Optional. Check Latest Version. Default: false.
+              installationPath: $(Agent.ToolsDirectory)/go
+              clean: true # boolean. Optional. Clean Go Cache. Default: false.  
+          - script: |
+              echo "%PATH%"
+              echo "%USERNAME%"
+              echo "Go Version"
+              go version
+              echo "Go Environment"
+              go env
+              echo "Go Environment Variables"
+              set | findstr /i "go"
+              dir "$(Agent.ToolsDirectory)\\go"
+            displayName: 'Check Go Version'
+                         
+          - task: Go@0
+            displayName: go install ginkgo
+            env:
+              GOPATH: "$(GOPATH)"
+              GOMODCACHE: "$(GOMODCACHE)"
+            inputs:
+              command: 'install' # 'get' | 'build' | 'test' | 'custom'. Required. Command. Default: get.
+              arguments: github.com/onsi/ginkgo/v2/ginkgo@latest # string. Arguments. 
+              
+          - task: PowerShell@2
+            displayName: Go pkg cleanup
+            env:
+              GOPATH: "$(GOPATH)"
+              GOMODCACHE: "$(GOMODCACHE)"            
+            inputs:
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              script: | # string. Required when targetType = inline. Script. 
+                go clean -modcache
+
+          - checkout: self
+            persistCredentials: true          
+            path: selfrepo
+          - checkout: prometheus-collector
+            sparseCheckoutDirectories: otelcollector/test/ci-cd otelcollector/test/ginkgo-e2e
+            persistCredentials: true
+            path: promrepo
+
+          - task: PowerShell@2
+            displayName: go mod tidy
+            env:
+              GOPATH: "$(GOPATH)"
+              GOMODCACHE: "$(GOMODCACHE)"            
+            inputs:
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              script: | # string. Required when targetType = inline. Script. 
+                $goPathDir = "$(GOPATH)"
+
+                $pkgs = @("k8s.io/client-go",
+                "github.com/golang-jwt/jwt",
+                "golang.org/toolchain",
+                "golang.org/x/crypto",
+                "golang.org/x/net",
+                "golang.org/x/sys",
+                "golang.org/x/text",
+                "golang.org/x/term",
+                "golang.org/x/tools",
+                "golang.org/x/image",
+                "github.com/Azure/azure-sdk-for-go/sdk/azidentity",
+                "github.com/Azure/azure-sdk-for-go/sdk/internal")
+
+                "Getting latest packages for go.mod under $(System.DefaultWorkingDirectory)..."
+                ## *******************************
+                Get-ChildItem -Path "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e" -Recurse -File -Filter *.mod |
+                  Select-Object -ExpandProperty DirectoryName |
+                  Sort-Object -Unique | foreach { 
+
+                    "DirectoryName: ($_)"
+                    cd $_
+
+                    go get k8s.io/client-go@latest
+                    go get github.com/golang-jwt/jwt@latest
+                    go get golang.org/toolchain@latest
+                    go get golang.org/x/crypto@latest
+                    go get golang.org/x/net@latest
+                    go get golang.org/x/sys@latest
+                    go get golang.org/x/text@latest
+                    go get golang.org/x/term@latest
+                    go get golang.org/x/tools@latest
+                    go get golang.org/x/image@latest
+                    go get github.com/Azure/azure-sdk-for-go/sdk/azidentity@latest
+                    go get github.com/Azure/azure-sdk-for-go/sdk/internal@latest
+
+                    go mod tidy 
+                  } 
+
+                <#--"Make sure MOD and SUM files are not read-only..."
+                Get-ChildItem -Path "$goPathDir" -Recurse -File -Filter go.mod | foreach {
+                  "Processing: $($_.FullName)"
+
+                  $fullName = $_.FullName
+                  $file = Get-Item $fullName
+                  $file.IsReadOnly = $false
+
+                  $fullName = $fullName -replace 'go.mod', 'go.sum'
+                  if (Test-Path -Path $fullName) {
+                    $file = Get-Item $fullName
+                    $file.IsReadOnly = $false
+                  }
+                }
+
+                "Getting latest packages for go.mod under $goPathDir..."
+                Get-ChildItem -Path "$goPathDir" -Recurse -File -Include go.mod | foreach {
+                  
+                    $dir = $_.DirectoryName
+                    "DirectoryName: $dir"
+                    cd $dir
+
+                    go get k8s.io/client-go@latest
+                    go get github.com/golang-jwt/jwt@latest
+                    go get golang.org/toolchain@latest
+                    go get golang.org/x/crypto@latest
+                    go get golang.org/x/net@latest
+                    go get golang.org/x/sys@latest
+                    go get golang.org/x/text@latest
+                    go get golang.org/x/term@latest
+                    go get golang.org/x/tools@latest
+                    go get golang.org/x/image@latest
+                    go get github.com/Azure/azure-sdk-for-go/sdk/azidentity@latest
+                    go get github.com/Azure/azure-sdk-for-go/sdk/internal@latest
+
+                    go mod tidy                  
+                  }--#>
+
+          - task: PowerShell@2
+            displayName: Build regionTests - Linux
+            env:
+              GOPATH: "$(GOPATH)"
+              GOMODCACHE: "$(GOMODCACHE)"  
+              PATH: "$(GOPATH)\\bin;$(PATH)" # Ensure ginkgo is in the PATH  
+              GOOS: "linux"
+              GOARCH: "amd64"
+              CGO_ENABLED: 0
+            inputs:
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              ## ***************************
+              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e" # string. Optional. Working directory.
+              ##filePath: # string. Required when targetType = filePath. Script Path. 
+              #arguments: # string. Optional. Use when targetType = filePath. Arguments. 
+              script: |
+                ginkgo build
+                Rename-Item regionTests.test regionTests-linux.test
+
+          - task: CopyFiles@2
+            displayName: Copy AKS ARM template to build staging directory
+            inputs:
+            ## *****************************************
+              SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ci-cd'
+              Contents: '**'
+              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ci-cd'
+
+          - task: CopyFiles@2
+            displayName: Copy ginkgo-e2e to build staging directory
+            inputs:
+            ## *****************************************
+              SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ginkgo-e2e/regionTests'
+              Contents: '**'
+              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'              
+
+          - task: CopyFiles@2
+            displayName: Copy ev2 artifacts to staging directory
+            inputs:
+            ## *****************************************            
+              SourceFolder: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+              Contents: '**'
+              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot'
+
+          - task: PowerShell@2
+            displayName: Generate CVRP Manifest       
+            inputs:
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              #workingDirectory:  # string. Optional. Working directory.
+              ##filePath: # string. Required when targetType = filePath. Script Path. 
+              #arguments: # string. Optional. Use when targetType = filePath. Arguments. 
+              script: |
+                $OutputDir = "$(OB_OutputDirectory)"
+                Write-Host "OutputDirectory: $OutputDir"
+                $ManifestPath = Join-Path $OutputDir "cvrp.manifest.json"
+
+                $files = Get-ChildItem -Path $OutputDir -Recurse -File
+
+                $manifestFiles = @()
+
+                foreach ($file in $files) {
+                  $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
+                  $src = $file.FullName.Substring($OutputDir.Length + 1)
+                  $entry = @{
+                    Paths = @($src)
+                    Source = $src
+                    Hash = $hash.Hash
+                  }
+                  $manifestFiles += $entry
+                }
+
+                $manifest = @{
+                  Files = $manifestFiles
+                  HashType = "SHA256Hash"
+                }
+
+                $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path $ManifestPath -Encoding UTF8
+                Write-Host "CVRP manifest generated at: $ManifestPath"
+
+          templateContext:
+            signing:
+              configurations:
+                - name: SignTestBinaries
+                  description: Sign .test files with test certificate
+                  signType: esrp
+                  certificateId: CP-466278
+                  pattern: '**/*.test'
+                  directory: '$(System.DefaultWorkingDirectory)'
+                  operations:
+                    - SigntoolSign
+                  clientId: '$(system.identity.clientId)'
+                  tenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+
+                - name: SignPowerShellScripts
+                  signType: esrp
+                  certificateId: CP-466278
+                  pattern: '**/*.ps1'
+                  directory: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+                  operations: 
+                    - SigntoolSign
+                  clientId: $(system.identity.clientId)
+                  tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
+
+            outputs:
+            - output: pipelineArtifact
+              targetPath: '$(OB_OutputDirectory)'
+              artifactName: 'drop-prometheus-collector'
+              sbomBuildComponentPath: '$(OB_OutputDirectory)'
+

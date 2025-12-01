@@ -1,0 +1,167 @@
+trigger: none
+
+parameters:
+ - name: buildVersion
+   type: string
+ - name: cvrpPath
+   type: string
+   default: '.\cvrp.manifest.json'
+ - name: artifactToDeploy
+   type: string
+   default: 'drop-prometheus-collector'
+ - name: debugMode
+   type: boolean
+   default: false  
+
+variables:
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2019/vse2022:latest'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+
+  pipelines:
+    - pipeline: source_pipeline
+      source: "PromCollector-GinkgoTests-BuildArtifacts-1ES-Official"
+      version: ${{ parameters.buildVersion }}
+      trigger: none
+
+extends:
+  template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    ev2ManagedSdpRolloutConfig:
+      rolloutType: normal
+      overrideManagedValidationDuration: false
+      managedValidationOverrideDurationInHours: 0
+      icmIncidentId: 0 
+    stages:
+    - stage: "Signing"
+      dependsOn: []
+      displayName: "Signing Artifacts"
+      variables:
+        ob_release_environment: Test
+        ob_release_stagetype: deployment
+        ArtifactToDeploy: ${{ parameters.artifactToDeploy }}
+        CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
+      jobs:
+        - job: SigningJob
+          displayName: "Sign necessary artifacts"
+          timeoutInMinutes: 120      
+          variables:
+            ob_outputDirectory: '$(Build.ArtifactStagingDirectory)'    
+            ob_uploadToCloudvault: true
+            ob_uploadToPipelineArtifact: true          
+          pool:
+            type: windows
+          steps:
+            - download: source_pipeline
+              artifact: ${{ parameters.artifactToDeploy }}   
+            - task: PowerShell@2
+              displayName: 'Debug (Pipeline.Workspace)'
+              condition: eq('${{ parameters.debugMode }}', true)
+              inputs:
+                targetType: 'inline'
+                script: |
+                  Get-ChildItem -Path "$(Pipeline.Workspace)" -Recurse | ForEach-Object { Write-Host $_.FullName }  
+            - task: CopyFiles@2
+              displayName: Copy ServiceGroupRoot to staging directory
+              inputs:
+                SourceFolder: '$(System.DefaultWorkingDirectory)/Deployment'
+                Contents: '**'
+                TargetFolder: '$(OB_OutputDirectory)' 
+            - task: PowerShell@2
+              displayName: Copy .test to output as .exe
+              inputs:
+                targetType: 'inline'
+                script: |
+                  $source = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests/*.test'
+                  $sourceDir = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'
+                  $destinationDir = "$(OB_OutputDirectory)/serviceGroupRoot/ev2scripts"
+                  $destinationFile = Join-Path $destinationDir "*.exe"
+
+                  # Create destination directory if it doesn't exist
+                  if (-not (Test-Path $destinationDir)) {
+                      New-Item -ItemType Directory -Path $destinationDir | Out-Null
+                  }
+
+                  # Copy the file(s)
+                  ##Copy-Item -Path $source -Destination $destinationFile -Force
+                  # Copy *.test files and rename to *.exe
+                  Get-ChildItem -Path $sourceDir -Filter "*.test" | ForEach-Object {
+                      $newName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".exe"
+                      Copy-Item -Path $_.FullName -Destination (Join-Path $destinationDir $newName)
+                  }
+
+                  Write-Host "All .test files copied and renamed to .exe in $destinationDir"
+
+            - task: CopyFiles@2
+              displayName: Copy ci-cd templates to output
+              inputs:
+                SourceFolder: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/ci-cd'
+                Contents: '*.*'
+                TargetFolder: '$(OB_OutputDirectory)/serviceGroupRoot/templates'                    
+            - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
+              displayName: 'Package Signing - deployment files'
+              inputs:
+                command: 'sign'
+                signing_environment: 'azure-ado'
+                signing_profile: 'internal_azure_service'
+                files_to_sign: '**\*.ps1'           
+                search_root: '$(OB_OutputDirectory)/serviceGroupRoot'              
+            ## Package powershell scripts to ZIP for shell extension usage   
+            - task: PowerShell@2
+              displayName: 'Package deployment files for shell ext'
+              inputs:
+                targetType: 'inline'
+                script: |
+                  $serviceGroupRoot =  "$(OB_OutputDirectory)/serviceGroupRoot"
+                  Write-Output "serviceGroupRoot: $serviceGroupRoot"
+                  $source = "$serviceGroupRoot/ev2scripts"
+                  Write-Output "source: $source"
+                  $target = "$serviceGroupRoot/packages"
+                  Write-Output "target: $target"
+                  $targetZipFile = "$target/tests.zip"
+                  Write-Output "targetZipFile: $targetZipFile"
+
+                  if (!(Test-Path -Path $target -PathType 'Container')) {
+                    Write-Output "Directory '$target' doesn't exist. Creating it."
+                    New-Item -Path $target -ItemType Directory -Force
+                  }
+                  del "$targetZipFile" -ErrorAction SilentlyContinue -Force
+                  Add-Type -A 'System.IO.Compression.FileSystem'
+                  [IO.Compression.ZipFile]::CreateFromDirectory("$source", "$targetZipFile");      
+
+            - task: PowerShell@2
+              displayName: Generate CVRP Manifest       
+              inputs:
+                targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+                script: |
+                  $OutputDir = "$(OB_OutputDirectory)"
+                  Write-Host "OutputDirectory: $OutputDir"
+                  $ManifestPath = Join-Path $OutputDir "cvrp.manifest.json"
+
+                  $files = Get-ChildItem -Path $OutputDir -Recurse -File
+
+                  $manifestFiles = @()
+
+                  foreach ($file in $files) {
+                    $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
+                    $src = $file.FullName.Substring($OutputDir.Length + 1)
+                    $entry = @{
+                      Paths = @($src)
+                      Source = $src
+                      Hash = $hash.Hash
+                    }
+                    $manifestFiles += $entry
+                  }
+
+                  $manifest = @{
+                    Files = $manifestFiles
+                    HashType = "SHA256Hash"
+                  }
+
+                  $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path $ManifestPath -Encoding UTF8
+                  Write-Host "CVRP manifest generated at: $ManifestPath"                                               
