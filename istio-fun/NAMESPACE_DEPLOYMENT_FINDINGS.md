@@ -54,12 +54,46 @@ open /etc/operator-targets/server/certs/server.crt: no such file or directory
   - `ama-metrics-operator-targets-server-tls-secret`
   - `ama-metrics-operator-targets-client-tls-secret`
 
+### 🔍 Secret Creation Discovery (NEW)
+
+**Who Creates the Secrets?**
+
+The **`config-reader` container** (sidecar in the Target Allocator pod) auto-generates the TLS secrets on startup:
+
+```log
+2025/12/01 19:12:01 Secret ama-metrics-operator-targets-server-tls-secret created/updated successfully in namespace kube-system
+2025/12/01 19:12:01 Generating secret with CA cert
+2025/12/01 19:12:01 Secret ama-metrics-operator-targets-client-tls-secret created/updated successfully in namespace kube-system
+2025/12/01 19:12:01 TLS certificates and secret generated successfully
+```
+
+**How It Works:**
+1. `config-reader` container starts first
+2. Generates self-signed CA and server/client certificates
+3. Creates the secrets in the deployment namespace
+4. `targetallocator` container reads certs from volume mounts
+5. Pod becomes 2/2 Running
+
+**RBAC Required:**
+- Uses `ama-metrics-serviceaccount` 
+- Bound to `ama-metrics-reader` ClusterRole via `ama-metrics-clusterrolebinding`
+- ClusterRole has `secrets: create` permission
+
 **Why kube-system works:**
-- Previous deployments created these secrets
-- Secrets persist even after Helm uninstall (they may be managed externally)
+- The config-reader successfully creates secrets with proper RBAC
+- Secrets are auto-generated on each fresh deployment
+
+**Why custom namespace initially failed:**
+- Likely a timing/race condition on first attempt
+- The `--secret-namespace` flag needs to point to the correct namespace
+- ClusterRoleBinding works across namespaces (cluster-scoped)
 
 **Solutions:**
-1. **Copy secrets from kube-system:**
+1. **Wait for auto-creation** (secrets are created by config-reader):
+   - Ensure RBAC (ClusterRoleBinding) is properly deployed
+   - Verify `--secret-namespace` matches deployment namespace
+
+2. **Copy secrets from kube-system (if already exist):**
    ```bash
    kubectl get secret ama-metrics-operator-targets-server-tls-secret -n kube-system -o yaml | \
      sed 's/namespace: kube-system/namespace: ama-metrics-zane-test/' | kubectl apply -f -
@@ -67,14 +101,14 @@ open /etc/operator-targets/server/certs/server.crt: no such file or directory
      sed 's/namespace: kube-system/namespace: ama-metrics-zane-test/' | kubectl apply -f -
    ```
 
-2. **Disable HTTPS (not recommended for production):**
+3. **Disable HTTPS (not recommended for production):**
    ```yaml
    # In values.yaml
    AzureMonitorMetrics:
      OperatorTargetsHttpsEnabled: false
    ```
 
-3. **Use cert-manager:**
+4. **Use cert-manager:**
    - Set up cert-manager to generate certificates in the custom namespace
 
 ---
