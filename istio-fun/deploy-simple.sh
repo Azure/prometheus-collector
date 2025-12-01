@@ -8,9 +8,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHART_DIR="${SCRIPT_DIR}/../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon"
-#NAMESPACE="${NAMESPACE:-ama-metrics-zane-test}"  # Can be overridden via environment variable
-NAMESPACE="${NAMESPACE:-kube-system}"  # Can be overridden via environment variable
-
+NAMESPACE="${NAMESPACE:-ama-metrics-zane-test}"  # Can be overridden via environment variable
+#NAMESPACE="${NAMESPACE:-kube-system}"  # Can be overridden via environment variable
+img="6.24.1-zane-istio-play-12-01-2025-3948018a"
 
 echo "=========================================="
 echo "Deploying ama-metrics Helm Chart"
@@ -33,7 +33,7 @@ fi
 
 # Create values.yaml with custom namespace
 if [ -f "${CHART_DIR}/values-template.yaml" ]; then
-    sed -e 's/${IMAGE_TAG}/6.24.1-main-11-14-2025-15146744/g' \
+    sed -e "s/\${IMAGE_TAG}/${img}/g" \
         -e 's|${MCR_REPOSITORY}|/azuremonitor/containerinsights/ciprod/prometheus-collector/images|g' \
         -e 's/${ARC_EXTENSION}/false/g' \
         -e 's/${AKS_REGION}/westeurope/g' \
@@ -47,19 +47,34 @@ echo ""
 echo "Deploying to ${NAMESPACE}..."
 echo ""
 
-# Check if release already exists
-if helm list -n ${NAMESPACE} 2>/dev/null | grep -q ama-metrics; then
-    echo "Upgrading existing release..."
-    helm upgrade ama-metrics ${CHART_DIR} \
-        --namespace ${NAMESPACE} \
-        --values ${CHART_DIR}/values.yaml
-else
-    echo "Installing new release..."
-    helm install ama-metrics ${CHART_DIR} \
-        --namespace ${NAMESPACE} \
-        --create-namespace \
-        --values ${CHART_DIR}/values.yaml
+# Check if namespace exists and clean up if needed
+if kubectl get namespace ${NAMESPACE} >/dev/null 2>&1; then
+    echo "⚠ Namespace ${NAMESPACE} already exists"
+    echo "Deleting existing namespace and resources..."
+    
+    # Uninstall helm release first if it exists
+    if helm list -n ${NAMESPACE} 2>/dev/null | grep -q ama-metrics; then
+        helm uninstall ama-metrics -n ${NAMESPACE} --wait || true
+    fi
+    
+    # Delete the namespace
+    kubectl delete namespace ${NAMESPACE} --wait=true
+    echo "✓ Deleted namespace ${NAMESPACE}"
+    
+    # Wait for namespace to be fully deleted
+    echo "Waiting for namespace deletion to complete..."
+    while kubectl get namespace ${NAMESPACE} >/dev/null 2>&1; do
+        sleep 2
+    done
+    echo "✓ Namespace fully deleted"
 fi
+
+# Fresh install
+echo "Installing new release..."
+helm install ama-metrics ${CHART_DIR} \
+    --namespace ${NAMESPACE} \
+    --create-namespace \
+    --values ${CHART_DIR}/values.yaml
 
 echo ""
 echo "=========================================="
