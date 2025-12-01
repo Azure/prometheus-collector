@@ -52,6 +52,15 @@ var taLivenessCounter = 0
 var taLivenessStartTime = time.Time{}
 var cfgReaderContainerStartTime = time.Time{}
 
+// getNamespace returns the namespace from OTELCOL_NAMESPACE env var, defaulting to kube-system
+func getNamespace() string {
+	namespace := os.Getenv("OTELCOL_NAMESPACE")
+	if namespace == "" {
+		namespace = "kube-system"
+	}
+	return namespace
+}
+
 func logFatalError(message string) {
 	// Always log the full message
 	log.Fatalf("%s%s%s", RED, message, RESET)
@@ -313,12 +322,13 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 }
 
 func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certificate,
-	caKey *rsa.PrivateKey) (string, string, error) {
-	log.Println("Creating server certificate")
-	dnsNames := []string{
-		"localhost",
-		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
-	}
+caKey *rsa.PrivateKey) (string, string, error) {
+log.Println("Creating server certificate")
+namespace := getNamespace()
+dnsNames := []string{
+"localhost",
+fmt.Sprintf("ama-metrics-operator-targets.%s.svc.cluster.local", namespace),
+}
 	now := time.Now()
 	notAfter := now.AddDate(0, ServerValidityMonths, 0)
 
@@ -366,10 +376,10 @@ func createClientCertificate(co certOperator.CertOperator, caCert *x509.Certific
 }
 
 func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
-	log.Println("Generating secret with server cert, server key and CA cert")
-	// Create secret from the ca cert, server cert and server key
-	secretName := "ama-metrics-operator-targets-server-tls-secret"
-	namespace := "kube-system"
+log.Println("Generating secret with server cert, server key and CA cert")
+// Create secret from the ca cert, server cert and server key
+secretName := "ama-metrics-operator-targets-server-tls-secret"
+namespace := getNamespace()
 
 	// Create the secret data
 	secretData := map[string][]byte{
@@ -421,10 +431,10 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 }
 
 func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string, caCertPem string) error {
-	log.Println("Generating secret with CA cert")
-	// Create secret from the ca cert, server cert and server key
-	secretName := "ama-metrics-operator-targets-client-tls-secret"
-	namespace := "kube-system"
+log.Println("Generating secret with CA cert")
+// Create secret from the ca cert, server cert and server key
+secretName := "ama-metrics-operator-targets-client-tls-secret"
+namespace := getNamespace()
 
 	// Create the secret data
 	secretData := map[string][]byte{
