@@ -157,47 +157,47 @@
         "parameters": {}
       }
     },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(parameters('clusterResourceId')))]",
-      "apiVersion": "2017-05-10",
-      "subscriptionId": "[variables('clusterSubscriptionId')]",
-      "resourceGroup": "[variables('clusterResourceGroup')]",
-      "dependsOn": [
-        "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {},
-          "variables": {},
-          "resources": [
-            {
-              "name": "[variables('clusterName')]",
-              "type": "Microsoft.ContainerService/managedClusters",
-              "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
-              "properties": {
-                "mode": "Incremental",
-                "id": "[parameters('clusterResourceId')]",
-                "azureMonitorProfile": {
-                  "metrics": {
-                    "enabled": true,
-                    "kubeStateMetrics": {
-                      "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
-                      "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "parameters": {}
-      }
-    },
+    // {
+    //   "type": "Microsoft.Resources/deployments",
+    //   "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(parameters('clusterResourceId')))]",
+    //   "apiVersion": "2017-05-10",
+    //   "subscriptionId": "[variables('clusterSubscriptionId')]",
+    //   "resourceGroup": "[variables('clusterResourceGroup')]",
+    //   "dependsOn": [
+    //     "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
+    //   ],
+    //   "properties": {
+    //     "mode": "Incremental",
+    //     "template": {
+    //       "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    //       "contentVersion": "1.0.0.0",
+    //       "parameters": {},
+    //       "variables": {},
+    //       "resources": [
+    //         {
+    //           "name": "[variables('clusterName')]",
+    //           "type": "Microsoft.ContainerService/managedClusters",
+    //           "location": "[parameters('clusterLocation')]",
+    //           "apiVersion": "2023-01-01",
+    //           "properties": {
+    //             "mode": "Incremental",
+    //             "id": "[parameters('clusterResourceId')]",
+    //             "azureMonitorProfile": {
+    //               "metrics": {
+    //                 "enabled": true,
+    //                 "kubeStateMetrics": {
+    //                   "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+    //                   "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+    //                 }
+    //               }
+    //             }
+    //           }
+    //         }
+    //       ]
+    //     },
+    //     "parameters": {}
+    //   }
+    // },
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
