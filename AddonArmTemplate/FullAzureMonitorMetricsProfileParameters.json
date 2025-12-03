@@ -3,16 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "azureMonitorWorkspaceResourceId": {
-      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{amw_name}"
+      "value": "/subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourceGroups/zane-custom-ns/providers/Microsoft.Monitor/accounts/ZaneAzureMonitorWorkspace"
     },
     "azureMonitorWorkspaceLocation": {
-      "value": "{amwLocation}"
+      "value": "westeurope"
     },
     "clusterResourceId": {
-      "value": "/subscriptions/{sub_id}/resourcegroups/{rg_name}/providers/Microsoft.ContainerService/managedClusters/{cluster_name}"
+      "value": "/subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourceGroups/zane-custom-ns/providers/Microsoft.ContainerService/managedClusters/zane-metrics-custom-ns"
     },
     "clusterLocation": {
-      "value": "{clusterLocation}"
+      "value": "westeurope"
     },
     "metricLabelsAllowlist": {
       "value": ""
@@ -24,10 +24,10 @@
       "value": false
     },
     "grafanaResourceId": {
-      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/Microsoft.Dashboard/grafana/{grafana_name}"
+      "value": "/subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourceGroups/zane-custom-ns/providers/Microsoft.Dashboard/grafana/zane-metr-cust-graf1"
     },
     "grafanaLocation": {
-      "value": "{grafanaLocation}"
+      "value": "westeurope"
     },
     "grafanaSku": {
       "value": "Standard"
