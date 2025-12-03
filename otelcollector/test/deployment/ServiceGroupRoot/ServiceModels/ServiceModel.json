@@ -26,7 +26,7 @@
           "name": "PromCollectorTestsShellExtension",
           "composedOf": {
             "extension": {
-              "rolloutParametersPath": "RolloutParameters/RegionsTest.ShellExtension.RolloutParameters.json",
+              "rolloutParametersPath": "RolloutParameters/PromCollectorTests.ShellExtension.RolloutParameters.json",
               "shell": [
                 {
                   "type": "runScriptShell",
