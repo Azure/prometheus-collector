@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticRolloutSpecification.json",
+  "contentVersion": "1.0.0", 
+  "rolloutMetadata": {
+    "name": "prometheus-collector-ginkgoe2e-tests-rollout",
+    "serviceModelPath": "ServiceModels/ServiceModel.json",
+    "ScopeBindingsPath": "ScopeBindings.json",
+    "rolloutType": "Major",
+    "configuration": {
+      "serviceGroupScope": { "specPath": "config/$rolloutInfra().json" }
+    },    
+    "buildSource": {
+      "parameters": {
+        "versionFile": "buildver.txt"
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "PromCollectorTestsShellExtension",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "PromCollectorTestsShellExtension",
+      "actions": [ "shell/runPromCollectorTests" ]
+    }
+  ]
+}

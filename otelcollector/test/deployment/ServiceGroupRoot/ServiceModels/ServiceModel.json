@@ -1,0 +1,44 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/RegionAgnosticServiceModel.json",
+  "contentVersion": "1.0.0",
+  "serviceMetadata": {
+        "serviceIdentifier": "335c5688-a203-441d-9dc7-89f7b874a113",
+        "serviceGroup": "Microsoft.Azure.PrometheusCollector.GinkgoE2E.Tests",
+        "displayName": "PrometheusCollector GinkgoE2E Tests",
+        "tenantId": "$config(tenant)",
+        "environment": "$config(environment)"
+  },  
+  "serviceResourceGroupDefinitions": [
+    {
+      "name": "Run.PromTests",
+      "subscriptionKey": "prom-test",
+      "azureResourceGroupName": "prom-test",
+      "stamps": {
+        "Count": 1
+      },
+      "scopeTags": [    {
+          "name": "Common"
+      }],
+      "serviceResourceDefinitions": [
+        {
+          "name": "PromCollectorTestsShellExtension",
+          "composedOf": {
+            "extension": {
+              "rolloutParametersPath": "RolloutParameters/RegionsTest.ShellExtension.RolloutParameters.json",
+              "shell": [
+                {
+                  "type": "runScriptShell",
+                  "properties": {
+                      "imageName": "adm-mariner-20-l",
+                      "imageVersion": "v4"
+                  }                  
+                }
+              ]
+            }            
+          }
+        }
+      ]
+    }
+
+  ]
+}

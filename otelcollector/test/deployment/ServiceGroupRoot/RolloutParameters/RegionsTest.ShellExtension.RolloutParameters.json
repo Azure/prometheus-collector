@@ -1,0 +1,54 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/rolloutParameters.json",
+  "contentVersion": "1.0.0.0",
+  "shellExtensions" : [
+    {
+        "name": "runPromCollectorTests",
+        "type": "runScriptShell",
+        "properties": {
+            "maxExecutionTime": "PT30M"
+        },
+        "package": {
+            "reference": {
+                "path": "packages/tests.zip"
+            }
+        },
+        "launch": {
+          "command": [
+              "/bin/bash",
+              "-c",
+              "pwsh ./query-aks2.ps1 -clientId '$_CLIENT_ID_$' -subscriptionId '$_SUBSCRIPTION_ID_$' -environment '$_ENV_$' -ResourceGroupName '$_RESOURCE_GROUP_NAME_$' -AksName '$_AKS_NAME_$' -amwName '$_AMW_NAME_$' -logsStorageAccountName '$_LOG_STORAGE_ACCOUNT_NAME_$'"
+            ],
+          "subnetIds": [
+            {
+              "id": "$_SHELL_SUBNET_ID_$"
+            }
+          ],  
+          "environmentVariables": [
+            {
+                "name": "AZURE_CLIENT_ID",
+                "value": "$_CLIENT_ID_$"
+            },
+            {
+                "name": "AZURE_SDK_GO_LOGGING",
+                "value": "all"
+            }            
+        ],                    
+          "identity": {
+              "type": "UserAssigned",
+              "userAssignedIdentities": [
+                "$_MANAGED_IDENTITY_ID_$"
+              ]
+          }          
+        }
+    }
+  ],
+  "wait": [
+    {
+      "name": "wait2Hours",
+      "properties": {
+        "duration": "PT2H"
+      }
+    }
+  ]
+}

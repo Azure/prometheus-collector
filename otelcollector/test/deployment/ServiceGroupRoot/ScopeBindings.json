@@ -1,0 +1,100 @@
+{
+  "$schema": "http://schema.express.azure.com/schemas/2015-01-01-alpha/ScopeBindings.json",
+  "contentVersion": "1.0.0.0",
+    "scopeBindings": [
+        {
+            "scopeTagName": "Common",
+            "bindings": [
+                {
+                    "find": "$_ENV_$",
+                    "replaceWith": "$config(environment)"
+                },                
+                {
+                    "find": "$_SUBSCRIPTION_ID_$",
+                    "replaceWith": "$config(subscriptionId)"
+                },   
+                {
+                    "find": "$_RESOURCE_GROUP_NAME_$",
+                    "replaceWith": "$azureResourceGroup()"
+                },                             
+                {
+                    "find": "$_LOG_STORAGE_ACCOUNT_NAME_$",
+                    "replaceWith": "stshellextlogs12345"
+                },               
+                {
+                    "find": "$_VNET_NAME_$",
+                    "replaceWith": "aksVnet"
+                },
+                {
+                    "find": "$_SHELL_SUBNET_NAME_$",
+                    "replaceWith": "shellSubnet"
+                },
+                {
+                    "find": "$_CLIENT_ID_$",
+                    "replaceWith": "$config(clientId)"
+                },
+                {
+                    "find": "$_MANAGED_IDENTITY_NAME_$",
+                    "replaceWith": "$config(managedIdentityName)"
+                },
+                {
+                    "find": "$_MANAGED_IDENTITY_ID_$",
+                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$config(managedIdentityName)"
+                },
+                {
+                    "find": "$_AKS_NAME_$",
+                    "replaceWith": "$config(aksName)"
+                },
+                {
+                    "find": "$_AMW_NAME_$",
+                    "replaceWith": "$config(amwName)"
+                },
+                {
+                    "find": "$_SHELL_SUBNET_ID_$",
+                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/aksVnet/subnets/shellSubnet"
+                }                         
+            ]
+        },
+        {
+            "scopeTagName": "PublicDev",
+            "bindings": [
+                {
+                    "find": "$_CLIENT_ID_$",
+                    "replaceWith": "de61beff-a8f7-4016-810d-2a744c5fe868"
+                },
+                {
+                    "find": "$_MANAGED_IDENTITY_NAME_$",
+                    "replaceWith": "prom-test-mi"
+                },
+                {
+                    "find": "$_MANAGED_IDENTITY_ID_$",
+                    "replaceWith": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/prom-test-mi"
+                },
+                {
+                    "find": "$_SUBSCRIPTION_ID_$",
+                    "replaceWith": "84ca48fe-c942-42e5-b492-d56681d058fa"
+                },
+                                {
+                    "find": "$_ENV_$",
+                    "replaceWith": ""
+                },
+                {
+                    "find": "$_RESOURCE_GROUP_NAME_$",
+                    "replaceWith": "wtd-dev"
+                },
+                {
+                    "find": "$_AKS_NAME_$",
+                    "replaceWith": "wtdDemoCluster"
+                },
+                {
+                    "find": "$_AMW_NAME_$",
+                    "replaceWith": "wtdDemoCluster-amw"
+                },
+                {
+                    "find": "$_SHELL_SUBNET_ID_$",
+                    "replaceWith": "/subscriptions/84ca48fe-c942-42e5-b492-d56681d058fa/resourceGroups/wtd-dev/providers/Microsoft.Network/virtualNetworks/aksVnet/subnets/shellSubnet"
+                }                   
+            ]
+        }          
+    ]
+}
