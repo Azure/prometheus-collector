@@ -5,6 +5,7 @@
     "environment": "USNat",
     "subscriptionId": "061390fc-1b69-430f-8ca1-db6511bfa549",
     "clientId": "6ae0f871-c572-46ae-a335-76d07e46a0cf",
+    "principalId": "",
     "managedIdentityName": "prom-test-msi",
     "aksName": "aksTestCluster",
     "amwName": "aksTestCluster-amw"

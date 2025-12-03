@@ -1,0 +1,15 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "principalId": {
+      "value": "$_PRINCIPAL_ID_$"
+    },
+    "subscriptionId": {
+      "value": "$_SUBSCRIPTION_ID_$"
+    },
+    "resourceGroupName": {
+      "value": "$_RESOURCE_GROUP_NAME_$"
+    }
+  }
+}

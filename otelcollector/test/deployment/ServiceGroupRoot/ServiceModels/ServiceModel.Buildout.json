@@ -10,7 +10,7 @@
   },  
   "serviceResourceGroupDefinitions": [
     {
-      "name": "Run.PromTests",
+      "name": "Deploy.AksCluster",
       "subscriptionKey": "prom-test",
       "azureResourceGroupName": "prom-test",
       "stamps": {
@@ -23,22 +23,23 @@
       ],
       "serviceResourceDefinitions": [
         {
-          "name": "PromCollectorTestsShellExtension",
+          "name": "Deploy.AksCluster",
           "composedOf": {
-            "extension": {
-              "rolloutParametersPath": "RolloutParameters/RegionsTest.ShellExtension.RolloutParameters.json",
-              "shell": [
-                {
-                  "type": "runScriptShell",
-                  "properties": {
-                      "imageName": "adm-mariner-20-l",
-                      "imageVersion": "v4"
-                  }                  
-                }
-              ]
-            }            
+            "arm": {
+              "templatePath": "Templates/ci-cd-cluster.json",
+              "parameterPath": "Parameters/ci-cd-cluster.parameters.json"
+            }
           }
-        }
+        },
+        {
+          "name": "Deploy.ClusterRoleAssignments",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/RoleAssignments.Template.json",
+              "parameterPath": "Parameters/RoleAssignments.Parameters.json"
+            }
+          }
+        }        
       ]
     }
 

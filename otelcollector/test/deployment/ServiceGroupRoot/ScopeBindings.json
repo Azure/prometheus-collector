@@ -34,6 +34,10 @@
                     "replaceWith": "$config(clientId)"
                 },
                 {
+                    "find": "$_PRINCIPAL_ID_$",
+                    "replaceWith": "$config(principalId)"
+                },
+                {
                     "find": "$_MANAGED_IDENTITY_NAME_$",
                     "replaceWith": "$config(managedIdentityName)"
                 },

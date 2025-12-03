@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticRolloutSpecification.json",
+  "contentVersion": "1.0.0", 
+  "rolloutMetadata": {
+    "name": "prometheus-collector-ginkgoe2e-tests-rollout",
+    "serviceModelPath": "ServiceModels/ServiceModel.Buildout.json",
+    "ScopeBindingsPath": "ScopeBindings.json",
+    "rolloutType": "Major",
+    "configuration": {
+      "serviceGroupScope": { "specPath": "config/$rolloutInfra().json" }
+    },    
+    "buildSource": {
+      "parameters": {
+        "versionFile": "buildver.txt"
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "Deploy.AksCluster",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "Deploy.AksCluster",
+      "actions": [ "deploy" ]
+    },
+    {
+      "name": "Deploy.ClusterRoleAssignments",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "Deploy.ClusterRoleAssignments",
+      "actions": [ "deploy" ],
+      "dependsOn": ["Deploy.AksCluster"]
+    }    
+  ]
+}
