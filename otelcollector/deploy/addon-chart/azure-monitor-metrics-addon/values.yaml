@@ -1,0 +1,175 @@
+# Custom namespace for deployment (defaults to kube-system for compatibility)
+namespace: "ama-metrics-zane-test"
+
+AzureMonitorMetrics:
+  KubeStateMetrics:
+# Uncomment the below 2 settings if you want to pass in the labels and/or annotations or metrics
+    #MetricLabelsAllowlist: "testlabel=[.*]"
+    #MetricAnnotationsAllowList: ""
+    #MetricAllowList: ""
+    ImageRegistry: mcr.microsoft.com
+    ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
+    CPULimit: 1
+    MemoryLimit: 5Gi
+# Kube-state-metrics ImageTag - 2.17.0, corresponds to chart version - 6.2.0
+    ImageTag: "v2.17.0-4"
+    Collectors:
+      - certificatesigningrequests
+      - configmaps
+      - cronjobs
+      - daemonsets
+      - deployments
+      - endpoints
+      - horizontalpodautoscalers
+      - ingresses
+      - jobs
+      - leases
+      - limitranges
+      - mutatingwebhookconfigurations
+      - namespaces
+      - networkpolicies
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - poddisruptionbudgets
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - resourcequotas
+      - secrets
+      - services
+      - statefulsets
+      - storageclasses
+      - validatingwebhookconfigurations
+      - volumeattachments
+  ImageRegistry: mcr.microsoft.com
+  ImageRepository: /azuremonitor/containerinsights/cidev/prometheus-collector/images
+  ImageTag: 6.24.1-zane-istio-play-12-01-2025-5872518c
+  ImageTagWin: 6.24.1-zane-istio-play-12-01-2025-5872518c-win
+  RsCPULimit: 7
+  RsMemoryLimit: 14Gi
+  RsCPURequest: 150m
+  RsMemoryRequest: 500Mi
+  DsCPULimitLinux: 200m
+  DsMemoryLimitLinux: 1Gi
+  DsCPURequestLinux: 50m
+  DsMemoryRequestLinux: 150Mi
+  DsCPULimitWindows: 500m
+  DsMemoryLimitWindows: 1Gi
+  ImageTagTargetAllocator: 6.24.1-zane-istio-play-12-01-2025-5872518c-targetallocator
+  ImageTagCfgReader: 6.24.1-zane-istio-play-12-01-2025-5872518c-cfg
+  TargetAllocatorEnabled: true
+  CollectorHPAEnabled: true
+  OperatorTargetsHttpsEnabled: true
+  DeploymentReplicas: 2
+  CfgReaderCPULimit: 1
+  CfgReaderMemoryLimit: 1Gi
+  CfgReaderCPURequest: 1m
+  CfgReaderMemoryRequest: 10Mi
+  TargetAllocatorCPULimit: 5
+  TargetAllocatorMemoryLimit: 8Gi
+  TargetAllocatorCPURequest: 10m
+  TargetAllocatorMemoryRequest: 50Mi
+  IsAppMonitoringAutoInstrumentationEnabled: false
+  IsAppMonitoringOpenTelemetryMetricsEnabled: false
+  OpenTelemetryMetricsPort: "28333"
+  enableDaemonSetSizing: false
+  daemonSetSizingValues: {}
+  # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
+  # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
+  # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
+  # ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
+  AddonTokenAdapter:
+    ImageRegistry: mcr.microsoft.com
+    ImageRepository: "/aks/msi/addon-token-adapter"
+    ImageTag: "master.250423.2"
+    ImageRepositoryWin: "/aks/msi/addon-token-adapter"
+    ImageTagWin: "master.250423.2"
+  ArcExtension: false
+  ArcEnableOperator: true
+  # Do not change the below settings. They are reserved for Arc Autonomous
+  isArcACluster: false
+  arcAutonomousSettings:
+    customRegionalEndpoint: ""
+    customGlobalEndpoint: ""
+    customResourceEndpoint: ""
+AppmonitoringAgent:
+    enabled: false
+    isOpenTelemetryLogsEnabled: false
+    isOpenTelemetryMetricsEnabled: false
+    openTelemetryMetricsPort: 28333
+global:
+  commonGlobals:
+    CloudEnvironment: "azurepubliccloud"
+    Region: "westeurope"
+    Customer:
+      AzureResourceID: /subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourcegroups/zane-custom-ns/providers/Microsoft.ContainerService/managedClusters/zane-metrics-custom-ns
+    isAutomaticSKU: false
+
+# For ARC backdoor testing
+Azure:
+  Extension:
+    Name: azuremonitor-metrics
+  Cluster:
+    ResourceId: "${ARC_RESOURCE_ID}"
+    Region: "${ARC_REGION}"
+    Cloud: "azurepubliccloud"
+    Distribution: ""
+  proxySettings:
+    isProxyEnabled: "false"
+    httpProxy: ""
+    httpsProxy: ""
+    noProxy: ""
+    proxyCert: ""
+  Identity:
+      MSIAdapterYaml: |-
+        - name: EXTENSION_ARMID
+          value: ${ARC_RESOURCE_ID}/providers/Microsoft.KubernetesConfiguration/extensions/azuremonitor-metrics
+        - name: EXTENSION_NAME
+          value: azuremonitor-metrics
+        - name: CLUSTER_IDENTITY
+          value: "false"
+        - name: CLUSTER_TYPE
+          value:  ConnectedClusters
+        - name: MANAGED_IDENTITY_AUTH
+          value: "true"
+        - name: TEST_MODE
+          value: "false"
+        - name: TEST_FILE
+          value: "/data/token"
+        image: "mcr.microsoft.com/azurearck8s/msi-adapter:1.0.4"
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9999
+            scheme: "HTTP"
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+
+# Arc override values for customers
+ClusterDistribution: ""
+CloudEnvironment: ""
+MountCATrustAnchorsDirectory: true
+MountUbuntuCACertDirectory: true
+
+prometheus-node-exporter:
+  service:
+    enabled: true
+    port: 9110
+    targetPort: 9110
+  image:
+    registry: mcr.microsoft.com
+    repository: oss/v2/prometheus/node-exporter
+tolerationsOnlyForControlPlane: false
