@@ -3,6 +3,7 @@ trigger: none
 parameters:
  - name: buildVersion
    type: string
+   default: ''
  - name: cvrpPath
    type: string
    default: '.\cvrp.manifest.json'

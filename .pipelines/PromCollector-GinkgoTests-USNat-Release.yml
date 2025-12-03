@@ -62,6 +62,6 @@ extends:
                 TaskAction: RegisterAndRollout
                 SkipRegistrationIfExists: true
                 ServiceRootPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot'
-                RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot/Rolloutspecs/RolloutSpec.USNat.json'
+                RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot/Rolloutspecs/RolloutSpec.json'
                 StageMapName: "Microsoft.Azure.SDP.Standard"
                 Select: regions(${{ parameters.deployToRegions }}) 
