@@ -11,8 +11,8 @@
   "serviceResourceGroupDefinitions": [
     {
       "name": "Deploy.AksCluster",
-      "subscriptionKey": "prom-test",
-      "azureResourceGroupName": "prom-test",
+      "subscriptionKey": "prom-test-$location()",
+      "azureResourceGroupName": "prom-test-$location()",
       "stamps": {
         "Count": 1
       },
