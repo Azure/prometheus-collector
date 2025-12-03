@@ -1,0 +1,9 @@
+{
+    "ServiceEndpoint": "https://management.core.eaglex.ic.gov/",
+    "ActiveDirectoryEndpoint": "https://login.microsoftonline.eaglex.ic.gov/",
+    "ResourceManagerEndpoint": "https://management.azure.eaglex.ic.gov",
+    "ActiveDirectoryServiceEndpointResourceId": "https://management.azure.eaglex.ic.gov/",
+    "GraphEndpoint": "https://graph.cloudapi.eaglex.ic.gov",
+    "AzureKeyVaultDnsSuffix": "vault.cloudapi.eaglex.ic.gov",
+    "AzureKeyVaultServiceEndpointResourceId": "https://vault.cloudapi.eaglex.ic.gov"
+}
