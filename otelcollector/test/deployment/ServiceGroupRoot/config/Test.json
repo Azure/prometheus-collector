@@ -1,0 +1,12 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ConfigurationSpecification.json#",
+  "Settings": {
+    "tenant": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "environment": "Test",
+    "subscriptionId": "b9842c7c-1a38-4385-8f39-a5131475",
+    "clientId": "de61beff-a8f7-4016-810d-2a744c5fe868",
+    "managedIdentityName": "prom-test-mi",
+    "aksName": "aksDemoCluster",
+    "amwName": "aksDemoCluster-amw"    
+  }
+}
