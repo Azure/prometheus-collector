@@ -123,11 +123,24 @@ if kubectl get namespace ${NAMESPACE} >/dev/null 2>&1; then
     fi
 fi
 
+# Create namespace if it doesn't exist (or was just deleted)
+if ! kubectl get namespace ${NAMESPACE} >/dev/null 2>&1; then
+    echo "Creating namespace ${NAMESPACE}..."
+    kubectl create namespace ${NAMESPACE}
+    echo "✓ Namespace created"
+    
+    # Copy secret from kube-system to the new namespace
+    echo "Copying aad-msi-auth-token secret from kube-system..."
+    kubectl get secret aad-msi-auth-token -n kube-system -o yaml | \
+      sed "s/namespace: kube-system/namespace: ${NAMESPACE}/" | \
+      kubectl apply -f -
+    echo "✓ Secret copied to ${NAMESPACE}"
+fi
+
 # Fresh install
 echo "Installing new release..."
 helm install ama-metrics ${CHART_DIR} \
     --namespace ${NAMESPACE} \
-    --create-namespace \
     --values ${CHART_DIR}/values.yaml
 
 echo ""
