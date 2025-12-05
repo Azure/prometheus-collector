@@ -30,6 +30,14 @@
                 "value": "$_CLIENT_ID_$"
             },
             {
+                "name": "CLOUD_ENVIRONMENT",
+                "value": "$_ENV_$"
+            },
+                        {
+                "name": "GO_CLOUDCONFIG_PATH",
+                "value": "./"
+            },
+            {
                 "name": "AZURE_SDK_GO_LOGGING",
                 "value": "all"
             }            

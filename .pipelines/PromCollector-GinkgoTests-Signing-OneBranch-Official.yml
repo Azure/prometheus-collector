@@ -11,8 +11,9 @@ parameters:
    type: string
    default: 'drop-prometheus-collector'
  - name: debugMode
+   displayName: 'Enable debug output' 
    type: boolean
-   default: false  
+   default: true 
 
 variables:
   WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2019/vse2022:latest'
@@ -71,40 +72,41 @@ extends:
             - task: CopyFiles@2
               displayName: Copy ServiceGroupRoot to staging directory
               inputs:
-                SourceFolder: '$(System.DefaultWorkingDirectory)/Deployment'
+                ##SourceFolder: '$(System.DefaultWorkingDirectory)/Deployment'
+                SourceFolder: '$(System.DefaultWorkingDirectory)'
                 Contents: '**'
                 TargetFolder: '$(OB_OutputDirectory)' 
-            - task: PowerShell@2
-              displayName: Copy .test to output as .exe
-              inputs:
-                targetType: 'inline'
-                script: |
-                  $source = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests/*.test'
-                  $sourceDir = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'
-                  $destinationDir = "$(OB_OutputDirectory)/serviceGroupRoot/ev2scripts"
-                  $destinationFile = Join-Path $destinationDir "*.exe"
+            # # - task: PowerShell@2
+            # #   displayName: Copy .test to output as .exe
+            # #   inputs:
+            # #     targetType: 'inline'
+            # #     script: |
+            # #       $source = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests/*.test'
+            # #       $sourceDir = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'
+            # #       $destinationDir = "$(OB_OutputDirectory)/serviceGroupRoot/ev2scripts"
+            # #       $destinationFile = Join-Path $destinationDir "*.exe"
 
-                  # Create destination directory if it doesn't exist
-                  if (-not (Test-Path $destinationDir)) {
-                      New-Item -ItemType Directory -Path $destinationDir | Out-Null
-                  }
+            # #       # Create destination directory if it doesn't exist
+            # #       if (-not (Test-Path $destinationDir)) {
+            # #           New-Item -ItemType Directory -Path $destinationDir | Out-Null
+            # #       }
 
-                  # Copy the file(s)
-                  ##Copy-Item -Path $source -Destination $destinationFile -Force
-                  # Copy *.test files and rename to *.exe
-                  Get-ChildItem -Path $sourceDir -Filter "*.test" | ForEach-Object {
-                      $newName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".exe"
-                      Copy-Item -Path $_.FullName -Destination (Join-Path $destinationDir $newName)
-                  }
+            # #       # Copy the file(s)
+            # #       ##Copy-Item -Path $source -Destination $destinationFile -Force
+            # #       # Copy *.test files and rename to *.exe
+            # #       Get-ChildItem -Path $sourceDir -Filter "*.test" | ForEach-Object {
+            # #           $newName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".exe"
+            # #           Copy-Item -Path $_.FullName -Destination (Join-Path $destinationDir $newName)
+            # #       }
 
-                  Write-Host "All .test files copied and renamed to .exe in $destinationDir"
+            # #       Write-Host "All .test files copied and renamed to .exe in $destinationDir"
 
-            - task: CopyFiles@2
-              displayName: Copy ci-cd templates to output
-              inputs:
-                SourceFolder: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/ci-cd'
-                Contents: '*.*'
-                TargetFolder: '$(OB_OutputDirectory)/serviceGroupRoot/templates'                    
+            # # - task: CopyFiles@2
+            # #   displayName: Copy ci-cd templates to output
+            # #   inputs:
+            # #     SourceFolder: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/ci-cd'
+            # #     Contents: '*.*'
+            # #     TargetFolder: '$(OB_OutputDirectory)/serviceGroupRoot/templates'                    
             - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
               displayName: 'Package Signing - deployment files'
               inputs:

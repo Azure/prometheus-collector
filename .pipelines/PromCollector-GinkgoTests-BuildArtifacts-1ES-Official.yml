@@ -11,7 +11,7 @@ trigger: none  # https://aka.ms/obpipelines/triggers
 # global parameteres are configured here and show up in AzDO UI in build queue time. Required for MSBuild and .NET.
 # learn more at https://aka.ms/obpipelines/parameters
 parameters:
-- name: 'debug'
+- name: 'debugMode'
   displayName: 'Enable debug output'
   type: boolean
   default: true
@@ -24,7 +24,7 @@ variables:
   ManifestGeneratorTaskTimeoutInMinutes: 30
   1espt.codesignvalidation.enforced: true
 
-  system.debug: ${{ parameters.debug }}
+  system.debug: ${{ parameters.debugMode }}
   CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)]  # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
   ENABLE_PRS_DELAYSIGN: 0
   ROOT: $(Build.SourcesDirectory)
@@ -69,7 +69,8 @@ extends:
         enabled: true
         timeoutInMinutes: 30
         itemPattern: '**/*.ps1'
-        rootPaths: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+        ##rootPaths: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+        rootPaths: '$(System.DefaultWorkingDirectory)/../promrepo'
       sourceRepositoriesToScan:
         exclude:
         - repository: prometheus-collector
@@ -126,9 +127,17 @@ extends:
             persistCredentials: true          
             path: selfrepo
           - checkout: prometheus-collector
-            sparseCheckoutDirectories: otelcollector/test/ci-cd otelcollector/test/ginkgo-e2e
+            ##sparseCheckoutDirectories: otelcollector/test/ci-cd otelcollector/test/ginkgo-e2e
+            sparseCheckoutDirectories: otelcollector/test
             persistCredentials: true
             path: promrepo
+          - task: PowerShell@2
+            displayName: 'Debug (Pipeline.Workspace)'
+            condition: eq('${{ parameters.debugMode }}', true)
+            inputs:
+              targetType: 'inline'
+              script: |
+                Get-ChildItem -Path "$(Pipeline.Workspace)" -Recurse | ForEach-Object { Write-Host $_.FullName }              
 
           - task: PowerShell@2
             displayName: go mod tidy
@@ -227,35 +236,34 @@ extends:
               CGO_ENABLED: 0
             inputs:
               targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
-              ## ***************************
               workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests" # string. Optional. Working directory.
-              ##filePath: # string. Required when targetType = filePath. Script Path. 
-              #arguments: # string. Optional. Use when targetType = filePath. Arguments. 
               script: |
                 ginkgo build
-                Rename-Item regionTests.test regionTests-linux.test
+                Rename-Item regionTests.test regionTests-linux.exe
 
           - task: CopyFiles@2
-            displayName: Copy AKS ARM template to build staging directory
-            inputs:
-            ## *****************************************
-              SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ci-cd'
-              Contents: '**'
-              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ci-cd'
-
-          - task: CopyFiles@2
-            displayName: Copy ginkgo-e2e to build staging directory
+            displayName: Copy ginkgo-e2e tests (.EXEs) to build staging directory
             inputs:
             ## *****************************************
               SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ginkgo-e2e/regionTests'
+              Contents: '**/*.exe'
+              ##TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'              
+              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ev2scripts'              
+
+          - task: CopyFiles@2
+            displayName: Copy ginkgo-e2e cloud configuration files to staging directory
+            inputs:
+              SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ginkgo-e2e/configuration'
               Contents: '**'
-              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'              
+              ##TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests' 
+              TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ev2scripts' 
 
           - task: CopyFiles@2
             displayName: Copy ev2 artifacts to staging directory
             inputs:
             ## *****************************************            
-              SourceFolder: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+              ##SourceFolder: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+              SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/deployment/ServiceGroupRoot'
               Contents: '**'
               TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot'
 
@@ -312,7 +320,8 @@ extends:
                   signType: esrp
                   certificateId: CP-466278
                   pattern: '**/*.ps1'
-                  directory: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+                  ##directory: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
+                  directory: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/deployment/ServiceGroupRoot'
                   operations: 
                     - SigntoolSign
                   clientId: $(system.identity.clientId)

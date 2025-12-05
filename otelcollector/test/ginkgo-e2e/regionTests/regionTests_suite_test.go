@@ -12,7 +12,6 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/monitor/azquery"
@@ -54,20 +53,20 @@ func TestTest(t *testing.T) {
 	RunSpecs(t, "Test Suite")
 }
 
-var envConfig = cloud.Configuration{
+// var envConfig = cloud.Configuration{
 
-	ActiveDirectoryAuthorityHost: "https://login.microsoftonline.eaglex.ic.gov/",
-	Services: map[cloud.ServiceName]cloud.ServiceConfiguration{
-		cloud.ResourceManager: {
-			Endpoint: "https://management.azure.eaglex.ic.gov",
-			Audience: "https://management.azure.eaglex.ic.gov",
-		},
-		azquery.ServiceNameMetrics: {
-			Endpoint: "https://management.azure.eaglex.ic.gov",
-			Audience: "https://management.azure.eaglex.ic.gov",
-		},
-	},
-}
+// 	ActiveDirectoryAuthorityHost: "https://login.microsoftonline.eaglex.ic.gov/",
+// 	Services: map[cloud.ServiceName]cloud.ServiceConfiguration{
+// 		cloud.ResourceManager: {
+// 			Endpoint: "https://management.azure.eaglex.ic.gov",
+// 			Audience: "https://management.azure.eaglex.ic.gov",
+// 		},
+// 		azquery.ServiceNameMetrics: {
+// 			Endpoint: "https://management.azure.eaglex.ic.gov",
+// 			Audience: "https://management.azure.eaglex.ic.gov",
+// 		},
+// 	},
+// }
 
 // // TODO: Move to setup_utils.go later - POSSIBLY UNNEEDED NOW //////////////////////////////
 // func getKubeClient() (*kubernetes.Clientset, *rest.Config, error) {
@@ -95,7 +94,7 @@ var envConfig = cloud.Configuration{
 var _ = BeforeSuite(func() {
 	var err error
 	fmt.Println("Getting kube client")
-	////WTD K8sClient, Cfg, err = getKubeClient() ////************ utils.SetupKubernetesClient()
+	////WTD K8sClient, Cfg, err = getKubeClient()
 	K8sClient, Cfg, err = utils.SetupKubernetesClient()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -309,11 +308,17 @@ var _ = Describe("Regions Suite", func() {
 		It("Query Azure Monitor for AMW usage and limits metrics", func() {
 			////cred, err := azidentity.NewDefaultAzureCredential(nil)
 
+			cloudConfig, err := utils.GetCloudConfigFromEnvironment()
+			Expect(err).NotTo(HaveOccurred())
+
+			envConfig, err := cloudConfig.ReadCloudConfig()
+			Expect(err).NotTo(HaveOccurred())
+
 			// Create a credential using the specified client ID
 			cred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
 				ID: azidentity.ClientID(azureClientId),
 				ClientOptions: azcore.ClientOptions{
-					Cloud: envConfig,
+					Cloud: *envConfig,
 				},
 			})
 			if err != nil {
@@ -326,7 +331,7 @@ var _ = Describe("Regions Suite", func() {
 			client, err := azquery.NewMetricsClient(cred,
 				&azquery.MetricsClientOptions{
 					ClientOptions: azcore.ClientOptions{
-						Cloud: envConfig,
+						Cloud: *envConfig,
 					},
 				},
 			)

@@ -32,24 +32,63 @@ func (c CloudEnvironment) String() string {
 	}
 }
 
-// ParseCloudEnvironment converts a string to CloudEnvironment
-func ParseCloudEnvironment(s string) (CloudEnvironment, error) {
-	switch strings.ToLower(strings.Trim(s, " ")) { // Trim leading/trailing spaces.
-	case "":
-		return Public, nil
-	case "public":
-		return Public, nil
-	case "ussec":
-		return USSec, nil
-	case "usnat":
-		return USNat, nil
-	default:
-		return -1, fmt.Errorf("invalid cloud environment: %s", s)
-	}
+func GetCloudConfigFromEnvironment() (CloudEnvironment, error) {
+	strCloudEnv := getEnvOrDefault(CLOUD_ENVIRONMENT, "")
+	cloudEnv, err := ParseCloudEnvironment(strCloudEnv)
+	return cloudEnv, err
 }
 
+// ParseCloudEnvironment converts a string to CloudEnvironment
+func ParseCloudEnvironment(s string) (CloudEnvironment, error) {
+	// switch strings.ToLower(strings.Trim(s, " ")) { // Trim leading/trailing spaces.
+	// case "":
+	// 	return Public, nil
+	// case "test":
+	// 	return Public, nil
+	// case "prod":
+	// 	return Public, nil
+	// case "public":
+	// 	return Public, nil
+	// case "ussec":
+	// 	return USSec, nil
+	// case "usnat":
+	// 	return USNat, nil
+	// default:
+	// 	return -1, fmt.Errorf("invalid cloud environment: %s", s)
+	// }
+
+	envMap := map[string]CloudEnvironment{
+		"":       Public,
+		"test":   Public,
+		"prod":   Public,
+		"public": Public,
+		"ussec":  USSec,
+		"usnat":  USNat,
+	}
+
+	normalized := strings.ToLower(strings.TrimSpace(s))
+	if env, ok := envMap[normalized]; ok {
+		return env, nil
+	}
+	return -1, fmt.Errorf("invalid cloud environment: %s", s) //// WTD Maybe the default should just be Public.
+}
+
+const GO_CLOUDCONFIG_PATH string = "GO_CLOUDCONFIG_PATH"
+const CLOUD_ENVIRONMENT string = "CLOUD_ENVIRONMENT"
+
+var defaultCloudConfigPath string = "../configuration"
+
 func (cloudEnv *CloudEnvironment) GenerateCloudConfigFilePath() string {
-	return fmt.Sprintf("../configuration/cloudconfig_%s.json", cloudEnv.String())
+	envPath := getEnvOrDefault(GO_CLOUDCONFIG_PATH, defaultCloudConfigPath)
+	return fmt.Sprintf("%s/cloudconfig_%s.json", strings.TrimSuffix(envPath, "/"), cloudEnv.String())
+}
+
+// getEnvOrDefault returns the environment variable value or the default if empty
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func (cloudEnv CloudEnvironment) ReadCloudConfig() (*cloud.Configuration, error) {
