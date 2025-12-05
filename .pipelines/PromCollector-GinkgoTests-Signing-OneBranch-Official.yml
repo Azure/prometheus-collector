@@ -70,43 +70,12 @@ extends:
                 script: |
                   Get-ChildItem -Path "$(Pipeline.Workspace)" -Recurse | ForEach-Object { Write-Host $_.FullName }  
             - task: CopyFiles@2
-              displayName: Copy ServiceGroupRoot to staging directory
+              displayName: Copy ServiceGroupRoot build artifact to staging directory
               inputs:
                 ##SourceFolder: '$(System.DefaultWorkingDirectory)/Deployment'
-                SourceFolder: '$(System.DefaultWorkingDirectory)'
+                SourceFolder: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector'
                 Contents: '**'
-                TargetFolder: '$(OB_OutputDirectory)' 
-            # # - task: PowerShell@2
-            # #   displayName: Copy .test to output as .exe
-            # #   inputs:
-            # #     targetType: 'inline'
-            # #     script: |
-            # #       $source = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests/*.test'
-            # #       $sourceDir = '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'
-            # #       $destinationDir = "$(OB_OutputDirectory)/serviceGroupRoot/ev2scripts"
-            # #       $destinationFile = Join-Path $destinationDir "*.exe"
-
-            # #       # Create destination directory if it doesn't exist
-            # #       if (-not (Test-Path $destinationDir)) {
-            # #           New-Item -ItemType Directory -Path $destinationDir | Out-Null
-            # #       }
-
-            # #       # Copy the file(s)
-            # #       ##Copy-Item -Path $source -Destination $destinationFile -Force
-            # #       # Copy *.test files and rename to *.exe
-            # #       Get-ChildItem -Path $sourceDir -Filter "*.test" | ForEach-Object {
-            # #           $newName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".exe"
-            # #           Copy-Item -Path $_.FullName -Destination (Join-Path $destinationDir $newName)
-            # #       }
-
-            # #       Write-Host "All .test files copied and renamed to .exe in $destinationDir"
-
-            # # - task: CopyFiles@2
-            # #   displayName: Copy ci-cd templates to output
-            # #   inputs:
-            # #     SourceFolder: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector/ServiceGroupRoot/ci-cd'
-            # #     Contents: '*.*'
-            # #     TargetFolder: '$(OB_OutputDirectory)/serviceGroupRoot/templates'                    
+                TargetFolder: '$(OB_OutputDirectory)'                    
             - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
               displayName: 'Package Signing - deployment files'
               inputs:
