@@ -11,8 +11,8 @@
   "serviceResourceGroupDefinitions": [
     {
       "name": "Run.PromTests",
-      "subscriptionKey": "prom-test-$location()",
-      "azureResourceGroupName": "prom-test-$location()",
+      "subscriptionKey": "prom-test",
+      "azureResourceGroupName": "prom-test",
       "stamps": {
         "Count": 1
       },
