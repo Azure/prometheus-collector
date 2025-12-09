@@ -114,7 +114,9 @@ extends:
                 script: |
                   $OutputDir = "$(OB_OutputDirectory)"
                   Write-Host "OutputDirectory: $OutputDir"
-                  $ManifestPath = Join-Path $OutputDir "cvrp.manifest.json"
+                  $manifestName = "cvrp.manifest.json"
+                  $ManifestPath = Join-Path $OutputDir $manifestName
+                  Write-Host "ManifestPath: $ManifestPath"
 
                   $files = Get-ChildItem -Path $OutputDir -Recurse -File
 
@@ -123,11 +125,21 @@ extends:
                   foreach ($file in $files) {
                     $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
                     $src = $file.FullName.Substring($OutputDir.Length + 1)
-                    $entry = @{
-                      Paths = @($src)
-                      Source = $src
-                      Hash = $hash.Hash
+                    if ($src -like "*\$manifestName") {
+                      ## Don't hash the manifest itself.
+                      Write-Host "Skipping manifest file from hashing: $src"
+                      $entry = @{
+                          Paths = @($src)
+                          Source = $src
+                        }
+                    } else {
+                      $entry = @{
+                          Paths = @($src)
+                          Source = $src
+                          Hash = $hash.Hash
+                        }
                     }
+
                     $manifestFiles += $entry
                   }
 
