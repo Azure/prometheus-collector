@@ -125,7 +125,7 @@ extends:
                   foreach ($file in $files) {
                     $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
                     $src = $file.FullName.Substring($OutputDir.Length + 1)
-                    if ($src -like "*\$manifestName") {
+                    if ($src -like "*$manifestName") {
                       ## Don't hash the manifest itself.
                       Write-Host "Skipping manifest file from hashing: $src"
                       $entry = @{
