@@ -76,8 +76,8 @@ function Register-CustomAzEnvironment {
             if ([string]::IsNullOrEmpty($j.ActiveDirectoryServiceEndpointResourceId)) {
                 throw "Environment file '$envFile' is missing required 'ActiveDirectoryServiceEndpointResourceId' field."
             }
-            if ([string]::IsNullOrEmpty($j.MicrosoftGraphEndpoint)) {
-                throw "Environment file '$envFile' is missing required 'MicrosoftGraphEndpoint' field."
+            if ([string]::IsNullOrEmpty($j.GraphEndpoint)) {
+                throw "Environment file '$envFile' is missing required 'GraphEndpoint' field."
             }
             if ([string]::IsNullOrEmpty($j.AzureKeyVaultDnsSuffix)) {
                 throw "Environment file '$envFile' is missing required 'AzureKeyVaultDnsSuffix' field."
@@ -91,7 +91,7 @@ function Register-CustomAzEnvironment {
             -ActiveDirectoryEndpoint $j.ActiveDirectoryEndpoint `
             -ResourceManagerEndpoint $j.ResourceManagerEndpoint `
             -ActiveDirectoryServiceEndpointResourceId $j.ActiveDirectoryServiceEndpointResourceId `
-            -GraphEndpoint $j.MicrosoftGraphEndpoint `
+            -GraphEndpoint $j.GraphEndpoint `
             -AzureKeyVaultDnsSuffix $j.AzureKeyVaultDnsSuffix `
             -AzureKeyVaultServiceEndpointResourceId $j.AzureKeyVaultServiceEndpointResourceId
             Write-Host "Registered Az environment '$environment'." -ForegroundColor Green
