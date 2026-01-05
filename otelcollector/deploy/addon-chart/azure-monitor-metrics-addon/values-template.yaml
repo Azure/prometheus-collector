@@ -160,7 +160,6 @@ ClusterDistribution: ""
 CloudEnvironment: ""
 MountCATrustAnchorsDirectory: true
 MountUbuntuCACertDirectory: true
-IgnoreProxySettings: false
 
 prometheus-node-exporter:
   service:

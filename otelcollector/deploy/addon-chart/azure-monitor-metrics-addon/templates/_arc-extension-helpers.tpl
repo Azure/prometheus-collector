@@ -11,7 +11,7 @@ cloudEnvironment: {{ default (lower .Values.Azure.Cluster.Cloud) (lower .Values.
 # If our override ClusterDistribution value is set, use that. Otherwise, use inherited Arc cluster helm value
 distribution: {{ default (lower .Values.Azure.Cluster.Distribution) (lower .Values.ClusterDistribution) }}
 # true if Arc Extension is enabled and inherited Arc helm values isProxyEnabled is true
-isProxyEnabled: {{ and ($isArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) (not .Values.IgnoreProxySettings) }}
+isProxyEnabled: {{ and ($isArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
 
 operatorEnabled: true
 {{- if $isArcExtension }}
