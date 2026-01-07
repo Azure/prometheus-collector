@@ -17,9 +17,6 @@
   + Fix doc for backdoor testing (https://github.com/Azure/prometheus-collector/pull/1361)c
   + test: support sequential cluster deployment (https://github.com/Azure/prometheus-collector/pull/1349)
 
-
-
-
 ## Release 11-13-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744-win`
