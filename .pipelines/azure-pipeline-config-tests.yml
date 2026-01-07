@@ -794,7 +794,7 @@ stages:
               kubectl testkube run testsuite config-global-ext-labels-error --verbose --job-template job-template.yaml
 
               # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-global-ext-labels-error --limit 1 | config-global-ext-labels-error | awk '{print $1}')
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-global-ext-labels-error --limit 1 | grep config-global-ext-labels-error | awk '{print $1}')
 
               # Watch until the all the tests in the test suite finish
               kubectl testkube watch testsuiteexecution $execution_id
@@ -829,6 +829,70 @@ stages:
             continueOnError: true
 
           - bash: |
+              # Export branch and AMW variables (use pipeline parameter or default main)
+              export BRANCH=${{ parameters.branch }}
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
+
+              # Remove any leftover custom Prometheus configmaps first
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+
+
+              # Generate the v2 TestKube CR with envsubst and apply it
+              envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-v2-crs.yaml > ./testkube/testkube-config-test-default-targets-on-v2-crs-ci.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-config-test-default-targets-on-v2-crs-ci.yaml
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs for v2 configmap tests"
+
+          - bash: |
+              sleep 480
+
+              exit 0
+            displayName: "Wait for cluster to be ready"
+
+          - bash: |
+              # Run the v2 test suite
+              kubectl testkube run testsuite config-tests-def-targets-on-configmap-v2 --verbose --job-template job-template.yaml
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-def-targets-on-configmap-v2 --limit 1 | grep config-tests-def-targets-on-configmap-v2 | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results-v2.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results-v2.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results-v2.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 1
+              fi
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
+            displayName: "Run tests for all default targets in settings cfg map enabled (v2)"
+
+          - bash: |
               # Collect all testkube results using the same approach as run-testkube-workflow.sh
               mkdir -p $(Build.ArtifactStagingDirectory)
               
@@ -837,6 +901,7 @@ stages:
                 "config-tests-no-configmaps"
                 "config-tests-all-targets-disabled"
                 "config-tests-def-targets-on-configmap"
+                "config-tests-def-targets-on-configmap-v2"
                 "config-tests-all-rs-targets-enabled"
                 "config-tests-all-ds-targets-enabled"
                 "config-tests-all-targets-enabled"

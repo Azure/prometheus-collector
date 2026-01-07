@@ -67,7 +67,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 
 	// Handle case when no configmap is present (metricsConfigBySection is nil)
 	if metricsConfigBySection == nil {
-		// Use default values - minimalingestionprofile_value is already set to "true"
+		shared.SetEnvAndSourceBashrcOrPowershell("MINIMAL_INGESTION_PROFILE", minimalingestionprofile_value, true)
 		keeplist = make(map[string]string) // Empty keeplist for other values
 	} else {
 		// Configmap is present, proceed with normal logic
