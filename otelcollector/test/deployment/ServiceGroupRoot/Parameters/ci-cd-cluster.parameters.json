@@ -3,7 +3,46 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "clusterName": {
-      "value": "aks-"
+      "value": "$_AKS_NAME_$"
+    },
+    "amwName": {
+      "value": "$_AMW_NAME_$"
+    },
+    "allowedRegions": {
+      "value": "$_ALLOWED_REGIONS_$"
+    },
+    "availabilityZones": {
+      "value": []
+    },
+    "agentPoolVmSize": {
+      "value": "$_AGENT_POOL_VM_SIZE_$"
+    },
+    "marinerVmSize": {
+      "value": "$_MARINER_VM_SIZE_$"
+    },
+    "arm64VmSize": {
+      "value": "$_ARM64_VM_SIZE_$"
+    },
+    "marinerarm64VmSize": {
+      "value": "$_MARINERARM64_VM_SIZE_$"
+    },
+    "win22VmSize": {
+      "value": "$_WIN22_VM_SIZE_$"
+    },
+    "win19VmSize": {
+      "value": "$_WIN19_VM_SIZE_$"
+    },
+    "actionGroupId": {
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-ev2/providers/Microsoft.Insights/actiongroups/wtdTestAg"
+    },
+    "vnetName": {
+      "value": "$_VNET_NAME_$"
+    },
+    "ipAddrNatGateway": {
+      "value": "ipAddrNatGateway"
+    },
+    "shellExtSubnetName": {
+      "value": "$_SHELL_SUBNET_NAME_$"
     }
   }
 }

@@ -2,12 +2,19 @@
   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ConfigurationSpecification.json#",
   "Settings": {
     "tenant": "70a90262-f46c-48aa-ac4c-37e37f8be1a2",
+    "allowedRegions": ["usnateast","usnatwest"],
     "environment": "USNat",
     "subscriptionId": "061390fc-1b69-430f-8ca1-db6511bfa549",
     "clientId": "6ae0f871-c572-46ae-a335-76d07e46a0cf",
     "principalId": "",
     "managedIdentityName": "prom-test-msi",
-    "aksName": "aksTestCluster",
-    "amwName": "aksTestCluster-amw"
+    "vnetNameBase": "aksVnet-",
+    "shellExtSubnetNameBase": "shellSubnet-",
+    "agentPoolVmSize": "Standard_D4s_v3",
+    "marinerVmSize": "Standard_D4s_v3",
+    "arm64VmSize": "Standard_D4pds_v5",
+    "marinerarm64VmSize": "Standard_D4pds_v5",
+    "win22VmSize": "Standard_D2s_v3",
+    "win19VmSize": "Standard_DS3_v2"
   }
 }

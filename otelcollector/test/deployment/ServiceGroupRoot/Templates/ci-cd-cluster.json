@@ -53,7 +53,7 @@
     }, 
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "westus3"
+      "defaultValue": "[resourceGroup().location]"
     },
     "metricLabelsAllowlist": {
       "type": "string",
@@ -65,13 +65,19 @@
     },
     "clusterName": {
       "type": "string",
-      "defaultValue": "ci-cd-aks-cluster",
+      "defaultValue": "[concat('aks-cluster-', resourceGroup().location)]  ",
       "metadata": {
         "description": "The name of the Managed Cluster resource."
       }
     },
+    "amwName": {
+      "type": "string",
+      "defaultValue": "[concat(parameters('clusterName'), '-', 'amw')]",
+      "metadata": {
+        "description": "The name of the Azure Monitor Workspace."
+    },
     "clusterLocation": {
-      "defaultValue": "westus3",
+      "defaultValue": "[resourceGroup().location]",
       "type": "string",
       "metadata": {
           "description": "The location of the Managed Cluster resource."
@@ -199,7 +205,7 @@
     "isValidClusterLocation": "[contains(parameters('allowedRegions'), parameters('clusterLocation'))]",
     "isValidAmwLocation": "[contains(parameters('allowedRegions'), parameters('azureMonitorWorkspaceLocation'))]",
     "resourceIdPrefix": "[resourceGroup().id]",
-    "azureMonitorWorkspaceName": "[concat(parameters('clusterName'), '-', 'amw')]",
+    "azureMonitorWorkspaceName": "[parameters('amwName')]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcrName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcraName": "[Concat('MSProm', '-', parameters('clusterLocation'), '-', parameters('clusterName'))]",

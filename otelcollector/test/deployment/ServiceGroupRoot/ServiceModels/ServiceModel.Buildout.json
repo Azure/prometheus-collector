@@ -27,7 +27,7 @@
           "composedOf": {
             "arm": {
               "templatePath": "Templates/ci-cd-cluster.json",
-              "parameterPath": "Parameters/ci-cd-cluster.parameters.json"
+              "parametersPath": "Parameters/ci-cd-cluster.parameters.json"
             }
           }
         },
@@ -36,7 +36,7 @@
           "composedOf": {
             "arm": {
               "templatePath": "Templates/RoleAssignments.Template.json",
-              "parameterPath": "Parameters/RoleAssignments.Parameters.json"
+              "parametersPath": "Parameters/RoleAssignments.Parameters.json"
             }
           }
         }        

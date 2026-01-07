@@ -6,6 +6,10 @@
             "scopeTagName": "Common",
             "bindings": [
                 {
+                    "find": "$_ALLOWED_REGIONS_$",
+                    "replaceWith": "$config(allowedRegions)"
+                }
+                {
                     "find": "$_ENV_$",
                     "replaceWith": "$config(environment)"
                 },                
@@ -19,15 +23,19 @@
                 },                             
                 {
                     "find": "$_LOG_STORAGE_ACCOUNT_NAME_$",
-                    "replaceWith": "stshellextlogs12345"
+                    "replaceWith": "stshellextlogs-$azureResourceGroup()"
                 },               
                 {
                     "find": "$_VNET_NAME_$",
-                    "replaceWith": "aksVnet"
+                    "replaceWith": "$config(vnetNameBase)$azureResourceGroup()"
                 },
                 {
+                    "find": "$_NAT_GATEWAY_NAME_$",
+                    "replaceWith": "ipAddrNatGateway-$azureResourceGroup()"
+                },                
+                {
                     "find": "$_SHELL_SUBNET_NAME_$",
-                    "replaceWith": "shellSubnet"
+                    "replaceWith": "$config(shellExtSubnetNameBase)$azureResourceGroup()"
                 },
                 {
                     "find": "$_CLIENT_ID_$",
@@ -47,58 +55,41 @@
                 },
                 {
                     "find": "$_AKS_NAME_$",
-                    "replaceWith": "$config(aksName)"
+                    "replaceWith": "aks-cluster-$azureResourceGroup()"
                 },
                 {
                     "find": "$_AMW_NAME_$",
-                    "replaceWith": "$config(amwName)"
+                    "replaceWith": "aks-cluster-$azureResourceGroup()-amw"
                 },
                 {
                     "find": "$_SHELL_SUBNET_ID_$",
-                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/aksVnet/subnets/shellSubnet"
-                }                         
+                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/$config(vnetNameBase)$azureResourceGroup()/subnets/$config(shellExtSubnetNameBase)$azureResourceGroup()"
+                },
+                {
+                    "find": "$_AGENT_POOL_VM_SIZE_$",
+                    "replaceWith": "$config(agentPoolVmSize)"
+                },
+                {
+                    "find": "$_MARINER_VM_SIZE_$",
+                    "replaceWith": "$config(marinerVmSize)"
+                },                        
+                {
+                    "find": "$_ARM64_VM_SIZE_$",
+                    "replaceWith": "$config(arm64VmSize)"
+                },                 
+                {
+                    "find": "$_MARINERARM64_VM_SIZE_$",
+                    "replaceWith": "$config(marinerarm64VmSize)"
+                },                
+                {
+                    "find": "$_WIN22_VM_SIZE_$",
+                    "replaceWith": "$config(win22VmSize)"
+                },          
+                {
+                    "find": "$_WIN19_VM_SIZE_$",
+                    "replaceWith": "$config(win19VmSize)"
+                }
             ]
-        },
-        {
-            "scopeTagName": "PublicDev",
-            "bindings": [
-                {
-                    "find": "$_CLIENT_ID_$",
-                    "replaceWith": "de61beff-a8f7-4016-810d-2a744c5fe868"
-                },
-                {
-                    "find": "$_MANAGED_IDENTITY_NAME_$",
-                    "replaceWith": "prom-test-mi"
-                },
-                {
-                    "find": "$_MANAGED_IDENTITY_ID_$",
-                    "replaceWith": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/prom-test-mi"
-                },
-                {
-                    "find": "$_SUBSCRIPTION_ID_$",
-                    "replaceWith": "84ca48fe-c942-42e5-b492-d56681d058fa"
-                },
-                                {
-                    "find": "$_ENV_$",
-                    "replaceWith": ""
-                },
-                {
-                    "find": "$_RESOURCE_GROUP_NAME_$",
-                    "replaceWith": "wtd-dev"
-                },
-                {
-                    "find": "$_AKS_NAME_$",
-                    "replaceWith": "wtdDemoCluster"
-                },
-                {
-                    "find": "$_AMW_NAME_$",
-                    "replaceWith": "wtdDemoCluster-amw"
-                },
-                {
-                    "find": "$_SHELL_SUBNET_ID_$",
-                    "replaceWith": "/subscriptions/84ca48fe-c942-42e5-b492-d56681d058fa/resourceGroups/wtd-dev/providers/Microsoft.Network/virtualNetworks/aksVnet/subnets/shellSubnet"
-                }                   
-            ]
-        }          
+        }     
     ]
 }
