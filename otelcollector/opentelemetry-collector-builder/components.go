@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 )
 
 func components() (otelcol.Factories, error) {
@@ -37,6 +38,7 @@ func components() (otelcol.Factories, error) {
 			resourceProcessor.Type(): resourceProcessor,
 			filterProcessor.Type():   filterProcessor,
 		},
+		Telemetry: otelconftelemetry.NewFactory(),
 	}
 
 	return factories, nil
