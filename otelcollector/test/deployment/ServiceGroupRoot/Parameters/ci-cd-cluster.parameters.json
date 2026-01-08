@@ -43,6 +43,9 @@
     },
     "shellExtSubnetName": {
       "value": "$_SHELL_SUBNET_NAME_$"
-    }
+    },
+    "storageAccountName": {
+      "value": "$_LOG_STORAGE_ACCOUNT_NAME_$"
+    }    
   }
 }

@@ -75,6 +75,7 @@
       "defaultValue": "[concat(parameters('clusterName'), '-', 'amw')]",
       "metadata": {
         "description": "The name of the Azure Monitor Workspace."
+      }
     },
     "clusterLocation": {
       "defaultValue": "[resourceGroup().location]",
@@ -206,6 +207,7 @@
     "isValidAmwLocation": "[contains(parameters('allowedRegions'), parameters('azureMonitorWorkspaceLocation'))]",
     "resourceIdPrefix": "[resourceGroup().id]",
     "azureMonitorWorkspaceName": "[parameters('amwName')]",
+    "logAnalyticsWorkspaceName": "[concat(parameters('clusterName'), '-laws')]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcrName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcraName": "[Concat('MSProm', '-', parameters('clusterLocation'), '-', parameters('clusterName'))]",
@@ -222,7 +224,6 @@
     "RecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
     "version": " - 0.1"
   },
-  "functions": [],
   "resources": [
     {
       "type": "Microsoft.Network/virtualNetworks",
@@ -348,26 +349,26 @@
                         "destinationAddressPrefixes": []
                     }
                 },
-                {
-                    "name": "NRMS-Rule-103",
-                    "type": "Microsoft.Network/networkSecurityGroups/securityRules",
-                    "properties": {
-                        "provisioningState": "Succeeded",
-                        "description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
-                        "protocol": "*",
-                        "sourcePortRange": "*",
-                        "destinationPortRange": "*",
-                        "sourceAddressPrefix": "CorpNetPublic",
-                        "destinationAddressPrefix": "*",
-                        "access": "Allow",
-                        "priority": 103,
-                        "direction": "Inbound",
-                        "sourcePortRanges": [],
-                        "destinationPortRanges": [],
-                        "sourceAddressPrefixes": [],
-                        "destinationAddressPrefixes": []
-                    }
-                },            
+                // {
+                //     "name": "NRMS-Rule-103",
+                //     "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                //     "properties": {
+                //         "provisioningState": "Succeeded",
+                //         "description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+                //         "protocol": "*",
+                //         "sourcePortRange": "*",
+                //         "destinationPortRange": "*",
+                //         "sourceAddressPrefix": "CorpNetPublic",
+                //         "destinationAddressPrefix": "*",
+                //         "access": "Allow",
+                //         "priority": 103,
+                //         "direction": "Inbound",
+                //         "sourcePortRanges": [],
+                //         "destinationPortRanges": [],
+                //         "sourceAddressPrefixes": [],
+                //         "destinationAddressPrefixes": []
+                //     }
+                // },            
                 {
                     "name": "NRMS-Rule-105",
                     "type": "Microsoft.Network/networkSecurityGroups/securityRules",
@@ -545,6 +546,24 @@
       }
     },
     {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "condition": "[variables('isValidClusterLocation')]",      
+      "name": "[variables('logAnalyticsWorkspaceName')]",
+      "location": "[parameters('clusterLocation')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": "30",
+        "workspaceCapping": {
+          "dailyQuotaGb": "-1"
+        },
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
       "type": "Microsoft.ContainerService/managedClusters",
       "condition": "[variables('isValidClusterLocation')]",
       "apiVersion": "2025-07-01",
@@ -694,11 +713,11 @@
           }
         ],
         "autoUpgradeProfile": {
-          //"upgradeChannel": "patch",
           "nodeOSUpgradeChannel": "NodeImage"
         },
         "securityProfile": {
           "defender": {
+            "logAnalyticsWorkspaceResourceId": "[resourceId('microsoft.operationalinsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
             "securityMonitoring": {
               "enabled": true
             }

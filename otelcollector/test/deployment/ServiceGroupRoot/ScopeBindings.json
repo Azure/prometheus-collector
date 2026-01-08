@@ -6,9 +6,9 @@
             "scopeTagName": "Common",
             "bindings": [
                 {
-                    "find": "$_ALLOWED_REGIONS_$",
+                    "find": "\"$_ALLOWED_REGIONS_$\"",
                     "replaceWith": "$config(allowedRegions)"
-                }
+                },
                 {
                     "find": "$_ENV_$",
                     "replaceWith": "$config(environment)"
@@ -23,7 +23,7 @@
                 },                             
                 {
                     "find": "$_LOG_STORAGE_ACCOUNT_NAME_$",
-                    "replaceWith": "stshellextlogs-$azureResourceGroup()"
+                    "replaceWith": "stshellextlogs$location()"
                 },               
                 {
                     "find": "$_VNET_NAME_$",
