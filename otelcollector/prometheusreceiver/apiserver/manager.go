@@ -12,100 +12,90 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
-	grafanaRegexp "github.com/grafana/regexp"
 	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
-	toolkitweb "github.com/prometheus/exporter-toolkit/web"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/httputil"
 	"github.com/prometheus/prometheus/web"
-	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/net/netutil"
+
+	grafanaRegexp "github.com/grafana/regexp"
+	toolkit_web "github.com/prometheus/exporter-toolkit/web"
+	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
+// Use same settings as Prometheus web server
 const (
-	maxConnections       = 512
-	defaultReadTimeout   = 10 * time.Minute
-	apiRoutePrefix       = "/api"
-	lookbackDeltaDefault = 5 * time.Minute
+	maxConnections     = 512
+	readTimeoutMinutes = 10
 )
 
-// Manager owns the lifecycle of the optional embedded Prometheus API server.
 type Manager struct {
-	settings   receiver.Settings
-	cfg        *Config
-	registerer prometheus.Registerer
-	registry   *prometheus.Registry
-	server     *http.Server
+	settings      receiver.Settings
+	shutdown      chan struct{}
+	cfg           *Config
+	promCfg       *promconfig.Config
+	scrapeManager *scrape.Manager
+	registry      *prometheus.Registry
+	registerer    prometheus.Registerer
+	server        *http.Server
+	mtx           sync.RWMutex
 }
 
-// NewManager constructs a Manager from the supplied configuration. Returns nil when cfg is nil.
-func NewManager(settings receiver.Settings, cfg *Config, registerer prometheus.Registerer, registry *prometheus.Registry) *Manager {
-	if cfg == nil {
-		return nil
-	}
+func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, registry *prometheus.Registry, registerer prometheus.Registerer) *Manager {
 	return &Manager{
-		settings:   settings,
+		shutdown:   make(chan struct{}),
+		settings:   set,
 		cfg:        cfg,
-		registerer: registerer,
+		promCfg:    promCfg,
 		registry:   registry,
+		registerer: registerer,
 	}
 }
 
-// Start bootstraps the Prometheus web handler and begins serving requests.
-func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager *scrape.Manager, cfgProvider func() promconfig.Config) error {
-	if m == nil {
-		return nil
-	}
-	if scrapeManager == nil {
-		return fmt.Errorf("scrape manager must be provided to start API server")
-	}
-	if cfgProvider == nil {
-		return fmt.Errorf("config provider must be supplied to start API server")
-	}
-	if m.server != nil {
-		return fmt.Errorf("API server already started")
-	}
-
+func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager *scrape.Manager) error {
 	m.settings.Logger.Info("Starting Prometheus API server")
+	m.scrapeManager = scrapeManager
 
+	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
 	var corsOriginRegexp *grafanaRegexp.Regexp
-	if m.cfg.ServerConfig.CORS.HasValue() {
-		allowedOrigins := m.cfg.ServerConfig.CORS.Get().AllowedOrigins
-		if len(allowedOrigins) > 0 {
-			var b strings.Builder
-			b.WriteString(allowedOrigins[0])
-			for _, origin := range allowedOrigins[1:] {
-				b.WriteString("|")
-				b.WriteString(origin)
-			}
-			combined, err := grafanaRegexp.Compile(b.String())
-			if err != nil {
-				return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %w", err)
-			}
-			corsOriginRegexp = combined
+	corsConfig := m.cfg.ServerConfig.CORS.Get()
+	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
+		var combinedOriginsBuilder strings.Builder
+		combinedOriginsBuilder.WriteString(corsConfig.AllowedOrigins[0])
+		for _, origin := range corsConfig.AllowedOrigins[1:] {
+			combinedOriginsBuilder.WriteString("|")
+			combinedOriginsBuilder.WriteString(origin)
 		}
+		combinedRegexp, err := grafanaRegexp.Compile(combinedOriginsBuilder.String())
+		if err != nil {
+			return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %s", err.Error())
+		}
+		corsOriginRegexp = combinedRegexp
 	}
 
+	// If read timeout is not set in the receiver config, use the default Prometheus value.
 	readTimeout := m.cfg.ServerConfig.ReadTimeout
 	if readTimeout == 0 {
-		readTimeout = defaultReadTimeout
+		readTimeout = time.Duration(readTimeoutMinutes) * time.Minute
 	}
 
-	options := &web.Options{
-		ScrapeManager:   scrapeManager,
+	// Set the options to keep similar code to the Prometheus repo.
+	o := &web.Options{
+		ScrapeManager:   m.scrapeManager,
 		Context:         ctx,
 		ListenAddresses: []string{m.cfg.ServerConfig.Endpoint},
 		ExternalURL: &url.URL{
@@ -124,36 +114,44 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		CORSOrigin:     corsOriginRegexp,
 	}
 
-	promLogger := promslog.NewNopLogger()
-	factorySPr := func(_ context.Context) api_v1.ScrapePoolsRetriever { return options.ScrapeManager }
-	factoryTr := func(_ context.Context) api_v1.TargetRetriever { return options.ScrapeManager }
+	// Creates the API object in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L314-L354
+	// Anything not defined by the options above will be nil, such as o.QueryEngine, o.Storage, etc. IsAgent=true, so these being nil is expected by Prometheus.
+	factorySPr := func(_ context.Context) api_v1.ScrapePoolsRetriever { return o.ScrapeManager }
+	factoryTr := func(_ context.Context) api_v1.TargetRetriever { return o.ScrapeManager }
 	factoryAr := func(_ context.Context) api_v1.AlertmanagerRetriever { return nil }
 	factoryRr := func(_ context.Context) api_v1.RulesRetriever { return nil }
 	var app storage.Appendable
+	logger := promslog.NewNopLogger()
 
-	apiV1 := api_v1.NewAPI(options.QueryEngine, options.Storage, app, options.ExemplarStorage, factorySPr, factoryTr, factoryAr,
-		cfgProvider,
-		options.Flags,
+	apiV1 := api_v1.NewAPI(o.QueryEngine, o.Storage, app, o.ExemplarStorage, factorySPr, factoryTr, factoryAr,
+
+		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
+		func() promconfig.Config {
+			m.mtx.RLock()
+			defer m.mtx.RUnlock()
+			return *m.promCfg
+		},
+		o.Flags, // nil
 		api_v1.GlobalURLOptions{
-			ListenAddress: options.ListenAddresses[0],
-			Host:          options.ExternalURL.Host,
-			Scheme:        options.ExternalURL.Scheme,
+			ListenAddress: o.ListenAddresses[0],
+			Host:          o.ExternalURL.Host,
+			Scheme:        o.ExternalURL.Scheme,
 		},
 		func(f http.HandlerFunc) http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
 				f(w, r)
 			}
 		},
-		options.LocalStorage,
-		options.TSDBDir,
-		options.EnableAdminAPI,
-		promLogger,
+		o.LocalStorage,   // nil
+		o.TSDBDir,        // nil
+		o.EnableAdminAPI, // nil
+		logger,
 		factoryRr,
-		options.RemoteReadSampleLimit,
-		options.RemoteReadConcurrencyLimit,
-		options.RemoteReadBytesInFrame,
-		options.IsAgent,
-		options.CORSOrigin,
+		o.RemoteReadSampleLimit,      // nil
+		o.RemoteReadConcurrencyLimit, // nil
+		o.RemoteReadBytesInFrame,     // nil
+		o.IsAgent,
+		o.CORSOrigin,
 		func() (api_v1.RuntimeInfo, error) {
 			status := api_v1.RuntimeInfo{
 				GoroutineCount: runtime.NumGoroutine(),
@@ -162,6 +160,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 				GOGC:           os.Getenv("GOGC"),
 				GODEBUG:        os.Getenv("GODEBUG"),
 			}
+
 			return status, nil
 		},
 		&web.PrometheusVersion{
@@ -172,56 +171,59 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		},
-		options.NotificationsGetter,
-		options.NotificationsSub,
-		options.Gatherer,
-		options.Registerer,
+		o.NotificationsGetter,
+		o.NotificationsSub,
+		o.Gatherer,
+		o.Registerer,
 		nil,
-		options.EnableRemoteWriteReceiver,
-		options.AcceptRemoteWriteProtoMsgs,
-		options.EnableOTLPWriteReceiver,
-		options.ConvertOTLPDelta,
-		options.NativeOTLPDeltaIngestion,
-		options.CTZeroIngestionEnabled,
-		lookbackDeltaDefault,
-		options.EnableTypeAndUnitLabels,
+		o.EnableRemoteWriteReceiver,
+		o.AcceptRemoteWriteProtoMsgs,
+		o.EnableOTLPWriteReceiver,
+		o.ConvertOTLPDelta,
+		o.NativeOTLPDeltaIngestion,
+		o.CTZeroIngestionEnabled,
+		5*time.Minute, // LookbackDelta - Using the default value of 5 minutes
+		o.EnableTypeAndUnitLabels,
 		nil,
 	)
 
+	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
 	listener, err := m.cfg.ServerConfig.ToListener(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create listener: %w", err)
+		return fmt.Errorf("failed to create listener: %s", err.Error())
 	}
-	listener = netutil.LimitListener(listener, options.MaxConnections)
+	listener = netutil.LimitListener(listener, o.MaxConnections)
 	listener = conntrack.NewListener(listener,
 		conntrack.TrackWithName("http"),
-		conntrack.TrackWithTracing(),
-	)
+		conntrack.TrackWithTracing())
 
+	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 	mux := http.NewServeMux()
-	promHandler := promhttp.HandlerFor(options.Gatherer, promhttp.HandlerOpts{Registry: options.Registerer})
+	promHandler := promhttp.HandlerFor(o.Gatherer, promhttp.HandlerOpts{Registry: o.Registerer})
 	mux.Handle("/metrics", promHandler)
 
-	apiPath := apiRoutePrefix
-	if options.RoutePrefix != "/" {
-		apiPath = options.RoutePrefix + apiPath
-		m.settings.Logger.Info("Router prefix", zap.String("prefix", options.RoutePrefix))
+	// This is the path the web package uses, but the router above with no prefix can also be Registered by apiV1 instead.
+	apiPath := "/api"
+	if o.RoutePrefix != "/" {
+		apiPath = o.RoutePrefix + apiPath
+		logger.Info("Router prefix", "prefix", o.RoutePrefix)
 	}
-	router := route.New().WithInstrumentation(setPathWithPrefix(apiPath + "/v1"))
-	apiV1.Register(router)
-	mux.Handle(apiPath+"/v1/", http.StripPrefix(apiPath+"/v1", router))
+	av1 := route.New().
+		WithInstrumentation(setPathWithPrefix(apiPath + "/v1"))
+	apiV1.Register(av1)
+	mux.Handle(apiPath+"/v1/", http.StripPrefix(apiPath+"/v1", av1))
 
 	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 	})
 	m.server, err = m.cfg.ServerConfig.ToServer(ctx, host.GetExtensions(), m.settings.TelemetrySettings, otelhttp.NewHandler(mux, "", spanNameFormatter))
 	if err != nil {
-		return fmt.Errorf("failed to create API server: %w", err)
+		return err
 	}
+	webconfig := ""
 
-	webConfig := ""
 	go func() {
-		if err := toolkitweb.Serve(listener, m.server, &toolkitweb.FlagConfig{WebConfigFile: &webConfig}, promLogger); err != nil {
+		if err := toolkit_web.Serve(listener, m.server, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger); err != nil {
 			m.settings.Logger.Error("API server failed", zap.Error(err))
 		}
 	}()
@@ -229,14 +231,32 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	return nil
 }
 
-// Shutdown stops the underlying HTTP server.
-func (m *Manager) Shutdown(ctx context.Context) error {
-	if m == nil || m.server == nil {
-		return nil
-	}
-	return m.server.Shutdown(ctx)
+// ApplyConfig updates the config field of the Manager struct.
+func (m *Manager) ApplyConfig(cfg *promconfig.Config) error {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	m.promCfg = cfg
+
+	return nil
 }
 
+func (m *Manager) GetConfig() *promconfig.Config {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	return m.promCfg
+}
+
+func (m *Manager) Shutdown(ctx context.Context) error {
+	close(m.shutdown)
+	if m.server != nil {
+		return m.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+// Helper function from the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 func setPathWithPrefix(prefix string) func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
 	return func(_ string, handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

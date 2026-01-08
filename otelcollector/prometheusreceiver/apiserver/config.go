@@ -1,26 +1,24 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package apiserver
+package apiserver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 
 import (
-	"fmt"
+	"errors"
 
 	"go.opentelemetry.io/collector/config/confighttp"
 )
 
-// Config holds the settings for the optional embedded Prometheus API server.
+// Config defines the API server configuration.
 type Config struct {
 	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
 }
 
-// Validate ensures the API server configuration is usable.
+// Validate ensures the API server config is usable.
 func (cfg *Config) Validate() error {
-	if cfg == nil {
-		return fmt.Errorf("api server config must be provided")
-	}
 	if cfg.ServerConfig.Endpoint == "" {
-		return fmt.Errorf("server_config.endpoint must be specified")
+		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
 	}
+
 	return nil
 }

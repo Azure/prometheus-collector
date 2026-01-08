@@ -65,9 +65,10 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 	registerer := prometheus.WrapRegistererWith(
 		prometheus.Labels{"receiver": set.ID.String()},
 		registry)
-	var apiServerManager *apiserver.Manager
-	if apiCfg := cfg.APIServer.Get(); apiCfg != nil {
-		apiServerManager = apiserver.NewManager(set, apiCfg, registerer, registry)
+	apiServerManager := (*apiserver.Manager)(nil)
+	apiServerCfg := cfg.APIServer.Get()
+	if apiServerCfg != nil {
+		apiServerManager = apiserver.NewManager(set, apiServerCfg, &baseCfg, registry, registerer)
 	}
 	pr := &pReceiver{
 		cfg:              cfg,
@@ -103,15 +104,6 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 
 	if err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager); err != nil {
 		return err
-	}
-
-	if r.apiServerManager != nil {
-		cfgProvider := func() promconfig.Config {
-			return *(*promconfig.Config)(r.cfg.PrometheusConfig)
-		}
-		if err = r.apiServerManager.Start(discoveryCtx, host, r.scrapeManager, cfgProvider); err != nil {
-			r.settings.Logger.Error("Failed to start Prometheus API server", zap.Error(err))
-		}
 	}
 
 	r.loadConfigOnce.Do(func() {
@@ -204,6 +196,14 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		}
 	}()
+
+	apiServerCfg := r.cfg.APIServer.Get()
+	if apiServerCfg != nil {
+		err = r.apiServerManager.Start(ctx, host, r.scrapeManager)
+		if err != nil {
+			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
+		}
+	}
 
 	return nil
 }
