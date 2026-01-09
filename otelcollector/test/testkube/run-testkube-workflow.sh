@@ -112,104 +112,92 @@ sleep "$SLEEP_DURATION"
 echo "✓ Cluster wait period completed"
 
 # Step 4: Run TestKube tests
-echo "Step 4: Starting TestKube test suite execution..."
+echo "Step 4: Starting TestKube workflow execution..."
 
-# Run the full test suite
-kubectl testkube run testsuite e2e-tests-merge --verbose --job-template testkube/job-template.yaml
+echo "Run testkube testworkflows"
+# Build workflow list dynamically from cluster (exclude livenessprobe)
+mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$')
+if [[ ${#workflows[@]} -eq 0 ]]; then
+    echo "No testworkflows found via kubectl testkube get testworkflows"
+    exit 1
+fi
+failed_workflows=()
+successful_workflows=()
 
-# Get the current id of the test suite now running with retry logic
-max_get_id_retries=5
-get_id_retry_count=0
-execution_id=""
+for wf in "${workflows[@]}"; do
+    echo "Running workflow: $wf"
+    kubectl testkube run testworkflow "$wf" \
+        --config AZURE_CLIENT_ID="$AZURE_CLIENT_ID" \
+        --config AMW_QUERY_ENDPOINT="$AMW_QUERY_ENDPOINT" \
+        --verbose
 
-while [ $get_id_retry_count -lt $max_get_id_retries ] && [ -z "$execution_id" ]; do
-    execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-    
-    if [ -n "$execution_id" ]; then
-        echo "Test suite execution ID: $execution_id"
+    echo "Waiting for execution to be created..."
+    sleep 5
+
+    echo "Fetching testworkflow executions for $wf..."
+    kubectl testkube get testworkflowexecution
+    execution_id=$(kubectl testkube get testworkflowexecution | grep -i "$wf" | head -n 1 | awk '{print $1}')
+
+    echo "Execution ID: $execution_id"
+
+    # Check if execution_id is empty
+    if [[ -z "$execution_id" ]]; then
+        echo "Error: Could not find execution ID for $wf"
+        exit 1
+    fi
+
+    # Watch until the testworkflow finishes
+    kubectl testkube watch testworkflowexecution $execution_id
+
+    # Get the results as a formatted json file
+    kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${wf}.json"
+
+    # Verify the JSON is valid
+    if ! jq empty "testkube-results-${wf}.json" 2>/dev/null; then
+        echo "Error: Failed to get valid JSON results from testkube for $wf"
+        echo "Contents of testkube-results-${wf}.json:"
+        cat "testkube-results-${wf}.json"
+        exit 1
+    fi
+
+    # For any test that has failed, print out the logs
+    if [[ $(jq -r '.result.status' "testkube-results-${wf}.json") == "failed" ]]; then
+
+        echo "TestWorkflow failed. Execution ID: $execution_id"
+
+        # Get the logs of the testworkflow execution
+        kubectl testkube get testworkflowexecution $execution_id --logs-only > "execution-${wf}.log" 2>&1
+
+        # Display the logs
+        cat "execution-${wf}.log"
+
+        # Extract meaningful error information (only the ginkgo failure summary lines, any failure count)
+        result=$(awk 'BEGIN{inblock=0} /Summarizing [0-9]+ Failure/{inblock=1} {
+            if(inblock){
+                gsub(/\x1B\[[0-9;]*[mK]/, "");
+                if($0 ~ /^FAIL$/ || $0 ~ /^Ginkgo ran/ || $0 ~ /^Test Suite Failed/){exit};
+                print;
+            }
+        }' "execution-${wf}.log")
+
+        failed_workflows+=("${wf} (execution: ${execution_id})")
     else
-        get_id_retry_count=$((get_id_retry_count+1))
-        echo "Failed to get test suite execution ID (attempt $get_id_retry_count/$max_get_id_retries). Retrying in 5 seconds..."
-        sleep 5
+        successful_workflows+=("${wf} (execution: ${execution_id})")
     fi
 done
 
-if [ -z "$execution_id" ]; then
-    echo "Error: Failed to get test suite execution ID after $max_get_id_retries attempts."
-    add_result "$TARGET_ENV" "error" "Failed to retrieve test suite execution ID" ""
-    exit 0
-fi
-
-# Watch until all the tests in the test suite finish with retry logic
-max_retries=3
-retry_count=0
-watch_success=false
-
-echo "Monitoring test suite execution progress..."
-
-while [ $retry_count -lt $max_retries ] && [ "$watch_success" != "true" ]; do
-    # Suppress the verbose output but still monitor completion
-    if kubectl testkube watch testsuiteexecution "$execution_id" >/dev/null 2>&1; then
-        watch_success=true
-        echo "✓ Test suite execution completed"
-    else
-        retry_count=$((retry_count+1))
-        echo "Watching test suite execution failed (attempt $retry_count/$max_retries). Retrying in 10 seconds..."
-        sleep 10
-    fi
-done
-
-if [ "$watch_success" != "true" ]; then
-    echo "Warning: Failed to watch test suite execution after $max_retries attempts. Continuing with result collection..."
-fi
-
-# Get the results as a formatted json file with retry logic
-max_retries=3
-retry_count=0
-get_results_success=false
-
-while [ $retry_count -lt $max_retries ] && [ "$get_results_success" != "true" ]; do
-    if kubectl testkube get testsuiteexecution "$execution_id" --output json > testkube-results.json; then
-        get_results_success=true
-    else
-        retry_count=$((retry_count+1))
-        echo "Getting test results failed (attempt $retry_count/$max_retries). Retrying in 10 seconds..."
-        sleep 10
-    fi
-done
-
-if [ "$get_results_success" != "true" ]; then
-    echo "Error: Failed to get test results after $max_retries attempts."
-    add_result "$TARGET_ENV" "error" "Failed to retrieve test results after multiple attempts" ""
-    exit 0
-fi
-
-# Check if any tests failed and process results
-if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-    echo "Some tests failed. Processing failed test details..."
-    
-    # Collect failed test names in a variable
-    failed_tests=""
-    
-    # Get each test name and id that failed
-    jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-        testName=$(echo $line | cut -d ' ' -f 1)
-        id=$(echo $line | cut -d ' ' -f 2)
-        echo "Test $testName failed. Test ID: $id"
-        failed_tests+="$testName, "
-        
-        # Get the Ginkgo logs of the test
-        kubectl testkube get execution "$id" > out 2>error.log
-        
-        # Remove superfluous logs of everything before the last occurrence of 'go downloading'.
-        # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-        cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+echo "\n========== TestWorkflow Summary =========="
+if [[ ${#failed_workflows[@]} -gt 0 ]]; then
+    echo "Failed workflows:"
+    for wf in "${failed_workflows[@]}"; do
+        echo "- $wf"
     done
-    
-    # Get complete list of failed tests for the result message
-    failed_tests_list=$(jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | .execution.testName' testkube-results.json | paste -sd ", " -)
-    
-    # Build pipeline link if environment variables are available
+    if [[ ${#successful_workflows[@]} -gt 0 ]]; then
+        echo "Successful workflows:"
+        for wf in "${successful_workflows[@]}"; do
+            echo "- $wf"
+        done
+    fi
     pipeline_link=""
     if [ -n "$BUILD_BUILDID" ] && [ -n "$SYSTEM_JOBID" ] && [ -n "$SYSTEM_TASKINSTANCEID" ]; then
         pipeline_link="[View Pipeline Run](https://github-private.visualstudio.com/azure/_build/results?buildId=${BUILD_BUILDID}&view=logs&j=${SYSTEM_JOBID}&t=${SYSTEM_TASKINSTANCEID})"
@@ -218,10 +206,16 @@ if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
     fi
     
     echo "Failed test processing completed"
-    add_result "$TARGET_ENV" "failed" "Tests failed: $failed_tests_list. Check pipeline logs for details." "${pipeline_link}"
+    add_result "$TARGET_ENV" "failed" "Tests failed: ${failed_workflows[*]}. Check pipeline logs for details." "${pipeline_link}"
+    echo "========================================"
+    exit 1
 else
-    echo "All tests passed successfully!"
-    add_result "$TARGET_ENV" "passed" "All tests passed successfully" ""
+    echo "All workflows completed successfully."
+    echo "Successful workflows:"
+    for wf in "${successful_workflows[@]}"; do
+        echo "- $wf"
+    done
+    echo "========================================"
 fi
 
 echo "================================================="
