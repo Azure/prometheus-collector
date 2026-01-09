@@ -51,7 +51,7 @@
                 },
                 {
                     "find": "$_MANAGED_IDENTITY_ID_$",
-                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$config(managedIdentityName)"
+                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/prom-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$config(managedIdentityName)"
                 },
                 {
                     "find": "$_AKS_NAME_$",
