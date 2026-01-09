@@ -888,6 +888,8 @@ extends:
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
+            docker manifest annotate $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) --os linux --arch amd64
+            docker manifest annotate $(LINUX_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME) --os linux --arch arm64
             docker manifest push $(LINUX_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -1317,6 +1319,8 @@ extends:
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+            docker manifest annotate $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --os linux --arch amd64
+            docker manifest annotate $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --os linux --arch arm64
             docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
             docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
             MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
