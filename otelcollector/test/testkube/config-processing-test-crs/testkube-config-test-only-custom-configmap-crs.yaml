@@ -1,5 +1,5 @@
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: configprocessingcommon
   namespace: testkube
@@ -7,33 +7,38 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
+  config:
+    AMW_QUERY_ENDPOINT:
+      type: string
+      default: ""
+    AZURE_CLIENT_ID:
+      type: string
+      default: ""
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: "$BRANCH"
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    variables:
-      AMW_QUERY_ENDPOINT:
-        name: AMW_QUERY_ENDPOINT
-        value: "$AMW_QUERY_ENDPOINT"
-        type: basic
-      AZURE_CLIENT_ID:
-        name: AZURE_CLIENT_ID
-        value: "$AZURE_CLIENT_ID"
-        type: basic
-    args:
-      - "--label-filter"
-      - "(config-processing-common, config-processing-common-with-config-maps)"
-      - "./configprocessing"
-    executePostRunScriptBeforeScraping: false
+      revision: "$BRANCH"
+      paths:
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: AMW_QUERY_ENDPOINT
+          value: "{{config.AMW_QUERY_ENDPOINT}}"
+        - name: AZURE_CLIENT_ID
+          value: "{{config.AZURE_CLIENT_ID}}"
+      shell: |
+        ginkgo run -r --label-filter "(config-processing-common, config-processing-common-with-config-maps)" ./configprocessing
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
 ---
----
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: customconfigmapallactions
   namespace: testkube
@@ -41,40 +46,32 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
+  config:
+    AMW_QUERY_ENDPOINT:
+      type: string
+      default: ""
+    AZURE_CLIENT_ID:
+      type: string
+      default: ""
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: "$BRANCH"
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    variables:
-      AMW_QUERY_ENDPOINT:
-        name: AMW_QUERY_ENDPOINT
-        value: "$AMW_QUERY_ENDPOINT"
-        type: basic
-      AZURE_CLIENT_ID:
-        name: AZURE_CLIENT_ID
-        value: "$AZURE_CLIENT_ID"
-        type: basic
-    args:
-      - "--label-filter"
-      - "(config-processing-only-config-map-all-actions)"
-      - "./configprocessing"
-    executePostRunScriptBeforeScraping: false
----
-apiVersion: tests.testkube.io/v3
-kind: TestSuite
-metadata:
-  name: config-tests-custom-configmap-all-actions
-  namespace: testkube
-spec:
+      revision: "$BRANCH"
+      paths:
+      - otelcollector/test/ginkgo-e2e
   steps:
-  - stopOnFailure: false
-    execute:
-    - test: configprocessingcommon
-  - stopOnFailure: false
-    execute:
-    - test: customconfigmapallactions
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: AMW_QUERY_ENDPOINT
+          value: "{{config.AMW_QUERY_ENDPOINT}}"
+        - name: AZURE_CLIENT_ID
+          value: "{{config.AZURE_CLIENT_ID}}"
+      shell: |
+        ginkgo run -r --label-filter "(config-processing-only-config-map-all-actions)" ./configprocessing
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
