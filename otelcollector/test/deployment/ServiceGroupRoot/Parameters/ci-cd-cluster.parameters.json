@@ -32,9 +32,6 @@
     "win19VmSize": {
       "value": "$_WIN19_VM_SIZE_$"
     },
-    "actionGroupId": {
-      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-ev2/providers/Microsoft.Insights/actiongroups/wtdTestAg"
-    },
     "vnetName": {
       "value": "$_VNET_NAME_$"
     },

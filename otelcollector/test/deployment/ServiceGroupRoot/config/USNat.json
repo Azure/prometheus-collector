@@ -6,14 +6,14 @@
     "environment": "USNat",
     "subscriptionId": "061390fc-1b69-430f-8ca1-db6511bfa549",
     "clientId": "6ae0f871-c572-46ae-a335-76d07e46a0cf",
-    "principalId": "",
+    "principalId": "e411b477-5fa0-42bc-9fac-826b8808d10f",
     "managedIdentityName": "prom-test-msi",
     "vnetNameBase": "aksVnet-",
     "shellExtSubnetNameBase": "shellSubnet-",
     "agentPoolVmSize": "Standard_D4s_v3",
     "marinerVmSize": "Standard_D4s_v3",
-    "arm64VmSize": "Standard_D4pds_v5",
-    "marinerarm64VmSize": "Standard_D4pds_v5",
+    "arm64VmSize": "Standard_D4ds_v5",
+    "marinerarm64VmSize": "Standard_D4ds_v5",
     "win22VmSize": "Standard_D2s_v3",
     "win19VmSize": "Standard_DS3_v2"
   }

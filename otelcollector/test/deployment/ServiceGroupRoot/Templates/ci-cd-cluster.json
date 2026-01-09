@@ -147,13 +147,14 @@
         "description": "The password of the Windows Admin user."
       }
     },
-    "actionGroupId": {
+    "actionGroupName": {
       "type": "string",
-      "defaultValue": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-ev2/providers/Microsoft.Insights/actiongroups/wtdTestAg",
+      "defaultValue": "[concat('ag-', substring(uniqueString(resourceGroup().id), 0, 9))]",
       "metadata": {
-        "description": "Action group used for alerts"
-      }
-    },
+        "description": "Action group name used for alerts"
+      },
+      "maxLength": 12
+    },    
     "vnetName": {
       "type": "string",
       "defaultValue": "aksVnet",
@@ -206,6 +207,7 @@
     "isValidClusterLocation": "[contains(parameters('allowedRegions'), parameters('clusterLocation'))]",
     "isValidAmwLocation": "[contains(parameters('allowedRegions'), parameters('azureMonitorWorkspaceLocation'))]",
     "resourceIdPrefix": "[resourceGroup().id]",
+    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]",
     "azureMonitorWorkspaceName": "[parameters('amwName')]",
     "logAnalyticsWorkspaceName": "[concat(parameters('clusterName'), '-laws')]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
@@ -1175,6 +1177,29 @@
     },
 
     {
+        "type": "Microsoft.Insights/actionGroups",
+        "apiVersion": "2024-10-01-preview",
+        "condition": "[variables('isValidAmwLocation')]",        
+        "name": "[parameters('actionGroupName')]",
+        "location": "global",
+        "properties": {
+            "groupShortName": "[parameters('actionGroupName')]",
+            "enabled": true,
+            "emailReceivers": [],
+            "smsReceivers": [],
+            "webhookReceivers": [],
+            "eventHubReceivers": [],
+            "itsmReceivers": [],
+            "azureAppPushReceivers": [],
+            "automationRunbookReceivers": [],
+            "voiceReceivers": [],
+            "logicAppReceivers": [],
+            "azureFunctionReceivers": [],
+            "armRoleReceivers": []
+        }
+    },
+
+    {
       "name": "[Concat(parameters('clusterName'), '-dev-alerts')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "condition": "[variables('isValidAmwLocation')]",
@@ -1182,7 +1207,8 @@
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "dependsOn": [
         "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
-        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
+        "[resourceId('Microsoft.Insights/actionGroups/', parameters('actionGroupName'))]"
       ],         
       "properties": {
           "description": "[Concat('Rule group for cluster', parameters('clusterName'), 'in the workspace', variables('azureMonitorWorkspaceName'))]",

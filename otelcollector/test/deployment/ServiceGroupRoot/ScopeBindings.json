@@ -55,11 +55,11 @@
                 },
                 {
                     "find": "$_AKS_NAME_$",
-                    "replaceWith": "aks-cluster-$azureResourceGroup()"
+                    "replaceWith": "aks-$azureResourceGroup()"
                 },
                 {
                     "find": "$_AMW_NAME_$",
-                    "replaceWith": "aks-cluster-$azureResourceGroup()-amw"
+                    "replaceWith": "aks-$azureResourceGroup()-amw"
                 },
                 {
                     "find": "$_SHELL_SUBNET_ID_$",
