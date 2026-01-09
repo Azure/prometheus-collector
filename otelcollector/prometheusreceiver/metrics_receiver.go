@@ -28,7 +28,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 const (
@@ -71,19 +71,19 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		apiServerManager = apiserver.NewManager(set, apiServerCfg, &baseCfg, registry, registerer)
 	}
 	pr := &pReceiver{
-		cfg:          cfg,
-		consumer:     next,
-		settings:     set,
-		configLoaded: make(chan struct{}),
-		registerer:   registerer,
-		registry:     registry,
+		cfg:              cfg,
+		consumer:         next,
+		settings:         set,
+		configLoaded:     make(chan struct{}),
+		registerer:       registerer,
+		registry:         registry,
+		apiServerManager: apiServerManager,
 		targetAllocatorManager: targetallocator.NewManager(
 			set,
 			cfg.TargetAllocator.Get(),
 			&baseCfg,
-			enableNativeHistogramsGate.IsEnabled(),
+			cfg.enableNativeHistograms,
 		),
-		apiServerManager: apiServerManager,
 	}
 	return pr, nil
 }
@@ -102,8 +102,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
-	if err != nil {
+	if err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager); err != nil {
 		return err
 	}
 
@@ -153,7 +152,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		r.cfg.UseStartTimeMetric,
 		startTimeMetricRegex,
 		useCreatedMetricGate.IsEnabled(),
-		enableNativeHistogramsGate.IsEnabled(),
+		r.cfg.enableNativeHistograms,
+		!r.cfg.ignoreMetadata,
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 		r.cfg.TrimMetricSuffixes,
 	)
@@ -211,12 +211,12 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 func (r *pReceiver) initScrapeOptions() *scrape.Options {
 	opts := &scrape.Options{
 		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
+		ExtraMetrics:          enableReportExtraScrapeMetricsGate.IsEnabled() || r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
 		EnableCreatedTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
-		EnableNativeHistogramsIngestion:     enableNativeHistogramsGate.IsEnabled(),
+		EnableNativeHistogramsIngestion:     r.cfg.enableNativeHistograms,
 	}
 
 	return opts
@@ -226,10 +226,7 @@ func (r *pReceiver) initScrapeOptions() *scrape.Options {
 // plus a delta to prevent race conditions.
 // This ensures jobs are not garbage collected between scrapes.
 func gcInterval(cfg *PromConfig) time.Duration {
-	gcInterval := defaultGCInterval
-	if time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
-		gcInterval = time.Duration(cfg.GlobalConfig.ScrapeInterval) + gcIntervalDelta
-	}
+	gcInterval := max(time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta, defaultGCInterval)
 	for _, scrapeConfig := range cfg.ScrapeConfigs {
 		if time.Duration(scrapeConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
 			gcInterval = time.Duration(scrapeConfig.ScrapeInterval) + gcIntervalDelta
@@ -253,8 +250,7 @@ func (r *pReceiver) Shutdown(ctx context.Context) error {
 		r.unregisterMetrics()
 	}
 	if r.apiServerManager != nil {
-		err := r.apiServerManager.Shutdown(ctx)
-		if err != nil {
+		if err := r.apiServerManager.Shutdown(ctx); err != nil {
 			return err
 		}
 	}

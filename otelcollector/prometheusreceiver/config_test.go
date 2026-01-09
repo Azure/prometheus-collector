@@ -381,9 +381,9 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 
 	r0 := cfg.(*Config)
 	assert.NotNil(t, r0.PrometheusConfig)
-	assert.True(t, r0.APIServer.Enabled)
-	assert.NotNil(t, r0.APIServer.ServerConfig)
-	assert.Equal(t, "localhost:9090", r0.APIServer.ServerConfig.Endpoint)
+	apiCfg := r0.APIServer.Get()
+	require.NotNil(t, apiCfg)
+	assert.Equal(t, "localhost:9090", apiCfg.ServerConfig.Endpoint)
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withAPIDisabled").String())
 	require.NoError(t, err)
@@ -392,7 +392,7 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 	require.NoError(t, xconfmap.Validate(cfg))
 
 	r1 := cfg.(*Config)
-	assert.False(t, r1.APIServer.Enabled)
+	assert.False(t, r1.APIServer.HasValue())
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withoutAPI").String())
 	require.NoError(t, err)
@@ -402,7 +402,7 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 
 	r2 := cfg.(*Config)
 	assert.NotNil(t, r2.PrometheusConfig)
-	assert.False(t, r2.APIServer.Enabled)
+	assert.False(t, r2.APIServer.HasValue())
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withInvalidAPIConfig").String())
 	require.NoError(t, err)
@@ -465,6 +465,53 @@ scrape_configs:
 				credentials := string(scrapeConfig.HTTPClientConfig.Authorization.Credentials)
 				assert.Equal(t, "mySecretBearerToken123", credentials, "credentials should preserve original value")
 				assert.Equal(t, "Bearer", scrapeConfig.HTTPClientConfig.Authorization.Type)
+			},
+		},
+		{
+			name: "oauth2 client credentials secret preservation",
+			configYAML: `
+scrape_configs:
+  - job_name: "test-client-secredentialscret-auth"
+    oauth2:
+      client_id: "id-1"
+      client_secret: "mySuperSecretClientSecret"
+      token_url: "https://auth.example.com/token"
+    static_configs:
+      - targets: ["localhost:8080"]
+`,
+			checkFn: func(t *testing.T, dst *PromConfig) {
+				require.Len(t, dst.ScrapeConfigs, 1)
+				scrapeConfig := dst.ScrapeConfigs[0]
+				assert.Equal(t, "test-client-secredentialscret-auth", scrapeConfig.JobName)
+
+				// The critical check: ensure the client_secret is not "<secret>"
+				require.NotNil(t, scrapeConfig.HTTPClientConfig.OAuth2, "basic auth should be configured")
+				secret := string(scrapeConfig.HTTPClientConfig.OAuth2.ClientSecret)
+				assert.Equal(t, "mySuperSecretClientSecret", secret, "client_secret should preserve original value")
+			},
+		},
+		{
+			name: "oauth2 jwt-bearer certificate preservation",
+			configYAML: `
+scrape_configs:
+  - job_name: "test-jwt-bearer-auth"
+    oauth2:
+      client_id: "id-1"
+      client_certificate_key: "mySuperSecretCertificateKey"
+      token_url: "https://auth.example.com/token"
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer"
+    static_configs:
+      - targets: ["localhost:8080"]
+`,
+			checkFn: func(t *testing.T, dst *PromConfig) {
+				require.Len(t, dst.ScrapeConfigs, 1)
+				scrapeConfig := dst.ScrapeConfigs[0]
+				assert.Equal(t, "test-jwt-bearer-auth", scrapeConfig.JobName)
+
+				// The critical check: ensure the client_certificate_key is not "<secret>"
+				require.NotNil(t, scrapeConfig.HTTPClientConfig.OAuth2, "basic auth should be configured")
+				key := string(scrapeConfig.HTTPClientConfig.OAuth2.ClientCertificateKey)
+				assert.Equal(t, "mySuperSecretCertificateKey", key, "client_certificate_key should preserve original value")
 			},
 		},
 	}

@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
@@ -39,14 +39,20 @@ type Config struct {
 	StartTimeMetricRegex string `mapstructure:"start_time_metric_regex"`
 
 	// ReportExtraScrapeMetrics - enables reporting of additional metrics for Prometheus client like scrape_body_size_bytes
+	//
+	// Deprecated: use the feature gate "receiver.prometheusreceiver.EnableReportExtraScrapeMetrics" instead.
 	ReportExtraScrapeMetrics bool `mapstructure:"report_extra_scrape_metrics"`
 
 	TargetAllocator configoptional.Optional[targetallocator.Config] `mapstructure:"target_allocator"`
 
-	//  APIServer has the settings to enable the receiver to host the Prometheus API
-	// server in agent mode. This allows the user to call the endpoint to get
-	// the config, service discovery, and targets for debugging purposes.
+	//  APIServer configures the optional embedded Prometheus API server that can
+	// be used for debugging scrape configs, service discovery, and active targets.
 	APIServer configoptional.Optional[apiserver.Config] `mapstructure:"api_server"`
+
+	// From feature gate.
+	enableNativeHistograms bool
+	// For testing only.
+	ignoreMetadata bool
 }
 
 // Validate checks the receiver configuration is valid.
@@ -55,8 +61,10 @@ func (cfg *Config) Validate() error {
 		return errors.New("no Prometheus scrape_configs or target_allocator set")
 	}
 
-	if err := cfg.APIServer.Validate(); err != nil {
-		return fmt.Errorf("invalid API server configuration settings: %w", err)
+	if apiCfg := cfg.APIServer.Get(); apiCfg != nil {
+		if err := apiCfg.Validate(); err != nil {
+			return fmt.Errorf("invalid API server configuration settings: %w", err)
+		}
 	}
 
 	return nil

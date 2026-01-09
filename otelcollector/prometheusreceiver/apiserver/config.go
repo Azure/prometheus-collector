@@ -9,10 +9,12 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 )
 
+// Config defines the API server configuration.
 type Config struct {
 	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
 }
 
+// Validate ensures the API server config is usable.
 func (cfg *Config) Validate() error {
 	if cfg.ServerConfig.Endpoint == "" {
 		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")

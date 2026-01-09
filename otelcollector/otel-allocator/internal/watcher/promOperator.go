@@ -65,6 +65,7 @@ func NewPrometheusCRWatcher(
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func NewPrometheusCRWatcher(
 	// we want to use endpointslices by default
 	serviceDiscoveryRole := monitoringv1.ServiceDiscoveryRole("EndpointSlice")
 
-	// TODO: We should make these durations configurable
+	//no need to hardcode durations, use default if not set
 	prom := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cfg.CollectorNamespace,
@@ -92,7 +93,7 @@ func NewPrometheusCRWatcher(
 				ServiceDiscoveryRole:            &serviceDiscoveryRole,
 				ScrapeProtocols:                 cfg.PrometheusCR.ScrapeProtocols,
 			},
-			EvaluationInterval: monitoringv1.Duration("30s"),
+			EvaluationInterval: monitoringv1.Duration(cfg.PrometheusCR.EvaluationInterval.String()),
 		},
 	}
 
@@ -322,7 +323,6 @@ func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.
 	if secretInformers != nil {
 		informersMap[string(v1.ResourceSecrets)] = secretInformers
 	}
-
 	return informersMap, nil
 }
 

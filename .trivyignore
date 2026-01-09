@@ -1,9 +1,17 @@
 # This file contains CVEs to be ignored by Trivy
-# Auto-generated on Tue Oct 14 07:13:40 UTC 2025
+# Auto-generated on Tue Jan  6 07:17:34 UTC 2026
 
 # CRITICAL
-CVE-2025-61729
-CVE-2025-61727
-CVE-2025-68156
-CVE-2025-47914
-CVE-2025-58181
+
+# HIGH
+# otelcollector
+CVE-2025-68156 # github.com/expr-lang/expr
+# # promconfigvalidator
+CVE-2025-68156 # github.com/expr-lang/expr
+
+# # MEDIUM
+# # prometheusui
+CVE-2025-47914 # golang.org/x/crypto
+CVE-2025-58181 # golang.org/x/crypto
+
+
