@@ -7,13 +7,6 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  config:
-    AMW_QUERY_ENDPOINT:
-      type: string
-      default: ""
-    AZURE_CLIENT_ID:
-      type: string
-      default: ""
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
@@ -27,9 +20,9 @@ spec:
         image: cerebro31/ginkgo-test:latest
         env:
         - name: AMW_QUERY_ENDPOINT
-          value: "{{config.AMW_QUERY_ENDPOINT}}"
+          value: "$AMW_QUERY_ENDPOINT"
         - name: AZURE_CLIENT_ID
-          value: "{{config.AZURE_CLIENT_ID}}"
+          value: "$AZURE_CLIENT_ID"
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
@@ -48,13 +41,6 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  config:
-    AMW_QUERY_ENDPOINT:
-      type: string
-      default: ""
-    AZURE_CLIENT_ID:
-      type: string
-      default: ""
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
@@ -68,9 +54,9 @@ spec:
         image: cerebro31/ginkgo-test:latest
         env:
         - name: AMW_QUERY_ENDPOINT
-          value: "{{config.AMW_QUERY_ENDPOINT}}"
+          value: "$AMW_QUERY_ENDPOINT"
         - name: AZURE_CLIENT_ID
-          value: "{{config.AZURE_CLIENT_ID}}"
+          value: "$AZURE_CLIENT_ID"
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |

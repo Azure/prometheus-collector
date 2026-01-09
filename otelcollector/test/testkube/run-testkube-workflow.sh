@@ -163,26 +163,11 @@ for wf in "${workflows[@]}"; do
     # For any test that has failed, print out the logs
     if [[ $(jq -r '.result.status' "testkube-results-${wf}.json") == "failed" ]]; then
 
-        echo "TestWorkflow failed. Execution ID: $execution_id"
+        echo "$wf TestWorkflow failed. Execution ID: $execution_id"
 
-        # Get the logs of the testworkflow execution
-        kubectl testkube get testworkflowexecution $execution_id --logs-only > "execution-${wf}.log" 2>&1
-
-        # Display the logs
-        cat "execution-${wf}.log"
-
-        # Extract meaningful error information (only the ginkgo failure summary lines, any failure count)
-        result=$(awk 'BEGIN{inblock=0} /Summarizing [0-9]+ Failure/{inblock=1} {
-            if(inblock){
-                gsub(/\x1B\[[0-9;]*[mK]/, "");
-                if($0 ~ /^FAIL$/ || $0 ~ /^Ginkgo ran/ || $0 ~ /^Test Suite Failed/){exit};
-                print;
-            }
-        }' "execution-${wf}.log")
-
-        failed_workflows+=("${wf} (execution: ${execution_id})")
+        failed_workflows+=("${wf}")
     else
-        successful_workflows+=("${wf} (execution: ${execution_id})")
+        successful_workflows+=("${wf}")
     fi
 done
 

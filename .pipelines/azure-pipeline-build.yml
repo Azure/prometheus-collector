@@ -2575,6 +2575,7 @@ extends:
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
+        timeoutInMinutes: 120
         environment: Prometheus-Collector
         # dependsOn: Deploy_AKS_Chart
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false)))
@@ -2650,6 +2651,7 @@ extends:
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
+        timeoutInMinutes: 120
         environment: Prometheus-Collector
         # dependsOn: Deploy_AKS_Chart_OTel_Cluster
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false)))
@@ -2725,6 +2727,7 @@ extends:
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
+        timeoutInMinutes: 120
         environment: Prometheus-Collector
         # dependsOn: Deploy_Chart_ARC
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false)))
@@ -2800,6 +2803,7 @@ extends:
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
+        timeoutInMinutes: 120
         environment: Prometheus-Collector
         # dependsOn:  Deploy_AKS_Chart_OTel_Upgrade_Cluster
         condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, false)
@@ -2828,7 +2832,7 @@ extends:
                   scriptLocation: 'inlineScript'
                   inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
               - bash: |
-                  echo "bot/$(Build.SourceBranchName)"
+                  echo "suyadav/$(Build.SourceBranchName)"
                   export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
                   export BUILD_BUILDID="$(Build.BuildId)"
                   export SYSTEM_JOBID="$(System.JobId)"
@@ -2842,7 +2846,7 @@ extends:
                     "" \
                     "" \
                     "OTelCollector-Upgrade" \
-                    "bot/$(Build.SourceBranchName)"
+                    "suyadv/$(Build.SourceBranchName)"
                 workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
