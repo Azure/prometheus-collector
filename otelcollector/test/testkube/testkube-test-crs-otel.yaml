@@ -18,6 +18,9 @@ spec:
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
         image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --label-filter "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)" ./containerstatus
   pod:
@@ -45,6 +48,9 @@ spec:
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
         image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --label-filter "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)" ./livenessprobe
   pod:
@@ -72,6 +78,9 @@ spec:
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
         image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --label-filter "!(arc-extension,linux-daemonset-custom-config,fips,mdsd)" ./prometheusui
   pod:
@@ -99,6 +108,9 @@ spec:
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
         image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --ldflags "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" ./operator
   pod:
@@ -138,6 +150,8 @@ spec:
           value: "{{config.AMW_QUERY_ENDPOINT}}"
         - name: AZURE_CLIENT_ID
           value: "{{config.AZURE_CLIENT_ID}}"
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r ./querymetrics
   pod:

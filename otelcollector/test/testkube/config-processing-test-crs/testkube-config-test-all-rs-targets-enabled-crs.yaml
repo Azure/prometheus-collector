@@ -30,6 +30,8 @@ spec:
           value: "{{config.AMW_QUERY_ENDPOINT}}"
         - name: AZURE_CLIENT_ID
           value: "{{config.AZURE_CLIENT_ID}}"
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --label-filter "(config-processing-common, config-processing-common-with-config-maps)" ./configprocessing
   pod:
@@ -69,6 +71,8 @@ spec:
           value: "{{config.AMW_QUERY_ENDPOINT}}"
         - name: AZURE_CLIENT_ID
           value: "{{config.AZURE_CLIENT_ID}}"
+        - name: GOTOOLCHAIN
+          value: "auto"
       shell: |
         ginkgo run -r --label-filter "(config-processing-rs-targets-enabled)" ./configprocessing
   pod:
