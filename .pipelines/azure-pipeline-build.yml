@@ -2108,7 +2108,7 @@ extends:
       #     displayName: Tag commit with semver
     - stage: Deploy
       lockBehavior: sequential
-      # dependsOn: Build
+      dependsOn: Build
       jobs:
       # - deployment: Deploy_Chart_ARC
       #   templateContext:
