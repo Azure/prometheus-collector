@@ -26,7 +26,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "(config-processing-common, config-processing-common-with-error-config-maps)" ./configprocessing
+        ginkgo run -r -p --label-filter "(config-processing-common, config-processing-common-with-error-config-maps)" ./configprocessing
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -60,7 +60,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "(config-processing-global-settings-error)" ./configprocessing
+        ginkgo run -r -p --label-filter "(config-processing-global-settings-error)" ./configprocessing
   pod:
     nodeSelector:
       kubernetes.io/os: linux

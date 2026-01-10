@@ -22,7 +22,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./containerstatus
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./containerstatus
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -52,7 +52,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./livenessprobe
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./livenessprobe
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -82,7 +82,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./prometheusui
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./prometheusui
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -112,7 +112,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --ldflags "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" ./operator
+        ginkgo run -r -p --ldflags "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" ./operator
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -146,7 +146,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./querymetrics
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./querymetrics
   pod:
     nodeSelector:
       kubernetes.io/os: linux
