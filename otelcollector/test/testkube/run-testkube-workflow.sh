@@ -115,8 +115,8 @@ echo "✓ Cluster wait period completed"
 echo "Step 4: Starting TestKube workflow execution..."
 
 echo "Run testkube testworkflows"
-# Build workflow list dynamically from cluster (exclude livenessprobe)
-mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$')
+# Build workflow list dynamically from cluster (exclude livenessprobe and *-nightly)
+mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v '-nightly$')
 if [[ ${#workflows[@]} -eq 0 ]]; then
     echo "No testworkflows found via kubectl testkube get testworkflows"
     exit 1
@@ -126,10 +126,7 @@ successful_workflows=()
 
 for wf in "${workflows[@]}"; do
     echo "Running workflow: $wf"
-    kubectl testkube run testworkflow "$wf" \
-        --config AZURE_CLIENT_ID="$AZURE_CLIENT_ID" \
-        --config AMW_QUERY_ENDPOINT="$AMW_QUERY_ENDPOINT" \
-        --verbose
+    kubectl testkube run testworkflow "$wf"
 
     echo "Waiting for execution to be created..."
     sleep 5
