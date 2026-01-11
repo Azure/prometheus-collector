@@ -18,11 +18,11 @@ import (
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
@@ -35,10 +35,14 @@ type Config struct {
 	// the process started. It should not be used in "exporters" which export counters that may have
 	// started before the process itself. Use only if you know what you are doing, as this may result
 	// in incorrect rate calculations.
+	//
+	// Deprecated: use the metricstarttime processor instead.
 	UseStartTimeMetric   bool   `mapstructure:"use_start_time_metric"`
 	StartTimeMetricRegex string `mapstructure:"start_time_metric_regex"`
 
 	// ReportExtraScrapeMetrics - enables reporting of additional metrics for Prometheus client like scrape_body_size_bytes
+	//
+	// Deprecated: use the feature gate "receiver.prometheusreceiver.EnableReportExtraScrapeMetrics" instead.
 	ReportExtraScrapeMetrics bool `mapstructure:"report_extra_scrape_metrics"`
 
 	TargetAllocator configoptional.Optional[targetallocator.Config] `mapstructure:"target_allocator"`
@@ -46,7 +50,10 @@ type Config struct {
 	//  APIServer has the settings to enable the receiver to host the Prometheus API
 	// server in agent mode. This allows the user to call the endpoint to get
 	// the config, service discovery, and targets for debugging purposes.
-	APIServer configoptional.Optional[apiserver.Config] `mapstructure:"api_server"`
+	APIServer APIServer `mapstructure:"api_server"`
+
+	// For testing only.
+	ignoreMetadata bool
 }
 
 // Validate checks the receiver configuration is valid.
@@ -184,7 +191,7 @@ func reloadPromConfig(dst *PromConfig, src any) error {
 	yamlOut, err := yaml.MarshalWithOptions(
 		src,
 		yaml.CustomMarshaler(func(s commonconfig.Secret) ([]byte, error) {
-			return []byte(s), nil
+			return yaml.Marshal(string(s))
 		}),
 	)
 	if err != nil {
@@ -229,5 +236,22 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 	if err := checkFile(tlsConfig.KeyFile); err != nil {
 		return fmt.Errorf("error checking client key file %q: %w", tlsConfig.KeyFile, err)
 	}
+	return nil
+}
+
+type APIServer struct {
+	Enabled      bool                    `mapstructure:"enabled"`
+	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
+}
+
+func (cfg *APIServer) Validate() error {
+	if !cfg.Enabled {
+		return nil
+	}
+
+	if cfg.ServerConfig.Endpoint == "" {
+		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
+	}
+
 	return nil
 }
