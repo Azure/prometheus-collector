@@ -808,7 +808,7 @@ extends:
             
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            sudo docker build . --provenance false --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -824,10 +824,9 @@ extends:
               exit 1
             elif echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "arm64"'; then
               echo "SUCCESS: Image has correct arm64 architecture metadata"
-            elif echo "$MANIFEST_OUTPUT" | grep -qi "unauthorized\|error"; then
-              echo "WARNING: Could not verify architecture (auth issue) - continuing since push succeeded"
             else
               echo "WARNING: Could not verify architecture in manifest"
+              exit 1
             fi
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -881,8 +880,6 @@ extends:
               exit 1
             elif echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "amd64"'; then
               echo "SUCCESS: Image has correct amd64 architecture metadata"
-            elif echo "$MANIFEST_OUTPUT" | grep -qi "unauthorized\|error"; then
-              echo "WARNING: Could not verify architecture (auth issue) - continuing since push succeeded"
             else
               echo "WARNING: Could not verify architecture in manifest"
             fi
