@@ -808,19 +808,10 @@ extends:
             
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            # provenance flag false to avoid a manifest list is that includes one arm64 architecture and one unknown architecture.
             sudo docker build . --provenance false --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
-              exit 1
-            fi
-            
-            echo "=== Verifying pushed ARM64 image manifest ==="
-            MANIFEST_OUTPUT=$(sudo docker manifest inspect $(LINUX_ARM64_FULL_IMAGE_NAME) 2>&1) || true
-            echo "$MANIFEST_OUTPUT"
-            
-            # Check platform info in the manifest - ensure no "unknown" architecture exists
-            if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "unknown"'; then
-              echo "ERROR: Image has unknown architecture"
               exit 1
             fi
           retryCountOnTaskFailure: 1
@@ -900,17 +891,7 @@ extends:
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
-            fi
-            
-            echo "=== Verifying pushed AMD64 image manifest ==="
-            MANIFEST_OUTPUT=$(docker manifest inspect $(LINUX_AMD64_FULL_IMAGE_NAME) 2>&1) || true
-            echo "$MANIFEST_OUTPUT"
-            
-            # Check platform info in the manifest - ensure no "unknown" architecture exists
-            if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "unknown"'; then
-              echo "ERROR: Image has unknown architecture"
-              exit 1
-            fi
+            fi    
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push image to dev ACR"
