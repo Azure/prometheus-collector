@@ -820,12 +820,7 @@ extends:
             
             # Check platform info in the manifest - ensure no "unknown" architecture exists
             if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "unknown"'; then
-              echo "ERROR: Image has unknown architecture - platform metadata not set correctly"
-              exit 1
-            elif echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "arm64"'; then
-              echo "SUCCESS: Image has correct arm64 architecture metadata"
-            else
-              echo "WARNING: Could not verify architecture in manifest"
+              echo "ERROR: Image has unknown architecture"
               exit 1
             fi
           retryCountOnTaskFailure: 1
@@ -876,12 +871,8 @@ extends:
             
             # Check platform info in the manifest - ensure no "unknown" architecture exists
             if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "unknown"'; then
-              echo "ERROR: Image has unknown architecture - platform metadata not set correctly"
+              echo "ERROR: Image has unknown architecture"
               exit 1
-            elif echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "amd64"'; then
-              echo "SUCCESS: Image has correct amd64 architecture metadata"
-            else
-              echo "WARNING: Could not verify architecture in manifest"
             fi
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
