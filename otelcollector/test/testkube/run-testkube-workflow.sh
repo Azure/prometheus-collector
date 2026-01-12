@@ -116,7 +116,7 @@ echo "Step 4: Starting TestKube workflow execution..."
 
 echo "Run testkube testworkflows"
 # Build workflow list dynamically from cluster (exclude livenessprobe and *-nightly)
-mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v '-nightly$')
+mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v 'nightly$')
 if [[ ${#workflows[@]} -eq 0 ]]; then
     echo "No testworkflows found via kubectl testkube get testworkflows"
     exit 1
