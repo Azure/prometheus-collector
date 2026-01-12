@@ -1,0 +1,78 @@
+trigger: none
+
+parameters:
+ - name: buildVersion
+   type: string
+ - name: cvrpPath
+   type: string
+   default: '.\cvrp.manifest.json'
+ - name: artifactToDeploy
+   type: string
+   default: 'drop-prometheus-collector-signed'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+
+  pipelines:
+    # - pipeline: source_pipeline
+    #   source: "PrometheusCollector-BuildArtifacts-Official"
+    #   version: ${{ parameters.buildVersion }}
+    #   trigger: none
+    - pipeline: signing_pipeline
+      source: "PrometheusCollector-PostProcessArtifacts"
+      version: ${{ parameters.buildVersion }}
+      trigger: none      
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    stages:
+      # - stage: "USSec_pipeline_ReplicateOnly"
+      #   dependsOn: []
+      #   displayName: "USSec: <<branch-name>> Replicate Only"
+      #   variables:
+      #     ob_release_environment: USSec
+      #     ob_release_stagetype: replication
+      #     ArtifactToDeploy: ${{ parameters.artifactToDeploy }}
+      #     CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
+      #   jobs:
+      #     - job: ReleaseJob
+      #       pool:
+      #         type: release
+      #       steps:
+      #         - download: source_pipeline
+      #           artifact: ${{ parameters.artifactToDeploy }}
+      # # - stage: "USNat_pipeline_ReplicateOnly"
+      # #   dependsOn: []
+      # #   displayName: "USNat: PrometheusCollector Replicate Only"
+      # #   variables:
+      # #     ob_release_environment: USNat
+      # #     ob_release_stagetype: replication
+      # #     ArtifactToDeploy: ${{ parameters.artifactToDeploy }}
+      # #     CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
+      # #   jobs:
+      # #     - job: ReleaseJob
+      # #       pool:
+      # #         type: release
+      # #       steps:
+      # #         - download: source_pipeline
+      # #           artifact: ${{ parameters.artifactToDeploy }}
+      - stage: "USNat_pipeline_ReplicateOnly"
+        dependsOn: []
+        displayName: "USNat: PrometheusCollector Replicate Only"
+        variables:
+          ob_release_environment: USNat
+          ob_release_stagetype: replication
+          ArtifactToDeploy: "${{ parameters.artifactToDeploy }}"
+          CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
+        jobs:
+          - job: ReleaseJob
+            pool:
+              type: release
+            steps:
+              - download: signing_pipeline
+                artifact: "${{ parameters.artifactToDeploy }}"
