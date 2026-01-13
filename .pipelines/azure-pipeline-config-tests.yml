@@ -80,6 +80,13 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install kubectl CLI"
 
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
           # - bash: |
           #     set -e
           #     echo "executing the script to install golang $(GOLANG_VERSION)"
