@@ -83,16 +83,22 @@ export AZURE_CLIENT_ID
 export BRANCH_NAME
 
 # Generate the test CRs from template
-envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
+if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+    envsubst < "./testkube/config-processing-test-crs/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
+else
+    envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
+fi
 
 # Apply the generated files
 kubectl apply -f ./testkube/api-server-permissions.yaml
 kubectl apply -f "./testkube/$TARGET_OUTPUT"
 
-# Apply common configmaps
-kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+    # Apply common configmaps
+    kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+    kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+    kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+fi
 
 # Apply settings configmap (unless explicitly disabled)
 if [ "$APPLY_SETTINGS_CONFIGMAP" = "true" ]; then
@@ -102,9 +108,11 @@ else
     echo "⚠ Skipped settings configmap (disabled)"
 fi
 
-# Apply reference app
-kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
-echo "✓ TestKube environment setup completed"
+if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+    # Apply reference app
+    kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
+    echo "✓ TestKube environment setup completed"
+fi
 
 # Step 3: Wait for cluster to be ready
 echo "Step 3: Waiting for cluster to be ready for $SLEEP_DURATION seconds..."
@@ -114,9 +122,60 @@ echo "✓ Cluster wait period completed"
 # Step 4: Run TestKube tests
 echo "Step 4: Starting TestKube workflow execution..."
 
+
 echo "Run testkube testworkflows"
-# Build workflow list dynamically from cluster (exclude livenessprobe and *-nightly)
-mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v 'nightly$')
+if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+    echo "Running in ConfigTests environment"
+    # Build workflow list for ConfigTests environment via template name
+    case "$SOURCE_TEMPLATE" in
+        testkube-config-test-all-targets-disabled-crs.yaml)
+            workflows=(configprocessingcommon alltargetsdisabled)
+            ;;
+        testkube-config-test-all-targets-enabled-crs.yaml)
+            workflows=(configprocessingcommon alltargetsenabled)
+            ;;
+        testkube-config-test-all-ds-targets-enabled-crs.yaml)
+            workflows=(configprocessingcommon alldstargetsenabled)
+            ;;
+        testkube-config-test-all-rs-targets-enabled-crs.yaml)
+            workflows=(configprocessingcommon allrstargetsenabled)
+            ;;
+        testkube-config-test-default-targets-on-crs.yaml)
+            workflows=(configprocessingcommon defaultsettingsenabled)
+            ;;
+        testkube-config-test-default-targets-on-v2-crs.yaml)
+            workflows=(configprocessingcommonv2 defaultsettingsenabledv2)
+            ;;
+        testkube-config-test-no-configmaps-crs.yaml)
+            workflows=(configprocessingcommon noconfigmaps)
+            ;;
+        testkube-config-test-only-custom-configmap-crs.yaml)
+            workflows=(configprocessingcommon customconfigmapallactions)
+            ;;
+        testkube-config-test-custom-configmap-error-crs.yaml)
+            workflows=(configprocessingcommon customconfigmaperror)
+            ;;
+        testkube-config-test-custom-node-configmap-crs.yaml)
+            workflows=(configprocessingcommon customnodeconfigmaps)
+            ;;
+        testkube-config-test-settings-error-crs.yaml)
+            workflows=(configprocessingcommon settingserror)
+            ;;
+        testkube-config-test-global-ext-labels-error-crs.yaml)
+            workflows=(configprocessingcommon extlabelserror)
+            ;;
+        testkube-config-test-global-settings-crs.yaml)
+            workflows=(configprocessingcommon globalextlabels)
+            ;;
+        *)
+            echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
+            exit 1
+            ;;
+    esac
+else 
+    # Build workflow list dynamically from cluster (exclude livenessprobe and *nightly)
+    mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v 'nightly$')
+fi
 if [[ ${#workflows[@]} -eq 0 ]]; then
     echo "No testworkflows found via kubectl testkube get testworkflows"
     exit 1
@@ -147,18 +206,18 @@ for wf in "${workflows[@]}"; do
     kubectl testkube watch testworkflowexecution $execution_id
 
     # Get the results as a formatted json file
-    kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${wf}.json"
+    kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${TARGET_ENV}-${wf}.json"
 
     # Verify the JSON is valid
-    if ! jq empty "testkube-results-${wf}.json" 2>/dev/null; then
+    if ! jq empty "testkube-results-${TARGET_ENV}-${wf}.json" 2>/dev/null; then
         echo "Error: Failed to get valid JSON results from testkube for $wf"
-        echo "Contents of testkube-results-${wf}.json:"
-        cat "testkube-results-${wf}.json"
+        echo "Contents of testkube-results-${TARGET_ENV}-${wf}.json:"
+        cat "testkube-results-${TARGET_ENV}-${wf}.json"
         exit 1
     fi
 
     # For any test that has failed, print out the logs
-    if [[ $(jq -r '.result.status' "testkube-results-${wf}.json") == "failed" ]]; then
+    if [[ $(jq -r '.result.status' "testkube-results-${TARGET_ENV}-${wf}.json") == "failed" ]]; then
 
         echo "$wf TestWorkflow failed. Execution ID: $execution_id"
 

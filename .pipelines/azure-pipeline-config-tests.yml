@@ -72,16 +72,6 @@ stages:
             persistCredentials: true
 
           - bash: |
-              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-              sudo apt-get update
-              sudo apt-get install -y testkube
-
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Install testkube CLI"
-
-          - bash: |
               curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
               chmod +x kubectl
               sudo mv kubectl /usr/local/bin/
@@ -90,24 +80,17 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install kubectl CLI"
 
-          - bash: |
-              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Install Azure CLI"
-
-          - bash: |
-              set -e
-              echo "executing the script to install golang $(GOLANG_VERSION)"
-              wget https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
-              sudo rm -rf /usr/local/go
-              sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz --verbose
-              export PATH="/usr/local/go/bin:${PATH}"
-              echo "##vso[task.prependpath]/usr/local/go/bin"
-              go version
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Build: install golang $(GOLANG_VERSION)"
+          # - bash: |
+          #     set -e
+          #     echo "executing the script to install golang $(GOLANG_VERSION)"
+          #     wget https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
+          #     sudo rm -rf /usr/local/go
+          #     sudo tar -C /usr/local -xzf go$(GOLANG_VERSION).linux-amd64.tar.gz --verbose
+          #     export PATH="/usr/local/go/bin:${PATH}"
+          #     echo "##vso[task.prependpath]/usr/local/go/bin"
+          #     go version
+          #   workingDirectory: $(Build.SourcesDirectory)
+          #   displayName: "Build: install golang $(GOLANG_VERSION)"
 
           - task: AzureCLI@2
             displayName: Get kubeconfig
@@ -118,64 +101,23 @@ stages:
                 inlineScript: 'az aks get-credentials -g ${{ parameters.clusterResourceGroup }} -n ${{ parameters.clusterName }}'
           
           - bash: |
-              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
-              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
-              export BRANCH=${{ parameters.branch }}
-
-              envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./testkube/api-server-permissions.yaml
-              kubectl apply -f ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               # Delete all the configmaps to test the no configmaps case
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs for no configmaps"
 
-          - bash: |
-              sleep 480
-
-              exit 0
-            displayName: "Wait for config to get picked up"
-
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite config-tests-no-configmaps --verbose --job-template job-template.yaml
-
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-no-configmaps --limit 1 | grep config-tests-no-configmaps | awk '{print $1}')
-
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
-
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
-
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
-
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
-
-                # Explicitly fail the ADO task since at least one test failed
-                exit 1
-              fi
-
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-no-configmaps-crs.yaml" \
+                "testkube-config-test-no-configmaps-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
             displayName: "Run tests for no configmaps"
             continueOnError: true
 
