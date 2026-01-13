@@ -734,7 +734,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
+      ]
     },
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
