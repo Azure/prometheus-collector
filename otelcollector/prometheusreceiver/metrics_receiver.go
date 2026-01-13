@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
