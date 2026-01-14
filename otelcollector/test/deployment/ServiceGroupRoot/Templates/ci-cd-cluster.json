@@ -710,7 +710,7 @@
               "enableNodePublicIP": false,
               "mode": "User",
               "osType": "Windows",
-              "osSKU": "Windows2019",
+              "osSKU": "Windows2022",
               "enableFIPS": false
           }
         ],
