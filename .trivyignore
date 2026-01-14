@@ -4,12 +4,12 @@
 
 # HIGH
 # otelcollector
-# CVE-2025-68156 # github.com/expr-lang/expr
+CVE-2025-68156 # github.com/expr-lang/expr
 # # # promconfigvalidator
-# CVE-2025-68156 # github.com/expr-lang/expr
+CVE-2025-68156 # github.com/expr-lang/expr
 
 # # # MEDIUM
 # # # prometheusui
-# CVE-2025-47914 # golang.org/x/crypto
-# CVE-2025-58181 # golang.org/x/crypto
+CVE-2025-47914 # golang.org/x/crypto
+CVE-2025-58181 # golang.org/x/crypto
 
