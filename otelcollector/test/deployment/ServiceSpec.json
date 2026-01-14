@@ -1,0 +1,8 @@
+{
+    "providerType": "ServiceTree",
+    "identifier": "335c5688-a203-441d-9dc7-89f7b874a113",
+    "description": "Silver Reliability Engineering",
+    "ownerGroupContactEmail": "ag3p-monitoring@microsoft.com",
+    "policyCheckEnabled": true,
+    "contentVersion": "1.0.0.0"
+}
