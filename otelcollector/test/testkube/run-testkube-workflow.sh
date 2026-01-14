@@ -256,6 +256,7 @@ else
     for wf in "${successful_workflows[@]}"; do
         echo "- $wf"
     done
+    add_result "$TARGET_ENV" "passed" "All tests passed" ""
     echo "========================================"
 fi
 
