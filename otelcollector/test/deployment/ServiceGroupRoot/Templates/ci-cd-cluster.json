@@ -728,7 +728,7 @@
           "defender": {
             "logAnalyticsWorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
             "securityMonitoring": {
-              "enabled": "[parameters('enableDefender')]"
+              "enabled": true
             }
           }
         },

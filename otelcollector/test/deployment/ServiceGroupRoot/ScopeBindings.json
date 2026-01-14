@@ -15,7 +15,7 @@
                 },                
                 {
                     "find": "$_SUBSCRIPTION_ID_$",
-                    "replaceWith": "$config(subscriptionId)"
+                    "replaceWith": "$azureSubscriptionId()"
                 },   
                 {
                     "find": "$_RESOURCE_GROUP_NAME_$",
