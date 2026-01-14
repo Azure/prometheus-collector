@@ -87,6 +87,7 @@ data:
       kube-scheduler = false
       kube-controller-manager = false
       etcd = true
+      istio = false
     default-targets-metrics-keep-list: |-
       apiserver = ""
       cluster-autoscaler = ""
@@ -94,6 +95,7 @@ data:
       kube-scheduler = ""
       kube-controller-manager = ""
       etcd = ""
+      istio = ""
     minimal-ingestion-profile: |-
       enabled = true
   prometheus-collector-settings: |-

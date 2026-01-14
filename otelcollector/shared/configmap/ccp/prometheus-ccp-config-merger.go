@@ -22,6 +22,7 @@ const (
 	controlplaneClusterAutoscalerFile     = defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
 	controlplaneNodeAutoProvisioningFile  = defaultPromConfigPathPrefix + "controlplane_node_auto_provisioning.yml"
 	controlplaneEtcdDefaultFile           = defaultPromConfigPathPrefix + "controlplane_etcd.yml"
+	controlplaneIstioDefaultFile          = defaultPromConfigPathPrefix + "controlplane_istio.yml"
 )
 
 var (
@@ -202,6 +203,30 @@ func populateDefaultPrometheusConfig() {
 			err = os.WriteFile(controlplaneEtcdDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
+	}
+
+	// Add Istio Control Plane (MCP) metrics scraping support
+	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
+		if meshMemberMetricsFqdn != "" {
+			fmt.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
+			controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
+			if exists && controlplaneIstioKeepListRegex != "" {
+				appendMetricRelabelConfig(controlplaneIstioDefaultFile, controlplaneIstioKeepListRegex)
+			}
+			contents, err := os.ReadFile(controlplaneIstioDefaultFile)
+			if err == nil {
+				contents = []byte(strings.Replace(string(contents), "$$MESH_MEMBER_METRICS_FQDN$$", meshMemberMetricsFqdn, -1))
+				contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
+				err = os.WriteFile(controlplaneIstioDefaultFile, contents, fs.FileMode(0644))
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, controlplaneIstioDefaultFile)
+				}
+			}
+		} else {
+			fmt.Println("Istio control plane metrics enabled but MESH_MEMBER_METRICS_FQDN environment variable is not set, skipping Istio scraping")
+		}
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)

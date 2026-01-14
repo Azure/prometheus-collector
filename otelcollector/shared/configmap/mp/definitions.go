@@ -101,6 +101,7 @@ type ConfigProcessor struct {
 	ControlplaneClusterAutoscaler           string
 	ControlplaneNodeAutoProvisioning        string
 	ControlplaneEtcd                        string
+	ControlplaneIstio                       string
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
