@@ -201,6 +201,13 @@
         "StorageV2",
         "BlobStorage"
       ]
+    },
+    "enableDefender": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable Microsoft Defender for Containers"
+      }
     }
   },
   "variables": {
@@ -719,9 +726,9 @@
         },
         "securityProfile": {
           "defender": {
-            "logAnalyticsWorkspaceResourceId": "[resourceId('microsoft.operationalinsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+            "logAnalyticsWorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
             "securityMonitoring": {
-              "enabled": true
+              "enabled": "[parameters('enableDefender')]"
             }
           }
         },
@@ -1236,7 +1243,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1254,7 +1261,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1272,7 +1279,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1290,7 +1297,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1308,7 +1315,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1326,7 +1333,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1344,7 +1351,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1362,7 +1369,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1380,7 +1387,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1398,7 +1405,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1416,7 +1423,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1434,7 +1441,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               },
@@ -1452,7 +1459,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "[parameters('actionGroupId')]"
+                          "actionGroupId": "[variables('actionGroupId')]"
                       }
                   ]
               }
