@@ -16,12 +16,14 @@ var (
 	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex         string
 	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
 	controlplaneNodeAutoProvisioningRegex, controlplaneEtcdRegex           string
+	controlplaneIstioRegex                                                 string
 	controlplaneKubeControllerManagerMinMac                                = "rest_client_request_duration_seconds|rest_client_requests_total|workqueue_depth"
 	controlplaneKubeSchedulerMinMac                                        = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
 	controlplaneApiserverMinMac                                            = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
 	controlplaneClusterAutoscalerMinMac                                    = "rest_client_requests_total|cluster_autoscaler_(last_activity|cluster_safe_to_autoscale|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count)|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
 	controlplaneNodeAutoProvisioningMinMac                                 = "karpenter_(nodes_created_total|nodes_terminated_total|voluntary_disruption_eligible_nodes|nodeclaims_disrupted_total|voluntary_disruption_decisions_total|pods_state)"
 	controlplaneEtcdMinMac                                                 = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
+	controlplaneIstioMinMac                                                = "pilot_xds_pushes_total|pilot_xds_push_context_errors|pilot_conflict_inbound_listener|pilot_conflict_outbound_listener_http_over_current_tcp|pilot_conflict_outbound_listener_tcp_over_current_tcp|pilot_conflict_outbound_listener_tcp_over_current_http|pilot_virt_services|pilot_services|pilot_proxy_convergence_time|citadel_server_csr_count|galley_validation_passed|galley_validation_failed|pilot_info"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -87,6 +89,7 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 				"kube-scheduler":          "controlplane-kube-scheduler",
 				"kube-controller-manager": "controlplane-kube-controller-manager",
 				"etcd":                    "controlplane-etcd",
+				"istio":                   "controlplane-istio",
 			}
 			for key, value := range settings {
 				if v1Key, ok := v2ToV1KeyMap[key]; ok {
@@ -128,6 +131,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 		"kube-scheduler":          "controlplane-kube-scheduler",
 		"kube-controller-manager": "controlplane-kube-controller-manager",
 		"etcd":                    "controlplane-etcd",
+		"istio":                   "controlplane-istio",
 		"minimalingestionprofile": "minimalingestionprofile",
 	}
 
@@ -150,6 +154,8 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 			regexValues.ControlplaneNodeAutoProvisioning = getStringValue(value)
 		case "controlplane-etcd":
 			regexValues.ControlplaneEtcd = getStringValue(value)
+		case "controlplane-istio":
+			regexValues.ControlplaneIstio = getStringValue(value)
 		case "minimalingestionprofile":
 			regexValues.MinimalIngestionProfile = getStringValue(value)
 		}
@@ -176,6 +182,9 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 	if regexValues.ControlplaneEtcd != "" && !shared.IsValidRegex(regexValues.ControlplaneEtcd) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
+	if regexValues.ControlplaneIstio != "" && !shared.IsValidRegex(regexValues.ControlplaneIstio) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-istio: %s", regexValues.ControlplaneIstio)
+	}
 	if regexValues.MinimalIngestionProfile != "" && !shared.IsValidRegex(regexValues.MinimalIngestionProfile) {
 		return regexValues, fmt.Errorf("invalid regex for MinimalIngestionProfile: %s", regexValues.MinimalIngestionProfile)
 	}
@@ -187,6 +196,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscaler)
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneNodeAutoProvisioningRegex: %s\n", regexValues.ControlplaneNodeAutoProvisioning)
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcd)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneIstioRegex: %s\n", regexValues.ControlplaneIstio)
 	fmt.Printf("populateSettingValuesFromConfigMap::minimalIngestionProfile: %s\n", regexValues.MinimalIngestionProfile)
 
 	return regexValues, nil // Return regex values and nil error if everything is valid
@@ -204,6 +214,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler
 		controlplaneNodeAutoProvisioningRegex += regexValues.ControlplaneNodeAutoProvisioning
 		controlplaneEtcdRegex += regexValues.ControlplaneEtcd
+		controlplaneIstioRegex += regexValues.ControlplaneIstio
 	} else { // else accounts for "true" and any other values including "nil" (meaning no configmap or no minimal setting in the configmap)
 		fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
 		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
@@ -212,6 +223,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
 		controlplaneNodeAutoProvisioningRegex += regexValues.ControlplaneNodeAutoProvisioning + "|" + controlplaneNodeAutoProvisioningMinMac
 		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+		controlplaneIstioRegex += regexValues.ControlplaneIstio + "|" + controlplaneIstioMinMac
 	}
 }
 
@@ -249,6 +261,7 @@ func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[s
 		"CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX":      controlplaneClusterAutoscalerRegex,
 		"CONTROLPLANE_NODE_AUTO_PROVISIONING_KEEP_LIST_REGEX":  controlplaneNodeAutoProvisioningRegex,
 		"CONTROLPLANE_ETCD_KEEP_LIST_REGEX":                    controlplaneEtcdRegex,
+		"CONTROLPLANE_ISTIO_KEEP_LIST_REGEX":                   controlplaneIstioRegex,
 	}
 
 	fmt.Printf("tomlparserCCPTargetsMetricsKeepList::Final data to write: %+v\n", data)
