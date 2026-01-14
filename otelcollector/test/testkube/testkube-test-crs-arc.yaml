@@ -1,5 +1,5 @@
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: containerstatus
   namespace: testkube
@@ -7,47 +7,29 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    args:
-      - "--label-filter"
-      - "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)"
-      - "./containerstatus"
-    executePostRunScriptBeforeScraping: false
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./containerstatus
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: livenessprobe
-  namespace: testkube
-  labels:
-    executor: ginkgo-executor
-    test-type: ginkgo-test
-spec:
-  type: ginkgo/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/Azure/prometheus-collector
-      branch: main
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    args:
-      - "--label-filter"
-      - "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)"
-      - "./livenessprobe"
-    executePostRunScriptBeforeScraping: false
----
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: prometheusui
   namespace: testkube
@@ -55,23 +37,29 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    args:
-      - "--label-filter"
-      - "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)"
-      - "./prometheusui"
-    executePostRunScriptBeforeScraping: false
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./prometheusui
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: operator
   namespace: testkube
@@ -79,23 +67,29 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    args:
-      - "--ldflags"
-      - "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com"
-      - "./operator"
-    executePostRunScriptBeforeScraping: false
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --ldflags "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" ./operator
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
 ---
-apiVersion: tests.testkube.io/v3
-kind: Test
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: querymetrics
   namespace: testkube
@@ -103,68 +97,201 @@ metadata:
     executor: ginkgo-executor
     test-type: ginkgo-test
 spec:
-  type: ginkgo/test
   content:
-    type: git
-    repository:
-      type: git
+    git:
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
-      path: otelcollector/test/ginkgo-e2e
-  executionRequest:
-    variables:
-      AMW_QUERY_ENDPOINT:
-        name: AMW_QUERY_ENDPOINT
-        value: "$AMW_QUERY_ENDPOINT"
-        type: basic
-      AZURE_CLIENT_ID:
-        name: AZURE_CLIENT_ID
-        value: "$AZURE_CLIENT_ID"
-        type: basic
-    args:
-      - "--label-filter"
-      - "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)"
-      - "./querymetrics"
-    executePostRunScriptBeforeScraping: false
----
-apiVersion: tests.testkube.io/v3
-kind: TestSuite
-metadata:
-  name: e2e-tests-nightly
-  namespace: testkube
-spec:
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
   steps:
-  - stopOnFailure: false
-    execute:
-    - test: containerstatus
-    - test: prometheusui
-    - test: operator
-  - stopOnFailure: false
-    execute:
-    - delay: 2m0s
-  - stopOnFailure: false
-    execute:
-    - test: querymetrics
-  - stopOnFailure: false
-    execute:
-    - test: livenessprobe
-  schedule: "0 7 * * *"
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: AMW_QUERY_ENDPOINT
+          value: "$AMW_QUERY_ENDPOINT"
+        - name: AZURE_CLIENT_ID
+          value: "$AZURE_CLIENT_ID"
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./querymetrics
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
 ---
-apiVersion: tests.testkube.io/v3
-kind: TestSuite
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
-  name: e2e-tests-merge
+  name: containerstatus-nightly
   namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
 spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
   steps:
-  - stopOnFailure: false
-    execute:
-    - test: containerstatus
-    - test: prometheusui
-    - test: operator
-  - stopOnFailure: false
-    execute:
-    - delay: 2m0s
-  - stopOnFailure: false
-    execute:
-    - test: querymetrics
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./containerstatus
+  events:
+    - cronjob:
+        cron: "0 7 * * *"
+        timezone: America/Los_Angeles
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: livenessprobe-nightly
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./livenessprobe
+  events:
+    - cronjob:
+        cron: "0 8 * * *"
+        timezone: America/Los_Angeles
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: prometheusui-nightly
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./prometheusui
+  events:
+    - cronjob:
+        cron: "0 7 * * *"
+        timezone: America/Los_Angeles
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: operator-nightly
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --ldflags "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" ./operator
+  events:
+    - cronjob:
+        cron: "0 7 * * *"
+        timezone: America/Los_Angeles
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: querymetrics-nightly
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: main
+      paths: 
+      - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+        - name: AMW_QUERY_ENDPOINT
+          value: "$AMW_QUERY_ENDPOINT"
+        - name: AZURE_CLIENT_ID
+          value: "$AZURE_CLIENT_ID"
+        - name: GOTOOLCHAIN
+          value: "auto"
+      shell: |
+        ginkgo run -r -p --label-filter "!(windows,arm64,linux-daemonset-custom-config,otlp,retina)" ./querymetrics
+  events:
+    - cronjob:
+        cron: "0 7 * * *"
+        timezone: America/Los_Angeles
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
