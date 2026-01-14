@@ -102,7 +102,7 @@ stages:
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -122,22 +122,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="no-configmaps"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-no-configmaps.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
               
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -157,22 +152,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-disabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-disabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -192,22 +182,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-on"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-on.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-rs-targets-enabled.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -227,22 +212,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-rs-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-rs-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-ds-targets-enabled.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -262,22 +242,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-ds-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-ds-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-enabled.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -297,15 +272,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -316,7 +286,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -336,22 +306,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="only-custom-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-only-custom-configmap.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -371,15 +336,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-settings"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-settings.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -388,7 +348,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -408,15 +368,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-node-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-node-configmap.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -426,7 +381,7 @@ stages:
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-error.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -446,15 +401,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="settings-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-settings-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -464,7 +414,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml
               
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -484,15 +434,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-configmap-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-configmap-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -500,7 +445,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/global-settings/ama-metrics-prometheus-config-configmap-with-global-error.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -520,15 +465,10 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-ext-labels-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-ext-labels-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
@@ -538,7 +478,7 @@ stages:
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
 
-              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Pipeline.Workspace)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
               export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
@@ -558,78 +498,27 @@ stages:
             continueOnError: true
 
           - bash: |
-              RESULTS_FILE="$(Pipeline.Workspace)/testkube-results-ConfigTests.json"
-
-              if [ -f "$RESULTS_FILE" ]; then
-                echo "Results file exists: $RESULTS_FILE"
-                echo "Contents of results file:"
-                cat "$RESULTS_FILE"
-              else
-                echo "Results file not found: $RESULTS_FILE"
-              fi
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-on-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-on-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
 
+          # List created files
           - bash: |
-              if [ -f "$(Pipeline.Workspace)/testkube-results-ConfigTests.json" ]; then
-                # Read the JSON content and set it as a pipeline variable
-                TESTKUBE_RESULTS_CONFIG=$(cat "$(Pipeline.Workspace)/testkube-results-ConfigTests.json" | jq -c . | tr -d '\n\r')
-                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_CONFIG;isOutput=true]$TESTKUBE_RESULTS_CONFIG"
-                echo "TestKube Config tests results set as pipeline variable"
-                echo $TESTKUBE_RESULTS_CONFIG
-              else
-                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_CONFIG;isOutput=true]{\"environment\":\"ConfigTests\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
-                echo "TestKube Config tests results file not found, setting default failure result"
-              fi
-            displayName: "Set TestKube Config Results as Pipeline Variable"
-            condition: always()
-            name: testkube_results
+              echo "Results files created:"
+              ls -la "$(Build.ArtifactStagingDirectory)/testkube-results/"
+            displayName: "List Results Files"
 
-  - job: TestKube_Summary
-    displayName: "Send TestKube Summary Notification"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Testkube
-    condition: always()
-    variables:
-      skipComponentGovernanceDetection: true
-      TESTKUBE_RESULTS_CONFIG: $[ dependencies.Testkube.outputs['Testkube.testkube_results.TESTKUBE_RESULTS_CONFIG'] ]
-    steps:
-    - checkout: self
-      persistCredentials: true
-
-    - bash: |
-        # Create results directory
-        mkdir -p "$(Pipeline.Workspace)/testkube-results"
-        echo "Results directory created"
-      displayName: "Create TestKube Results Directory"
-
-    # Write Config tests results directly to file if available using PowerShell
-    - task: PowerShell@2
-      displayName: "Write Config Tests Results"
-      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_CONFIG'], ''))
-      env:
-        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_CONFIG)
-      inputs:
-        targetType: 'inline'
-        script: |
-          $content = $env:TESTKUBE_RESULTS
-          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ConfigTests.json" -Value $content
-
-    # List created files
-    - bash: |
-        echo "Results files created:"
-        ls -la "$(Pipeline.Workspace)/testkube-results/"
-      displayName: "List Results Files"
-
-    - bash: |
-        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
-        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
-        export BUILD_REASON="$(Build.Reason)"
-        export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
-        export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
-        export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
-        chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
-        ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Send TestKube Summary Notification"
+          - bash: |
+              export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+              export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+              export BUILD_REASON="$(Build.Reason)"
+              export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+              export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+              export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+              chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
+              ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Build.ArtifactStagingDirectory)/testkube-results
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Send TestKube Summary Notification"
