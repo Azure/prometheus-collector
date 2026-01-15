@@ -956,7 +956,7 @@ extends:
             DIGEST=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
             SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
-            {"targetArtifact":{"mediaType":"$MEDIA_TYPE","digest":"$DIGEST","size":$SIZE}}
+            {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
             echo "Contents of payload.json:"
             cat $(Build.ArtifactStagingDirectory)/linux/payload.json
