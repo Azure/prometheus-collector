@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -207,21 +208,39 @@ func populateDefaultPrometheusConfig() {
 
 	// Add Istio Control Plane (MCP) metrics scraping support
 	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
 		if meshMemberMetricsFqdn != "" {
 			fmt.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
-			controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
-			if exists && controlplaneIstioKeepListRegex != "" {
-				appendMetricRelabelConfig(controlplaneIstioDefaultFile, controlplaneIstioKeepListRegex)
-			}
-			contents, err := os.ReadFile(controlplaneIstioDefaultFile)
-			if err == nil {
-				contents = []byte(strings.Replace(string(contents), "$$MESH_MEMBER_METRICS_FQDN$$", meshMemberMetricsFqdn, -1))
-				contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-				err = os.WriteFile(controlplaneIstioDefaultFile, contents, fs.FileMode(0644))
+
+			// Parse the URL to extract scheme and host
+			parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
+			if parseErr != nil {
+				fmt.Printf("Failed to parse MESH_MEMBER_METRICS_FQDN as URL: %s, skipping Istio scraping\n", parseErr)
+			} else {
+				scheme := parsedURL.Scheme
+				if scheme == "" {
+					scheme = "https" // Default to https if no scheme provided
+				}
+				host := parsedURL.Host
+				if host == "" {
+					// If no host parsed, the input might be just a hostname without scheme
+					host = meshMemberMetricsFqdn
+				}
+
+				controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
+				if exists && controlplaneIstioKeepListRegex != "" {
+					appendMetricRelabelConfig(controlplaneIstioDefaultFile, controlplaneIstioKeepListRegex)
+				}
+				contents, err := os.ReadFile(controlplaneIstioDefaultFile)
 				if err == nil {
-					defaultConfigs = append(defaultConfigs, controlplaneIstioDefaultFile)
+					contents = []byte(strings.Replace(string(contents), "$$MESH_MEMBER_METRICS_SCHEME$$", scheme, -1))
+					contents = []byte(strings.Replace(string(contents), "$$MESH_MEMBER_METRICS_HOST$$", host, -1))
+					err = os.WriteFile(controlplaneIstioDefaultFile, contents, fs.FileMode(0644))
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, controlplaneIstioDefaultFile)
+					}
 				}
 			}
 		} else {
