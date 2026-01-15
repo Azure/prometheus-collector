@@ -4,14 +4,9 @@ scrape_configs:
   label_limit: 63
   label_name_length_limit: 511
   label_value_length_limit: 1023
-  scheme: https
+  scheme: $$MESH_MEMBER_METRICS_SCHEME$$
   static_configs:
-    - targets: ['$$MESH_MEMBER_METRICS_FQDN$$']
-  tls_config:
-    ca_file: /etc/kubernetes/secrets/ca.pem
-    cert_file: /etc/kubernetes/secrets/client.pem
-    key_file: /etc/kubernetes/secrets/client-key.pem
-    insecure_skip_verify: true
+    - targets: ['$$MESH_MEMBER_METRICS_HOST$$']
   relabel_configs:
     - source_labels: [__address__]
       regex: (.*)
