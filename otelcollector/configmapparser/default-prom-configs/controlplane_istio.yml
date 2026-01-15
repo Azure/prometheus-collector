@@ -5,6 +5,7 @@ scrape_configs:
   label_name_length_limit: 511
   label_value_length_limit: 1023
   scheme: $$MESH_MEMBER_METRICS_SCHEME$$
+  metrics_path: /metrics
   static_configs:
     - targets: ['$$MESH_MEMBER_METRICS_HOST$$']
   relabel_configs:
