@@ -970,7 +970,7 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
+            docker buildx imagetools create --platform linux/amd64,linux/arm64 -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
               echo "Error: Docker buildx imagetools create failed."
               exit 1
