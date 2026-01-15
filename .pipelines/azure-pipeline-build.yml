@@ -1090,26 +1090,8 @@ extends:
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
-              for i in {1..5}; do
-                trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
-            #     TRIVY_EXIT_CODE=$?
-            #     if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-            #       cat trivy_output.log
-            #       break
-            #     fi
-            #     if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-            #       echo "Error: Too many requests to the Trivy server. Retrying ($i/5)"
-            #       sleep 5
-            #     else
-            #       cat trivy_output.log
-            #       exit 1
-            #     fi
-            #   done
-            #   if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-            #     echo "Error: Trivy scan failed after 5 retries."
-            #     exit 1
-            #   fi
-            # done
+              trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image
+            done
           workingDirectory: $(Build.SourcesDirectory)
           displayName: "Build: run trivy scan"
         - task: CodeQL3000Finalize@0
