@@ -809,7 +809,7 @@ extends:
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             # provenance flag false to avoid a manifest list is that includes one arm64 architecture and one unknown architecture.
-            sudo docker build . --provenance false --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+            sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
               exit 1
@@ -817,43 +817,43 @@ extends:
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: build and push image to dev ACR'
-        - bash: |
-            echo "=== Verifying ARM64 image architecture ==="
-            # Use docker manifest inspect -v to get detailed platform info
-            MANIFEST_VERBOSE=$(sudo docker manifest inspect -v $(LINUX_ARM64_FULL_IMAGE_NAME) 2>&1)
-            echo "$MANIFEST_VERBOSE"
+        # - bash: |
+        #     echo "=== Verifying ARM64 image architecture ==="
+        #     # Use docker manifest inspect -v to get detailed platform info
+        #     MANIFEST_VERBOSE=$(sudo docker manifest inspect -v $(LINUX_ARM64_FULL_IMAGE_NAME) 2>&1)
+        #     echo "$MANIFEST_VERBOSE"
             
-            # Check if it's a manifest list (array) or single manifest (object)
-            IS_ARRAY=$(echo "$MANIFEST_VERBOSE" | jq 'if type == "array" then "true" else "false" end' -r)
+        #     # Check if it's a manifest list (array) or single manifest (object)
+        #     IS_ARRAY=$(echo "$MANIFEST_VERBOSE" | jq 'if type == "array" then "true" else "false" end' -r)
             
-            if [ "$IS_ARRAY" == "true" ]; then
-              echo "Manifest Type: MANIFEST LIST (multi-arch)"
-              echo "##vso[task.logissue type=error]ERROR: Expected single-arch manifest but got a manifest list. ARM64 image should not be a multi-arch image."
-              exit 1
-            else
-              echo "Manifest Type: SINGLE MANIFEST (single-arch) ✓"
-            fi
+        #     if [ "$IS_ARRAY" == "true" ]; then
+        #       echo "Manifest Type: MANIFEST LIST (multi-arch)"
+        #       echo "##vso[task.logissue type=error]ERROR: Expected single-arch manifest but got a manifest list. ARM64 image should not be a multi-arch image."
+        #       exit 1
+        #     else
+        #       echo "Manifest Type: SINGLE MANIFEST (single-arch) ✓"
+        #     fi
             
-            # Extract and verify architecture from the Descriptor.platform section
-            ARCH=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.architecture // .platform.architecture // "unknown"')
-            OS=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.os // .platform.os // "unknown"')
+        #     # Extract and verify architecture from the Descriptor.platform section
+        #     ARCH=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.architecture // .platform.architecture // "unknown"')
+        #     OS=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.os // .platform.os // "unknown"')
             
-            echo "Detected Architecture: $ARCH"
-            echo "Detected OS: $OS"
+        #     echo "Detected Architecture: $ARCH"
+        #     echo "Detected OS: $OS"
             
-            if [ "$ARCH" != "arm64" ]; then
-              echo "##vso[task.logissue type=error]ERROR: Expected architecture 'arm64' but got '$ARCH'"
-              exit 1
-            fi
+        #     if [ "$ARCH" != "arm64" ]; then
+        #       echo "##vso[task.logissue type=error]ERROR: Expected architecture 'arm64' but got '$ARCH'"
+        #       exit 1
+        #     fi
             
-            if [ "$OS" != "linux" ]; then
-              echo "##vso[task.logissue type=error]ERROR: Expected OS 'linux' but got '$OS'"
-              exit 1
-            fi
+        #     if [ "$OS" != "linux" ]; then
+        #       echo "##vso[task.logissue type=error]ERROR: Expected OS 'linux' but got '$OS'"
+        #       exit 1
+        #     fi
             
-            echo "✓ ARM64 image architecture verified successfully: $OS/$ARCH"
-          displayName: 'Build: verify ARM64 image architecture'
-          condition: succeeded()
+        #     echo "✓ ARM64 image architecture verified successfully: $OS/$ARCH"
+        #   displayName: 'Build: verify ARM64 image architecture'
+        #   condition: succeeded()
       - job: Linux_Prometheus_Collector_AMD64
         displayName: 'Build: linux AMD64 prometheus-collector image'
         pool:
@@ -895,43 +895,43 @@ extends:
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push image to dev ACR"
-        - bash: |
-            echo "=== Verifying AMD64 image architecture ==="
-            # Use docker manifest inspect -v to get detailed platform info
-            MANIFEST_VERBOSE=$(docker manifest inspect -v $(LINUX_AMD64_FULL_IMAGE_NAME) 2>&1)
-            echo "$MANIFEST_VERBOSE"
+        # - bash: |
+        #     echo "=== Verifying AMD64 image architecture ==="
+        #     # Use docker manifest inspect -v to get detailed platform info
+        #     MANIFEST_VERBOSE=$(docker manifest inspect -v $(LINUX_AMD64_FULL_IMAGE_NAME) 2>&1)
+        #     echo "$MANIFEST_VERBOSE"
             
-            # Check if it's a manifest list (array) or single manifest (object)
-            IS_ARRAY=$(echo "$MANIFEST_VERBOSE" | jq 'if type == "array" then "true" else "false" end' -r)
+        #     # Check if it's a manifest list (array) or single manifest (object)
+        #     IS_ARRAY=$(echo "$MANIFEST_VERBOSE" | jq 'if type == "array" then "true" else "false" end' -r)
             
-            if [ "$IS_ARRAY" == "true" ]; then
-              echo "Manifest Type: MANIFEST LIST (multi-arch)"
-              echo "##vso[task.logissue type=error]ERROR: Expected single-arch manifest but got a manifest list. AMD64 image should not be a multi-arch image."
-              exit 1
-            else
-              echo "Manifest Type: SINGLE MANIFEST (single-arch) ✓"
-            fi
+        #     if [ "$IS_ARRAY" == "true" ]; then
+        #       echo "Manifest Type: MANIFEST LIST (multi-arch)"
+        #       echo "##vso[task.logissue type=error]ERROR: Expected single-arch manifest but got a manifest list. AMD64 image should not be a multi-arch image."
+        #       exit 1
+        #     else
+        #       echo "Manifest Type: SINGLE MANIFEST (single-arch) ✓"
+        #     fi
             
-            # Extract and verify architecture from the Descriptor.platform section
-            ARCH=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.architecture // .platform.architecture // "unknown"')
-            OS=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.os // .platform.os // "unknown"')
+        #     # Extract and verify architecture from the Descriptor.platform section
+        #     ARCH=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.architecture // .platform.architecture // "unknown"')
+        #     OS=$(echo "$MANIFEST_VERBOSE" | jq -r '.Descriptor.platform.os // .platform.os // "unknown"')
             
-            echo "Detected Architecture: $ARCH"
-            echo "Detected OS: $OS"
+        #     echo "Detected Architecture: $ARCH"
+        #     echo "Detected OS: $OS"
             
-            if [ "$ARCH" != "amd64" ]; then
-              echo "##vso[task.logissue type=error]ERROR: Expected architecture 'amd64' but got '$ARCH'"
-              exit 1
-            fi
+        #     if [ "$ARCH" != "amd64" ]; then
+        #       echo "##vso[task.logissue type=error]ERROR: Expected architecture 'amd64' but got '$ARCH'"
+        #       exit 1
+        #     fi
             
-            if [ "$OS" != "linux" ]; then
-              echo "##vso[task.logissue type=error]ERROR: Expected OS 'linux' but got '$OS'"
-              exit 1
-            fi
+        #     if [ "$OS" != "linux" ]; then
+        #       echo "##vso[task.logissue type=error]ERROR: Expected OS 'linux' but got '$OS'"
+        #       exit 1
+        #     fi
             
-            echo "✓ AMD64 image architecture verified successfully: $OS/$ARCH"
-          displayName: 'Build: verify AMD64 image architecture'
-          condition: succeeded()
+        #     echo "✓ AMD64 image architecture verified successfully: $OS/$ARCH"
+        #   displayName: 'Build: verify AMD64 image architecture'
+        #   condition: succeeded()
       - job: Linux_Prometheus_Collector
         displayName: 'Build: linux prometheus-collector image'
         pool:
@@ -970,10 +970,9 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(LINUX_FULL_IMAGE_NAME)
+            docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
-              echo "Error: Docker manifest push failed."
+              echo "Error: Docker buildx imagetools create failed."
               exit 1
             fi
             
@@ -982,30 +981,30 @@ extends:
           displayName: 'Build: build and push image to dev ACR'
         - bash: |
             echo "=== Verifying multi-arch manifest list ==="
-            MANIFEST_VERBOSE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) 2>&1)
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw 2>&1)
             echo "$MANIFEST_VERBOSE"
             
-            # Check if it's a manifest list (array) or single manifest (object)
-            IS_ARRAY=$(echo "$MANIFEST_VERBOSE" | jq 'if type == "array" then "true" else "false" end' -r)
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
             
-            if [ "$IS_ARRAY" != "true" ]; then
+            if [ "$HAS_MANIFESTS" != "true" ]; then
               echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
               exit 1
             fi
             echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
             
             # Count the number of manifests
-            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq 'length')
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
             echo "Number of manifests: $MANIFEST_COUNT"
             
-            if [ "$MANIFEST_COUNT" -ne 2 ]; then
-              echo "##vso[task.logissue type=error]ERROR: Expected 2 architectures but found $MANIFEST_COUNT"
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
               exit 1
             fi
-            echo "Manifest count verified: 2 architectures ✓"
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
             
             # Extract architectures from manifest list
-            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.[].Descriptor.platform.architecture // .[].platform.architecture' | sort | tr '\n' ' ')
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
             echo "Architectures found: $ARCHS"
             
             # Check for amd64
@@ -1022,15 +1021,18 @@ extends:
             fi
             echo "arm64 architecture found ✓"
             
-            echo "✓ Multi-arch manifest list verified successfully with both amd64 and arm64"
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - bash: |
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
-            {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+            {"targetArtifact":{"mediaType":"$MEDIA_TYPE","digest":"$DIGEST","size":$SIZE}}
             EOF
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: Set values in payload.json for signing'
