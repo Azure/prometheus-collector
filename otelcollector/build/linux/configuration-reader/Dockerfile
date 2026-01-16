@@ -86,7 +86,7 @@ RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install 
     $tmpdir/setup-configreader.sh ${TARGETARCH}
 
 # Stage 4: final
-FROM FROM mcr.microsoft.com/azurelinux/base/core:3.0
+FROM mcr.microsoft.com/azurelinux/base/core:3.0
 
 ENV PATH="/busybin:${PATH}" OS_TYPE="linux"
 
