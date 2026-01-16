@@ -61,13 +61,15 @@ echo "================================================="
 # Initialize results file
 init_results_file
 
-# Step 1: Install TestKube CLI
-echo "Step 1: Installing TestKube CLI..."
-wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get install -y testkube
-echo "✓ TestKube CLI installation completed"
+# Step 1: Install TestKube CLI only if not ConfigTests
+if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+    echo "Step 1: Installing TestKube CLI..."
+    wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+    echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+    sudo apt-get update
+    sudo apt-get install -y testkube
+    echo "✓ TestKube CLI installation completed"
+fi
 
 # Step 2: Set up TestKube environment
 echo "Step 2: Setting up TestKube environment..."
@@ -173,8 +175,26 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
             ;;
     esac
 else 
-    # Build workflow list dynamically from cluster (exclude livenessprobe and *nightly)
-    mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name' | grep -v '^livenessprobe$' | grep -v 'nightly$')
+    # Build workflow list dynamically from cluster (exclude livenessprobe)
+    mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name')
+    if [[ ${#workflows[@]} -gt 0 ]]; then
+        # if [[ "$TARGET_ENV" != *Nightly* ]]; then
+        # Filter out livenessprobe workflow if present
+        workflows=("${workflows[@]/livenessprobe}")
+        # else
+        #     # Keep livenessprobe if present but ensure it runs last
+        #     reordered=()
+        #     lp=()
+        #     for wf in "${workflows[@]}"; do
+        #         if [[ "$wf" == "livenessprobe" ]]; then
+        #             lp+=("$wf")
+        #         else
+        #             reordered+=("$wf")
+        #         fi
+        #     done
+        #     workflows=("${reordered[@]}" "${lp[@]}")
+        # fi
+    fi
 fi
 if [[ ${#workflows[@]} -eq 0 ]]; then
     echo "No testworkflows found via kubectl testkube get testworkflows"

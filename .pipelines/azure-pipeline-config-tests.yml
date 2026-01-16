@@ -72,6 +72,16 @@ stages:
             persistCredentials: true
 
           - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+
+          - bash: |
               curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
               chmod +x kubectl
               sudo mv kubectl /usr/local/bin/
