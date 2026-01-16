@@ -91,7 +91,7 @@ WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
     gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
-    systemd-devel systemd-rpm-macros zlib-devel build-essential librdkafka-dev -y
+    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
 ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
@@ -101,20 +101,23 @@ COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/
 RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
 WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
 # Run cmake with the same flags that Mariner uses
-RUN cmake \
--DCMAKE_BUILD_TYPE=RelWithDebInfo \
--DFLB_EXAMPLES=Off \
--DFLB_OUT_SLACK=Off \
--DFLB_IN_SYSTEMD=On \
--DFLB_OUT_TD=Off \
--DFLB_OUT_ES=Off \
--DFLB_SHARED_LIB=On \
--DFLB_RELEASE=On \
--DFLB_DEBUG=Off \
--DFLB_TLS=On \
+RUN cmake \ 
+-DOPENSSL_ROOT_DIR=/usr \
+-DOPENSSL_LIBRARIES=/usr/lib \
 -DFLB_JEMALLOC=On \
--DFLB_PREFER_SYSTEM_LIBS=On \
--DFLB_PROXY_GO=On \
+-DFLB_RELEASE=On \
+-DFLB_SIMD=On \
+-DFLB_TLS=On \
+-DFLB_SHARED_LIB=Off \
+-DFLB_EXAMPLES=Off \
+-DFLB_HTTP_SERVER=On \
+-DFLB_IN_EXEC=Off \
+-DFLB_IN_SYSTEMD=On \
+-DFLB_OUT_KAFKA=On \
+-DFLB_OUT_PGSQL=On \
+-DFLB_LOG_NO_CONTROL_CHARS=On \
+-DFLB_CHUNK_TRACE=On \
+..
 RUN make
 RUN make install
 
