@@ -178,22 +178,27 @@ else
     # Build workflow list dynamically from cluster (exclude livenessprobe)
     mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name')
     if [[ ${#workflows[@]} -gt 0 ]]; then
-        # if [[ "$TARGET_ENV" != *Nightly* ]]; then
-        # Filter out livenessprobe workflow if present
-        workflows=("${workflows[@]/livenessprobe}")
-        # else
-        #     # Keep livenessprobe if present but ensure it runs last
-        #     reordered=()
-        #     lp=()
-        #     for wf in "${workflows[@]}"; do
-        #         if [[ "$wf" == "livenessprobe" ]]; then
-        #             lp+=("$wf")
-        #         else
-        #             reordered+=("$wf")
-        #         fi
-        #     done
-        #     workflows=("${reordered[@]}" "${lp[@]}")
-        # fi
+        if [[ "$TARGET_ENV" != *Nightly* ]]; then
+            # Filter out livenessprobe workflow without leaving empty entries
+            filtered=()
+            for wf in "${workflows[@]}"; do
+                [[ "$wf" == "livenessprobe" ]] && continue
+                filtered+=("$wf")
+            done
+            workflows=("${filtered[@]}")
+        else
+            # Keep livenessprobe if present but ensure it runs last
+            reordered=()
+            lp=()
+            for wf in "${workflows[@]}"; do
+                if [[ "$wf" == "livenessprobe" ]]; then
+                    lp+=("$wf")
+                else
+                    reordered+=("$wf")
+                fi
+            done
+            workflows=("${reordered[@]}" "${lp[@]}")
+        fi
     fi
 fi
 if [[ ${#workflows[@]} -eq 0 ]]; then
