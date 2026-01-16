@@ -1286,6 +1286,11 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+
+            echo "=== Docker Version Info (AMD64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -1332,6 +1337,11 @@ extends:
             # echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             # sudo apt-get update
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+            
+            echo "=== Docker Version Info (ARM64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
@@ -1373,17 +1383,71 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            
+            docker buildx imagetools create -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+            if [ $? -ne 0 ]; then
+              echo "Error: Docker buildx imagetools create failed."
+              exit 1
+            fi
+
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
             {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
+            echo "Contents of payload.json:"
+            cat $(Build.ArtifactStagingDirectory)/targetallocator/payload.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
           displayName: "Build: build and push target allocator image to dev ACR"
+          condition: succeeded()
+        - bash: |
+            echo "=== Verifying multi-arch manifest list ==="
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw 2>&1)
+            echo "$MANIFEST_VERBOSE"
+            
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
+            
+            if [ "$HAS_MANIFESTS" != "true" ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
+              exit 1
+            fi
+            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            
+            # Count the number of manifests
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
+            echo "Number of manifests: $MANIFEST_COUNT"
+            
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
+              exit 1
+            fi
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            
+            # Extract architectures from manifest list
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
+            echo "Architectures found: $ARCHS"
+            
+            # Check for amd64
+            if ! echo "$ARCHS" | grep -q "amd64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
+              exit 1
+            fi
+            echo "amd64 architecture found ✓"
+            
+            # Check for arm64
+            if ! echo "$ARCHS" | grep -q "arm64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
+              exit 1
+            fi
+            echo "arm64 architecture found ✓"
+            
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+          displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - bash: |
             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
