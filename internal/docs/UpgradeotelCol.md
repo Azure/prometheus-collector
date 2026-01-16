@@ -368,3 +368,7 @@ promCfg := (*promconfig.Config)(cfg)
 #### 3. Deleted File
 
 - `otelcollector/prometheusreceiver/metricsreceiver_api_server_test.go` - Removed (old test file)
+
+
+#### Test
+Build the otelcollector to make sure the function `api_v1.NewAPI` doesn't need extra parameters added at the end if a newer Prometheus version is used. Find the corresponding Prometheus version branch in the Prometheus repo and look in the [web.go](https://github.com/prometheus/prometheus/blob/main/web/web.go#L364) file and function there to see what should be changed.
