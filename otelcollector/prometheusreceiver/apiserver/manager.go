@@ -184,6 +184,8 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.CTZeroIngestionEnabled,
 		5*time.Minute, // LookbackDelta - Using the default value of 5 minutes
 		o.EnableTypeAndUnitLabels,
+		o.AppendMetadata,
+		nil,
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
@@ -215,7 +217,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 	})
-	m.server, err = m.cfg.ServerConfig.ToServer(ctx, host, m.settings.TelemetrySettings, otelhttp.NewHandler(mux, "", spanNameFormatter))
+	m.server, err = m.cfg.ServerConfig.ToServer(ctx, host.GetExtensions(), m.settings.TelemetrySettings, otelhttp.NewHandler(mux, "", spanNameFormatter))
 	if err != nil {
 		return err
 	}
