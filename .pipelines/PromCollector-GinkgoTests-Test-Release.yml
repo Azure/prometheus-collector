@@ -51,7 +51,7 @@ extends:
             - download: source_pipeline
               artifact: ${{ parameters.artifactToDeploy }}             
             - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-              displayName: Test_Deploy_Buildout01
+              displayName: Test_Deploy_ShellExt01
               inputs:
                 EnableStrictValidation: false
                 EndpointProviderType: Ev2Endpoint
@@ -59,7 +59,7 @@ extends:
                 RolloutSpecType: RSPath
                 ForceRegistration: true
                 TaskAction: RegisterAndRollout
-                SkipRegistrationIfExists: true
+                SkipRegistrationIfExists: false
                 ServiceRootPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot'
                 RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot/Rolloutspecs/RolloutSpec.json'
                 StageMapName: "Microsoft.Azure.SDP.Standard"
