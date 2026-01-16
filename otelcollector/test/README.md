@@ -63,58 +63,62 @@
 
 # File Directory Structure
 ```
-├── test                                   - e2e test suites to run on clusters. Unit tests are included alongside the golang files.
-│   ├── README.md                          - Info about setting up, writing, and running the tests.
-│   ├── ginkgo-e2e                         - Each test suite is a golang package.
-│   │   ├── <test suite package>           - Each test suite is a golang package.
-│   │   │   ├── <ginkgo test suite setup>  - Ginkgo syntax to setup for any tests in the package.
-│   │   │   ├── <ginkgo tests>             - Actual Ginkgo tests.
-│   │   │   ├── go.mod                     - Used to import the local utils module (and any other packages).
+├── test                                                      - e2e test suites to run on clusters. Unit tests are included alongside the golang files.
+│   ├── README.md                                             - Info about setting up, writing, and running the tests.
+│   ├── ginkgo-e2e                                            - Each test suite is a golang package.
+│   │   ├── <test suite package>                              - Each test suite is a golang package.
+│   │   │   ├── <ginkgo test suite setup>                     - Ginkgo syntax to setup for any tests in the package.
+│   │   │   ├── <ginkgo tests>                                - Actual Ginkgo tests.
+│   │   │   ├── go.mod                                        - Used to import the local utils module (and any other packages).
 │   │   │   ├── go.sum
-│   │   ├── containerstatus                - Test container logs have no errors, containers are running, and all processes are running.
-│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
-│   │   │   ├── container_status_test.go   - Run the tests for each container that's part of our agent.
+│   │   ├── containerstatus                                   - Test container logs have no errors, containers are running, and all processes are running.
+│   │   │   ├── suite_test.go                                 - Setup access to the Kubernetes cluster.
+│   │   │   ├── container_status_test.go                      - Run the tests for each container that's part of our agent.
 │   │   │   ├── go.mod
 │   │   │   ├── go.sum
-│   │   ├── livenessprobe                  - Test that the pods detect and restart when a process is not running.
-│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
-│   │   │   ├── process_liveness_test.go   - Run the tests for each container that's part of our agent.
+│   │   ├── livenessprobe                                     - Test that the pods detect and restart when a process is not running.
+│   │   │   ├── suite_test.go                                 - Setup access to the Kubernetes cluster.
+│   │   │   ├── process_liveness_test.go                      - Run the tests for each container that's part of our agent.
 │   │   │   ├── go.mod
 │   │   │   ├── go.sum
-│   │   ├── prometheusui                   - Test that the Prometheus UI paths are accessible and the API returns data.
-│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   ├── prometheusui                                      - Test that the Prometheus UI paths are accessible and the API returns data.
+│   │   │   ├── suite_test.go                                 - Setup access to the Kubernetes cluster.
 │   │   │   ├── prometheus_ui_test.go
-│   │   │   ├── go.mod
+│   │   │   ├── go.mod    
 │   │   │   ├── go.sum
-│   │   ├── querymetrics                   - Query the AMW and validate the data returned is expected.
-│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   ├── querymetrics                                      - Query the AMW and validate the data returned is expected.
+│   │   │   ├── suite_test.go                                 - Setup access to the Kubernetes cluster.
 │   │   │   ├── query_metrics_test.go
 │   │   │   ├── go.mod
 │   │   │   ├── go.sum
-│   │   ├── utils                          - Generalized utils functions for the test suites to use.
-│   │   │   ├── amw_query_api_utils.go     - Utils to query metrics from the AMW.
-│   │   │   ├── kubernetes_api_utils.go    - Utils that call the kubernetes API.
-│   │   │   ├── prometheus_ui_api_utils.go - Utils that call the Prometheus UI.
-│   │   │   ├── setup_utils.go             - Setup functions for cluster access.
-│   │   │   ├── constants.go               - Defined constants for test labels and transient errors to ignore.
+│   │   ├── utils                                             - Generalized utils functions for the test suites to use.
+│   │   │   ├── amw_query_api_utils.go                        - Utils to query metrics from the AMW.
+│   │   │   ├── kubernetes_api_utils.go                       - Utils that call the kubernetes API.
+│   │   │   ├── prometheus_ui_api_utils.go                    - Utils that call the Prometheus UI.
+│   │   │   ├── setup_utils.go                                - Setup functions for cluster access.
+│   │   │   ├── constants.go                                  - Defined constants for test labels and transient errors to ignore.
 │   │   │   ├── go.mod
 │   │   │   ├── go.sum
-│   ├── test-cluster-yamls                 - YAMLs to deploy on your test cluster and CI/CD clusters.
-│   │   ├── configmaps                     - Configmaps for scrape jobs tested.
-│   │   ├── customresources                - PodMonitor and ServiceMonitors for scrape jobs tested.
-│   ├── testkube                           - YAMLS to deploy on CI/CD clusters for TestKube.
-│   │   ├── api-server-permissions.yaml    - Permissions for the TestKube runner pods to call the API server.
-│   │   ├── testkube-test-crs.yaml         - CRs for TestKube test suites and tests for AKS CI/CD clusters.
-│   │   ├── testkube-test-crs-arc.yaml     - CRs for TestKube test suites and tests for Arc CI/CD clusters.
-│   ├── arc-conformance                    - The same Ginkgo tests can be used with the Arc conformance infra, but with a different runner than TestKube.
-│   │   ├── arc-conformance.yaml           - The YAML for the Arc conformance test pod to give to the Arc conformance team to run in the Arc conformance infra.
-│   │   ├── Dockerfile                     - The Dockerfile for building the Arc conformance image that has the Ginkgo tests to run
-│   │   ├── e2e_tests.sh                   - The script to start the container to run the Ginkgo tests
-│   │   ├── local-e2e-tests.yaml           - The YAML to deploy the conformance test pod locally to test any changes before using in the Arc conformance infra.
+│   ├── test-cluster-yamls                                    - YAMLs to deploy on your test cluster and CI/CD clusters.
+│   │   ├── configmaps                                        - Configmaps for scrape jobs tested.
+│   │   ├── customresources                                   - PodMonitor and ServiceMonitors for scrape jobs tested.
+│   ├── testkube                                              - YAMLS to deploy on CI/CD clusters for TestKube.
+│   │   ├── api-server-permissions.yaml                       - Permissions for the TestKube runner pods to call the API server.
+│   │   ├── testkube-test-crs.yaml                            - CRs for TestKube test workflows for AKS CI/CD clusters.
+│   │   ├── testkube-test-crs-arc.yaml                        - CRs for TestKube test workflows for Arc CI/CD clusters.
+│   │   ├── testkube-test-crs-otel.yaml                       - CRs for TestKube test workflows for OTel CI/CD clusters.
+│   │   ├── testkube-test-crs-otelcollector-upgrade.yaml      - CRs for TestKube test workflows for otel collector upgrade.
+│   │   ├── run-testkube-workflow.sh                          - Script used to run the test workflows in build pipelines.
+│   │   ├── send-testkube-summary.sh                          - Script used to share the test results to Teams channel in build pipelines.
+│   ├── arc-conformance                                       - The same Ginkgo tests can be used with the Arc conformance infra, but with a different runner than TestKube.
+│   │   ├── arc-conformance.yaml                              - The YAML for the Arc conformance test pod to give to the Arc conformance team to run in the Arc conformance infra.
+│   │   ├── Dockerfile                                        - The Dockerfile for building the Arc conformance image that has the Ginkgo tests to run
+│   │   ├── e2e_tests.sh                                      - The script to start the container to run the Ginkgo tests
+│   │   ├── local-e2e-tests.yaml                              - The YAML to deploy the conformance test pod locally to test any changes before using in the Arc conformance infra.
 │   │   ├── README.md
-│   ├── ci-cd                              - Files related to our CI/CD clusters
-│   │   ├── ci-cd-cluster.json             - ARM template to deploy a new CI/CD cluster
-│   │   ├── ci-cd-cluster-parameters.json  - ARM template parameters
+│   ├── ci-cd                                                 - Files related to our CI/CD clusters
+│   │   ├── ci-cd-cluster.json                                - ARM template to deploy a new CI/CD cluster
+│   │   ├── ci-cd-cluster-parameters.json                     - ARM template parameters
 ```
 
 # Ginkgo
@@ -303,13 +307,10 @@ These tests can be run on a dev cluster that you have kubeconfig/kubectl access 
 Behind the scenes, tests and executors are custom resources. Running a test starts a job that deploys the test executor pod which runs the Ginkgo tests (or a different framework setup).
 
 Some highlights are that:
-- Has an integrated dashboard to view results, set up tests, test suites, test schedules, etc. with a UX as an alternative to the (also available) CLI.
 - Includes test history, pass rate, and execution times.
-- Friendly user interface and easy Golang integration with out-of-the-box Ginkgo runner.
+- An easy Golang integration with out-of-the-box Ginkgo runner.
 - A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if a test failed. These tests can be run after every merge to main or scheduled to be run on an interval.
-- Test suites can be created out of tests with a dependency flowchart that can be set up for if some tests should run at the same time or after others, or only run if one succeeds.
 - There are many other test framework integrations including curl and postman for testing Kubernetes services and their APIs. There is also a k6 and jmeter integration for performance testing Kubernetes services.
-- The TestKube dashboard must be accessed from within the cluster for now unless we set up an outside endpoint.
 
 ## Getting Started
 - Install the CLI on linux/WSL:
@@ -383,84 +384,54 @@ Some highlights are that:
       waitForExecution: false
       arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
   ```
-- Add running the tests on the cluster to the build pipeline yaml. Replace the `az aks get-credentials` command with the corresponding cluster name and resource group.
+- Add running the tests on the cluster to the build pipeline yaml. Replace the `az aks get-credentials` command with the corresponding cluster name and resource group. Also, copy the [run-testkube-workflow.sh](./testkube/run-testkube-workflow.sh) in the respective folder.
   ```
   - deployment: Testkube
-    displayName: "Test: run testkube tests"
+    displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector
     dependsOn: Deploy_AKS_Chart
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
     variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
       skipComponentGovernanceDetection: true
+    templateContext:
+      type: releaseJob
+      isProduction: false
+      inputs:
+      - input: pipelineArtifact
+        artifactName: testkube-test-files
+        targetPath: $(Pipeline.Workspace)
     strategy:
       runOnce:
         deploy:
           steps:
-          - bash: |
-              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-              sudo apt-get update
-              sudo apt-get install -y testkube
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Install testkube CLI"
           - task: AzureCLI@1
             displayName: Get kubeconfig
             inputs:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g cluster-resource-group -n cluster-name'  
+              inlineScript: 'az aks get-credentials -g cluster-resource-group -n cluster-name' 
           - bash: |
-              export AMW_QUERY_ENDPOINT="<amw query endpoint>"
-              export AZURE_CLIENT_ID="<cluster managed identity client ID>"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-<cluster name>.yaml
-              kubectl apply -f ./testkube/api-server-permissions.yaml
-              kubectl apply -f ./testkube/testkube-test-crs-<cluster name>.yaml
-              kubectl apply -f ./test-cluster-yamls
-
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
-          - bash: |
-              sleep 120
-            displayName: "Wait for cluster to be ready"
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite e2e-tests-merge --verbose
-
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
-
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
-
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
-
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
-
-                # Explicitly fail the ADO task since at least one test failed
-                exit 1
-              fi
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Run tests"
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                <amw_query_endpoint> \
+                "<cluster managed identity client ID>" \
+                "testkube-test-crs.yaml" \
+                "testkube-test-crs-<cluster-name>.yaml" \
+                "" \
+                "" \
+                <env-name>
+            workingDirectory: $(Pipeline.Workspace)
+            displayName: "Run TestKube workflow"
   ```
 
 # Processes
