@@ -91,7 +91,7 @@ WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
     gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
-    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
+    systemd-devel systemd-rpm-macros zlib-devel build-essential librdkafka-devel -y
 ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
