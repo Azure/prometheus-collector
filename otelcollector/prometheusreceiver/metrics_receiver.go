@@ -28,7 +28,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 const (
@@ -81,7 +81,6 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 			set,
 			cfg.TargetAllocator.Get(),
 			&baseCfg,
-			enableNativeHistogramsGate.IsEnabled(),
 		),
 		apiServerManager: apiServerManager,
 	}
@@ -149,11 +148,9 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	store, err := internal.NewAppendable(
 		r.consumer,
 		r.settings,
-		gcInterval(r.cfg.PrometheusConfig),
 		r.cfg.UseStartTimeMetric,
 		startTimeMetricRegex,
-		useCreatedMetricGate.IsEnabled(),
-		enableNativeHistogramsGate.IsEnabled(),
+		!r.cfg.ignoreMetadata,
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 		r.cfg.TrimMetricSuffixes,
 	)
@@ -211,12 +208,11 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 func (r *pReceiver) initScrapeOptions() *scrape.Options {
 	opts := &scrape.Options{
 		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
+		ExtraMetrics:          enableReportExtraScrapeMetricsGate.IsEnabled() || r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
 		EnableCreatedTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
-		EnableNativeHistogramsIngestion:     enableNativeHistogramsGate.IsEnabled(),
 	}
 
 	return opts
@@ -226,10 +222,7 @@ func (r *pReceiver) initScrapeOptions() *scrape.Options {
 // plus a delta to prevent race conditions.
 // This ensures jobs are not garbage collected between scrapes.
 func gcInterval(cfg *PromConfig) time.Duration {
-	gcInterval := defaultGCInterval
-	if time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
-		gcInterval = time.Duration(cfg.GlobalConfig.ScrapeInterval) + gcIntervalDelta
-	}
+	gcInterval := max(time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta, defaultGCInterval)
 	for _, scrapeConfig := range cfg.ScrapeConfigs {
 		if time.Duration(scrapeConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
 			gcInterval = time.Duration(scrapeConfig.ScrapeInterval) + gcIntervalDelta
