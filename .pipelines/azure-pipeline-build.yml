@@ -236,94 +236,94 @@ extends:
             Contents: |
               **/*
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
-      - job: CreateSidecarArtifact
-        displayName: "Create Sidecar YAML Artifact for Remote Write"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish sidecar.yaml as an artifact'
-            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
-            artifactName: 'remote-write-drop'
-        steps:
-        - task: CopyFiles@2
-          displayName: "Copy sidecar.yaml to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
-            Contents: 'sidecar.yaml'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
+      # - job: CreateSidecarArtifact
+      #   displayName: "Create Sidecar YAML Artifact for Remote Write"
+      #   pool:
+      #     name: Azure-Pipelines-CI-Test-EO
+      #     image: ci-1es-managed-ubuntu-2204
+      #     os: linux
+      #   templateContext:
+      #     outputs:
+      #     - output: pipelineArtifact
+      #       displayName: 'Publish sidecar.yaml as an artifact'
+      #       targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
+      #       artifactName: 'remote-write-drop'
+      #   steps:
+      #   - task: CopyFiles@2
+      #     displayName: "Copy sidecar.yaml to artifact staging directory"
+      #     inputs:
+      #       SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+      #       Contents: 'sidecar.yaml'
+      #       TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
 
-      - job: DevClusterHelmChartFiles
-        displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
-            targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
-            artifactName: dev-cluster-helm-chart
-        steps:
-        - checkout: self
-          persistCredentials: true
-        - task: HelmInstaller@1
-          displayName: Install Helm version
-          inputs:
-            helmVersionToInstall: $(HELM_VERSION)
-        - bash: |
-            # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
-            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION 
-            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-            mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-            echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
-          displayName: "CI/CD: Download Retina Chart"
-          retryCountOnTaskFailure: 5
-          name: setup
-        - task: CopyFiles@2
-          displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart'
-            Contents: |
-              retina/**
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
-        - task: CopyFiles@2
-          displayName: "CI/CD: Copy Dev Cluster Helm Chart files to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart'
-            Contents: |
-              azure-monitor-metrics-addon/**
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+      # - job: DevClusterHelmChartFiles
+      #   displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+      #   pool:
+      #     name: Azure-Pipelines-CI-Test-EO
+      #     image: ci-1es-managed-ubuntu-2204
+      #     os: linux
+      #   templateContext:
+      #     outputs:
+      #     - output: pipelineArtifact
+      #       displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
+      #       targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
+      #       artifactName: dev-cluster-helm-chart
+      #   steps:
+      #   - checkout: self
+      #     persistCredentials: true
+      #   - task: HelmInstaller@1
+      #     displayName: Install Helm version
+      #     inputs:
+      #       helmVersionToInstall: $(HELM_VERSION)
+      #   - bash: |
+      #       # Get all releases and filter for proper semver versions (no pre-release tags)
+      #       RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
+      #       echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+      #       echo $RETINA_VERSION 
+      #       helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+      #       mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+      #       echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
+      #     displayName: "CI/CD: Download Retina Chart"
+      #     retryCountOnTaskFailure: 5
+      #     name: setup
+      #   - task: CopyFiles@2
+      #     displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
+      #     inputs:
+      #       SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart'
+      #       Contents: |
+      #         retina/**
+      #       TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+      #   - task: CopyFiles@2
+      #     displayName: "CI/CD: Copy Dev Cluster Helm Chart files to artifact staging directory"
+      #     inputs:
+      #       SourceFolder: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart'
+      #       Contents: |
+      #         azure-monitor-metrics-addon/**
+      #       TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
 
-      - job: TestKubeTestFiles
-        displayName: "CI/CD: Export TestKube test files for Deploy stage"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'CI/CD: Publish TestKube test files'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
-            artifactName: testkube-test-files
-        steps:
-        - checkout: self
-          persistCredentials: true
-        - task: CopyFiles@2
-          displayName: "CI/CD: Copy TestKube files to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/otelcollector/test'
-            Contents: |
-              testkube/**
-              test-cluster-yamls/**
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+      # - job: TestKubeTestFiles
+      #   displayName: "CI/CD: Export TestKube test files for Deploy stage"
+      #   pool:
+      #     name: Azure-Pipelines-CI-Test-EO
+      #     image: ci-1es-managed-ubuntu-2204
+      #     os: linux
+      #   templateContext:
+      #     outputs:
+      #     - output: pipelineArtifact
+      #       displayName: 'CI/CD: Publish TestKube test files'
+      #       targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
+      #       artifactName: testkube-test-files
+      #   steps:
+      #   - checkout: self
+      #     persistCredentials: true
+      #   - task: CopyFiles@2
+      #     displayName: "CI/CD: Copy TestKube files to artifact staging directory"
+      #     inputs:
+      #       SourceFolder: '$(Build.SourcesDirectory)/otelcollector/test'
+      #       Contents: |
+      #         testkube/**
+      #         test-cluster-yamls/**
+      #       TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
 
       # - job: Linux_Golang_Reference_App
       #   displayName: "Build: linux golang reference app image"

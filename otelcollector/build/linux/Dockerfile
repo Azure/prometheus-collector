@@ -117,7 +117,7 @@ RUN cmake \
 -DFLB_OUT_PGSQL=On \
 -DFLB_LOG_NO_CONTROL_CHARS=On \
 -DFLB_CHUNK_TRACE=On \
-..
+
 RUN make
 RUN make install
 
