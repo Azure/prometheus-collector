@@ -1,7 +1,7 @@
 # schedule to run everyday
 schedules:
-- cron: '0 6 * * *'
-  displayName: Daily config processing test run
+- cron: '0 1 * * *'
+  displayName: Nightly test run
   branches:
     include:
     - main
