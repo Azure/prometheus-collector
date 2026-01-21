@@ -11,7 +11,9 @@ pr:
     - main
 
 parameters:
-  featureFlags:
+- name: featureFlags
+  type: object
+  default:
     LinuxHostVersion:
       Network: KS1
     WindowsHostVersion:
