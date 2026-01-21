@@ -202,6 +202,13 @@
         "BlobStorage"
       ]
     },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "defaultValue": "aks-LogAnalyticsWorkspace",
+      "metadata": {
+        "description": "Name of the Log Analytics workspace"
+      }
+    },    
     "enableDefender": {
       "type": "bool",
       "defaultValue": false,
@@ -216,7 +223,7 @@
     "resourceIdPrefix": "[resourceGroup().id]",
     "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]",
     "azureMonitorWorkspaceName": "[parameters('amwName')]",
-    "logAnalyticsWorkspaceName": "[concat(parameters('clusterName'), '-laws')]",
+    "logAnalyticsWorkspaceName": "[parameters('logAnalyticsWorkspaceName')]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcrName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('clusterName'))]",
     "dcraName": "[Concat('MSProm', '-', parameters('clusterLocation'), '-', parameters('clusterName'))]",
@@ -554,24 +561,24 @@
       "properties": {
       }
     },
-    {
-      "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2022-10-01",
-      "condition": "[variables('isValidClusterLocation')]",      
-      "name": "[variables('logAnalyticsWorkspaceName')]",
-      "location": "[parameters('clusterLocation')]",
-      "properties": {
-        "sku": {
-          "name": "PerGB2018"
-        },
-        "retentionInDays": "30",
-        "workspaceCapping": {
-          "dailyQuotaGb": "-1"
-        },
-        "publicNetworkAccessForIngestion": "Enabled",
-        "publicNetworkAccessForQuery": "Enabled"
-      }
-    },
+    // {
+    //   "type": "Microsoft.OperationalInsights/workspaces",
+    //   "apiVersion": "2022-10-01",
+    //   "condition": "[variables('isValidClusterLocation')]",      
+    //   "name": "[variables('logAnalyticsWorkspaceName')]",
+    //   "location": "[parameters('clusterLocation')]",
+    //   "properties": {
+    //     "sku": {
+    //       "name": "PerGB2018"
+    //     },
+    //     "retentionInDays": "30",
+    //     "workspaceCapping": {
+    //       "dailyQuotaGb": "-1"
+    //     },
+    //     "publicNetworkAccessForIngestion": "Enabled",
+    //     "publicNetworkAccessForQuery": "Enabled"
+    //   }
+    // },
     {
       "type": "Microsoft.ContainerService/managedClusters",
       "condition": "[variables('isValidClusterLocation')]",
