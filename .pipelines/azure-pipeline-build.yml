@@ -44,6 +44,7 @@ extends:
   parameters:
     featureFlags:
       WindowsHostVersion:
+        Version: 2022
         Network: KS1
     pool:
       name: Azure-Pipelines-CI-Test-EO
