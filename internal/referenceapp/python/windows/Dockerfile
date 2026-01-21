@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/windows-cssc/python:3.11-servercore-ltsc2022
 # Move to working directory /build
 WORKDIR /build
 
-# Copy pre-downloaded packages (downloaded on host before docker build)
+# Copy pre-downloaded packages (downloaded by Linux job and passed as artifact)
 COPY packages /packages
 
 # Install packages from local directory (no network required)
