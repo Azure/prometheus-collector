@@ -586,14 +586,19 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
-          hostVersion:
-            Network: KS1
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
         steps:
+        - powershell: |
+            # Download Python packages on host (where network access works)
+            # These will be copied into the Docker container for offline installation
+            New-Item -Path "$(Build.SourcesDirectory)/internal/referenceapp/python/packages" -ItemType "directory" -Force
+            pip download prometheus-client -d "$(Build.SourcesDirectory)/internal/referenceapp/python/packages"
+          displayName: "Build: download Python packages for offline installation"
+          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
         - powershell: |
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
             docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
