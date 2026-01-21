@@ -10,14 +10,6 @@ pr:
     include:
     - main
 
-parameters:
-- name: featureFlags
-  type: object
-  default:
-    LinuxHostVersion:
-      Network: KS1
-    WindowsHostVersion:
-      Network: KS1
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -53,8 +45,8 @@ extends:
   parameters:
     pool:
       name: Azure-Pipelines-CI-Test-EO
-      image: ci-1es-managed-ubuntu-2204
-      os: linux
+      image: ci-1es-managed-windows-2022
+      os: windows
     sdl:
       sourceAnalysisPool:
         name: Azure-Pipelines-CI-Test-EO
@@ -64,6 +56,9 @@ extends:
         ignoreDirectories: 'mixins,internal,tools'
     customBuildTags:
     - ES365AIMigrationTooling
+    featureFlags:
+      WindowsHostVersion:
+        Network: KS1
 
     stages:
     - stage: Build
