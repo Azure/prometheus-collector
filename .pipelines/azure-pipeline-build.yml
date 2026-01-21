@@ -43,6 +43,7 @@ extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     featureFlags:
+      disableNetworkIsolation: true
       WindowsHostVersion:
         Version: 2022
         Network: KS1
