@@ -94,6 +94,10 @@ spec:
               value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # false scrapes all metrics
+            {{- if .Values.global.commonGlobals.Customer.MeshMemberMetricsFqdn }}
+            - name: MESH_MEMBER_METRICS_FQDN
+              value: "{{ .Values.global.commonGlobals.Customer.MeshMemberMetricsFqdn }}"
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -111,6 +115,11 @@ spec:
             - mountPath: /etc/kubernetes/secrets
               name: kubernetes-secrets
               readOnly: true
+            {{- if .Values.global.commonGlobals.Customer.MeshMemberMetricsFqdn }}
+            - mountPath: /var/run/secrets/ama-metrics
+              name: ama-metrics-token
+              readOnly: true
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -223,6 +232,15 @@ spec:
         - name: kubeconfig
           secret:
             secretName: kubeconfig-file
+        {{- if .Values.global.commonGlobals.Customer.MeshMemberMetricsFqdn }}
+        - name: ama-metrics-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+                  audience: "{{ .Values.global.commonGlobals.Customer.MemberApiServerUrl }}"
+        {{- end }}
         - name: kubernetes-secrets
           projected:
             defaultMode: 420

@@ -1,13 +1,21 @@
 scrape_configs:
 - job_name: controlplane-istio
   scrape_interval: $$SCRAPE_INTERVAL$$
+  scrape_timeout: 10s
   label_limit: 63
   label_name_length_limit: 511
   label_value_length_limit: 1023
-  scheme: $$MESH_MEMBER_METRICS_SCHEME$$
-  metrics_path: /metrics
-  static_configs:
-    - targets: ['$$MESH_MEMBER_METRICS_HOST$$']
+  http_sd_configs:
+    - url: '$$MESH_MEMBER_METRICS_FQDN$$/v1/targets'
+      refresh_interval: 30s
+      authorization:
+        type: Bearer
+        credentials_file: /var/run/secrets/ama-metrics/token
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/ama-metrics/token
+  tls_config:
+    insecure_skip_verify: false
   relabel_configs:
     - source_labels: [__address__]
       regex: (.*)
