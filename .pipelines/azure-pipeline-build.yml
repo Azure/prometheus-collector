@@ -29,7 +29,7 @@ variables:
   Codeql.Enabled: true
   GOLANG_VERSION: '1.24.11'
   FLUENTBIT_GOLANG_VERSION: '1.24.6'
-  TESTKUBE_GOLANG_VERSION: '1.23.10'
+  TESTKUBE_GOLANG_VERSION: '1.24.0'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -583,6 +583,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
+          demands:
+          - network -equals KS1
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
