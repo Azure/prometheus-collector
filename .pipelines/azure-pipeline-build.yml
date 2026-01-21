@@ -42,6 +42,9 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    featureFlags:
+      WindowsHostVersion:
+        Network: KS1
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
@@ -583,9 +586,6 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
-          hostVersion:
-            Version: 2022
-            Network: KS1
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
