@@ -43,6 +43,9 @@
     },
     "storageAccountName": {
       "value": "$_LOG_STORAGE_ACCOUNT_NAME_$"
-    }    
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "$_LOG_ANALYTICS_WORKSPACE_NAME_$"
+    }         
   }
 }

@@ -17,10 +17,17 @@
   },
   "orchestratedSteps": [
     {
+      "name": "Deploy.LogAnalyticsWorkspace",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "Deploy.LogAnalyticsWorkspace",
+      "actions": [ "deploy" ]
+    },
+    {
       "name": "Deploy.AksCluster",
       "targetType": "ServiceResourceDefinition",
       "targetName": "Deploy.AksCluster",
-      "actions": [ "deploy" ]
+      "actions": [ "deploy" ],
+      "dependsOn": ["Deploy.LogAnalyticsWorkspace"]      
     },
     {
       "name": "Deploy.ClusterRoleAssignments",

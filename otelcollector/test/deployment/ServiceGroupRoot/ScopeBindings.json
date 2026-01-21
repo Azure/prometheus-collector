@@ -62,6 +62,10 @@
                     "replaceWith": "aks-$azureResourceGroup()-amw"
                 },
                 {
+                    "find": "$_LOG_ANALYTICS_WORKSPACE_NAME_$",
+                    "replaceWith": "aks-$azureResourceGroup()-laws"
+                },
+                {
                     "find": "$_SHELL_SUBNET_ID_$",
                     "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/$config(vnetNameBase)$azureResourceGroup()/subnets/$config(shellExtSubnetNameBase)$azureResourceGroup()"
                 },
