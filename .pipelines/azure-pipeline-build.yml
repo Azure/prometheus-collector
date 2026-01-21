@@ -589,16 +589,18 @@ extends:
         condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish Python packages for Windows'
+            targetPath: '$(Build.ArtifactStagingDirectory)/python-packages'
+            artifactName: 'python-packages'
         steps:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/python-packages
             pip download prometheus-client --platform win_amd64 --python-version 311 --only-binary=:all: -d $(Build.ArtifactStagingDirectory)/python-packages || pip download prometheus-client -d $(Build.ArtifactStagingDirectory)/python-packages
             ls -la $(Build.ArtifactStagingDirectory)/python-packages/
           displayName: "Download Python packages for Windows"
-        - task: PublishPipelineArtifact@1
-          inputs:
-            targetPath: '$(Build.ArtifactStagingDirectory)/python-packages'
-            artifactName: 'python-packages'
       - job: Windows_Python_Reference_App
         displayName: "Build: windows python reference app image"
         pool:
