@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0",
   "serviceMetadata": {
         "serviceIdentifier": "335c5688-a203-441d-9dc7-89f7b874a113",
-        "serviceGroup": "Microsoft.Azure.PrometheusCollector.GinkgoE2E.Tests",
+        "serviceGroup": "Microsoft.Azure.PrometheusCollector.GinkgoE2E.Tests.Infra",
         "displayName": "PrometheusCollector GinkgoE2E Tests",
         "tenantId": "$config(tenant)",
         "environment": "$config(environment)"
