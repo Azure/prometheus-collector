@@ -1,0 +1,9 @@
+{
+    "ServiceEndpoint": "https://management.azure.com/",
+    "ActiveDirectoryEndpoint": "https://login.microsoftonline.com/",
+    "ResourceManagerEndpoint": "https://management.azure.com/",
+    "ActiveDirectoryServiceEndpointResourceId": "https://management.core.windows.net/",
+    "GraphEndpoint": "https://graph.windows.net",
+    "AzureKeyVaultDnsSuffix": "vault.azure.net",
+    "AzureKeyVaultServiceEndpointResourceId": "https://vault.azure.net"
+}
