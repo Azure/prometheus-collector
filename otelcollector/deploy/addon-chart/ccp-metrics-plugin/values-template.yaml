@@ -18,6 +18,9 @@ global:
       SubscriptionId: ${SUBSCRIPTION_ID} #msi-adapter
       ResourceGroupName: ${RESOURCE_GROUP} #msi-adapter
       ManagedClusterName: ${AKS_CLUSTER_NAME} #msi-adapter
+      # MCP/Applink Istio metrics support (optional)
+      # MeshMemberMetricsFqdn: Full URL for MCP metrics endpoint (e.g., https://xxx.region.sd.mcp.applink.azure.net)
+      # MemberApiServerUrl: Member cluster API server URL for token audience (e.g., https://cluster.region.azmk8s.io:443)
 prometheus-node-exporter:
   service:
     port: 9110
