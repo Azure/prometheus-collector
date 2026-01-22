@@ -19,6 +19,23 @@ func GetEnv(key, defaultValue string) string {
 	return value
 }
 
+// BuildOperationEnvironmentValue composes the base environment and add-on version for MetricsExtension.
+func BuildOperationEnvironmentValue() string {
+	version := os.Getenv("AGENT_VERSION")
+	if version == "" {
+		version = "unknown"
+	}
+
+	baseEnv := "ManagedPrometheus-Linux"
+	if strings.EqualFold(os.Getenv("CCP_METRICS_ENABLED"), "true") {
+		baseEnv = "ManagedPrometheus-CCP"
+	} else if strings.EqualFold(os.Getenv("OS_TYPE"), "windows") {
+		baseEnv = "ManagedPrometheus-Windows"
+	}
+
+	return fmt.Sprintf("%s/%s", baseEnv, version)
+}
+
 func GetControllerType() string {
 	// Get CONTROLLER_TYPE environment variable
 	controllerType := os.Getenv("CONTROLLER_TYPE")
