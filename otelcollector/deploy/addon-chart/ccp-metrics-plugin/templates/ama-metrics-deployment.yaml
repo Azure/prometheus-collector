@@ -238,4 +238,4 @@ spec:
               - serviceAccountToken:
                   path: token
                   expirationSeconds: 3600
-                  audience: {{ env "MEMBER_API_SERVER" | quote }}
+                  audience: {{ printf "https://%s:443" (env "ENDPOINT_FQDN") | quote }}
