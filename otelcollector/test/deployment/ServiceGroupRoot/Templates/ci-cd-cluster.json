@@ -518,20 +518,6 @@
             ]
         }
     },
-
-    // {
-    //   "type": "Microsoft.Storage/storageAccounts",
-    //   "condition": "[variables('isValidClusterLocation')]",
-    //   "apiVersion": "2023-01-01",
-    //   "name": "[parameters('storageAccountName')]",
-    //   "location": "[parameters('clusterLocation')]",
-    //   "sku": {
-    //     "name": "[parameters('skuName')]"
-    //   },
-    //   "kind": "[parameters('kind')]",
-    //   "properties": {}
-    // },
-
     {
       "type": "Microsoft.Monitor/accounts",
       "condition": "[variables('isValidAmwLocation')]",
@@ -710,14 +696,6 @@
         ],
         "autoUpgradeProfile": {
           "nodeOSUpgradeChannel": "NodeImage"
-        },
-        "securityProfile": {
-          "defender": {
-            "logAnalyticsWorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
-            "securityMonitoring": {
-              "enabled": "[parameters('enableDefender')]"
-            }
-          }
         },
         "azureMonitorProfile": {
           "metrics": {
