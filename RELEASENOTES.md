@@ -1,6 +1,6 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 01-06-2026
+## Release 01-22-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
@@ -10,12 +10,15 @@
   + build(deps): bump k8s.io/client-go from 0.34.0 to 0.34.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1346)
   + build(deps): bump github.com/golang-jwt/jwt/v5 from 5.2.1 to 5.2.2 in /otelcollector/test/ginkgo-e2e/utils (https://github.com/Azure/prometheus-collector/pull/1266)
   + build(deps): bump github.com/docker/docker from 28.3.0+incompatible to 28.3.3+incompatible in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1348)
+  + build(deps): Upgrade otelcollector to v0.142.0 (https://github.com/Azure/prometheus-collector/pull/1388)
+  + fix: manifest list issue on arm host, testkube golang version upgrade, disable window python ref app due to pypi.org (https://github.com/Azure/prometheus-collector/pull/1390)
 
 * Pipeline/Docs/Templates Updates:
   + fix: fix config test command (https://github.com/Azure/prometheus-collector/pull/1350)
   + fix: bicep fixes (https://github.com/Azure/prometheus-collector/pull/1359)
   + Fix doc for backdoor testing (https://github.com/Azure/prometheus-collector/pull/1361)c
   + test: support sequential cluster deployment (https://github.com/Azure/prometheus-collector/pull/1349)
+  + test: Testkube workflow migration (https://github.com/Azure/prometheus-collector/pull/1392)
 
 ## Release 11-13-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744`
