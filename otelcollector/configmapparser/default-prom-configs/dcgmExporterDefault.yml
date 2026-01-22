@@ -26,3 +26,27 @@ scrape_configs:
   - source_labels: [__meta_kubernetes_node_name]
     target_label: instance
     action: replace
+
+  # Drop high-cardinality labels that are not used in the dashboard
+  # The dashboard only uses: instance, gpu, and basic metric labels
+
+  # Drop UUID label - unique per GPU, extremely high cardinality
+  - regex: (?i)cluster
+    action: labeldrop
+  # Drop DCGM version label if present
+  - regex: (?i)dcgm_fi_driver_version
+    action: labeldrop
+  # Drop device label - redundant with gpu label
+  - regex: (?i)device
+    action: labeldrop
+  - regex: (?i)hostname
+    action: labeldrop
+  - regex: microsoft.resourceid
+    action: labeldrop
+  # Drop modelName label - while useful for inventory, not used in dashboard
+  - regex: (?i)modelName
+    action: labeldrop
+  - regex: (?i)pci_bus_id
+    action: labeldrop
+  - regex: (?i)uuid
+    action: labeldrop
