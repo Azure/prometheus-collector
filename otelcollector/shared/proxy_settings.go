@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"encoding/base64"
 	"log"
 	"os"
 	"os/exec"
@@ -88,7 +87,7 @@ func ConfigureEnvironment() error {
 			log.Println("HTTP Proxy specified does not include a host")
 		}
 
-		password := base64.StdEncoding.EncodeToString([]byte(strings.SplitN(urlParts[0], ":", 2)[1]))
+		password := strings.SplitN(urlParts[0], ":", 2)[1]
 		os.WriteFile("/opt/microsoft/proxy_password", []byte(password), 0644)
 
 		SetEnvAndSourceBashrcOrPowershell("MDSD_PROXY_MODE", "application", true)
