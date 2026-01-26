@@ -12,6 +12,7 @@ stages:
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-collector
+    timeoutInMinutes: 240
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
@@ -99,6 +100,7 @@ stages:
   - deployment: Testkube_OTel
     displayName: "Test: OTel AKS testkube tests"
     environment: Prometheus-Collector
+    timeoutInMinutes: 240
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
@@ -186,6 +188,7 @@ stages:
   - deployment: Testkube_ARC
     displayName: "Test: Arc testkube tests"
     environment: Prometheus-Collector
+    timeoutInMinutes: 240
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
@@ -273,6 +276,7 @@ stages:
   - deployment: Testkube_OTel_Upgrade
     displayName: "Test: OTel Collector Upgrade testkube tests"
     environment: Prometheus-Collector
+    timeoutInMinutes: 240
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
