@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/monitor/azquery"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +43,7 @@ func init() {
 	//flag.StringVar(&parmKubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file") //*************NEW - WTD***************************
 	flag.StringVar(&parmRuleName, "parmRuleName", "", "Prometheus rule name to use in this test suite")
 	flag.StringVar(&parmAmwResourceId, "parmAmwResourceId", "", "AMW resource id to use in this test suite")
-	flag.StringVar(&azureClientId, "clientId", "", "Azure Client ID to use in this test suite")
+	flag.StringVar(&azureClientId, "clientId", "", "Azure Client ID for user-assigned managed identity (optional, only required for Ev2)")
 }
 
 func TestTest(t *testing.T) {
@@ -117,11 +116,19 @@ var _ = BeforeSuite(func() {
 	// fmt.Printf("parmVerbose: %s\r\n", parmVerbose)
 	// Expect(strings.ToLower(parmVerbose)).To(BeElementOf([]string{"true", "false"}), "parmVerbose must be either 'true' or 'false'.")
 
-	////azureClientId = os.Getenv(AZURE_CLIENT_ID)
-	fmt.Printf("Setting env variable %s to %s\r\n", AZURE_CLIENT_ID, azureClientId)
-	_ = os.Setenv(AZURE_CLIENT_ID, azureClientId)
-	fmt.Printf("azureClientId: %s\r\n", azureClientId)
-	Expect(azureClientId).NotTo(BeEmpty())
+	// // fmt.Printf("Setting env variable %s to %s\r\n", AZURE_CLIENT_ID, azureClientId)
+	// // _ = os.Setenv(AZURE_CLIENT_ID, azureClientId)
+	// // fmt.Printf("azureClientId: %s\r\n", azureClientId)
+	// // Expect(azureClientId).NotTo(BeEmpty())
+
+	// Only set AZURE_CLIENT_ID if clientId was explicitly provided (e.g., for Ev2 with managed identity).
+	// In ADO pipelines, don't pass -clientId so DefaultAzureCredential uses AzureCLICredential instead.
+	if azureClientId != "" {
+		fmt.Printf("Setting env variable %s to %s\r\n", AZURE_CLIENT_ID, azureClientId)
+		_ = os.Setenv(AZURE_CLIENT_ID, azureClientId)
+	} else {
+		fmt.Println("No clientId provided - DefaultAzureCredential will use AzureCLI or environment credentials")
+	}
 })
 
 var _ = AfterSuite(func() {
@@ -315,12 +322,19 @@ var _ = Describe("Regions Suite", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create a credential using the specified client ID
-			cred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
-				ID: azidentity.ClientID(azureClientId),
-				ClientOptions: azcore.ClientOptions{
-					Cloud: *envConfig,
-				},
-			})
+			// // cred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+			// // 	ID: azidentity.ClientID(azureClientId),
+			// // 	ClientOptions: azcore.ClientOptions{
+			// // 		Cloud: *envConfig,
+			// // 	},
+			// // })
+			// // cred, err := utils.CreateDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
+			// // 	////ID: azidentity.ClientID(azureClientId),
+			// // 	ClientOptions: azcore.ClientOptions{
+			// // 		Cloud: *envConfig,
+			// // 	},
+			// // })
+			cred, err := utils.CreateDefaultAzureCredential(nil)
 			if err != nil {
 				log.Fatalf("failed to create managed identity credential: %v", err)
 			}

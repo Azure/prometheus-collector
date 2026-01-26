@@ -15,6 +15,7 @@ func CreateDefaultAzureCredential(options *azidentity.DefaultAzureCredentialOpti
 	}
 
 	strCloudEnv := os.Getenv("CLOUD_ENVIRONMENT")
+	fmt.Printf("CLOUD_ENVIRONMENT: %s\r\n", strCloudEnv)
 	cloudEnv, err := ParseCloudEnvironment(strCloudEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse 'CLOUD_ENVIRONMENT' environment variable (%s): %w", strCloudEnv, err)
