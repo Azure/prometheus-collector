@@ -9,7 +9,7 @@ resources:
   pipelines:
   - pipeline: '_Azureprometheus-collector'
     project: 'azure'
-    source: 'Azure.prometheus-collector'
+    source: 'CI-Delos-Ev2'
     #branch: 'main'
   repositories:
   - repository: 1ESPipelineTemplates
