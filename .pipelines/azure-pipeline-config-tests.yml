@@ -1,10 +1,3 @@
-# schedule to run everyday
-schedules:
-- cron: '0 6 * * *'
-  displayName: Daily config processing test run
-  branches:
-    include:
-    - main
 parameters:
 - name: subscriptionName
   displayName: 'Subscription Name'
