@@ -26,11 +26,15 @@ func BuildOperationEnvironmentValue() string {
 		version = "unknown"
 	}
 
-	baseEnv := "ManagedPrometheus-Linux"
+	var baseEnv string
 	if strings.EqualFold(os.Getenv("CCP_METRICS_ENABLED"), "true") {
 		baseEnv = "ManagedPrometheus-CCP"
 	} else if strings.EqualFold(os.Getenv("OS_TYPE"), "windows") {
 		baseEnv = "ManagedPrometheus-Windows"
+	} else if strings.EqualFold(os.Getenv("OS_TYPE"), "linux") {
+		baseEnv = "ManagedPrometheus-Linux"
+	} else {
+		baseEnv = "unknown"
 	}
 
 	return fmt.Sprintf("%s/%s", baseEnv, version)
