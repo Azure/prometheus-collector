@@ -49,7 +49,7 @@ extends:
     sdl:
       sourceAnalysisPool:
         name: Azure-Pipelines-CI-Test-EO
-        image: ci-1es-managed-windows-2022
+        image: ci-1es-managed-windows-2025
         os: windows
       componentgovernance: 
         ignoreDirectories: 'mixins,internal,tools'
@@ -501,7 +501,7 @@ extends:
         displayName: "Build: windows golang reference app image"
         pool:
           name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          image: ci-1es-managed-windows-2025
           os: windows
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
@@ -690,7 +690,7 @@ extends:
         displayName: "SDL: policheck scanning"
         pool:
           name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          image: ci-1es-managed-windows-2025
           os: windows
         variables:
           skipComponentGovernanceDetection: true
