@@ -6,7 +6,7 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.2-main-01-22-2026-5b4fee0a-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.2-main-01-22-2026-5b4fee0a-cfg`
 * AKS and Arc Container Images : 
-  + Add pdb for prometheus collector replicaset (https://github.com/Azure/prometheus-collector/pull/1331)
+  + Add pdb for prometheus collector replicaset and remove no schedule toleration for deployments(https://github.com/Azure/prometheus-collector/pull/1331)
   + build(deps): bump k8s.io/client-go from 0.34.0 to 0.34.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1346)
   + build(deps): bump github.com/golang-jwt/jwt/v5 from 5.2.1 to 5.2.2 in /otelcollector/test/ginkgo-e2e/utils (https://github.com/Azure/prometheus-collector/pull/1266)
   + build(deps): bump github.com/docker/docker from 28.3.0+incompatible to 28.3.3+incompatible in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1348)
