@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
@@ -30,16 +29,6 @@ import (
 type Config struct {
 	PrometheusConfig   *PromConfig `mapstructure:"config"`
 	TrimMetricSuffixes bool        `mapstructure:"trim_metric_suffixes"`
-	// UseStartTimeMetric enables retrieving the start time of all counter metrics
-	// from the process_start_time_seconds metric. This is only correct if all counters on that endpoint
-	// started after the process start time, and the process is the only actor exporting the metric after
-	// the process started. It should not be used in "exporters" which export counters that may have
-	// started before the process itself. Use only if you know what you are doing, as this may result
-	// in incorrect rate calculations.
-	//
-	// Deprecated: use the metricstarttime processor instead.
-	UseStartTimeMetric   bool   `mapstructure:"use_start_time_metric"`
-	StartTimeMetricRegex string `mapstructure:"start_time_metric_regex"`
 
 	// ReportExtraScrapeMetrics - enables reporting of additional metrics for Prometheus client like scrape_body_size_bytes
 	//
@@ -51,7 +40,7 @@ type Config struct {
 	//  APIServer has the settings to enable the receiver to host the Prometheus API
 	// server in agent mode. This allows the user to call the endpoint to get
 	// the config, service discovery, and targets for debugging purposes.
-	APIServer configoptional.Optional[apiserver.Config] `mapstructure:"api_server"`
+	APIServer APIServer `mapstructure:"api_server"`
 
 	// For testing only.
 	ignoreMetadata bool
@@ -250,7 +239,7 @@ func (cfg *APIServer) Validate() error {
 		return nil
 	}
 
-	if cfg.ServerConfig.Endpoint == "" {
+	if cfg.ServerConfig.NetAddr.Endpoint == "" {
 		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
 	}
 

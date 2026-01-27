@@ -27,7 +27,7 @@ variables:
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.24.11'
+  GOLANG_VERSION: '1.25.6'
   FLUENTBIT_GOLANG_VERSION: '1.24.6'
   TESTKUBE_GOLANG_VERSION: '1.24.0'
   FLUENT_BIT_VERSION: '3.2.2'
