@@ -56,6 +56,7 @@ var (
 	istioCniDefaultFile                          = "istioCniDefault.yml"
 	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
+	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
 
 type RegexValues struct {

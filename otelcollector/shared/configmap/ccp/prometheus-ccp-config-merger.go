@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -23,7 +22,6 @@ const (
 	controlplaneClusterAutoscalerFile     = defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
 	controlplaneNodeAutoProvisioningFile  = defaultPromConfigPathPrefix + "controlplane_node_auto_provisioning.yml"
 	controlplaneEtcdDefaultFile           = defaultPromConfigPathPrefix + "controlplane_etcd.yml"
-	controlplaneIstioDefaultFile          = defaultPromConfigPathPrefix + "controlplane_istio.yml"
 )
 
 var (
@@ -206,40 +204,6 @@ func populateDefaultPrometheusConfig() {
 		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
 	}
 
-	// Add Istio Control Plane (MCP) metrics scraping support
-	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
-	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
-	// The http_sd_configs endpoint is at /v1/targets and requires Bearer token auth
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
-		if meshMemberMetricsFqdn != "" {
-			fmt.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
-
-			// Validate the URL format
-			parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
-			if parseErr != nil {
-				fmt.Printf("Failed to parse MESH_MEMBER_METRICS_FQDN as URL: %s, skipping Istio scraping\n", parseErr)
-			} else if parsedURL.Host == "" {
-				fmt.Printf("MESH_MEMBER_METRICS_FQDN must include scheme and host (e.g., https://host): %s, skipping Istio scraping\n", meshMemberMetricsFqdn)
-			} else {
-				controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
-				if exists && controlplaneIstioKeepListRegex != "" {
-					appendMetricRelabelConfig(controlplaneIstioDefaultFile, controlplaneIstioKeepListRegex)
-				}
-				contents, err := os.ReadFile(controlplaneIstioDefaultFile)
-				if err == nil {
-					contents = []byte(strings.Replace(string(contents), "$$MESH_MEMBER_METRICS_FQDN$$", meshMemberMetricsFqdn, -1))
-					err = os.WriteFile(controlplaneIstioDefaultFile, contents, fs.FileMode(0644))
-					if err == nil {
-						defaultConfigs = append(defaultConfigs, controlplaneIstioDefaultFile)
-					}
-				}
-			}
-		} else {
-			fmt.Println("Istio control plane metrics enabled but MESH_MEMBER_METRICS_FQDN environment variable is not set, skipping Istio scraping")
-		}
-	}
-
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -343,7 +307,6 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 	defaultFilesArray := []string{
 		controlplaneApiserverDefaultFile, controlplaneKubeSchedulerDefaultFile, controlplaneKubeControllerManagerFile,
 		controlplaneClusterAutoscalerFile, controlplaneNodeAutoProvisioningFile, controlplaneEtcdDefaultFile,
-		controlplaneIstioDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {
