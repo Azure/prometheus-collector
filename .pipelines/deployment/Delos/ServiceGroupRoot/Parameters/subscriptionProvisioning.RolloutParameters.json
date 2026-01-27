@@ -1,0 +1,18 @@
+﻿{
+    "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/rolloutParameters.json",
+    "contentVersion": "1.0.0.0",
+    "subscriptions": [
+        {
+            "name": "SubscriptionProvisioning",
+            "displayName": "__SUBSCRIPTION_DISPLAY_NAME__",
+            "initialOwnerPrincipalId": "__INITIAL_OWNER_PRINCIPLE_ID__",
+            "workload": "__SUBSCRIPTION_WORKLOAD__",
+            "billing": {
+                "scope": "__SUBSCRIPTION_BILLING_SCOPE__",
+                "pcCode": "__SUBSCRIPTION_BILLING_PC_CODE__",
+                "costCategory": "__SUBSCRIPTION_BILLING_COST_CATEGORY__",
+                "airsRegisteredUserPrincipalId": "__AIRS_REGISTERED_USER_ID__"
+            }
+        }
+    ]
+}
