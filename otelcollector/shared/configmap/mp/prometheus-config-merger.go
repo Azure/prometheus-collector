@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"regexp"
@@ -611,6 +612,69 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
+	// Add waypoint-proxy support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		waypointproxyMetricsKeepListRegex, exists := regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
+		waypointproxyScrapeInterval, intervalExists := intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			fullWaypointProxyPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, waypointProxyDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullWaypointProxyPath, waypointproxyScrapeInterval)
+			}
+			if exists && waypointproxyMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullWaypointProxyPath, waypointproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullWaypointProxyPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullWaypointProxyPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullWaypointProxyPath)
+				}
+			}
+		}
+	}
+
+	// Add Istio Control Plane (MCP) metrics scraping support
+	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
+	// The http_sd_configs endpoint is at /v1/targets and requires Bearer token auth
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
+		if meshMemberMetricsFqdn != "" {
+			log.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
+
+			// Validate the URL format
+			parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
+			if parseErr != nil {
+				log.Printf("Failed to parse MESH_MEMBER_METRICS_FQDN as URL: %s, skipping Istio scraping\n", parseErr)
+			} else if parsedURL.Host == "" {
+				log.Printf("MESH_MEMBER_METRICS_FQDN must include scheme and host (e.g., https://host): %s, skipping Istio scraping\n", meshMemberMetricsFqdn)
+			} else {
+				controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
+				controlplaneIstioScrapeInterval, intervalExists := intervalHash["CONTROLPLANE_ISTIO_SCRAPE_INTERVAL"]
+				fullControlplaneIstioPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, controlplaneIstioDefaultFile)
+				if intervalExists {
+					UpdateScrapeIntervalConfig(fullControlplaneIstioPath, controlplaneIstioScrapeInterval)
+				}
+				if exists && controlplaneIstioKeepListRegex != "" {
+					AppendMetricRelabelConfig(fullControlplaneIstioPath, controlplaneIstioKeepListRegex)
+				}
+				contents, err := os.ReadFile(fullControlplaneIstioPath)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$MESH_MEMBER_METRICS_FQDN$$", meshMemberMetricsFqdn))
+					err = os.WriteFile(fullControlplaneIstioPath, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, fullControlplaneIstioPath)
+					}
+				}
+			}
+		} else {
+			log.Println("Istio control plane metrics enabled but MESH_MEMBER_METRICS_FQDN environment variable is not set, skipping Istio scraping")
+		}
+	}
+
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		prometheusCollectorHealthInterval, intervalExists := intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 		if intervalExists {
@@ -1138,6 +1202,71 @@ func populateDefaultPrometheusConfigWithOperator() {
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, fullIstioCniPath)
 				}
+			}
+		}
+	}
+
+	// Add waypoint-proxy support
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		waypointproxyMetricsKeepListRegex, exists := regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
+		waypointproxyScrapeInterval, intervalExists := intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || (currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+			fullWaypointProxyPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, waypointProxyDefaultFile)
+			if intervalExists {
+				UpdateScrapeIntervalConfig(fullWaypointProxyPath, waypointproxyScrapeInterval)
+			}
+			if exists && waypointproxyMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(fullWaypointProxyPath, waypointproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(fullWaypointProxyPath)
+			if err == nil {
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				err = os.WriteFile(fullWaypointProxyPath, contents, 0644)
+				if err == nil {
+					defaultConfigs = append(defaultConfigs, fullWaypointProxyPath)
+				}
+			}
+		}
+	}
+
+	// Add Istio Control Plane (MCP) metrics scraping support
+	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
+	// The http_sd_configs endpoint is at /v1/targets and requires Bearer token auth
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		if isConfigReaderSidecar() || currentControllerType == replicasetControllerType {
+			meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
+			if meshMemberMetricsFqdn != "" {
+				log.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
+
+				// Validate the URL format
+				parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
+				if parseErr != nil {
+					log.Printf("Failed to parse MESH_MEMBER_METRICS_FQDN as URL: %s, skipping Istio scraping\n", parseErr)
+				} else if parsedURL.Host == "" {
+					log.Printf("MESH_MEMBER_METRICS_FQDN must include scheme and host (e.g., https://host): %s, skipping Istio scraping\n", meshMemberMetricsFqdn)
+				} else {
+					controlplaneIstioKeepListRegex, exists := regexHash["CONTROLPLANE_ISTIO_KEEP_LIST_REGEX"]
+					controlplaneIstioScrapeInterval, intervalExists := intervalHash["CONTROLPLANE_ISTIO_SCRAPE_INTERVAL"]
+					fullControlplaneIstioPath := fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, controlplaneIstioDefaultFile)
+					if intervalExists {
+						UpdateScrapeIntervalConfig(fullControlplaneIstioPath, controlplaneIstioScrapeInterval)
+					}
+					if exists && controlplaneIstioKeepListRegex != "" {
+						AppendMetricRelabelConfig(fullControlplaneIstioPath, controlplaneIstioKeepListRegex)
+					}
+					contents, err := os.ReadFile(fullControlplaneIstioPath)
+					if err == nil {
+						contents = []byte(strings.ReplaceAll(string(contents), "$$MESH_MEMBER_METRICS_FQDN$$", meshMemberMetricsFqdn))
+						err = os.WriteFile(fullControlplaneIstioPath, contents, 0644)
+						if err == nil {
+							defaultConfigs = append(defaultConfigs, fullControlplaneIstioPath)
+						}
+					}
+				}
+			} else {
+				log.Println("Istio control plane metrics enabled but MESH_MEMBER_METRICS_FQDN environment variable is not set, skipping Istio scraping")
 			}
 		}
 	}

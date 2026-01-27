@@ -55,6 +55,7 @@ var (
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
+	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
 
 type RegexValues struct {
