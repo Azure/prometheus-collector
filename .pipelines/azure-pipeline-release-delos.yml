@@ -20,7 +20,7 @@ variables:
 resources:
   containers: []
   pipelines:
-  - pipeline: '_Delos-Azureprometheus-collector'
+  - pipeline: '_Azureprometheus-collector'
     project: 'azure'
     source: 'Azure.prometheus-collector'
     #branch: 'main'
