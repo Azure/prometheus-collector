@@ -27,15 +27,15 @@
                 },               
                 {
                     "find": "$_VNET_NAME_$",
-                    "replaceWith": "$config(vnetNameBase)$azureResourceGroup()"
+                    "replaceWith": "$config(vnetNameBase)"
                 },
                 {
                     "find": "$_NAT_GATEWAY_NAME_$",
-                    "replaceWith": "ipAddrNatGateway-$azureResourceGroup()"
+                    "replaceWith": "promTestIpAddrNatGateway"
                 },                
                 {
                     "find": "$_SHELL_SUBNET_NAME_$",
-                    "replaceWith": "$config(shellExtSubnetNameBase)$azureResourceGroup()"
+                    "replaceWith": "$config(shellExtSubnetNameBase)"
                 },
                 {
                     "find": "$_CLIENT_ID_$",
@@ -67,7 +67,7 @@
                 },
                 {
                     "find": "$_SHELL_SUBNET_ID_$",
-                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/$config(vnetNameBase)$azureResourceGroup()/subnets/$config(shellExtSubnetNameBase)$azureResourceGroup()"
+                    "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/$config(vnetNameBase)/subnets/$config(shellExtSubnetNameBase)"
                 },
                 {
                     "find": "$_AGENT_POOL_VM_SIZE_$",
