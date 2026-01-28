@@ -16,6 +16,7 @@
   + Add DCGM exporter support for GPU metrics collection (https://github.com/Azure/prometheus-collector/pull/1391)
   + build(deps): bump go.opentelemetry.io/otel/sdk from 1.38.0 to 1.39.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1381)
   + fix: update acstor node-agent pod selector for label changes (https://github.com/Azure/prometheus-collector/pull/1369)
+  + build(deps): Upgrade fluent bit (https://github.com/Azure/prometheus-collector/pull/1397)
 
 * Pipeline/Docs/Templates Updates:
   + fix: fix config test command (https://github.com/Azure/prometheus-collector/pull/1350)
