@@ -1,0 +1,486 @@
+stages:
+- stage: Deploy
+  jobs:
+  - deployment: Testkube
+    displayName: "Test: AKS testkube tests"
+    environment: Prometheus-collector
+    timeoutInMinutes: 240
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    condition: succeeded()
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              sudo mv kubectl /usr/local/bin/
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install kubectl CLI"
+
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
+          - task: AzureCLI@2
+            displayName: Get kubeconfig
+            inputs:
+              scriptType: 'bash'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
+
+          - bash: |
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com" \
+                "c7f895bb-c4f6-45af-be82-2273a424e237" \
+                "testkube-test-crs.yaml" \
+                "testkube-test-crs-ci-dev-aks-mac-eus.yaml" \
+                "" \
+                "" \
+                "AKS-Nightly"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run TestKube workflow"
+            continueOnError: true
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS-Nightly.json" ]; then
+                # Read the JSON content and set it as a pipeline variable
+                TESTKUBE_RESULTS_AKS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS-Nightly.json" | jq -c . | tr -d '\n\r')
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]$TESTKUBE_RESULTS_AKS"
+                echo "TestKube AKS results set as pipeline variable"
+                echo $TESTKUBE_RESULTS_AKS
+              else
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_AKS;isOutput=true]{\"environment\":\"AKS-Nightly\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                echo "TestKube AKS results file not found, setting default failure result"
+              fi
+            displayName: "Set TestKube AKS Results as Pipeline Variable"
+            continueOnError: true
+            name: testkube_results
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-AKS-Nightly.json" ]; then
+                TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-AKS-Nightly.json" | jq -r '.status')
+                if [ "$TEST_STATUS" = "failed" ]; then
+                  echo "##vso[task.logissue type=error]TestKube tests failed"
+                  echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                  exit 1
+                fi
+              else
+                echo "##vso[task.logissue type=error]TestKube results file not found"
+                echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                exit 1
+              fi
+            displayName: "Fail job if TestKube tests failed"
+
+  - deployment: Testkube_OTel
+    displayName: "Test: OTel AKS testkube tests"
+    environment: Prometheus-Collector
+    timeoutInMinutes: 240
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    condition: succeeded()
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              sudo mv kubectl /usr/local/bin/
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install kubectl CLI"
+
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
+          - task: AzureCLI@2
+            displayName: Get kubeconfig
+            inputs:
+              scriptType: 'bash'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials --resource-group ciprom-dev-aks-otlp --name ciprom-dev-aks-otlp'
+          
+          - bash: |
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com" \
+                "6b8f6333-ecd0-4579-b05d-afc98a103a59" \
+                "testkube-test-crs-otel.yaml" \
+                "testkube-test-crs-ciprom-dev-aks-otlp.yaml" \
+                "false" \
+                "" \
+                "OTel-Nightly"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run TestKube workflow"
+            continueOnError: true
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Nightly.json" ]; then
+                # Read the JSON content and set it as a pipeline variable
+                TESTKUBE_RESULTS_OTEL=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Nightly.json" | jq -c . | tr -d '\n\r')
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]$TESTKUBE_RESULTS_OTEL"
+                echo "TestKube OTel results set as pipeline variable"
+                echo $TESTKUBE_RESULTS_OTEL
+              else
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_OTEL;isOutput=true]{\"environment\":\"OTel-Nightly\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                echo "TestKube OTel results file not found, setting default failure result"
+              fi
+            displayName: "Set TestKube OTel Results as Pipeline Variable"
+            continueOnError: true
+            name: testkube_results
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Nightly.json" ]; then
+                TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTel-Nightly.json" | jq -r '.status')
+                if [ "$TEST_STATUS" = "failed" ]; then
+                  echo "##vso[task.logissue type=error]TestKube tests failed"
+                  echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                  exit 1
+                fi
+              else
+                echo "##vso[task.logissue type=error]TestKube results file not found"
+                echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                exit 1
+              fi
+            displayName: "Fail job if TestKube tests failed"
+
+  - deployment: Testkube_ARC
+    displayName: "Test: Arc testkube tests"
+    environment: Prometheus-Collector
+    timeoutInMinutes: 240
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    condition: succeeded()
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              sudo mv kubectl /usr/local/bin/
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install kubectl CLI"
+
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
+          - task: AzureCLI@2
+            displayName: Get kubeconfig
+            inputs:
+              scriptType: 'bash'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-arc-wcus -n ci-dev-arc-wcus'
+          
+          - bash: |
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+              "https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com" \
+              "5f13547e-a4e2-4efd-85fe-a2b03d5b8661" \
+              "testkube-test-crs-arc.yaml" \
+              "testkube-test-crs-ci-dev-arc-wcus.yaml" \
+              "" \
+              "" \
+              "ARC-Nightly"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run TestKube workflow"
+            continueOnError: true
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC-Nightly.json" ]; then
+                # Read the JSON content and set it as a pipeline variable
+                TESTKUBE_RESULTS_ARC=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC-Nightly.json" | jq -c . | tr -d '\n\r')
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]$TESTKUBE_RESULTS_ARC"
+                echo "TestKube ARC results set as pipeline variable"
+                echo $TESTKUBE_RESULTS_ARC
+              else
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_ARC;isOutput=true]{\"environment\":\"ARC-Nightly\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                echo "TestKube ARC results file not found, setting default failure result"
+              fi
+            displayName: "Set TestKube ARC Results as Pipeline Variable"
+            continueOnError: true
+            name: testkube_results
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-ARC-Nightly.json" ]; then
+                TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-ARC-Nightly.json" | jq -r '.status')
+                if [ "$TEST_STATUS" = "failed" ]; then
+                  echo "##vso[task.logissue type=error]TestKube tests failed"
+                  echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                  exit 1
+                fi
+              else
+                echo "##vso[task.logissue type=error]TestKube results file not found"
+                echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                exit 1
+              fi
+            displayName: "Fail job if TestKube tests failed"
+
+  - deployment: Testkube_OTel_Upgrade
+    displayName: "Test: OTel Collector Upgrade testkube tests"
+    environment: Prometheus-Collector
+    timeoutInMinutes: 240
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    condition: succeeded()
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              sudo mv kubectl /usr/local/bin/
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install kubectl CLI"
+
+          - bash: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install Azure CLI"
+
+          - task: AzureCLI@2
+            displayName: Get kubeconfig
+            inputs:
+              scriptType: 'bash'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
+          
+          - bash: |
+              echo "bot/$(Build.SourceBranchName)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "https://ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com" \
+                "3bf21bd6-3dd9-449d-8f17-5f3b1a61ecd6" \
+                "testkube-test-crs-otelcollector-upgrade.yaml" \
+                "testkube-test-crs-otel-upgrade.yaml" \
+                "" \
+                "" \
+                "OTelCollector-Upgrade-Nightly"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run TestKube workflow"
+            continueOnError: true
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade-Nightly.json" ]; then
+                # Read the JSON content and set it as a pipeline variable
+                TESTKUBE_RESULTS_UPGRADE=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade-Nightly.json" | jq -c . | tr -d '\n\r')
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]$TESTKUBE_RESULTS_UPGRADE"
+                echo "TestKube Upgrade results set as pipeline variable"
+                echo $TESTKUBE_RESULTS_UPGRADE
+              else
+                echo "##vso[task.setvariable variable=TESTKUBE_RESULTS_UPGRADE;isOutput=true]{\"environment\":\"OTelCollector-Upgrade-Nightly\",\"status\":\"failed\",\"message\":\"Results file not found\"}"
+                echo "TestKube Upgrade results file not found, setting default failure result"
+              fi
+            displayName: "Set TestKube Upgrade Results as Pipeline Variable"
+            continueOnError: true
+            name: testkube_results
+          
+          - bash: |
+              if [ -f "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade-Nightly.json" ]; then
+                TEST_STATUS=$(cat "$(Build.ArtifactStagingDirectory)/testkube-results-OTelCollector-Upgrade-Nightly.json" | jq -r '.status')
+                if [ "$TEST_STATUS" = "failed" ]; then
+                  echo "##vso[task.logissue type=error]TestKube tests failed"
+                  echo "##vso[task.complete result=Failed;]TestKube tests failed"
+                  exit 1
+                fi
+              else
+                echo "##vso[task.logissue type=error]TestKube results file not found"
+                echo "##vso[task.complete result=Failed;]TestKube results file not found"
+                exit 1
+              fi
+            displayName: "Fail job if TestKube tests failed"
+
+  - job: TestKube_Summary
+    displayName: "Send TestKube Summary Notification"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    dependsOn: 
+    - Testkube_ARC
+    - Testkube
+    - Testkube_OTel
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    variables:
+      skipComponentGovernanceDetection: true
+      TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
+      TESTKUBE_RESULTS_AKS: $[ dependencies.Testkube.outputs['Testkube.testkube_results.TESTKUBE_RESULTS_AKS'] ]
+      TESTKUBE_RESULTS_OTEL: $[ dependencies.Testkube_OTel.outputs['Testkube_OTel.testkube_results.TESTKUBE_RESULTS_OTEL'] ]
+    steps:
+    - bash: |
+        # Create results directory
+        mkdir -p "$(Pipeline.Workspace)/testkube-results"
+        echo "Results directory created"
+      displayName: "Create TestKube Results Directory"
+    
+    # Write ARC results directly to file if available using PowerShell
+    - task: PowerShell@2
+      displayName: "Write ARC Results"
+      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_ARC'], ''))
+      env:
+        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_ARC)
+      inputs:
+        targetType: 'inline'
+        script: |
+          $content = $env:TESTKUBE_RESULTS
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json" -Value $content
+    
+    # Write AKS results directly to file if available using PowerShell
+    - task: PowerShell@2
+      displayName: "Write AKS Results"
+      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_AKS'], ''))
+      env:
+        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_AKS)
+      inputs:
+        targetType: 'inline'
+        script: |
+          $content = $env:TESTKUBE_RESULTS
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json" -Value $content
+    
+    # Write OTel results directly to file if available using PowerShell
+    - task: PowerShell@2
+      displayName: "Write OTel Results"
+      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_OTEL'], ''))
+      env:
+        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_OTEL)
+      inputs:
+        targetType: 'inline'
+        script: |
+          $content = $env:TESTKUBE_RESULTS
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json" -Value $content
+    
+    # List created files
+    - bash: |
+        echo "Results files created:"
+        ls -la "$(Pipeline.Workspace)/testkube-results/"
+      displayName: "List Results Files"
+    - bash: |
+        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+        export BUILD_REASON="$(Build.Reason)"
+        export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+        export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+        export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        chmod +x ./testkube/send-testkube-summary.sh
+        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+      workingDirectory: $(Pipeline.Workspace)
+      displayName: "Send TestKube Summary Notification"
+
+  - job: TestKube_Notification_OTelCollector_Upgrade
+    displayName: "Send TestKube Summary Notification"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    dependsOn: 
+    - Testkube_OTel_Upgrade
+    condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+    variables:
+      skipComponentGovernanceDetection: true
+      TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
+    templateContext:
+      type: releaseJob
+      isProduction: false
+      inputs:
+      - input: pipelineArtifact
+        artifactName: testkube-test-files
+        targetPath: $(Pipeline.Workspace)
+    steps:
+    - bash: |
+        # Create results directory
+        mkdir -p "$(Pipeline.Workspace)/testkube-results"
+        echo "Results directory created"
+      displayName: "Create TestKube Results Directory"
+    
+    # Write Upgrade results directly to file if available using PowerShell
+    - task: PowerShell@2
+      displayName: "Write Upgrade Results"
+      condition: and(succeeded(), ne(variables['TESTKUBE_RESULTS_UPGRADE'], ''))
+      env:
+        TESTKUBE_RESULTS: $(TESTKUBE_RESULTS_UPGRADE)
+      inputs:
+        targetType: 'inline'
+        script: |
+          $content = $env:TESTKUBE_RESULTS
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json" -Value $content
+    
+    # List created files
+    - bash: |
+        echo "Results files created:"
+        ls -la "$(Pipeline.Workspace)/testkube-results/"
+      displayName: "List Results Files"
+    - bash: |
+        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
+        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
+        export BUILD_REASON="$(Build.Reason)"
+        export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
+        export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
+        export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        chmod +x ./testkube/send-testkube-summary.sh
+        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+      workingDirectory: $(Pipeline.Workspace)
+      displayName: "Send TestKube Summary Notification"
