@@ -36,6 +36,7 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"defaultscrapeZtunnel":                    "AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED",
 	"defaultscrapeIstioCni":                   "AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED",
 	"defaultscrapeWaypointProxy":              "AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED",
+	"defaultscrapeDcgmExporter":               "AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED",
 	"nodeexportertargetport":                  "NODE_EXPORTER_TARGETPORT",
 	"nodeexportername":                        "NODE_EXPORTER_NAME",
 	"kubestatename":                           "KUBE_STATE_NAME",

@@ -298,8 +298,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 11))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel", "dcgm-exporter"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -386,8 +386,8 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
-			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 10))
-			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel"}
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 11))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver", "local-csi-driver", "istio-cni", "waypoint", "ztunnel", "dcgm-exporter"}
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
@@ -693,4 +693,70 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingGlobalSettingsError)),
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingGlobalSettingsError)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingGlobalSettingsError)),
+)
+
+// DCGM exporter with custom scrape interval and regex override
+var _ = DescribeTable("The Prometheus UI API should respect dcgm-exporter custom scrape interval and regex overrides",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		if controllerLabelValue == "ama-metrics" {
+			var dcgmJobConfig *config.ScrapeConfig
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				if scrapeJob.JobName == "dcgm-exporter" {
+					dcgmJobConfig = scrapeJob
+					break
+				}
+			}
+			Expect(dcgmJobConfig).NotTo(BeNil(), "dcgm-exporter job should be present")
+
+			// Verify custom scrape interval
+			actualScrapeInterval := dcgmJobConfig.ScrapeInterval.String()
+			GinkgoWriter.Printf("[DCGMCustomConfig] Custom scrape interval - expected=%s, actual=%s\n", expectedScrapeInterval, actualScrapeInterval)
+			Expect(actualScrapeInterval).To(Equal(expectedScrapeInterval), "dcgm-exporter should use custom scrape interval from configmap")
+
+			// Verify custom metric regex override
+			Expect(dcgmJobConfig.MetricRelabelConfigs).NotTo(BeEmpty(), "dcgm-exporter should have metric relabeling")
+
+			// Find the keep action with custom regex
+			foundCustomRegex := false
+			for _, relabelConfig := range dcgmJobConfig.MetricRelabelConfigs {
+				if relabelConfig.Action == "keep" && len(relabelConfig.SourceLabels) > 0 && string(relabelConfig.SourceLabels[0]) == "__name__" {
+					foundCustomRegex = true
+					regex := relabelConfig.Regex.String()
+					GinkgoWriter.Printf("[DCGMCustomConfig] Custom metric regex=%s\n", regex)
+
+					// Verify all expected patterns are in the regex
+					for _, pattern := range expectedRegexPatterns {
+						Expect(regex).To(ContainSubstring(pattern), "dcgm-exporter regex should contain custom pattern: %s", pattern)
+					}
+
+					// Verify it still includes the minimal ingestion profile pattern (DCGM_.*)
+					Expect(regex).To(ContainSubstring("DCGM_"), "dcgm-exporter regex should still include minimal ingestion profile DCGM_ pattern")
+					break
+				}
+			}
+			Expect(foundCustomRegex).To(BeTrue(), "dcgm-exporter should have custom regex pattern in metric relabeling")
+
+			GinkgoWriter.Printf("[DCGMCustomConfig] Custom interval and regex override validated successfully\n")
+		}
+	},
+	Entry("when dcgm-exporter has custom 60s interval and specific metric regex",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m0s",
+		[]string{"DCGM_FI_DEV_GPU_UTIL", "DCGM_FI_DEV_MEM_COPY_UTIL", "DCGM_FI_DEV_POWER_USAGE"},
+		Label(utils.ConfigProcessingDcgmExporterEnabled)),
 )

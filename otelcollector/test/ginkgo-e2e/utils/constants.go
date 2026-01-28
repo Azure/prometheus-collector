@@ -57,4 +57,5 @@ const (
 	ConfigProcessingSettingsError         = "config-processing-settings-error"
 	ConfigProcessingCustomConfigMapError  = "config-processing-custom-config-map-error"
 	ConfigProcessingGlobalSettingsError   = "config-processing-global-settings-error"
+	ConfigProcessingDcgmExporterEnabled   = "config-processing-dcgm-exporter-enabled"
 )

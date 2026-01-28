@@ -29,7 +29,7 @@ variables:
   Codeql.Enabled: true
   GOLANG_VERSION: '1.24.11'
   FLUENTBIT_GOLANG_VERSION: '1.24.6'
-  TESTKUBE_GOLANG_VERSION: '1.23.10'
+  TESTKUBE_GOLANG_VERSION: '1.24.0'
   FLUENT_BIT_VERSION: '3.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -577,88 +577,89 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
           displayName: "Download, install Oras and run oras attach"
           condition: succeeded()
-      - job: Windows_Python_Reference_App
-        displayName: "Build: windows python reference app image"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
-          os: windows
-        dependsOn: Image_Tags_and_Ev2_Artifacts
-        variables:
-          WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-          skipComponentGovernanceDetection: true
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-        steps:
-        - powershell: |
-            New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
-            docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-            docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-          displayName: "Build: build and push reference app python windows image to dev ACR"
-          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        - powershell: |
-            $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
-            $firstManifest = $output[0]
-            $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
-            $DIGEST = $firstManifest.Descriptor.digest
-            $SIZE = $firstManifest.Descriptor.size
-            $payload = @{
-                targetArtifact = @{
-                    mediaType = $MEDIA_TYPE
-                    digest = $DIGEST
-                    size = $SIZE
-                }
-            } | ConvertTo-Json
-            $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
-          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-          displayName: "Build the payload json file"
-          condition: succeeded()
-        - task: EsrpCodeSigning@5
-          displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
-          inputs:
-            ConnectedServiceName: "ESRPServiceConnectionPrometheus"
-            UseMSIAuthentication: true
-            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-            AuthAKVName: 'ESRPPrometheusKVProd'
-            AuthCertName: 'ESRPContainerImageSignCert'
-            AuthSignCertName: 'ESRPReqPrometheusProdCert'
-            FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-            Pattern: "*.json"
-            signConfigType: inlineSignParams
-            inlineOperation: |
-              [
-                {
-                    "keyCode": "CP-469451",
-                    "operationSetCode": "NotaryCoseSign",
-                    "parameters": [
-                      {
-                        "parameterName": "CoseFlags",
-                        "parameterValue": "chainunprotected"
-                      }
-                    ],
-                    "toolName": "sign",
-                    "toolVersion": "1.0"
-                }
-              ]
-            SessionTimeout: '60'
-            MaxConcurrency: '50'
-            MaxRetryAttempts: '5'
-            PendingAnalysisWaitTimeoutMinutes: '5'
-        - powershell: |
-            curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
-            $currentDirectory = Get-Location
-            Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
-            New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
-            Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
-            $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-            oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-            oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
-          workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-          displayName: "Download, install Oras and run oras attach"
-          condition: succeeded()
+        # backlog: work item: 36496906
+        # - job: Windows_Python_Reference_App
+        #   displayName: "Build: windows python reference app image"
+        #   pool:
+        #     name: Azure-Pipelines-CI-Test-EO
+        #     image: ci-1es-managed-windows-2022
+        #     os: windows
+        #   dependsOn: Image_Tags_and_Ev2_Artifacts
+        #   variables:
+        #     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+        #     skipComponentGovernanceDetection: true
+        #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        #   steps:
+        #   - powershell: |
+        #       New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
+        #       docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        #       docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        #       docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        #       docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        #     displayName: "Build: build and push reference app python windows image to dev ACR"
+        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        #   - powershell: |
+        #       $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
+        #       $firstManifest = $output[0]
+        #       $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+        #       $DIGEST = $firstManifest.Descriptor.digest
+        #       $SIZE = $firstManifest.Descriptor.size
+        #       $payload = @{
+        #           targetArtifact = @{
+        #               mediaType = $MEDIA_TYPE
+        #               digest = $DIGEST
+        #               size = $SIZE
+        #           }
+        #       } | ConvertTo-Json
+        #       $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
+        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        #     displayName: "Build the payload json file"
+        #     condition: succeeded()
+        #   - task: EsrpCodeSigning@5
+        #     displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
+        #     inputs:
+        #       ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+        #       UseMSIAuthentication: true
+        #       AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
+        #       AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+        #       EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+        #       AuthAKVName: 'ESRPPrometheusKVProd'
+        #       AuthCertName: 'ESRPContainerImageSignCert'
+        #       AuthSignCertName: 'ESRPReqPrometheusProdCert'
+        #       FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+        #       Pattern: "*.json"
+        #       signConfigType: inlineSignParams
+        #       inlineOperation: |
+        #         [
+        #           {
+        #               "keyCode": "CP-469451",
+        #               "operationSetCode": "NotaryCoseSign",
+        #               "parameters": [
+        #                 {
+        #                   "parameterName": "CoseFlags",
+        #                   "parameterValue": "chainunprotected"
+        #                 }
+        #               ],
+        #               "toolName": "sign",
+        #               "toolVersion": "1.0"
+        #           }
+        #         ]
+        #       SessionTimeout: '60'
+        #       MaxConcurrency: '50'
+        #       MaxRetryAttempts: '5'
+        #       PendingAnalysisWaitTimeoutMinutes: '5'
+        #   - powershell: |
+        #       curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+        #       $currentDirectory = Get-Location
+        #       Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+        #       New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+        #       Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+        #       $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+        #       oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+        #       oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+        #     workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+        #     displayName: "Download, install Oras and run oras attach"
+        #     condition: succeeded()
       - job: Arc_Conformace_Test_Image
         displayName: "Build: Arc Conformance Test Image"
         pool:
@@ -802,6 +803,10 @@ extends:
             # echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             # sudo apt-get update
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+            echo "=== Docker Version Info (ARM64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+            
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
@@ -837,6 +842,10 @@ extends:
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
+            echo "=== Docker Version Info (AMD64 Agent) ==="
+            docker version
+            echo "==========================================="
+            
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
             docker system prune --all -f
@@ -887,22 +896,71 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(LINUX_FULL_IMAGE_NAME)
+            docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
-              echo "Error: Docker build failed."
+              echo "Error: Docker buildx imagetools create failed."
               exit 1
             fi
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: build and push image to dev ACR'
         - bash: |
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            echo "=== Verifying multi-arch manifest list ==="
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw 2>&1)
+            echo "$MANIFEST_VERBOSE"
+            
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
+            
+            if [ "$HAS_MANIFESTS" != "true" ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
+              exit 1
+            fi
+            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            
+            # Count the number of manifests
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
+            echo "Number of manifests: $MANIFEST_COUNT"
+            
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
+              exit 1
+            fi
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            
+            # Extract architectures from manifest list
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
+            echo "Architectures found: $ARCHS"
+            
+            # Check for amd64
+            if ! echo "$ARCHS" | grep -q "amd64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
+              exit 1
+            fi
+            echo "amd64 architecture found ✓"
+            
+            # Check for arm64
+            if ! echo "$ARCHS" | grep -q "arm64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
+              exit 1
+            fi
+            echo "arm64 architecture found ✓"
+            
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+          displayName: 'Build: verify multi-arch manifest list'
+          condition: succeeded()
+        - bash: |
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
             {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
+            echo "Contents of payload.json:"
+            cat $(Build.ArtifactStagingDirectory)/linux/payload.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: Set values in payload.json for signing'
           condition: succeeded()
@@ -1229,6 +1287,11 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+
+            echo "=== Docker Version Info (AMD64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -1275,6 +1338,11 @@ extends:
             # echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             # sudo apt-get update
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+            
+            echo "=== Docker Version Info (ARM64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
@@ -1316,17 +1384,71 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            
+            docker buildx imagetools create -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+            if [ $? -ne 0 ]; then
+              echo "Error: Docker buildx imagetools create failed."
+              exit 1
+            fi
+
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
             {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
+            echo "Contents of payload.json:"
+            cat $(Build.ArtifactStagingDirectory)/targetallocator/payload.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
           displayName: "Build: build and push target allocator image to dev ACR"
+          condition: succeeded()
+        - bash: |
+            echo "=== Verifying multi-arch manifest list ==="
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw 2>&1)
+            echo "$MANIFEST_VERBOSE"
+            
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
+            
+            if [ "$HAS_MANIFESTS" != "true" ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
+              exit 1
+            fi
+            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            
+            # Count the number of manifests
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
+            echo "Number of manifests: $MANIFEST_COUNT"
+            
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
+              exit 1
+            fi
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            
+            # Extract architectures from manifest list
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
+            echo "Architectures found: $ARCHS"
+            
+            # Check for amd64
+            if ! echo "$ARCHS" | grep -q "amd64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
+              exit 1
+            fi
+            echo "amd64 architecture found ✓"
+            
+            # Check for arm64
+            if ! echo "$ARCHS" | grep -q "arm64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
+              exit 1
+            fi
+            echo "arm64 architecture found ✓"
+            
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+          displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - bash: |
             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
