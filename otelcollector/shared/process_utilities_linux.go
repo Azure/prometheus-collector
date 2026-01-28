@@ -272,9 +272,9 @@ func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory s
 	operationEnvironment := BuildOperationEnvironmentValue()
 	var cmd *exec.Cmd
 	if meLocalControl {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", meConfigFile)
 	}
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
@@ -290,9 +290,9 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	operationEnvironment := BuildOperationEnvironmentValue()
 	var cmd *exec.Cmd
 	if meLocalControl {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", configOverrides)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", configOverrides)
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", configOverrides)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-OperationEnvironment", operationEnvironment, "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc,otlp_http", "-OtlpHttpHost", "http://0.0.0.0", "-OtlpHttpPort", "56681", "-ConfigOverridesFilePath", configOverrides)
 	}
 
 	// Create a file to store the stdoutput
