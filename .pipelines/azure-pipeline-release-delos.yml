@@ -49,7 +49,9 @@ extends:
       jobs:
       - job: ReleaseJob
         pool:
-          type: release  # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-windows-2022
+          os: windows
         steps:
           - download: _Azureprometheus-collector
             artifact: drop_build_main
