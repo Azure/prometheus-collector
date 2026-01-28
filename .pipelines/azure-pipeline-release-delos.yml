@@ -54,7 +54,7 @@ extends:
           os: windows
         steps:
           - download: _Azureprometheus-collector
-            artifact: drop_build_main
+            artifact: ev2-drop
           - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
             displayName: 'Ev2: Delos West Rollout'
             inputs:
