@@ -364,7 +364,7 @@ stages:
     - Testkube_ARC
     - Testkube
     - Testkube_OTel
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: succeeded()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
@@ -438,7 +438,7 @@ stages:
       os: linux
     dependsOn: 
     - Testkube_OTel_Upgrade
-    condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
+    condition: succeeded()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
