@@ -84,6 +84,13 @@ export AMW_QUERY_ENDPOINT
 export AZURE_CLIENT_ID
 export BRANCH_NAME
 
+if [[ "$TARGET_ENV" == *Nightly* ]]; then
+    echo "Nightly env detected"
+else 
+    echo "Non-nightly env detected"
+    exit 1
+fi
+
 # Generate the test CRs from template
 if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
     envsubst < "./testkube/config-processing-test-crs/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
@@ -191,16 +198,16 @@ else
             echo "Non-nightly environment detected"
             exit 1
             # Keep livenessprobe if present but ensure it runs last
-            reordered=()
-            lp=()
-            for wf in "${workflows[@]}"; do
-                if [[ "$wf" == "livenessprobe" ]]; then
-                    lp+=("$wf")
-                else
-                    reordered+=("$wf")
-                fi
-            done
-            workflows=("${reordered[@]}" "${lp[@]}")
+            # reordered=()
+            # lp=()
+            # for wf in "${workflows[@]}"; do
+            #     if [[ "$wf" == "livenessprobe" ]]; then
+            #         lp+=("$wf")
+            #     else
+            #         reordered+=("$wf")
+            #     fi
+            # done
+            # workflows=("${reordered[@]}" "${lp[@]}")
         fi
     fi
 fi
