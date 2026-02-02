@@ -178,7 +178,7 @@ else
     # Build workflow list dynamically from cluster (exclude livenessprobe)
     mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name')
     if [[ ${#workflows[@]} -gt 0 ]]; then
-        if [[ "$TARGET_ENV" != *Nightly* ]]; then
+        if [[ "$TARGET_ENV" == *Nightly* ]]; then
             # Filter out livenessprobe workflow without leaving empty entries
             filtered=()
             for wf in "${workflows[@]}"; do
@@ -187,6 +187,8 @@ else
             done
             workflows=("${filtered[@]}")
         else
+            echo "Non-nightly environment detected"
+            exit 1
             # Keep livenessprobe if present but ensure it runs last
             reordered=()
             lp=()

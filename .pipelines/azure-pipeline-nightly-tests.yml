@@ -353,6 +353,7 @@ stages:
                 exit 1
               fi
             displayName: "Fail job if TestKube tests failed"
+            continueOnError: true
 
   - job: TestKube_Summary
     displayName: "Send TestKube Summary Notification"
@@ -364,7 +365,7 @@ stages:
     - Testkube_ARC
     - Testkube
     - Testkube_OTel
-    condition: succeeded()
+    condition: always()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
@@ -438,7 +439,7 @@ stages:
       os: linux
     dependsOn: 
     - Testkube_OTel_Upgrade
-    condition: succeeded()
+    condition: always()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
