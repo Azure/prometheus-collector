@@ -179,6 +179,7 @@ else
     mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name')
     if [[ ${#workflows[@]} -gt 0 ]]; then
         if [[ "$TARGET_ENV" == *Nightly* ]]; then
+            echo "Nightly environment detected"
             # Filter out livenessprobe workflow without leaving empty entries
             filtered=()
             for wf in "${workflows[@]}"; do
