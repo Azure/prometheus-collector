@@ -306,7 +306,6 @@ stages:
               inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
           
           - bash: |
-              echo "bot/$(Build.SourceBranchName)"
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
@@ -420,15 +419,13 @@ stages:
         ls -la "$(Pipeline.Workspace)/testkube-results/"
       displayName: "List Results Files"
     - bash: |
-        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
-        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
         export BUILD_REASON="$(Build.Reason)"
         export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-      workingDirectory: $(Pipeline.Workspace)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
 
   - job: TestKube_Notification_OTelCollector_Upgrade
@@ -475,13 +472,11 @@ stages:
         ls -la "$(Pipeline.Workspace)/testkube-results/"
       displayName: "List Results Files"
     - bash: |
-        export SYSTEM_PULLREQUEST_PULLREQUESTTITLE="$(System.PullRequest.PullRequestTitle)"
-        export SYSTEM_PULLREQUEST_PULLREQUESTNUMBER="$(System.PullRequest.PullRequestNumber)"
         export BUILD_REASON="$(Build.Reason)"
         export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-      workingDirectory: $(Pipeline.Workspace)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
