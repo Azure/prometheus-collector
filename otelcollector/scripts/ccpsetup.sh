@@ -35,7 +35,7 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2025.722.956
+sudo tdnf install -y metricsext2-2.2026.126.1932
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # Remove any RPMs downloaded not from Mariner
