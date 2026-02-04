@@ -373,7 +373,7 @@ stages:
     steps:
     - bash: |
         # Create results directory
-        mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+        mkdir -p "$(Pipeline.Workspace)/testkube-results"
         echo "Results directory created"
       displayName: "Create TestKube Results Directory"
     
@@ -387,7 +387,7 @@ stages:
         targetType: 'inline'
         script: |
           $content = $env:TESTKUBE_RESULTS
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-ARC.json" -Value $content
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-ARC.json" -Value $content
     
     # Write AKS results directly to file if available using PowerShell
     - task: PowerShell@2
@@ -399,7 +399,7 @@ stages:
         targetType: 'inline'
         script: |
           $content = $env:TESTKUBE_RESULTS
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-AKS.json" -Value $content
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-AKS.json" -Value $content
     
     # Write OTel results directly to file if available using PowerShell
     - task: PowerShell@2
@@ -411,12 +411,12 @@ stages:
         targetType: 'inline'
         script: |
           $content = $env:TESTKUBE_RESULTS
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-OTel.json" -Value $content
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-OTel.json" -Value $content
     
     # List created files
     - bash: |
         echo "Results files created:"
-        ls -la "$(Build.ArtifactStagingDirectory)/testkube-results/"
+        ls -la "$(Pipeline.Workspace)/testkube-results/"
       displayName: "List Results Files"
     - bash: |
         export BUILD_REASON="$(Build.Reason)"
@@ -424,7 +424,7 @@ stages:
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
-        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Build.ArtifactStagingDirectory)/testkube-results
+        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
 
@@ -443,7 +443,7 @@ stages:
     steps:
     - bash: |
         # Create results directory
-        mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+        mkdir -p "$(Pipeline.Workspace)/testkube-results"
         echo "Results directory created"
       displayName: "Create TestKube Results Directory"
     
@@ -457,12 +457,12 @@ stages:
         targetType: 'inline'
         script: |
           $content = $env:TESTKUBE_RESULTS
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-Otel-Upgrade.json" -Value $content
+          Set-Content -Path "$(Pipeline.Workspace)/testkube-results/testkube-results-Otel-Upgrade.json" -Value $content
     
     # List created files
     - bash: |
         echo "Results files created:"
-        ls -la "$(Build.ArtifactStagingDirectory)/testkube-results/"
+        ls -la "$(Pipeline.Workspace)/testkube-results/"
       displayName: "List Results Files"
     - bash: |
         export BUILD_REASON="$(Build.Reason)"
@@ -470,6 +470,6 @@ stages:
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
-        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Build.ArtifactStagingDirectory)/testkube-results
+        ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
