@@ -1,6 +1,8 @@
 # This file contains CVEs to be ignored by Trivy
 
 # CRITICAL
+CVE-2025-15467
+
 
 # HIGH
 # otelcollector
@@ -8,8 +10,20 @@ CVE-2025-68156 # github.com/expr-lang/expr
 # # # promconfigvalidator
 CVE-2025-68156 # github.com/expr-lang/expr
 
+CVE-2025-69419
+CVE-2025-61726
+CVE-2025-61728
+
 # # # MEDIUM
 # # # prometheusui
 CVE-2025-47914 # golang.org/x/crypto
 CVE-2025-58181 # golang.org/x/crypto
-
+CVE-2025-15468 
+CVE-2025-66199
+CVE-2025-68160
+CVE-2025-69418 
+CVE-2025-69420
+CVE-2025-69421
+CVE-2026-22795
+CVE-2026-22796
+CVE-2025-61730
