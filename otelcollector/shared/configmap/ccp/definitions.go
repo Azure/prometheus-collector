@@ -7,6 +7,7 @@ type RegexValues struct {
 	ControlplaneClusterAutoscaler     string
 	ControlplaneNodeAutoProvisioning  string
 	ControlplaneEtcd                  string
+	ControlplaneIstio                 string
 	MinimalIngestionProfile           string
 }
 
@@ -28,6 +29,7 @@ type ConfigProcessor struct {
 	ControlplaneClusterAutoscaler     string
 	ControlplaneNodeAutoProvisioning  string
 	ControlplaneEtcd                  string
+	ControlplaneIstio                 string
 	NoDefaultsEnabled                 bool
 }
 
