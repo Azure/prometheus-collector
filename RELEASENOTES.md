@@ -6,19 +6,26 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images : 
-  + Add pdb for prometheus collector replicaset (https://github.com/Azure/prometheus-collector/pull/1331)
+  + Add pdb for prometheus collector replicaset and remove no schedule toleration for deployments(https://github.com/Azure/prometheus-collector/pull/1331)
   + build(deps): bump k8s.io/client-go from 0.34.0 to 0.34.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1346)
   + build(deps): bump github.com/golang-jwt/jwt/v5 from 5.2.1 to 5.2.2 in /otelcollector/test/ginkgo-e2e/utils (https://github.com/Azure/prometheus-collector/pull/1266)
   + build(deps): bump github.com/docker/docker from 28.3.0+incompatible to 28.3.3+incompatible in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1348)
   + build(deps): Upgrade otelcollector to v0.142.0 (https://github.com/Azure/prometheus-collector/pull/1388)
   + fix: manifest list issue on arm host, testkube golang version upgrade, disable window python ref app due to pypi.org (https://github.com/Azure/prometheus-collector/pull/1390)
+  + fix: proxy basic auth for mdsd (https://github.com/Azure/prometheus-collector/pull/1383)
+  + Add DCGM exporter support for GPU metrics collection (https://github.com/Azure/prometheus-collector/pull/1391)
+  + build(deps): bump go.opentelemetry.io/otel/sdk from 1.38.0 to 1.39.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1381)
+  + fix: update acstor node-agent pod selector for label changes (https://github.com/Azure/prometheus-collector/pull/1369)
+  + build(deps): Upgrade fluent bit (https://github.com/Azure/prometheus-collector/pull/1397)
 
 * Pipeline/Docs/Templates Updates:
   + fix: fix config test command (https://github.com/Azure/prometheus-collector/pull/1350)
   + fix: bicep fixes (https://github.com/Azure/prometheus-collector/pull/1359)
-  + Fix doc for backdoor testing (https://github.com/Azure/prometheus-collector/pull/1361)c
+  + Fix doc for backdoor testing (https://github.com/Azure/prometheus-collector/pull/1361)
   + test: support sequential cluster deployment (https://github.com/Azure/prometheus-collector/pull/1349)
   + test: Testkube workflow migration (https://github.com/Azure/prometheus-collector/pull/1392)
+  + Add delos specs for EV2 to create subscription - First stab (https://github.com/Azure/prometheus-collector/pull/1400)
+  + test: Increase nightly tests timeout (https://github.com/Azure/prometheus-collector/pull/1399)
 
 ## Release 11-13-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.1-main-11-14-2025-15146744`
