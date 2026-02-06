@@ -39,6 +39,12 @@ func SetupTelemetry(customEnvironment string) {
 		aiEndpoint = "https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
 		// IngestionEndpoint: usseceast-0.in.applicationinsights.azure.microsoft.scloud
 		log.Println("Setting telemetry output to the ussec instance")
+	case "azurebleucloud":
+		encodedAIKey = os.Getenv("APPLICATIONINSIGHTS_AUTH_BLEU")
+		aiEndpoint = "https://bleufrancecentral-0.in.applicationinsights.sovcloud-api.fr/v2/track"
+		// IngestionEndpoint: https://bleufrancecentral-0.in.applicationinsights.sovcloud-api.fr/
+		// (global ingestion endpoint - dc.* not supported in bleu)
+		log.Println("Setting telemetry output to the azurebleucloud instance")
 	default:
 		log.Printf("Unknown customEnvironment: %s, setting telemetry output to the default azurepubliccloud instance\n", customEnvironmentLower)
 		encodedAIKey = os.Getenv("APPLICATIONINSIGHTS_AUTH_PUBLIC")
