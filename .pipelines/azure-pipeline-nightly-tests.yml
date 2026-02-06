@@ -176,6 +176,7 @@ stages:
                 exit 1
               fi
             displayName: "Fail job if TestKube tests failed"
+            continueOnError: true
 
   - deployment: Testkube_ARC
     displayName: "Test: Arc testkube tests"
@@ -264,6 +265,7 @@ stages:
                 exit 1
               fi
             displayName: "Fail job if TestKube tests failed"
+            continueOnError: true
 
   - deployment: Testkube_OTel_Upgrade
     displayName: "Test: OTel Collector Upgrade testkube tests"
@@ -306,7 +308,6 @@ stages:
               inlineScript: 'az aks get-credentials --resource-group ciprom-upgrade-bot --name ciprom-upgrade-bot'
           
           - bash: |
-              echo "bot/$(Build.SourceBranchName)"
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
@@ -353,6 +354,7 @@ stages:
                 exit 1
               fi
             displayName: "Fail job if TestKube tests failed"
+            continueOnError: true
 
   - job: TestKube_Summary
     displayName: "Send TestKube Summary Notification"
@@ -364,7 +366,7 @@ stages:
     - Testkube_ARC
     - Testkube
     - Testkube_OTel
-    condition: succeeded()
+    condition: always()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_ARC: $[ dependencies.Testkube_ARC.outputs['Testkube_ARC.testkube_results.TESTKUBE_RESULTS_ARC'] ]
@@ -427,7 +429,7 @@ stages:
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-      workingDirectory: $(Pipeline.Workspace)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
 
   - job: TestKube_Notification_OTelCollector_Upgrade
@@ -438,7 +440,7 @@ stages:
       os: linux
     dependsOn: 
     - Testkube_OTel_Upgrade
-    condition: succeeded()
+    condition: always()
     variables:
       skipComponentGovernanceDetection: true
       TESTKUBE_RESULTS_UPGRADE: $[ dependencies.Testkube_OTel_Upgrade.outputs['Testkube_OTel_Upgrade.testkube_results.TESTKUBE_RESULTS_UPGRADE'] ]
@@ -482,5 +484,5 @@ stages:
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
-      workingDirectory: $(Pipeline.Workspace)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
       displayName: "Send TestKube Summary Notification"
