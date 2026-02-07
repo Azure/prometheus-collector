@@ -2052,8 +2052,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        #dependsOn:
-        #- Image_Tags_and_Ev2_Artifacts
+        dependsOn:
+        - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
           HELM_SEMVER: 6.24.3-main-01-28-2026-e05105c7
