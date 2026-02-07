@@ -18,6 +18,7 @@ import (
 
 	"bytes"
 	"fmt"
+	"regexp"
 )
 
 /*
@@ -64,6 +65,61 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 		}
 	}
 	return nil
+}
+
+/*
+ * Checks that the logs of all containers in all pods with the given label contain a key=value statement.
+ * The match is whitespace-tolerant around '=' and is case-sensitive for both key and value.
+ * Example: key="MINIMAL_INGESTION_PROFILE", expectedValue="true" will match lines like
+ * "MINIMAL_INGESTION_PROFILE=true" or "MINIMAL_INGESTION_PROFILE = true".
+ */
+func CheckContainerLogsContainKeyValue(clientset *kubernetes.Clientset, namespace, labelName, labelValue, containerName, key, expectedValue string) error {
+	// Get all pods with the given label
+	pods, err := GetPodsWithLabel(clientset, namespace, labelName, labelValue)
+	if err != nil {
+		return err
+	}
+
+	// Strip ANSI escape codes from logs before matching for cleaner handling
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+	// Build a regex that tolerates spaces around '=' and treats key/value literally
+	pattern := fmt.Sprintf(`(?m)%s\s*=\s*%s`, regexp.QuoteMeta(key), regexp.QuoteMeta(expectedValue))
+	re := regexp.MustCompile(pattern)
+
+	var missing []string
+
+	// For each pod, fetch logs only for the requested container
+	for _, pod := range pods {
+		logs, err := getContainerLogs(clientset, pod.Namespace, pod.Name, containerName)
+		if err != nil {
+			return err
+		}
+
+		// Strip ANSI codes for matching
+		cleanLogs := ansiRegex.ReplaceAllString(logs, "")
+
+		if !re.MatchString(cleanLogs) {
+			missing = append(missing, fmt.Sprintf("pod=%s container=%s", pod.Name, containerName))
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("logs do not contain '%s=%s' for: %s", key, expectedValue, strings.Join(missing, "; "))
+	}
+
+	return nil
+}
+
+/*
+ * Convenience wrapper that ensures MINIMAL_INGESTION_PROFILE is logged as true for all containers
+ * in all pods matching the provided label selector. This is expected to be true regardless of
+ * whether a settings/config ConfigMap is present (the defaulting logic in the agent forces it to true
+ * unless explicitly set false, which we do not allow). If the statement is missing or appears with a
+ * different value, an error is returned listing the offending pod/container pairs.
+ */
+func CheckMinimalIngestionProfileTrue(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
+	return CheckContainerLogsContainKeyValue(clientset, namespace, labelName, labelValue, "prometheus-collector", "MINIMAL_INGESTION_PROFILE", "true")
 }
 
 /*

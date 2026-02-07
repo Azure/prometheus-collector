@@ -74,7 +74,7 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
     - Select `Run pipeline` -> `Resources` -> `Azure.prometheus-collector` -> choose the build with the semver you want to release 
     - This pushes the linux, windows, and chart builds to the prod ACR which is synchronized with the prod MCR.
     - It uses the `eastus2euap` region for Managed SDP.
-    - Once pushed, you can manually start the `Deploy to prod clusters` stage to deploy the image to our prod clusters.
+    - Once pushed, you can manually start the `Deploy to prod clusters` stage to deploy the image to our prod clusters. You will need to click approve for that stage in the ADO pipeline view.
 - **PR 2**:
   - Get the chart semver or container image tag from the commit used for **Build 1** and update the release notes with the changelog. Link to a similar PR [here](https://github.com/Azure/prometheus-collector/pull/298)
 - **PR 3**:
@@ -91,7 +91,10 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
   - Ask for our conformance tests to be run in the [Arc Conformance teams channel](https://teams.microsoft.com/l/channel/19%3arlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1%40thread.tacv2/General?groupId=a077ab34-99ea-490c-b204-358d31c24fbe&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47). Follow the instructions in the [Arc test README](../../otelcollector/test/arc-conformance/README.md#testing-on-the-arc-conformance-matrix).
   - Create an Arc release in [ADO](https://github-private.visualstudio.com/azure/_build?definitionId=1083) after there were no issues with the AKS release.
   - Follow the same steps as the **Image Release**  by selecting `Run pipeline` -> `Resources` -> `Azure.prometheus-collector` -> choose the build with the semver you want to release.
-  - The new version will be automatically deployed to each region batch every 24 hours.
+  - Get a SAW approval for the release.
+  -  View the rollout in the [here](https://ra.ev2portal.azure.net/#/Prod/3170cdd2-19f0-4027-912b-1027311691a2/Microsoft.Azure.InfrastructureInsights.ContainerInsights.AzureMonitorMetrics.Extension) for our extension ServiceGroup. You must be connected to the VPN.
+  - The version will be deployed to the canary regions. It will wait 24 hours and then require a "Manual Promotion to Prod" step. Anyone will need to go to the ev2 portal on their SAW and choose to "End Wait".
+  - After this, the new version will be automatically deployed to each region batch every 24 hours.
 - **Control Plane Step**
   - **PR 5** Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp/pullrequest/11017213?_a=files)
   - Once the deployment complete, verify that the latest candidate image is running on the monitoring metrics clusters using the following dashboard [tile](https://dataexplorer.azure.com/dashboards/2ed37a93-2d75-494c-a072-e34fe60dcdd6?p-_startTime=24hours&p-_endTime=now&tile=3298383e-b7f7-409e-aa6f-8a32cf4ad7e4)

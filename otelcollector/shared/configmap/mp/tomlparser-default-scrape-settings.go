@@ -32,6 +32,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["waypoint-proxy"] = "false"
+	config["dcgmexporter"] = "false"
 
 	return config, nil
 }
@@ -60,6 +61,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["waypoint-proxy"] = "false"
+	config["dcgmexporter"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -179,6 +181,11 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for waypoint-proxy: %v\n", cp.WaypointProxy)
 	}
 
+	if val, ok := parsedConfig["dcgmexporter"]; ok && val != "" {
+		cp.DcgmExporter = val
+		fmt.Printf("config:: Using scrape settings for dcgmexporter: %v\n", cp.DcgmExporter)
+	}
+
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
@@ -224,6 +231,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED=%v\n", cp.Ztunnel))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED=%v\n", cp.IstioCni))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED=%v\n", cp.WaypointProxy))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED=%v\n", cp.DcgmExporter))
 
 	return nil
 }
