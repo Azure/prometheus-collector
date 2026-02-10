@@ -31,6 +31,12 @@ func main() {
 	osType := os.Getenv("OS_TYPE")
 	customEnvironment := shared.GetEnv("customEnvironment", "")
 
+	// Setup JSON logging with pod and containerID for CCP metrics mode
+	// This must be done early so all subsequent log output includes these fields
+	if strings.EqualFold(ccpMetricsEnabled, "true") {
+		shared.SetupCCPLogging()
+	}
+
 	if osType == "windows" {
 		env := strings.ToLower(customEnvironment)
 		switch env {
