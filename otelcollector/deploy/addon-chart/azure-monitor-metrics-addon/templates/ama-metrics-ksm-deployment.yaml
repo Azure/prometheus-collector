@@ -54,16 +54,16 @@ spec:
           {{-  end  }}
         {{-  end  }}
         {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist | join "," }}
+          {{- if .Values.kubeStateMetrics }}
+            {{- if .Values.kubeStateMetrics.metricLabelsAllowlist }}
+        - --metric-labels-allowlist={{ .Values.kubeStateMetrics.metricLabelsAllowlist | join "," }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowlist }}
-        - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowlist | join "," }}
+          {{- if .Values.kubeStateMetrics }}
+            {{- if .Values.kubeStateMetrics.metricAnnotationsAllowList }}
+        - --metric-annotations-allowlist={{ .Values.kubeStateMetrics.metricAnnotationsAllowList | join "," }}
             {{- end }}
           {{- end }}
         {{- end }}
