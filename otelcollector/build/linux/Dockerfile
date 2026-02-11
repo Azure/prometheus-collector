@@ -93,7 +93,7 @@ WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
     gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
-    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
+    systemd-devel systemd-rpm-macros zlib-devel build-essential postgresql-devel -y
 ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
@@ -103,20 +103,23 @@ COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/
 RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
 WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
 # Run cmake with the same flags that Mariner uses
-RUN cmake \
--DCMAKE_BUILD_TYPE=RelWithDebInfo \
--DFLB_EXAMPLES=Off \
--DFLB_OUT_SLACK=Off \
--DFLB_IN_SYSTEMD=On \
--DFLB_OUT_TD=Off \
--DFLB_OUT_ES=Off \
--DFLB_SHARED_LIB=On \
--DFLB_RELEASE=On \
--DFLB_DEBUG=Off \
--DFLB_TLS=On \
+RUN cmake \ 
+-DOPENSSL_ROOT_DIR=/usr \
+-DOPENSSL_LIBRARIES=/usr/lib \
 -DFLB_JEMALLOC=On \
--DFLB_PREFER_SYSTEM_LIBS=On \
--DFLB_PROXY_GO=On ../
+-DFLB_RELEASE=On \
+-DFLB_SIMD=On \
+-DFLB_TLS=On \
+-DFLB_SHARED_LIB=Off \
+-DFLB_EXAMPLES=Off \
+-DFLB_HTTP_SERVER=On \
+-DFLB_IN_EXEC=Off \
+-DFLB_IN_SYSTEMD=On \
+-DFLB_OUT_KAFKA=On \
+-DFLB_OUT_PGSQL=On \
+-DFLB_LOG_NO_CONTROL_CHARS=On \
+-DFLB_CHUNK_TRACE=On ../
+
 RUN make
 RUN make install
 
@@ -137,6 +140,8 @@ ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAw
 ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
 # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# Below is for CIAgentPromCollectorAI AppInsights Resource in Bleu
+ENV APPLICATIONINSIGHTS_AUTH_BLEU NTI3MjJjYTgtYWZiMy1iYWVjLWFiMWEtZGYzZjZjNDZlNWE5
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
@@ -160,7 +165,6 @@ COPY ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.yaml ./fluen
 COPY --from=fluent-bit-builder /src/fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
-COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
@@ -190,6 +194,8 @@ ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAw
 ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
 # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# Below is for CIAgentPromCollectorAI AppInsights Resource in Bleu
+ENV APPLICATIONINSIGHTS_AUTH_BLEU NTI3MjJjYTgtYWZiMy1iYWVjLWFiMWEtZGYzZjZjNDZlNWE5
 # Set environment variables for mdsd
 ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
 ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
@@ -236,7 +242,6 @@ COPY --from=builder /usr/bin/trust /usr/bin
 
 COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
 COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
-COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
 
 # bash dependencies
 COPY --from=builder /usr/lib/libreadline.so.8 /usr/lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
@@ -251,7 +256,7 @@ COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6
 COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # fluent-bit dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/
+COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libpq.so.5 /usr/lib/libldap.so.2 /usr/lib/liblber.so.2 /usr/lib/libgnutls.so.30 /usr/lib/libidn2.so.0 /usr/lib/libunistring.so.5 /usr/lib/libnettle.so.8 /usr/lib/libhogweed.so.6 /usr/lib/
 # mdsd dependencies
 COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
 COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/

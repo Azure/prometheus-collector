@@ -3,12 +3,6 @@ set -x
 $x &> /dev/null
 results_dir="${RESULTS_DIR:-/tmp/results}"
 
-validateAuthParameters() {
-  if [ -z $WORKLOAD_CLIENT_ID ]; then
-     echo "ERROR: parameter WORKLOAD_CLIENT_ID is required." > ${results_dir}/error
-  fi
-}
-
 validateArcConfTestParameters() {
   if [ -z $SUBSCRIPTION_ID ]; then
      echo "ERROR: parameter SUBSCRIPTION_ID is required." > ${results_dir}/error
@@ -24,9 +18,27 @@ validateArcConfTestParameters() {
 }
 
 login_to_azure() {
-  az login --identity --username $WORKLOAD_CLIENT_ID
-  echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
-  az account set -s $SUBSCRIPTION_ID
+  if [[ -v SYSTEM_ACCESSTOKEN && -n "$SYSTEM_ACCESSTOKEN" &&
+         -v SERVICE_CONNECTION_ID && -n "$SERVICE_CONNECTION_ID" &&
+         -v SYSTEM_OIDCREQUESTURI && -n "$SYSTEM_OIDCREQUESTURI" ]]; then
+    export OIDC_REQUEST_URL="${SYSTEM_OIDCREQUESTURI}?api-version=7.1&serviceConnectionId=${SERVICE_CONNECTION_ID}"
+    echo "OIDC_REQUEST_URL= $OIDC_REQUEST_URL"
+
+    FED_TOKEN=$(curl -s -H "Content-Length: 0" -H "Content-Type: application/json" -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" -X POST $OIDC_REQUEST_URL | jq -r '.oidcToken')
+    echo "FED_TOKEN= $FED_TOKEN"
+
+    echo "logging in using Federated Identity"
+    az login --service-principal -u $FED_CLIENT_ID  --tenant $TENANT_ID --allow-no-subscriptions --federated-token $FED_TOKEN 2> ${results_dir}/error || python3 setup_failure_handler.py
+    echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
+    az account set -s $SUBSCRIPTION_ID
+  elif [[ -v WORKLOAD_CLIENT_ID && -n "$WORKLOAD_CLIENT_ID" ]]; then
+    echo "logging in using Workload Identity"
+    az login --identity --username $WORKLOAD_CLIENT_ID
+    echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
+    az account set -s $SUBSCRIPTION_ID
+  else
+    echo "ERROR: Unable to login to Azure. Missing Federated Identity or Workload Identity parameters." > ${results_dir}/error
+  fi
 }
 
 addArcConnectedK8sExtension() {
@@ -105,13 +117,24 @@ createArcAMAMetricsExtension() {
   fi
 
   echo "creating extension type: Microsoft.AzureMonitor.Containers.Metrics"
-  basicparameters="--cluster-name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers.Metrics --scope cluster --name azuremonitor-metrics --allow-preview true"
+  basicparameters="--cluster-name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers.Metrics --scope cluster --name azuremonitor-metrics --auto-upgrade-minor-version false"
   if [ ! -z "$AMA_METRICS_ARC_RELEASE_TRAIN" ]; then
       basicparameters="$basicparameters  --release-train $AMA_METRICS_ARC_RELEASE_TRAIN"
   fi
   if [ ! -z "$AMA_METRICS_ARC_VERSION" ]; then
-      basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION --AutoUpgradeMinorVersion false"
+      basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION"
   fi
+  resourcelocation=$(az connectedk8s show --name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --query location -o json | tr -d '"' | tr -d '"\r\n')
+  echo "cluster resource location: ${resourcelocation}"
+  if [[ "$resourcelocation" == *"euap"* ]]; then
+    resourcelocation="eastus2euap"
+  else 
+    resourcelocation="swedencentral"
+  fi
+  echo "using resource location: ${resourcelocation} for amw resource id"
+  amw_resource_id="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/DefaultResourceGroup-$resourcelocation/providers/microsoft.monitor/accounts/DefaultAzureMonitorWorkspace-$resourcelocation"
+  echo "using amw resource id: ${amw_resource_id}"
+  basicparameters="$basicparameters --configuration-settings azure-monitor-workspace-resource-id=$amw_resource_id"
   
   az k8s-extension create $basicparameters
 }
@@ -141,11 +164,19 @@ waitForAMAMetricsExtensionInstalled() {
   done
 }
 
+applyCustomResourcesForTests() {
+  kubectl apply -f /yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+  kubectl apply -f /yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+  kubectl apply -f /yamls/configmaps/ama-metrics-settings-configmap.yaml
+  kubectl apply -f /yamls/referenceapp/prometheus-reference-app.yaml
+  kubectl apply -f /yamls/customresources/prometheus-reference-app.yaml
+
+  # sleep for 5 minutes to allow resources to be created
+  sleep 5m
+}
+
 getAMAMetricsAMWQueryEndpoint() {
-  amw=$(az k8s-extension show --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters --name azuremonitor-metrics --query configurationSettings -o json)
-  echo "Azure Monitor Metrics extension amw: $amw"
-  amw=$(echo $amw | tr -d '"\r\n {}')
-  amw="${amw##*:}"
+  amw=$(az k8s-extension show --cluster-name ${CLUSTER_NAME} --resource-group ${RESOURCE_GROUP} --cluster-type connectedClusters --name azuremonitor-metrics --query "configurationSettings.\"azure-monitor-workspace-resource-id\"" -o tsv)
   echo "extension amw: ${amw}"
   queryEndpoint=$(az monitor account show --ids ${amw} --query "metrics.prometheusQueryEndpoint" -o json | tr -d '"\r\n')
   echo "queryEndpoint: ${queryEndpoint}"
@@ -174,8 +205,6 @@ saveResults() {
 # Ensure that we tell the Sonobuoy worker we are done regardless of results.
 trap saveResults EXIT
 
-validateAuthParameters
-
 validateArcConfTestParameters
 
 login_to_azure
@@ -193,6 +222,8 @@ createArcAMAMetricsExtension
 showArcAMAMetricsExtension
 
 waitForAMAMetricsExtensionInstalled
+
+applyCustomResourcesForTests
 
 getAMAMetricsAMWQueryEndpoint
 

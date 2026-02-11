@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 )
 
 func components() (otelcol.Factories, error) {
@@ -33,10 +34,11 @@ func components() (otelcol.Factories, error) {
 			promExporter.Type(): promExporter,
 		},
 		Processors: map[component.Type]processor.Factory{
-			batchProcessor.Type():   batchProcessor,
+			batchProcessor.Type():    batchProcessor,
 			resourceProcessor.Type(): resourceProcessor,
 			filterProcessor.Type():   filterProcessor,
 		},
+		Telemetry: otelconftelemetry.NewFactory(),
 	}
 
 	return factories, nil

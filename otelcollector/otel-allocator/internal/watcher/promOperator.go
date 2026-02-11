@@ -65,6 +65,7 @@ func NewPrometheusCRWatcher(
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func NewPrometheusCRWatcher(
 	// we want to use endpointslices by default
 	serviceDiscoveryRole := monitoringv1.ServiceDiscoveryRole("EndpointSlice")
 
-	// TODO: We should make these durations configurable
+	//no need to hardcode durations, use default if not set
 	prom := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cfg.CollectorNamespace,
@@ -91,8 +92,9 @@ func NewPrometheusCRWatcher(
 				ProbeNamespaceSelector:          cfg.PrometheusCR.ProbeNamespaceSelector,
 				ServiceDiscoveryRole:            &serviceDiscoveryRole,
 				ScrapeProtocols:                 cfg.PrometheusCR.ScrapeProtocols,
+				ScrapeClasses:                   cfg.PrometheusCR.ScrapeClasses,
 			},
-			EvaluationInterval: monitoringv1.Duration("30s"),
+			EvaluationInterval: monitoringv1.Duration(cfg.PrometheusCR.EvaluationInterval.String()),
 		},
 	}
 
@@ -105,8 +107,9 @@ func NewPrometheusCRWatcher(
 	store := assets.NewStoreBuilder(client.CoreV1(), client.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
 	operatorMetrics := operator.NewMetrics(promRegisterer)
-	eventRecorderFactory := operator.NewEventRecorderFactory(false)
-	eventRecorder := eventRecorderFactory(client, "target-allocator")
+	eventRecorderFactoryFactory := operator.NewEventRecorderFactory(false)
+	eventRecorderFactory := eventRecorderFactoryFactory(client, "target-allocator")
+	eventRecorder := eventRecorderFactory(prom)
 
 	var nsMonInf cache.SharedIndexInformer
 	getNamespaceInformerErr := retry.OnError(retry.DefaultRetry,
@@ -315,14 +318,13 @@ func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.
 		informersMap[promv1alpha1.ScrapeConfigName] = scrapeConfigInformer
 	}
 
-	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip(operator.SecretGVK()))
 	if err != nil {
 		return nil, err
 	}
 	if secretInformers != nil {
 		informersMap[string(v1.ResourceSecrets)] = secretInformers
 	}
-
 	return informersMap, nil
 }
 
@@ -415,7 +417,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					})
 					if !exists || err != nil {
 						if err != nil {
-							w.logger.Error("unexpected store error when checking if secret exists, skipping update", secretName, "error", err)
+							w.logger.Error("unexpected store error when checking if secret exists, skipping update", "secret", secretName, "error", err)
 							return
 						}
 						// if the secret does not exist in the store, we skip the update
@@ -425,13 +427,13 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					newSecret, err := w.store.GetSecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
 
 					if err != nil {
-						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
+						w.logger.Error("unexpected store error when getting updated secret - ", "secret", secretName, "error", err)
 						return
 					}
 
 					w.logger.Info("Updating secret in store", "newObjName", newMeta.GetObjectMeta().GetName(), "newobjnamespace", newMeta.GetObjectMeta().GetNamespace())
 					if err := w.store.UpdateObject(newSecret); err != nil {
-						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+						w.logger.Error("unexpected store error when updating secret  - ", "secret", newMeta.GetObjectMeta().GetName(), "error", err)
 					} else {
 						w.logger.Info(
 							"Successfully updated store, sending update event to notifyEvents channel",
@@ -463,7 +465,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					// if the secret does not exist in the store, we skip the delete
 					if !exists || err != nil {
 						if err != nil {
-							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", "secret", secretMeta.GetObjectMeta().GetName(), "error", err)
 							return
 						}
 						// if the secret does not exist in the store, we skip the delete
@@ -473,7 +475,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					// if the secret exists in the store, we delete it
 					// and send an event notification to the notifyEvents channel
 					if err := w.store.DeleteObject(secretObj); err != nil {
-						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+						w.logger.Error("unexpected store error when deleting secret - ", "secret", secretMeta.GetObjectMeta().GetName(), "error", err)
 						//return
 					} else {
 						w.logger.Info(
@@ -575,38 +577,38 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 
 		// Get ServiceMonitors if the informer exists
 		if informer, ok := w.informers[monitoringv1.ServiceMonitorName]; ok {
-			instances, err := w.resourceSelector.SelectServiceMonitors(ctx, informer.ListAllByNamespace)
+			selection, err := w.resourceSelector.SelectServiceMonitors(ctx, informer.ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
-			serviceMonitorInstances = instances
+			serviceMonitorInstances = selection.ValidResources()
 		}
 
 		// Get PodMonitors if the informer exists
 		if informer, ok := w.informers[monitoringv1.PodMonitorName]; ok {
-			instances, err := w.resourceSelector.SelectPodMonitors(ctx, informer.ListAllByNamespace)
+			selection, err := w.resourceSelector.SelectPodMonitors(ctx, informer.ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
-			podMonitorInstances = instances
+			podMonitorInstances = selection.ValidResources()
 		}
 
 		// Get Probes if the informer exists
 		if informer, ok := w.informers[monitoringv1.ProbeName]; ok {
-			instances, err := w.resourceSelector.SelectProbes(ctx, informer.ListAllByNamespace)
+			selection, err := w.resourceSelector.SelectProbes(ctx, informer.ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
-			probeInstances = instances
+			probeInstances = selection.ValidResources()
 		}
 
 		// Get ScrapeConfigs if the informer exists
 		if informer, ok := w.informers[promv1alpha1.ScrapeConfigName]; ok {
-			instances, err := w.resourceSelector.SelectScrapeConfigs(ctx, informer.ListAllByNamespace)
+			selection, err := w.resourceSelector.SelectScrapeConfigs(ctx, informer.ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
-			scrapeConfigInstances = instances
+			scrapeConfigInstances = selection.ValidResources()
 		}
 
 		generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
