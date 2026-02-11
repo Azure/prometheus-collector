@@ -13,6 +13,8 @@ You can use the troubleshooting script provided [here](https://raw.githubusercon
 
 Steps:
 - Open powershell using the [cloudshell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview) in the azure portal.
+- Make sure your az account subscription is pointing to the subscription of the cluster.
+- If running an Arc cluster, make sure the kubeconfig/kubectl context is already pointing to the cluster
 
 > Note: This script supported on any Powershell supported environment: Windows and Non-Windows.
  For Linux, refer [Install-Powershell-On-Linux](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7) and
