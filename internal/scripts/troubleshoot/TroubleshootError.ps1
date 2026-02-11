@@ -6,9 +6,11 @@
 		Classifies the error type that a user is facing with their AKS cluster related to Managed Prometheus
 
     .PARAMETER ClusterResourceId
-        Resource Id of the AKS (Azure Kubernetes Service)
+        Resource Id of the AKS (Azure Kubernetes Service) or Arc-enabled Kubernetes cluster
         Example :
         AKS cluster ResourceId should be in this format : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.ContainerService/managedClusters/<clusterName>
+        Arc cluster ResourceId should be in this format : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.Kubernetes/connectedClusters/<clusterName>
+
 #>
 
 param(
@@ -18,8 +20,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 Start-Transcript -path .\TroubleshootDump.txt -Force
-$AksOptOutLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-disable"
-$AksOptInLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-enable?tabs=azure-portal#enable-prometheus-metric-collection"
+$AksOptOutLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-disable"
+$AksOptInLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=cli"
+$ArcOptInLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable-arc?tabs=cli"
 $contactUSMessage = "Please contact us by creating a support ticket in Azure if you need any help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket"
 
 # Create debuglogs directory if not exists
@@ -30,28 +33,52 @@ if (-not (Test-Path -Path $debuglogsDir -PathType Container)) {
 
 Write-Host("ClusterResourceId: '" + $ClusterResourceId + "' ")
 
-if (($null -eq $ClusterResourceId) -or ($ClusterResourceId.Split("/").Length -ne 9) -or (($ClusterResourceId.ToLower().Contains("microsoft.containerservice/managedclusters") -ne $true))
-) {
-    Write-Host("Provided Cluster resource id should be fully qualified resource id of AKS or ARO cluster") -ForegroundColor Red
+$normalizedClusterResourceId = $ClusterResourceId.ToLower()
+$managedClusterResourceType = "microsoft.containerservice/managedclusters"
+$connectedClusterResourceType = "microsoft.kubernetes/connectedclusters"
+
+if (($null -eq $ClusterResourceId) -or ($ClusterResourceId.Split("/").Length -ne 9)) {
+    Write-Host("Provided Cluster resource id should be fully qualified resource id of AKS/ARO or Arc-enabled Kubernetes cluster") -ForegroundColor Red
     Write-Host("Resource Id Format for AKS cluster is : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.ContainerService/managedClusters/<clusterName>") -ForegroundColor Red
+    Write-Host("Resource Id Format for Arc cluster is : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.Kubernetes/connectedClusters/<clusterName>") -ForegroundColor Red
+    Stop-Transcript
+    exit 1
+}
+
+if ($normalizedClusterResourceId.Contains($managedClusterResourceType)) {
+    $ClusterType = "AKS"
+    $ClusterResourceTypeName = "Microsoft.ContainerService/managedClusters"
+}
+elseif ($normalizedClusterResourceId.Contains($connectedClusterResourceType)) {
+    $ClusterType = "Arc"
+    $ClusterResourceTypeName = "Microsoft.Kubernetes/connectedClusters"
+}
+else {
+    Write-Host("Provided Cluster resource id should be fully qualified resource id of AKS or Arc-enabled Kubernetes cluster") -ForegroundColor Red
+    Write-Host("Resource Id Format for AKS cluster is : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.ContainerService/managedClusters/<clusterName>") -ForegroundColor Red
+    Write-Host("Resource Id Format for Arc cluster is : /subscriptions/<subId>/resourceGroups/<rgName>/providers/Microsoft.Kubernetes/connectedClusters/<clusterName>") -ForegroundColor Red
     Stop-Transcript
     exit 1
 }
 
 $ClusterRegion = ""
-$ClusterType = "AKS"
+$OnboardingDocsLink = if ($ClusterType -eq "AKS") { $AksOptInLink } else { $ArcOptInLink }
 
 #
 # checks the all required Powershell modules exist and if not exists, request the user permission to install
 #
+$requiresAzAksModule = ($ClusterType -eq "AKS")
 $azAccountModule = Get-Module -ListAvailable -Name Az.Accounts
 $azResourcesModule = Get-Module -ListAvailable -Name Az.Resources
 $azOperationalInsights = Get-Module -ListAvailable -Name Az.OperationalInsights
-$azAksModule = Get-Module -ListAvailable -Name Az.Aks
+$azAksModule = $null
+if ($requiresAzAksModule) {
+    $azAksModule = Get-Module -ListAvailable -Name Az.Aks
+}
 $azARGModule = Get-Module -ListAvailable -Name Az.ResourceGraph
 $azMonitorModule = Get-Module -ListAvailable -Name Az.Monitor
 
-if (($null -eq $azAksModule) -or ($null -eq $azARGModule) -or ($null -eq $azAccountModule) -or ($null -eq $azResourcesModule) -or ($null -eq $azOperationalInsights) -or ($null -eq $azMonitorModule)) {
+if ((($requiresAzAksModule -and ($null -eq $azAksModule))) -or ($null -eq $azARGModule) -or ($null -eq $azAccountModule) -or ($null -eq $azResourcesModule) -or ($null -eq $azOperationalInsights) -or ($null -eq $azMonitorModule)) {
 
     $isWindowsMachine = $true
     if ($PSVersionTable -and $PSVersionTable.PSEdition -contains "core") {
@@ -75,7 +102,7 @@ if (($null -eq $azAksModule) -or ($null -eq $azARGModule) -or ($null -eq $azAcco
     }
 
     $message = "This script will try to install the latest versions of the following Modules : `
-    Az.Ak,Az.ResourceGraph, Az.Resources, Az.Accounts, Az.OperationalInsights  and Az.Monitor using the command`
+    Az.Aks (AKS only), Az.ResourceGraph, Az.Resources, Az.Accounts, Az.OperationalInsights  and Az.Monitor using the command`
 			    `'Install-Module {Insert Module Name} -Repository PSGallery -Force -AllowClobber -ErrorAction Stop -WarningAction Stop'
 			    `If you do not have the latest version of these Modules, this troubleshooting script may not run."
     $question = "Do you want to Install the modules and run the script or just run the script?"
@@ -100,7 +127,7 @@ if (($null -eq $azAksModule) -or ($null -eq $azARGModule) -or ($null -eq $azAcco
                     exit 1
                 }
             }
-            if ($null -eq $azAksModule) {
+            if ($requiresAzAksModule -and ($null -eq $azAksModule)) {
                 try {
                     Write-Host("Installing Az.Aks...")
                     Install-Module Az.Aks -Force -AllowClobber -ErrorAction Stop
@@ -175,7 +202,7 @@ if (($null -eq $azAksModule) -or ($null -eq $azARGModule) -or ($null -eq $azAcco
                 }
             }
 
-            if ($null -eq $azAksModule) {
+            if ($requiresAzAksModule -and ($null -eq $azAksModule)) {
                 try {
                     Import-Module Az.Aks -ErrorAction Stop
                 }
@@ -306,7 +333,7 @@ Write-Host("Successfully checked resource groups details...") -ForegroundColor G
 Write-Host("Checking '" + $ClusterType + "' Cluster details...")
 $ResourceDetailsArray = $null
 try {
-    $ResourceDetailsArray = Get-AzResource -ResourceGroupName $ClusterResourceGroupName -Name $ClusterName -ResourceType "Microsoft.ContainerService/managedClusters" -ExpandProperties -ErrorAction Stop -WarningAction Stop
+    $ResourceDetailsArray = Get-AzResource -ResourceGroupName $ClusterResourceGroupName -Name $ClusterName -ResourceType $ClusterResourceTypeName -ExpandProperties -ErrorAction Stop -WarningAction Stop
     if ($null -eq $ResourceDetailsArray) {
         Write-Host("")
         Write-Host("Could not fetch cluster details: Please make sure that the '" + $ClusterType + "' Cluster name: '" + $ClusterName + "' is correct and you have access to the cluster") -ForegroundColor Red
@@ -319,18 +346,23 @@ try {
         $ClusterRegion = $ResourceDetailsArray.Location
         Write-Host("ClusterRegion: " + $ClusterRegion)
         foreach ($ResourceDetail in $ResourceDetailsArray) {
-            if ($ResourceDetail.ResourceType -eq "Microsoft.ContainerService/managedClusters") {
-                $azureMonitorProfile = ($ResourceDetail.Properties.azureMonitorProfile | ConvertTo-Json).toLower() | ConvertFrom-Json
-                if (($nul -eq $azureMonitorProfile) -or ($null -eq $azureMonitorProfile.metrics) -or ($null -eq $azureMonitorProfile.metrics.enabled) -or ("true" -ne $azureMonitorProfile.metrics.enabled)) {
-                    Write-Host("Your cluster isn't onboarded to Managed Prometheus. Please refer to the following documentation to onboard:") -ForegroundColor Red;
-                    $clusterProperies = ($ResourceDetail.Properties  | ConvertTo-Json)
-                    Write-Host("Cluster Properties found: " + $clusterProperies) -ForegroundColor Red;
-                    Write-Host($AksOptInLink) -ForegroundColor Red;
-                    Write-Host("");
-                    Stop-Transcript
-                    exit 1
+            if ($ResourceDetail.ResourceType -eq $ClusterResourceTypeName) {
+                if ($ClusterType -eq "AKS") {
+                    $azureMonitorProfile = ($ResourceDetail.Properties.azureMonitorProfile | ConvertTo-Json).toLower() | ConvertFrom-Json
+                    if (($nul -eq $azureMonitorProfile) -or ($null -eq $azureMonitorProfile.metrics) -or ($null -eq $azureMonitorProfile.metrics.enabled) -or ("true" -ne $azureMonitorProfile.metrics.enabled)) {
+                        Write-Host("Your cluster isn't onboarded to Managed Prometheus. Please refer to the following documentation to onboard:") -ForegroundColor Red;
+                        $clusterProperies = ($ResourceDetail.Properties  | ConvertTo-Json)
+                        Write-Host("Cluster Properties found: " + $clusterProperies) -ForegroundColor Red;
+                        Write-Host($OnboardingDocsLink) -ForegroundColor Red;
+                        Write-Host("");
+                        Stop-Transcript
+                        exit 1
+                    }
+                    Write-Host("AKS Cluster ResourceId: '" + $ResourceDetail.ResourceId + " has Managed Prometheus enabled in the AKS-RP");
                 }
-                Write-Host("AKS Cluster ResourceId: '" + $ResourceDetail.ResourceId + " has Managed Prometheus enabled in the AKS-RP");
+                else {
+                    Write-Host("Arc Cluster ResourceId: '" + $ResourceDetail.ResourceId + "' is onboarded to Azure Arc.")
+                }
                 break
             }
         }
@@ -415,12 +447,17 @@ catch {
 #
 try {
     Write-Host("Getting Kubeconfig of the cluster...")
-    Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
-    Write-Host("Successfully got the Kubeconfig of the cluster.")
+    if ($ClusterType -eq "AKS") {
+        Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
+        Write-Host("Successfully got the Kubeconfig of the cluster.")
 
-    Write-Host("Switching to cluster context:", $ClusterName)
-    kubectl config use-context $ClusterName
-    Write-Host("Successfully switched current context of the k8s cluster to:", $ClusterName)
+        Write-Host("Switching to cluster context:", $ClusterName)
+        kubectl config use-context $ClusterName
+        Write-Host("Successfully switched current context of the k8s cluster to:", $ClusterName)
+    }
+    else {
+        Write-Host("Arc cluster detected. Skipping Import-AzAksCredential and kubectl context changes. Ensure your kubeconfig already targets this cluster.") -ForegroundColor Yellow
+    }
 
     Write-Host("Checking if HPA is configured for ama-metrics deployment...")
     $hpa = kubectl get hpa ama-metrics-hpa -n kube-system -o json 2>$null | ConvertFrom-Json
@@ -430,7 +467,7 @@ try {
         if ($null -eq $rsPod) {
             Write-Host("ama-metrics replicaset pod not scheduled or failed to schedule.") -ForegroundColor Red
             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-            Write-Host($AksOptInLink) -ForegroundColor Red
+            Write-Host($OnboardingDocsLink) -ForegroundColor Red
             Write-Host($contactUSMessage)
             Stop-Transcript
             exit 1
@@ -453,7 +490,7 @@ try {
             }
             Write-Host("successfully got ama-metrics rs pod details ...")
             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-            Write-Host($AksOptInLink) -ForegroundColor Red
+            Write-Host($OnboardingDocsLink) -ForegroundColor Red
             Write-Host($contactUSMessage)
             Stop-Transcript
             exit 1
@@ -632,128 +669,133 @@ catch {
     exit 1
 }
 
-try {
-    # Get AKS cluster information
-    $aksCluster = Get-AzAksCluster -ResourceGroupName $ClusterResourceGroupName -Name $ClusterName
+if ($ClusterType -eq "AKS") {
+    try {
+        # Get AKS cluster information
+        $aksCluster = Get-AzAksCluster -ResourceGroupName $ClusterResourceGroupName -Name $ClusterName
 
-    $hasWindowsNodePools = $false
+        $hasWindowsNodePools = $false
 
-    # Loop through node pools and check for Windows nodes
-    foreach ($nodePool in $aksCluster.AgentPoolProfiles) {
-        if ($nodePool.OsType -eq "Windows") {
-            $hasWindowsNodePools = $true
-            break
-        }
-    }
-    
-    if ($hasWindowsNodePools) {
-        Write-Host("Checking whether the ama-metrics-win-node windows daemonset pod running correctly ...")
-        $ds = kubectl get ds -n kube-system -o json --field-selector metadata.name=ama-metrics-win-node | ConvertFrom-Json
-        if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
-            Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
-            Stop-Transcript
-            exit 1
-        }
-
-        $dsStatus = $ds.Items[0].status
-
-        if (
-            (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
-                ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
-                ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
-
-            Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
-            Write-Host($dsStatus)
-            Write-Host($contactUSMessage)
-            Stop-Transcript
-            exit 1
-        }
-
-        Write-Host( "ama-metrics-win-node daemonset pod running OK.") -ForegroundColor Green
-
-        $iterationCount = 0
-        $maxIterations = 15
-        # Get windows daemonset pod logs
-        $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-win-node -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
-        foreach ($podName in $podNames) {
-            if ($iterationCount -ge $maxIterations) {
-                Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+        # Loop through node pools and check for Windows nodes
+        foreach ($nodePool in $aksCluster.AgentPoolProfiles) {
+            if ($nodePool.OsType -eq "Windows") {
+                $hasWindowsNodePools = $true
                 break
             }
-
-            # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
-            kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
-            Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-            # # Copy MA Host log from container to debuglogs directory
-            # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentHost.1.log ./$debuglogsDir/MonAgentHost_$($podName).log
-            # Write-Host("MonAgentHost_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-            # # Copy MA Launcher log from container to debuglogs directory
-            # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentLauncher.1.log ./$debuglogsDir/MonAgentLauncher_$($podName).log
-            # Write-Host("MonAgentLauncher_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-            # Get logs from prometheus-collector container and store in a file
-            $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
-            kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
-
-            # Get logs from prometheus-collector container and store in a file
-            $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapterwin.log"
-            kubectl logs $($podName) -n kube-system -c addon-token-adapter-win > $addonTokenLogPath
-
-            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)__addontokenadapterwin.log")
-            $iterationCount++
         }
+        
+        if ($hasWindowsNodePools) {
+            Write-Host("Checking whether the ama-metrics-win-node windows daemonset pod running correctly ...")
+            $ds = kubectl get ds -n kube-system -o json --field-selector metadata.name=ama-metrics-win-node | ConvertFrom-Json
+            if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
+                Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
+                Stop-Transcript
+                exit 1
+            }
 
-        # Collect windows exporter pod logs if it exits
-
-        Write-Host("Checking whether the winndows exporter pods are running correctly in the monitoring namespace...")
-        $ds = kubectl get ds -n monitoring -o json --field-selector metadata.name=windows-exporter | ConvertFrom-Json
-        if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
-            Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
-        }
-        else {
             $dsStatus = $ds.Items[0].status
 
             if (
-            (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
-                ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
-                ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
+                (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
+                    ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
+                    ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
 
-                Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
+                Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
                 Write-Host($dsStatus)
+                Write-Host($contactUSMessage)
+                Stop-Transcript
+                exit 1
             }
-            else {
 
-                Write-Host( "windows exporter daemonset pod(s) running OK.") -ForegroundColor Green
+            Write-Host( "ama-metrics-win-node daemonset pod running OK.") -ForegroundColor Green
 
-                $iterationCount = 0
-                $maxIterations = 15
-                # Get windows exporter daemonset pod logs
-                $podNames = kubectl get pods -n monitoring -l app=windows-exporter -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
-                foreach ($podName in $podNames) {
-                    if ($iterationCount -ge $maxIterations) {
-                        Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
-                        break
-                    }
-                   
-                    # Get logs from prometheus-collector container and store in a file
-                    $windowsExporterLogPath = "$debuglogsDir/$($podName).log"
-                    kubectl logs $($podName) -n monitoring > $windowsExporterLogPath
-
-                    Write-Host ("Logs for $podName have been saved to $($podName).log")
-                    $iterationCount++
+            $iterationCount = 0
+            $maxIterations = 15
+            # Get windows daemonset pod logs
+            $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-win-node -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
+            foreach ($podName in $podNames) {
+                if ($iterationCount -ge $maxIterations) {
+                    Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+                    break
                 }
 
+                # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+                kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+                Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
+                # # Copy MA Host log from container to debuglogs directory
+                # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentHost.1.log ./$debuglogsDir/MonAgentHost_$($podName).log
+                # Write-Host("MonAgentHost_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+                # # Copy MA Launcher log from container to debuglogs directory
+                # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentLauncher.1.log ./$debuglogsDir/MonAgentLauncher_$($podName).log
+                # Write-Host("MonAgentLauncher_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+                # Get logs from prometheus-collector container and store in a file
+                $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+                kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
+
+                # Get logs from prometheus-collector container and store in a file
+                $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapterwin.log"
+                kubectl logs $($podName) -n kube-system -c addon-token-adapter-win > $addonTokenLogPath
+
+                Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)__addontokenadapterwin.log")
+                $iterationCount++
+            }
+
+            # Collect windows exporter pod logs if it exits
+
+            Write-Host("Checking whether the winndows exporter pods are running correctly in the monitoring namespace...")
+            $ds = kubectl get ds -n monitoring -o json --field-selector metadata.name=windows-exporter | ConvertFrom-Json
+            if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
+                Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
+            }
+            else {
+                $dsStatus = $ds.Items[0].status
+
+                if (
+                (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
+                    ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
+                    ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
+
+                    Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
+                    Write-Host($dsStatus)
+                }
+                else {
+
+                    Write-Host( "windows exporter daemonset pod(s) running OK.") -ForegroundColor Green
+
+                    $iterationCount = 0
+                    $maxIterations = 15
+                    # Get windows exporter daemonset pod logs
+                    $podNames = kubectl get pods -n monitoring -l app=windows-exporter -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
+                    foreach ($podName in $podNames) {
+                        if ($iterationCount -ge $maxIterations) {
+                            Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+                            break
+                        }
+                       
+                        # Get logs from prometheus-collector container and store in a file
+                        $windowsExporterLogPath = "$debuglogsDir/$($podName).log"
+                        kubectl logs $($podName) -n monitoring > $windowsExporterLogPath
+
+                        Write-Host ("Logs for $podName have been saved to $($podName).log")
+                        $iterationCount++
+                    }
+
+
+                }
             }
         }
     }
+    catch {
+        Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
+        Stop-Transcript
+        exit 1
+    }
 }
-catch {
-    Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
-    Stop-Transcript
-    exit 1
+else {
+    Write-Host("Skipping Windows node pool validation for Arc clusters.") -ForegroundColor Yellow
 }
 
 # Zip up the contents of the debuglogs directory
