@@ -76,6 +76,9 @@ COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
 COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
 COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
 COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
+COPY ../shared/configmap/common/testhelpers/*.go ./main/shared/configmap/common/testhelpers/
+COPY ./shared/configmap/common/testhelpers/go.mod ./main/shared/configmap/common/testhelpers/
+COPY ./shared/configmap/common/testhelpers/go.sum ./main/shared/configmap/common/testhelpers/
 # Copy main go files
 COPY ./main/*.go ./main/
 COPY ./go.mod ./main/
