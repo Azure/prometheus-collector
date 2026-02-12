@@ -10,18 +10,15 @@ This package contains the Ginkgo-based integration tests that guard the Managed 
 - `configmapparser_test.go` – master spec that drives all scenarios via helper contexts.
 - `testdata/` – canonical Prometheus config fixtures that every scenario compares against.
 - `configmap-test-cases/` – TOML snippets used by some contexts to mimic multi-section configmaps (both v1 and v2 schemas).
-- `../common/testhelpers` – shared harness that provides temp file helpers, env overrides, and comparison utilities.
+- `../common/testhelpers` – shared helpers that provides temp file helpers, env overrides, and comparison utilities.
 
 ## Running the tests
 
 ```bash
 cd otelcollector/shared/configmap/mp
-# Vet is disabled until legacy generated code is cleaned up.
 go test .
 ```
 
-Tips:
-- Tests create artifacts under `/tmp/settings` and `/tmp/configmapparser` and are cleaned up automatically.
 
 ## How the specs work
 
@@ -34,6 +31,25 @@ The common `checkResults(...)` helper performs three validations:
 3. **Prometheus configs** – reads `mergedDefaultConfigPath` (and optionally the merged custom config) and asserts equivalence against the YAML in `./testdata`.
 
 All scrape configs are sorted by `job_name` prior to comparison so fixture ordering does not depend on the ordering that the configmapparser produces.
+
+## Test coverage
+
+The suite currently exercises the following scenarios (each runs across Linux ReplicaSet, Linux DaemonSet, and Windows DaemonSet):
+
+- When the settings configmap does not exist
+- When the settings configmap sections exist but are empty
+- When the settings configmap sections exist and are not default
+- When some of the configmap sections exist but not all
+- When the configmap sections exist but all scrape jobs are false
+- When minimal ingestion is false and has keeplist regex values
+- When minimal ingestion is false and has no keeplist regex values
+- When the custom configmap exists
+    - And the settings configmap sections do not exist
+    - And the settings configmap sections have all default scrape configs set to false
+- When the settings configmap uses v2 and the sections exist but are empty
+- When the settings configmap uses v2 and the sections are not default
+- When the settings configmap uses v2, minimal ingestion is false, and not all sections are present
+
 
 ## Adding or updating scenarios
 
