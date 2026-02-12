@@ -39,17 +39,10 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLAN
 WORKDIR /
 # Create directories
 RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./shared/configmap/common/
 RUN mkdir -p ./main/
-# Copy shared go files
-COPY ../shared/*.go ./main/shared/
-COPY ./shared/go.mod ./main/shared/
-COPY ./shared/go.sum ./main/shared/
-COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
-COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
-COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
-COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
-COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
-COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
+# Copy shared module (includes mp, ccp, common, and helpers)
+COPY ./shared/ ./main/shared/
 # Copy main go files
 COPY ./main/*.go ./main/
 COPY ./go.mod ./main/

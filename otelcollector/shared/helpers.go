@@ -246,7 +246,8 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
+			log.Printf("failed to open file %s: %v\n", filePath, err)
+			continue
 		}
 		defer func() {
 			if cerr := file.Close(); cerr != nil {

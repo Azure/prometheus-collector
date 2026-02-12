@@ -1,14 +1,20 @@
 package ccpconfigmapsettings
 
-type RegexValues struct {
-	ControlplaneKubeControllerManager string
-	ControlplaneKubeScheduler         string
-	ControlplaneApiserver             string
-	ControlplaneClusterAutoscaler     string
-	ControlplaneNodeAutoProvisioning  string
-	ControlplaneEtcd                  string
-	MinimalIngestionProfile           string
-}
+var (
+	configSettingsPrefix             = "/etc/config/settings/"
+	configMapParserPrefix            = "/opt/microsoft/configmapparser/"
+	schemaVersionFile                = configSettingsPrefix + "schema-version"
+	configVersionFile                = configSettingsPrefix + "config-version"
+	collectorSettingsEnvVarPath      = configMapParserPrefix + "config_prometheus_collector_settings_env_var"
+	defaultSettingsEnvVarPath        = configMapParserPrefix + "config_default_scrape_settings_env_var"
+	defaultSettingsMountPath         = configSettingsPrefix + "default-scrape-settings-enabled"
+	defaultSettingsMountPathv2       = configSettingsPrefix + "default-targets-scrape-enabled"
+	collectorSettingsMountPath       = configSettingsPrefix + "prometheus-collector-settings"
+	configMapKeepListMountPath       = configSettingsPrefix + "default-targets-metrics-keep-list"
+	configMapKeepListEnvVarPath      = configMapParserPrefix + "config_def_targets_metrics_keep_list_hash"
+	scrapeConfigDefinitionPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
+	mergedDefaultConfigPath          = "/opt/defaultsMergedConfig.yml"
+)
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
 type FilesystemConfigLoader struct {

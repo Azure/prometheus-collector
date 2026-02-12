@@ -20,6 +20,7 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
+	"github.com/prometheus-collector/shared"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -904,132 +905,15 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			}
 
 			if os.Getenv(envControllerType) == "ReplicaSet" {
-				if KubeletKeepListRegex != "" {
-					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
-				}
-				if CoreDNSKeepListRegex != "" {
-					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
-				}
-				if CAdvisorKeepListRegex != "" {
-					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-				}
-				if KubeProxyKeepListRegex != "" {
-					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-				}
-				if ApiServerKeepListRegex != "" {
-					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-				}
-				if KubeStateKeepListRegex != "" {
-					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-				}
-				if NodeExporterKeepListRegex != "" {
-					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-				}
-				if WinExporterKeepListRegex != "" {
-					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-				}
-				if WinKubeProxyKeepListRegex != "" {
-					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-				}
-				if PodannotationKeepListRegex != "" {
-					metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
-				}
-				if KappieBasicKeepListRegex != "" {
-					metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
-				}
-				if AcstorCapacityProvisionerKeepListRegex != "" {
-					metric.Properties["AcstorCapacityProvisionerRegex"] = AcstorCapacityProvisionerKeepListRegex
-				}
-				if AcstorMetricsExporterKeepListRegex != "" {
-					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
-				}
-				if LocalCSIDriverKeepListRegex != "" {
-					metric.Properties["LocalCSIDriverExporterRegex"] = LocalCSIDriverKeepListRegex
-				}
-				if ZtunnelKeepListRegex != "" {
-					metric.Properties["ZtunnelKeepListRegex"] = ZtunnelKeepListRegex
-				}
-				if IstioCniKeepListRegex != "" {
-					metric.Properties["IstioCniKeepListRegex"] = IstioCniKeepListRegex
-				}
-				if WaypointProxyKeepListRegex != "" {
-					metric.Properties["WaypointProxyKeepListRegex"] = WaypointProxyKeepListRegex
-				}
-				if DCGMExporterKeepListRegex != "" {
-					metric.Properties["DCGMExporterRegex"] = DCGMExporterKeepListRegex
-				}
-				if NetworkObservabilityCiliumKeepListRegex != "" {
-					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex
-				}
-				if NetworkObservabilityHubbleKeepListRegex != "" {
-					metric.Properties["NetworkObservabilityHubbleRegex"] = NetworkObservabilityHubbleKeepListRegex
-				}
-				if NetworkObservabilityRetinaKeepListRegex != "" {
-					metric.Properties["NetworkObservabilityRetinaRegex"] = NetworkObservabilityRetinaKeepListRegex
-				}
 
-				if KubeletScrapeInterval != "" {
-					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
-				}
-				if CoreDNSScrapeInterval != "" {
-					metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
-				}
-				if CAdvisorScrapeInterval != "" {
-					metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
-				}
-				if KubeProxyScrapeInterval != "" {
-					metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
-				}
-				if ApiServerScrapeInterval != "" {
-					metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
-				}
-				if KubeStateScrapeInterval != "" {
-					metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
-				}
-				if NodeExporterScrapeInterval != "" {
-					metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
-				}
-				if WinExporterScrapeInterval != "" {
-					metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
-				}
-				if WinKubeProxyScrapeInterval != "" {
-					metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
-				}
-				if PromHealthScrapeInterval != "" {
-					metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
-				}
-				if PodAnnotationScrapeInterval != "" {
-					metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
-				}
-				if KappieBasicScrapeInterval != "" {
-					metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
-				}
-				if AcstorCapacityProvisionerScrapeInterval != "" {
-					metric.Properties["AcstorCapacityProvisionerScrapeInterval"] = AcstorCapacityProvisionerScrapeInterval
-				}
-				if AcstorMetricsExporterScrapeInterval != "" {
-					metric.Properties["AcstorMetricsExporterScrapeInterval"] = AcstorMetricsExporterScrapeInterval
-				}
-				if ZtunnelScrapeInterval != "" {
-					metric.Properties["ZtunnelScrapeInterval"] = ZtunnelScrapeInterval
-				}
-				if IstioCniScrapeInterval != "" {
-					metric.Properties["IstioCniScrapeInterval"] = IstioCniScrapeInterval
-				}
-				if WaypointProxyScrapeInterval != "" {
-					metric.Properties["WaypointProxyScrapeInterval"] = WaypointProxyScrapeInterval
-				}
-				if DCGMExporterScrapeInterval != "" {
-					metric.Properties["DCGMExporterScrapeInterval"] = DCGMExporterScrapeInterval
-				}
-				if NetworkObservabilityCiliumScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval
-				}
-				if NetworkObservabilityHubbleScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityHubbleScrapeInterval"] = NetworkObservabilityHubbleScrapeInterval
-				}
-				if NetworkObservabilityRetinaScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityRetinaScrapeInterval"] = NetworkObservabilityRetinaScrapeInterval
+				for jobName, job := range shared.DefaultScrapeJobs {
+					metric.Properties[fmt.Sprintf("%sEnabled", jobName)] = strconv.FormatBool(job.Enabled)
+					if job.KeepListRegex != "" {
+						metric.Properties[fmt.Sprintf("%sKeepListRegex", jobName)] = job.KeepListRegex
+					}
+					if job.ScrapeInterval != "" {
+						metric.Properties[fmt.Sprintf("%sScrapeInterval", jobName)] = job.ScrapeInterval
+					}
 				}
 			}
 

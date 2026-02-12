@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+
+	"github.com/prometheus-collector/shared"
 )
 
 const (
@@ -34,7 +36,8 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 		// Writes the variable to the file in the format: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='value'
 		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
 		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
-		log.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
+		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
+		shared.DefaultScrapeJobs["podannotations"].Enabled = true
 
 		if _, err := file.WriteString(envVarString); err != nil {
 			return fmt.Errorf("error writing to file: %v", err)

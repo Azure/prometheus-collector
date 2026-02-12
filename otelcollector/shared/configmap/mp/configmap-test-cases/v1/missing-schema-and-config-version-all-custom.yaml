@@ -1,0 +1,76 @@
+
+prometheus-collector-settings: |-
+  cluster_alias = "alias"
+  https_config = true
+default-scrape-settings-enabled: |-
+  kubelet = true
+  coredns = true
+  cadvisor = true
+  kubeproxy = true
+  apiserver = true
+  kubestate = true
+  nodeexporter = true
+  windowsexporter = true
+  windowskubeproxy = true
+  kappiebasic = true
+  networkobservabilityRetina = true
+  networkobservabilityHubble = true
+  networkobservabilityCilium = true
+  prometheuscollectorhealth = true
+  controlplane-apiserver = true
+  controlplane-cluster-autoscaler = true
+  controlplane-node-auto-provisioning = true
+  controlplane-kube-scheduler = true
+  controlplane-kube-controller-manager = true
+  controlplane-etcd = true
+  acstor-capacity-provisioner = true
+  acstor-metrics-exporter = true
+  dcgmexporter = true
+pod-annotation-based-scraping: |-
+  podannotationnamespaceregex = ".*|value"
+default-targets-metrics-keep-list: |-
+  kubelet = "test1.*|test2"
+  coredns = "test1.*|test2"
+  cadvisor = "test1.*|test2"
+  kubeproxy = "test1.*|test2"
+  apiserver = "test1.*|test2"
+  kubestate = "test1.*|test2"
+  nodeexporter = "test1.*|test2"
+  windowsexporter = "test1.*|test2"
+  windowskubeproxy = "test1.*|test2"
+  podannotations = "test1.*|test2"
+  kappiebasic = "test1.*|test2"
+  networkobservabilityRetina = "test1.*|test2"
+  networkobservabilityHubble = "test1.*|test2"
+  networkobservabilityCilium = "test1.*|test2"
+  controlplane-apiserver = "test1.*|test2"
+  controlplane-cluster-autoscaler = "test1.*|test2"
+  controlplane-node-auto-provisioning = "test1.*|test2"
+  controlplane-kube-scheduler = "test1.*|test2"
+  controlplane-kube-controller-manager = "test1.*|test2"
+  controlplane-etcd = "test1.*|test2"
+  acstor-capacity-provisioner = "test1.*|test2"
+  acstor-metrics-exporter = "test1.*|test2"
+  dcgmexporter = "test1.*|test2"
+  minimalingestionprofile = true
+default-targets-scrape-interval-settings: |-
+  kubelet = "15s"
+  coredns = "15s"
+  cadvisor = "15s"
+  kubeproxy = "15s"
+  apiserver = "15s"
+  kubestate = "15s"
+  nodeexporter = "15s"
+  windowsexporter = "15s"
+  windowskubeproxy = "15s"
+  kappiebasic = "15s"
+  networkobservabilityRetina = "15s"
+  networkobservabilityHubble = "15s"
+  networkobservabilityCilium = "15s"
+  prometheuscollectorhealth = "15s"
+  acstor-capacity-provisioner = "15s"
+  acstor-metrics-exporter = "15s"
+  dcgmexporter = "15s"
+  podannotations = "15s"
+debug-mode: |-
+  enabled = true

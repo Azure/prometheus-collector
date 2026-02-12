@@ -3,42 +3,26 @@ package ccpconfigmapsettings
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
+
+	"github.com/prometheus-collector/shared"
+	cmcommon "github.com/prometheus-collector/shared/configmap/common"
 )
 
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
-	// Extract the prometheus-collector-settings section
-	if settings, ok := metricsConfigBySection["cluster_alias"]; ok {
-		if value, ok := settings["default_metric_account_name"]; ok {
-			cp.DefaultMetricAccountName = value
-			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
-		}
+	fmt.Println("metricsConfigBySection:", metricsConfigBySection)
 
-		if value, ok := settings["cluster_alias"]; ok {
-			cp.ClusterAlias = strings.TrimSpace(value)
-			fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
-			if cp.ClusterAlias != "" {
-				cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
-				cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")
-				fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
-			}
-		}
+	sharedSettings := cmcommon.CollectorSettings{}
+	cmcommon.PopulateSharedCollectorSettings(&sharedSettings, metricsConfigBySection, func(format string, args ...interface{}) {
+		fmt.Printf(format, args...)
+	})
 
-		if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
-			cp.IsOperatorEnabledChartSetting = true
-			if value, ok := settings["operator_enabled"]; ok {
-				cp.IsOperatorEnabled = value == "true"
-				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
-			}
-		} else {
-			cp.IsOperatorEnabledChartSetting = false
-		}
-	} else {
-		cp.IsOperatorEnabledChartSetting = false
-		fmt.Println("prometheus-collector-settings section not found in metricsConfigBySection, using defaults")
-	}
+	cp.DefaultMetricAccountName = sharedSettings.MetricAccountName
+	cp.ClusterAlias = sharedSettings.ClusterAlias
+	cp.ClusterLabel = sharedSettings.ClusterLabel
+	cp.IsOperatorEnabled = sharedSettings.OperatorEnabled
+	cp.IsOperatorEnabledChartSetting = sharedSettings.OperatorEnabledChart
 }
 
 // WriteConfigToFile writes the configuration settings to a file.
@@ -49,25 +33,26 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	}
 	defer file.Close()
 
-	file.WriteString(fmt.Sprintf("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", configParser.DefaultMetricAccountName))
-	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
-	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
-	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%t\n", configParser.IsOperatorEnabledChartSetting))
-	if configParser.IsOperatorEnabled {
-		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
-		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))
+	sharedSettings := cmcommon.CollectorSettings{
+		MetricAccountName:    configParser.DefaultMetricAccountName,
+		ClusterAlias:         configParser.ClusterAlias,
+		ClusterLabel:         configParser.ClusterLabel,
+		OperatorEnabled:      configParser.IsOperatorEnabled,
+		OperatorEnabledChart: configParser.IsOperatorEnabledChartSetting,
+	}
+
+	if err := cmcommon.WriteSharedCollectorSettings(file, sharedSettings); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // Configure processes the configuration and writes it to a file.
-func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
 
-	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
+	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
 		if len(metricsConfigBySection) > 0 {
 			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
@@ -102,13 +87,13 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
-func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
+		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
-	configurator.Configure(metricsConfigBySection)
+	configurator.Configure(metricsConfigBySection, schemaVersion)
 }

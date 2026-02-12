@@ -1,0 +1,30 @@
+schema-version:
+  v1 
+config-version:
+  ver1
+default-targets-metrics-keep-list:
+  kubelet = "test.*|test2"
+  coredns = "test.*|test2"
+  cadvisor = "test.*|test2"
+  kubeproxy = "test.*|test2"
+  apiserver = "test.*|test2"
+  kubestate = "test.*|test2"
+  nodeexporter = "test.*|test2"
+  windowsexporter = "test.*|test2"
+  windowskubeproxy = "test.*|test2"
+  podannotations = "test.*|test2"
+  kappiebasic = "test.*|test2"
+  networkobservabilityRetina = "test.*|test2"
+  networkobservabilityHubble = "test.*|test2"
+  networkobservabilityCilium = "test.*|test2"
+  acstor-capacity-provisioner = "test.*|test2"
+  acstor-metrics-exporter = "test.*|test2"
+  dcgmexporter = "test.*|test2"
+  prometheuscollectorhealth = "test.*|test2"
+  controlplane-apiserver = "test.*|test2"
+  controlplane-cluster-autoscaler = "test.*|test2"
+  controlplane-node-auto-provisioning = "test.*|test2"
+  controlplane-kube-scheduler = "test.*|test2"
+  controlplane-kube-controller-manager = "test.*|test2"
+  controlplane-etcd = "test.*|test2"
+  minimalingestionprofile = false
