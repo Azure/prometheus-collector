@@ -66,7 +66,7 @@ scrape_configs:
     source_labels:
     - __meta_kubernetes_namespace
   - action: keep
-    regex: (metrics-exporter;monitor)|(storage-operator;node-agent)
+    regex: (metrics-exporter;monitor)|(storage-operator;node-agent)|(node-agent;node-agent)
     source_labels:
     - __meta_kubernetes_pod_label_app_kubernetes_io_name
     - __meta_kubernetes_pod_label_app_kubernetes_io_component
@@ -98,6 +98,47 @@ scrape_configs:
     - __meta_kubernetes_pod_container_port_name
   scheme: http
   scrape_interval: 30s
+- job_name: dcgm-exporter
+  kubernetes_sd_configs:
+  - role: node
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metrics_path: /metrics
+  relabel_configs:
+  - action: keep
+    regex: enabled
+    source_labels:
+    - __meta_kubernetes_node_label_kubernetes_azure_com_dcgm_exporter
+  - action: replace
+    regex: (.+)
+    replacement: $1:19400
+    source_labels:
+    - __meta_kubernetes_node_address_InternalIP
+    target_label: __address__
+  - action: replace
+    source_labels:
+    - __meta_kubernetes_node_name
+    target_label: instance
+  - action: labeldrop
+    regex: (?i)cluster
+  - action: labeldrop
+    regex: (?i)dcgm_fi_driver_version
+  - action: labeldrop
+    regex: (?i)device
+  - action: labeldrop
+    regex: (?i)hostname
+  - action: labeldrop
+    regex: microsoft.resourceid
+  - action: labeldrop
+    regex: (?i)modelName
+  - action: labeldrop
+    regex: (?i)pci_bus_id
+  - action: labeldrop
+    regex: (?i)uuid
+  scheme: http
+  scrape_interval: 30s
+
 - job_name: kube-dns
   kubernetes_sd_configs:
   - namespaces:

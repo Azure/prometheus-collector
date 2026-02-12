@@ -192,6 +192,18 @@ var DefaultScrapeJobs = map[string]*DefaultScrapeJob{
 		CustomerKeepListRegex:      "",
 		ScrapeInterval:             "30s",
 	},
+	"dcgmexporter": {
+		JobName:                    "dcgmexporter",
+		Enabled:                    false,
+		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
+		ControllerType:             ControllerType.ReplicaSet,
+		ScrapeConfigDefinitionFile: "dcgmExporterDefault.yml",
+		PlaceholderNames:           []string{},
+		MinimalKeepListRegex:       "DCGM_.*",
+		CustomerKeepListRegex:      "",
+		ScrapeInterval:             "30s",
+	},
 	"networkobservabilityRetina": {
 		JobName:                    "networkobservabilityRetina",
 		Enabled:                    true,

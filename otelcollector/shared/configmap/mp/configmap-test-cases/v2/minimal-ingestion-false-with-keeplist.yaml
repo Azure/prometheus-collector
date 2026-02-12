@@ -22,6 +22,7 @@ cluster-metrics: |-
     networkobservabilityCilium = "test1.*|test2"
     acstor-capacity-provisioner = "test1.*|test2"
     acstor-metrics-exporter = "test1.*|test2"
+    dcgmexporter = "test1.*|test2"
   minimal-ingestion-profile: |-
     enabled = true
 controlplane-metrics: |-

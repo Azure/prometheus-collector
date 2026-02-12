@@ -19,6 +19,7 @@ cluster-metrics: |-
     networkobservabilityCilium = false
     acstor-capacity-provisioner = false
     acstor-metrics-exporter = false
+    dcgmexporter = false
     prometheuscollectorhealth = false
 controlplane-metrics: |-
   default-targets-scrape-enabled: |-

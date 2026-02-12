@@ -19,6 +19,7 @@ default-targets-metrics-keep-list:
   networkobservabilityCilium = "test.*|test2"
   acstor-capacity-provisioner = "test.*|test2"
   acstor-metrics-exporter = "test.*|test2"
+  dcgmexporter = "test.*|test2"
   prometheuscollectorhealth = "test.*|test2"
   controlplane-apiserver = "test.*|test2"
   controlplane-cluster-autoscaler = "test.*|test2"

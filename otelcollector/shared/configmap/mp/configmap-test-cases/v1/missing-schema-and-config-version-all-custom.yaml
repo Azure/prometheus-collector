@@ -25,6 +25,7 @@ default-scrape-settings-enabled: |-
   controlplane-etcd = true
   acstor-capacity-provisioner = true
   acstor-metrics-exporter = true
+  dcgmexporter = true
 pod-annotation-based-scraping: |-
   podannotationnamespaceregex = ".*|value"
 default-targets-metrics-keep-list: |-
@@ -50,6 +51,7 @@ default-targets-metrics-keep-list: |-
   controlplane-etcd = "test1.*|test2"
   acstor-capacity-provisioner = "test1.*|test2"
   acstor-metrics-exporter = "test1.*|test2"
+  dcgmexporter = "test1.*|test2"
   minimalingestionprofile = true
 default-targets-scrape-interval-settings: |-
   kubelet = "15s"
@@ -68,6 +70,7 @@ default-targets-scrape-interval-settings: |-
   prometheuscollectorhealth = "15s"
   acstor-capacity-provisioner = "15s"
   acstor-metrics-exporter = "15s"
+  dcgmexporter = "15s"
   podannotations = "15s"
 debug-mode: |-
   enabled = true

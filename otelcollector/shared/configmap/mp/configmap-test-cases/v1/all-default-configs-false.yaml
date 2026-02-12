@@ -18,6 +18,7 @@ default-scrape-settings-enabled:
   networkobservabilityCilium = false
   acstor-capacity-provisioner = false
   acstor-metrics-exporter = false
+  dcgmexporter = false
   prometheuscollectorhealth = false
   controlplane-apiserver = false
   controlplane-cluster-autoscaler = false

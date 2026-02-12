@@ -55,16 +55,26 @@ func MinimalProfileSetting(metricsConfig map[string]map[string]string, sectionNa
 // keep list expressions and writes the resulting values to a YAML file that can
 // be consumed by downstream components.
 func PopulateKeepLists(opts KeepListOptions) error {
-	keeplist := opts.MetricsConfig[opts.KeepListSection]
+	var keeplist map[string]string
+	if opts.MetricsConfig != nil {
+		keeplist = opts.MetricsConfig[opts.KeepListSection]
+	}
+
 	minimalProfileEnabled := opts.MinimalProfileDefaultBool
 
-	switch shared.ParseSchemaVersion(opts.SchemaVersion) {
+	switch opts.SchemaVersion {
 	case shared.SchemaVersion.V1:
 		minimalProfileEnabled = MinimalProfileSetting(opts.MetricsConfig, opts.KeepListSection, opts.MinimalProfileKeyV1, opts.MinimalProfileDefaultBool)
 	case shared.SchemaVersion.V2:
 		minimalProfileEnabled = MinimalProfileSetting(opts.MetricsConfig, opts.MinimalProfileSection, opts.MinimalProfileKeyV2, opts.MinimalProfileDefaultBool)
-	default:
-		// leave the default value when schema is unknown
+	}
+
+	if err := shared.SetEnvAndSourceBashrcOrPowershell(
+		"MINIMAL_INGESTION_PROFILE",
+		strconv.FormatBool(minimalProfileEnabled),
+		true,
+	); err != nil {
+		return fmt.Errorf("common.PopulateKeepLists::setting MINIMAL_INGESTION_PROFILE failed: %w", err)
 	}
 
 	for jobName, job := range opts.Jobs {

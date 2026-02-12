@@ -265,6 +265,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"acstor-capacity-provisioner",
 				"local-csi-driver",
 				"acstor-metrics-exporter",
+				"dcgmexporter",
 				"prometheuscollectorhealth",
 			} {
 				scrapeOverrides[job] = true
@@ -307,6 +308,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = true
 				local-csi-driver = true
 				acstor-metrics-exporter = true
+				dcgmexporter = true
 				prometheuscollectorhealth = true
 			`)
 			configMapDebugMountPath = testhelpers.MustCreateTempFile(configSettingsPrefix, "debug-mode", `enabled = true`)
@@ -328,6 +330,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
 				local-csi-driver = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
+    			dcgmexporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
 				ztunnel = "test.*|test2"
 				istio-cni = "test.*|test2"
@@ -353,6 +356,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "15s"
 				local-csi-driver = "15s"
     			acstor-metrics-exporter = "15s"
+    			dcgmexporter = "15s"
 				ztunnel = "15s"
 				istio-cni = "15s"
 				waypoint-proxy = "15s"
@@ -420,6 +424,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
 				local-csi-driver = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
+    			dcgmexporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
 				ztunnel = "test.*|test2"
 				istio-cni = "test.*|test2"
@@ -445,6 +450,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "15s"
 				local-csi-driver = "15s"
     			acstor-metrics-exporter = "15s"
+    			dcgmexporter = "15s"
 				ztunnel = "15s"
 				istio-cni = "15s"
 				waypoint-proxy = "15s"
@@ -525,6 +531,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = false
 				local-csi-driver = false
 				acstor-metrics-exporter = false
+				dcgmexporter = false
 				prometheuscollectorhealth = false
 			`)
 			isDefaultConfig = false
@@ -582,6 +589,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				acstor-capacity-provisioner = "test.*|test2"
 				local-csi-driver = "test.*|test2"
     			acstor-metrics-exporter = "test.*|test2"
+    			dcgmexporter = "test.*|test2"
 				prometheuscollectorhealth = "test.*|test2"
 				ztunnel = "test.*|test2"
 				istio-cni = "test.*|test2"
@@ -735,6 +743,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					acstor-capacity-provisioner = false
 					local-csi-driver = false
 					acstor-metrics-exporter = false
+					dcgmexporter = false
 					prometheuscollectorhealth = false
 				`)
 				isDefaultConfig = false
@@ -846,6 +855,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"acstor-capacity-provisioner",
 				"local-csi-driver",
 				"acstor-metrics-exporter",
+				"dcgmexporter",
 			} {
 				scrapeOverrides[job] = true
 			}
@@ -890,6 +900,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					acstor-capacity-provisioner = true
 					local-csi-driver = true
 					acstor-metrics-exporter = true
+					dcgmexporter = true
 					prometheuscollectorhealth = false
 				pod-annotation-based-scraping: |-
 					podannotationnamespaceregex = ".*|value"
@@ -920,8 +931,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					networkobservabilityHubble = "test.*|test2"
 					networkobservabilityCilium = "test.*|test2"
 					acstor-capacity-provisioner = "test.*|test2"
-				local-csi-driver = "test.*|test2"
+					local-csi-driver = "test.*|test2"
 					acstor-metrics-exporter = "test.*|test2"
+					dcgmexporter = "test.*|test2"
 					prometheuscollectorhealth = "test.*|test2"
 					ztunnel = "test.*|test2"
 					istio-cni = "test.*|test2"
@@ -945,8 +957,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					prometheuscollectorhealth = "15s"
 					podannotations = "15s"
 					acstor-capacity-provisioner = "15s"
-				local-csi-driver = "15s"
+					local-csi-driver = "15s"
 					acstor-metrics-exporter = "15s"
+					dcgmexporter = "15s"
 					ztunnel = "15s"
 					istio-cni = "15s"
 					waypoint-proxy = "15s"
@@ -1006,6 +1019,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"acstor-capacity-provisioner",
 				"local-csi-driver",
 				"acstor-metrics-exporter",
+				"dcgmexporter",
 			} {
 				scrapeOverrides[job] = true
 			}
@@ -1043,8 +1057,9 @@ var _ = Describe("Configmapparser", Ordered, func() {
 					networkobservabilityHubble = true
 					networkobservabilityCilium = true
 					acstor-capacity-provisioner = true
-				local-csi-driver = true
+					local-csi-driver = true
 					acstor-metrics-exporter = true
+					dcgmexporter = true
 					prometheuscollectorhealth = false
 				minimal-ingestion-profile: |-
 					enabled = false
