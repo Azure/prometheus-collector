@@ -58,6 +58,7 @@ AzureMonitorMetrics:
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
   OperatorTargetsHttpsEnabled: true
+  MeshMembershipMetricsFQDN: ""
   DeploymentReplicas: 2
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
@@ -102,6 +103,7 @@ global:
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
     isAutomaticSKU: false
+    endpointFQDN: ""
 
 # For ARC backdoor testing
 Azure:

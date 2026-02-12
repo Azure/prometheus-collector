@@ -22,6 +22,7 @@ var (
 	localCSIDriverRegex                                                 string
 	ztunnelRegex, istioCniRegex, waypointRegex                          string
 	dcgmExporterRegex                                                   string
+	controlplaneIstioRegex                                              string
 	kubeletRegex_minimal_mac                                            = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase"
 	coreDNSRegex_minimal_mac                                            = "coredns_build_info|coredns_panics_total|coredns_dns_responses_total|coredns_forward_responses_total|coredns_dns_request_duration_seconds|coredns_dns_request_duration_seconds_bucket|coredns_dns_request_duration_seconds_sum|coredns_dns_request_duration_seconds_count|coredns_forward_request_duration_seconds|coredns_forward_request_duration_seconds_bucket|coredns_forward_request_duration_seconds_sum|coredns_forward_request_duration_seconds_count|coredns_dns_requests_total|coredns_forward_requests_total|coredns_cache_hits_total|coredns_cache_misses_total|coredns_cache_entries|coredns_plugin_enabled|coredns_dns_request_size_bytes|coredns_dns_request_size_bytes_bucket|coredns_dns_request_size_bytes_sum|coredns_dns_request_size_bytes_count|coredns_dns_response_size_bytes|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
 	cadvisorRegex_minimal_mac                                           = "container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds"
@@ -39,11 +40,12 @@ var (
 	acstorMetricsExporter_minimal_mac                                   = "disk_read_operations_completed_total|disk_write_operations_completed_total|disk_read_operations_time_seconds_total|disk_write_operations_time_seconds_total|disk_read_bytes_total|disk_written_bytes_total|disk_reads_merged_total|disk_writes_merged_total|disk_io_now|disk_io_time_seconds_total|disk_io_time_weighted_seconds_total|disk_discard_operations_completed_total|disk_discards_merged_total|disk_discarded_sectors_total|disk_discard_operations_time_seconds_total|disk_flush_requests_total|disk_flush_requests_time_seconds_total|disk_errors_total|disk_readonly_errors_gauge|disk_readonly_status_gauge"
 	//These metrics are somewhere getting transformed from rpc_server.duration_milliseconds_bucket to rpc.server.duration_milliseconds_bucket.
 	// It's not clear where this is happening, so we are keeping both regexes for now. Once we find the root cause, we can remove one of them.
-	localCsiDriver_minimal_mac = "rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count"
-	ztunnel_minimal_mac        = "istio_build|istio_xds_connection_terminations_total|istio_xds_message_total|istio_tcp_connections_opened_total|istio_tcp_connections_closed_total|istio_tcp_sent_bytes_total|istio_tcp_received_bytes_total|istio_dns_requests_total|workload_manager_active_proxy_count|workload_manager_pending_proxy_count"
-	istioCni_minimal_mac       = "istio_cni_install_ready|istio_cni_installs_total|nodeagent_reconcile_events_total|ztunnel_connected"
-	waypoint_minimal_mac       = "istio_build|istio_requests_total|istio_request_duration_milliseconds_sum|istio_request_duration_milliseconds_count|envoy_cluster_upstream_cx_active|envoy_cluster_upstream_cx_connect_fail|envoy_server_memory_allocated"
-	dcgmexporter_minimal_mac   = "DCGM_.*"
+	localCsiDriver_minimal_mac    = "rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count"
+	ztunnel_minimal_mac           = "istio_build|istio_xds_connection_terminations_total|istio_xds_message_total|istio_tcp_connections_opened_total|istio_tcp_connections_closed_total|istio_tcp_sent_bytes_total|istio_tcp_received_bytes_total|istio_dns_requests_total|workload_manager_active_proxy_count|workload_manager_pending_proxy_count"
+	istioCni_minimal_mac          = "istio_cni_install_ready|istio_cni_installs_total|nodeagent_reconcile_events_total|ztunnel_connected"
+	waypoint_minimal_mac          = "istio_build|istio_requests_total|istio_request_duration_milliseconds_sum|istio_request_duration_milliseconds_count|envoy_cluster_upstream_cx_active|envoy_cluster_upstream_cx_connect_fail|envoy_server_memory_allocated"
+	dcgmexporter_minimal_mac      = "DCGM_.*"
+	controlplaneIstio_minimal_mac = "pilot_xds_pushes|pilot_xds_push_context_errors|pilot_conflict_inbound_listener|pilot_conflict_outbound_listener_http_over_current_tcp|pilot_conflict_outbound_listener_tcp_over_current_tcp|pilot_conflict_outbound_listener_tcp_over_current_http|pilot_virt_services|pilot_services|pilot_proxy_convergence_time|pilot_xds|citadel_server_csr_count|galley_validation_passed|galley_validation_failed|pilot_info"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -130,6 +132,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		istiocni:                   getStringValue(keeplist["istio-cni"]),
 		waypoint:                   getStringValue(keeplist["waypoint-proxy"]),
 		dcgmexporter:               getStringValue(keeplist["dcgmexporter"]),
+		controlplaneistio:          getStringValue(keeplist["controlplane-istio"]),
 		minimalingestionprofile:    minimalingestionprofile_value,
 	}
 
@@ -166,6 +169,7 @@ func validateRegexValues(regexValues RegexValues) error {
 		"istio-cni":                   regexValues.istiocni,
 		"waypoint-proxy":              regexValues.waypoint,
 		"dcgmexporter":                regexValues.dcgmexporter,
+		"controlplane-istio":          regexValues.controlplaneistio,
 	}
 
 	// Iterate over the fields and validate each regex
@@ -221,6 +225,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		istioCniRegex = fmt.Sprintf("%s|%s", regexValues.istiocni, istioCni_minimal_mac)
 		waypointRegex = fmt.Sprintf("%s|%s", regexValues.waypoint, waypoint_minimal_mac)
 		dcgmExporterRegex = fmt.Sprintf("%s|%s", regexValues.dcgmexporter, dcgmexporter_minimal_mac)
+		controlplaneIstioRegex = fmt.Sprintf("%s|%s", regexValues.controlplaneistio, controlplaneIstio_minimal_mac)
 
 	} else {
 		log.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
@@ -246,6 +251,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		istioCniRegex = regexValues.istiocni
 		waypointRegex = regexValues.waypoint
 		dcgmExporterRegex = regexValues.dcgmexporter
+		controlplaneIstioRegex = regexValues.controlplaneistio
 	}
 }
 
@@ -285,6 +291,7 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 		"ISTIOCNI_METRICS_KEEP_LIST_REGEX":                   istioCniRegex,
 		"WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX":             waypointRegex,
 		"DCGMEXPORTER_METRICS_KEEP_LIST_REGEX":               dcgmExporterRegex,
+		"CONTROLPLANE_ISTIO_KEEP_LIST_REGEX":                 controlplaneIstioRegex,
 	}
 
 	out, err := yaml.Marshal(data)
