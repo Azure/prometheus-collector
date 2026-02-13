@@ -9,7 +9,7 @@ AzureMonitorMetrics:
     CPULimit: 1
     MemoryLimit: 5Gi
 # Kube-state-metrics ImageTag - 2.17.0, corresponds to chart version - 6.2.0
-    ImageTag: "v2.17.0-5"
+    ImageTag: "v2.17.0-6"
     Collectors:
       - certificatesigningrequests
       - configmaps
