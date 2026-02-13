@@ -483,6 +483,8 @@ github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndr
 github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
 github.com/prometheus-community/prom-label-proxy v0.12.1 h1:vJ6tGz4NMge140Ua3T/zh3HO0CA3bmnCsfkWK/cujG0=
 github.com/prometheus-community/prom-label-proxy v0.12.1/go.mod h1:/tZNtOMcbPbE1VFcY8b48mPqT1bb2jVpXx2WdjjM8TY=
+github.com/prometheus-operator/prometheus-operator v0.88.0 h1:3T/dCQdk7CUVRqVfwRHoC5g66fC/ML6XQQLtQVL6Q5o=
+github.com/prometheus-operator/prometheus-operator v0.88.0/go.mod h1:ImzO6sdWk/qWgdPBuGkkPTd43aLZulCANvqTEdcNCxI=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0 h1:eKVckm/elKIvnNKQAO9WXxBOudphxpkZmT9+bevtvDo=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0/go.mod h1:IJwk1oNs212afqGbNnE84GAB95OHtJR/BuI1rKESiYk=
 github.com/prometheus-operator/prometheus-operator/pkg/client v0.88.0 h1:0Dtkv63g5ZZNFpZhZmpBLEKvZWCFSKjLhQ51o++pfqE=
