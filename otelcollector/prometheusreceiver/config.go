@@ -13,16 +13,15 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
-	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
@@ -40,7 +39,7 @@ type Config struct {
 	//  APIServer has the settings to enable the receiver to host the Prometheus API
 	// server in agent mode. This allows the user to call the endpoint to get
 	// the config, service discovery, and targets for debugging purposes.
-	APIServer APIServer `mapstructure:"api_server"`
+	APIServer configoptional.Optional[apiserver.Config] `mapstructure:"api_server"`
 
 	// For testing only.
 	ignoreMetadata bool
@@ -227,11 +226,6 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 		return fmt.Errorf("error checking client key file %q: %w", tlsConfig.KeyFile, err)
 	}
 	return nil
-}
-
-type APIServer struct {
-	Enabled      bool                    `mapstructure:"enabled"`
-	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
 }
 
 func (cfg *APIServer) Validate() error {
