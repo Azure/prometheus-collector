@@ -227,15 +227,3 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 	}
 	return nil
 }
-
-func (cfg *APIServer) Validate() error {
-	if !cfg.Enabled {
-		return nil
-	}
-
-	if cfg.ServerConfig.NetAddr.Endpoint == "" {
-		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
-	}
-
-	return nil
-}
