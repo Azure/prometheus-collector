@@ -43,7 +43,7 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
+	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries sent in a minute
 	timeseriesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "timeseries_sent_per_minute",
@@ -52,7 +52,7 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// bytesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
+	// bytesSentMetric is the Prometheus metric measuring the number of bytes sent in a minute
 	bytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "bytes_sent_per_minute",
