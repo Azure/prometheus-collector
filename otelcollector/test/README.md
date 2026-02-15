@@ -51,6 +51,12 @@
   - The Prometheus UI should return a 200 for its UI pages for both the `prometheus-collector` replicaset and daemonset containers.
 - Query Metrics from the AMW
   - Querying for the `up` metric returns data.
+- Health Metrics `label=ccp`
+  - The health metrics endpoint (:2234/metrics) is accessible in CCP mode.
+  - All 5 required health metrics are exposed: `timeseries_received_per_minute`, `timeseries_sent_per_minute`, `bytes_sent_per_minute`, `invalid_custom_prometheus_config`, `exporting_metrics_failed`.
+  - Health metrics have correct labels (computer, release, controller_type).
+  - fluent-bit process is NOT running in CCP mode (health metrics exposed directly).
+
 
 ## Current Labels for Tests
 - Unlabeled: These tests should run on every basic cluster.
@@ -60,6 +66,7 @@
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 - `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
 - `fips`: Tests that should only run on clusters taht have FIPS nodes.
+- `ccp`: Tests that should only run on clusters with CCP (Control-Plane) metrics enabled.
 
 # File Directory Structure
 ```
