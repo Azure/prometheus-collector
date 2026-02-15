@@ -94,6 +94,10 @@ spec:
               value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # false scrapes all metrics
+          ports:
+            - name: health-metrics
+              containerPort: 2234
+              protocol: TCP
           securityContext:
             privileged: false
           volumeMounts:

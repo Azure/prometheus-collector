@@ -256,6 +256,10 @@ func main() {
 				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
 		}
+	} else {
+		// In CCP mode, expose health metrics directly without fluent-bit
+		log.Println("Starting Prometheus Collector Health metrics in CCP mode")
+		go shared.ExposePrometheusCollectorHealthMetrics()
 	}
 
 	if osType == "linux" && !otlpEnabled {
