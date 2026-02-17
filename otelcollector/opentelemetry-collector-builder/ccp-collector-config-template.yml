@@ -18,23 +18,23 @@ processors:
     send_batch_max_size: 7000
   resource:
     attributes:
-    - key: cluster
-      value: "${env:AZMON_CLUSTER_LABEL}"
-      action: "upsert"
-    - key: job
-      from_attribute: service.name
-      action: insert
-    - key: instance
-      from_attribute: service.instance.id
-      action: insert
+      - key: cluster
+        value: "${env:AZMON_CLUSTER_LABEL}"
+        action: "upsert"
+      - key: job
+        from_attribute: service.name
+        action: insert
+      - key: instance
+        from_attribute: service.instance.id
+        action: insert
 receivers:
-    prometheus:
-      config:
+  prometheus:
+    config:
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
+      exporters: [otlp_grpc]
       processors: [batch, resource]
   telemetry:
     logs:
