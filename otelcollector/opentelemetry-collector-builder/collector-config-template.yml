@@ -5,7 +5,7 @@ exporters:
       cluster: ${env:AZMON_CLUSTER_LABEL}
   prometheus/telemetry:
     endpoint: "127.0.0.1:9095"
-  otlp:
+  otlp_grpc:
     endpoint: 127.0.0.1:55680
     tls:
       insecure: true

@@ -1,5 +1,5 @@
 exporters:
-  otlp:
+  otlp_grpc:
     compression: gzip
     endpoint: 127.0.0.1:55680
     retry_on_failure:
