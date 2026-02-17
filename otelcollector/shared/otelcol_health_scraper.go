@@ -25,6 +25,9 @@ const (
 
 	// otelColSentMetric is the otelcollector internal counter for metric data points successfully sent by the exporter
 	otelColSentMetric = "otelcol_exporter_sent_metric_points"
+
+	// otelColSendFailedMetric is the otelcollector internal counter for metric data points that failed to export
+	otelColSendFailedMetric = "otelcol_exporter_send_failed_metric_points"
 )
 
 // ScrapeOtelCollectorHealthMetrics periodically scrapes the otelcollector's
@@ -40,6 +43,7 @@ func ScrapeOtelCollectorHealthMetrics() {
 
 	var prevReceived float64
 	var prevSent float64
+	var prevSendFailed float64
 	var initialized bool
 
 	ticker := time.NewTicker(otelColScrapeInterval)
@@ -56,10 +60,12 @@ func ScrapeOtelCollectorHealthMetrics() {
 
 		currentReceived := metrics[otelColReceivedMetric]
 		currentSent := metrics[otelColSentMetric]
+		currentSendFailed := metrics[otelColSendFailedMetric]
 
 		if initialized {
 			deltaReceived := currentReceived - prevReceived
 			deltaSent := currentSent - prevSent
+			deltaSendFailed := currentSendFailed - prevSendFailed
 
 			// Handle counter resets (e.g. otelcollector restart)
 			if deltaReceived < 0 {
@@ -68,6 +74,9 @@ func ScrapeOtelCollectorHealthMetrics() {
 			if deltaSent < 0 {
 				deltaSent = currentSent
 			}
+			if deltaSendFailed < 0 {
+				deltaSendFailed = currentSendFailed
+			}
 
 			if deltaReceived > 0 || deltaSent > 0 {
 				TimeseriesVolumeMutex.Lock()
@@ -75,10 +84,17 @@ func ScrapeOtelCollectorHealthMetrics() {
 				TimeseriesSentTotal += deltaSent
 				TimeseriesVolumeMutex.Unlock()
 			}
+
+			if deltaSendFailed > 0 {
+				ExportingFailedMutex.Lock()
+				OtelCollectorExportingFailedCount += int(deltaSendFailed)
+				ExportingFailedMutex.Unlock()
+			}
 		}
 
 		prevReceived = currentReceived
 		prevSent = currentSent
+		prevSendFailed = currentSendFailed
 		initialized = true
 	}
 }

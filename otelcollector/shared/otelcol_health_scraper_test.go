@@ -102,6 +102,9 @@ func TestScrapeOtelColMetrics(t *testing.T) {
 		"# HELP otelcol_exporter_sent_metric_points Number of metric points sent.",
 		"# TYPE otelcol_exporter_sent_metric_points counter",
 		`otelcol_exporter_sent_metric_points{exporter="otlp"} 800`,
+		"# HELP otelcol_exporter_send_failed_metric_points Number of metric points failed.",
+		"# TYPE otelcol_exporter_send_failed_metric_points counter",
+		`otelcol_exporter_send_failed_metric_points{exporter="otlp"} 3`,
 		"# HELP otelcol_process_uptime Total uptime.",
 		"# TYPE otelcol_process_uptime counter",
 		"otelcol_process_uptime 3600",
@@ -126,6 +129,11 @@ func TestScrapeOtelColMetrics(t *testing.T) {
 	// exporter_sent should be 800
 	if got := metrics[otelColSentMetric]; got != 800 {
 		t.Errorf("otelcol_exporter_sent_metric_points = %f, want 800", got)
+	}
+
+	// send_failed should be 3
+	if got := metrics[otelColSendFailedMetric]; got != 3 {
+		t.Errorf("otelcol_exporter_send_failed_metric_points = %f, want 3", got)
 	}
 
 	// process_uptime should be 3600
@@ -184,34 +192,44 @@ func TestDeltaAccumulation(t *testing.T) {
 	TimeseriesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
 
+	ExportingFailedMutex.Lock()
+	origFailed := OtelCollectorExportingFailedCount
+	OtelCollectorExportingFailedCount = 0
+	ExportingFailedMutex.Unlock()
+
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesReceivedTotal = origReceived
 		TimeseriesSentTotal = origSent
 		TimeseriesVolumeMutex.Unlock()
+		ExportingFailedMutex.Lock()
+		OtelCollectorExportingFailedCount = origFailed
+		ExportingFailedMutex.Unlock()
 	}()
 
 	type scrapeResult struct {
-		received float64
-		sent     float64
+		received   float64
+		sent       float64
+		sendFailed float64
 	}
 
 	// Simulate a series of scrapes with monotonically increasing counters
 	scrapes := []scrapeResult{
-		{received: 100, sent: 80},   // initial (no delta computed)
-		{received: 250, sent: 200},  // delta: +150 received, +120 sent
-		{received: 400, sent: 350},  // delta: +150 received, +150 sent
-		{received: 10, sent: 5},     // counter reset: use raw value as delta
-		{received: 60, sent: 55},    // delta: +50 received, +50 sent
+		{received: 100, sent: 80, sendFailed: 0},   // initial (no delta computed)
+		{received: 250, sent: 200, sendFailed: 2},  // delta: +150 received, +120 sent, +2 failed
+		{received: 400, sent: 350, sendFailed: 5},  // delta: +150 received, +150 sent, +3 failed
+		{received: 10, sent: 5, sendFailed: 0},     // counter reset: use raw value as delta
+		{received: 60, sent: 55, sendFailed: 1},    // delta: +50 received, +50 sent, +1 failed
 	}
 
-	var prevReceived, prevSent float64
+	var prevReceived, prevSent, prevSendFailed float64
 	var initialized bool
 
 	for _, s := range scrapes {
 		if initialized {
 			deltaReceived := s.received - prevReceived
 			deltaSent := s.sent - prevSent
+			deltaSendFailed := s.sendFailed - prevSendFailed
 
 			// Handle counter resets
 			if deltaReceived < 0 {
@@ -220,6 +238,9 @@ func TestDeltaAccumulation(t *testing.T) {
 			if deltaSent < 0 {
 				deltaSent = s.sent
 			}
+			if deltaSendFailed < 0 {
+				deltaSendFailed = s.sendFailed
+			}
 
 			if deltaReceived > 0 || deltaSent > 0 {
 				TimeseriesVolumeMutex.Lock()
@@ -227,16 +248,24 @@ func TestDeltaAccumulation(t *testing.T) {
 				TimeseriesSentTotal += deltaSent
 				TimeseriesVolumeMutex.Unlock()
 			}
+
+			if deltaSendFailed > 0 {
+				ExportingFailedMutex.Lock()
+				OtelCollectorExportingFailedCount += int(deltaSendFailed)
+				ExportingFailedMutex.Unlock()
+			}
 		}
 
 		prevReceived = s.received
 		prevSent = s.sent
+		prevSendFailed = s.sendFailed
 		initialized = true
 	}
 
 	// Expected totals:
 	// received: 150 + 150 + 10 + 50 = 360
 	// sent: 120 + 150 + 5 + 50 = 325
+	// sendFailed: 2 + 3 + 0 + 1 = 6
 	TimeseriesVolumeMutex.Lock()
 	defer TimeseriesVolumeMutex.Unlock()
 
@@ -245,6 +274,12 @@ func TestDeltaAccumulation(t *testing.T) {
 	}
 	if TimeseriesSentTotal != 325 {
 		t.Errorf("TimeseriesSentTotal = %f, want 325", TimeseriesSentTotal)
+	}
+
+	ExportingFailedMutex.Lock()
+	defer ExportingFailedMutex.Unlock()
+	if OtelCollectorExportingFailedCount != 6 {
+		t.Errorf("OtelCollectorExportingFailedCount = %d, want 6", OtelCollectorExportingFailedCount)
 	}
 }
 
