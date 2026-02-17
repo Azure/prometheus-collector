@@ -78,6 +78,36 @@ var (
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
+
+	// Diagnostic metrics from otelcollector internal counters (supplementary to ME-based health metrics)
+	// These help diagnose where failures occur: otelcol→ME vs ME→workspace
+
+	// otelcolReceivedRateMetric shows what otelcollector's receiver accepted per minute
+	otelcolReceivedRateMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_receiver_accepted_metric_points_per_minute",
+			Help: "Rate of metric points accepted by otelcollector receiver (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelcolSentRateMetric shows what otelcollector's exporter sent to ME per minute
+	otelcolSentRateMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_exporter_sent_metric_points_per_minute",
+			Help: "Rate of metric points sent by otelcollector exporter to ME (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelcolSendFailedMetric shows cumulative metric points that failed to export from otelcol to ME
+	otelcolSendFailedTotalMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_exporter_send_failed_metric_points_total",
+			Help: "Total metric points that failed to export from otelcollector to ME",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
 )
 
 const (
@@ -100,6 +130,9 @@ func ExposePrometheusCollectorHealthMetrics() {
 	r.MustRegister(bytesSentMetric)
 	r.MustRegister(invalidCustomConfigMetric)
 	r.MustRegister(exportingFailedMetric)
+	r.MustRegister(otelcolReceivedRateMetric)
+	r.MustRegister(otelcolSentRateMetric)
+	r.MustRegister(otelcolSendFailedTotalMetric)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	http.Handle("/metrics", handler)
@@ -138,6 +171,13 @@ func ExposePrometheusCollectorHealthMetrics() {
 			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))
 			OtelCollectorExportingFailedCount = 0
 			ExportingFailedMutex.Unlock()
+
+			// Update diagnostic metrics from otelcol scraper
+			OtelColDiagMutex.Lock()
+			otelcolReceivedRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
+			otelcolSentRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSentRate)
+			otelcolSendFailedTotalMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSendFailedTotal)
+			OtelColDiagMutex.Unlock()
 
 			lastTickerStart = time.Now()
 		}

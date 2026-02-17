@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,31 +15,45 @@ const (
 	// otelColMetricsURL is the internal metrics endpoint exposed by the otelcollector process
 	otelColMetricsURL = "http://127.0.0.1:8888/metrics"
 
-	// otelColScrapeInterval is how often we scrape the otelcollector metrics to compute deltas
+	// otelColScrapeInterval is how often we scrape the otelcollector metrics
 	otelColScrapeInterval = 15 * time.Second
 
 	// otelColStartupDelay is how long to wait before first scrape to let otelcollector start
 	otelColStartupDelay = 30 * time.Second
 
-	// otelColReceivedMetric is the otelcollector internal counter for metric data points accepted by the receiver
-	otelColReceivedMetric = "otelcol_receiver_accepted_metric_points"
-
-	// otelColSentMetric is the otelcollector internal counter for metric data points successfully sent by the exporter
-	otelColSentMetric = "otelcol_exporter_sent_metric_points"
-
-	// otelColSendFailedMetric is the otelcollector internal counter for metric data points that failed to export
+	// Metric names from otelcollector's internal Prometheus endpoint
+	otelColReceivedMetric   = "otelcol_receiver_accepted_metric_points"
+	otelColSentMetric       = "otelcol_exporter_sent_metric_points"
 	otelColSendFailedMetric = "otelcol_exporter_send_failed_metric_points"
 )
 
+var (
+	// OtelColDiagMutex protects the diagnostic metric values
+	OtelColDiagMutex sync.Mutex
+
+	// OtelColReceivedRate is the per-minute rate of metric points accepted by otelcollector's receiver
+	OtelColReceivedRate float64
+
+	// OtelColSentRate is the per-minute rate of metric points sent by otelcollector's exporter (to ME)
+	OtelColSentRate float64
+
+	// OtelColSendFailedTotal is the cumulative count of metric points that failed to export from otelcol to ME
+	OtelColSendFailedTotal float64
+)
+
 // ScrapeOtelCollectorHealthMetrics periodically scrapes the otelcollector's
-// internal metrics endpoint to compute timeseries volume for CCP health metrics.
-// In CCP mode, fluent-bit is not running so the ME log parsing path that normally
-// feeds TimeseriesReceivedTotal/TimeseriesSentTotal is not available.
-// Instead, this function reads the otelcollector's own counters
-// (otelcol_receiver_accepted_metric_points / otelcol_exporter_sent_metric_points)
-// and feeds deltas into the shared globals that ExposePrometheusCollectorHealthMetrics reads.
+// internal metrics endpoint to compute diagnostic rates for CCP mode.
+//
+// These metrics help diagnose failures between otelcollector and ME:
+//   - otelcol_receiver_accepted_metric_points: what otelcol received from scrape targets
+//   - otelcol_exporter_sent_metric_points: what otelcol handed to ME
+//   - otelcol_exporter_send_failed_metric_points: what otelcol failed to hand to ME
+//
+// The primary health metrics (timeseries_received/sent_per_minute) come from ME log parsing
+// via TailMELogs, which gives true end-to-end confirmation that ME accepted and published data.
+// These otelcol metrics are supplementary diagnostics exposed as separate gauges on port 2234.
 func ScrapeOtelCollectorHealthMetrics() {
-	log.Printf("Waiting %v for otelcollector to start before scraping health metrics", otelColStartupDelay)
+	log.Printf("Waiting %v for otelcollector to start before scraping diagnostic metrics", otelColStartupDelay)
 	time.Sleep(otelColStartupDelay)
 
 	var prevReceived float64
@@ -49,7 +64,7 @@ func ScrapeOtelCollectorHealthMetrics() {
 	ticker := time.NewTicker(otelColScrapeInterval)
 	defer ticker.Stop()
 
-	log.Printf("Starting otelcollector health metrics scraper (interval=%v, url=%s)", otelColScrapeInterval, otelColMetricsURL)
+	log.Printf("Starting otelcollector diagnostic metrics scraper (interval=%v, url=%s)", otelColScrapeInterval, otelColMetricsURL)
 
 	for range ticker.C {
 		metrics, err := scrapeOtelColMetrics(otelColMetricsURL)
@@ -78,18 +93,14 @@ func ScrapeOtelCollectorHealthMetrics() {
 				deltaSendFailed = currentSendFailed
 			}
 
-			if deltaReceived > 0 || deltaSent > 0 {
-				TimeseriesVolumeMutex.Lock()
-				TimeseriesReceivedTotal += deltaReceived
-				TimeseriesSentTotal += deltaSent
-				TimeseriesVolumeMutex.Unlock()
-			}
+			// Compute per-minute rates from 15s interval deltas
+			minuteScale := 60.0 / otelColScrapeInterval.Seconds()
 
-			if deltaSendFailed > 0 {
-				ExportingFailedMutex.Lock()
-				OtelCollectorExportingFailedCount += int(deltaSendFailed)
-				ExportingFailedMutex.Unlock()
-			}
+			OtelColDiagMutex.Lock()
+			OtelColReceivedRate = deltaReceived * minuteScale
+			OtelColSentRate = deltaSent * minuteScale
+			OtelColSendFailedTotal += deltaSendFailed
+			OtelColDiagMutex.Unlock()
 		}
 
 		prevReceived = currentReceived

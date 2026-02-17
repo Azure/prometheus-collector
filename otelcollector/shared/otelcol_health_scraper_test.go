@@ -180,31 +180,26 @@ func TestScrapeOtelColMetrics_EmptyResponse(t *testing.T) {
 	}
 }
 
-func TestDeltaAccumulation(t *testing.T) {
-	// Simulate the delta computation logic from ScrapeOtelCollectorHealthMetrics
-	// to verify correctness without starting a real ticker
+func TestDiagnosticDeltaAccumulation(t *testing.T) {
+	// Simulate the delta computation logic from the diagnostic scraper
+	// to verify it correctly computes rates and accumulates send_failed
 
 	// Save and restore globals
-	TimeseriesVolumeMutex.Lock()
-	origReceived := TimeseriesReceivedTotal
-	origSent := TimeseriesSentTotal
-	TimeseriesReceivedTotal = 0
-	TimeseriesSentTotal = 0
-	TimeseriesVolumeMutex.Unlock()
-
-	ExportingFailedMutex.Lock()
-	origFailed := OtelCollectorExportingFailedCount
-	OtelCollectorExportingFailedCount = 0
-	ExportingFailedMutex.Unlock()
+	OtelColDiagMutex.Lock()
+	origReceivedRate := OtelColReceivedRate
+	origSentRate := OtelColSentRate
+	origSendFailedTotal := OtelColSendFailedTotal
+	OtelColReceivedRate = 0
+	OtelColSentRate = 0
+	OtelColSendFailedTotal = 0
+	OtelColDiagMutex.Unlock()
 
 	defer func() {
-		TimeseriesVolumeMutex.Lock()
-		TimeseriesReceivedTotal = origReceived
-		TimeseriesSentTotal = origSent
-		TimeseriesVolumeMutex.Unlock()
-		ExportingFailedMutex.Lock()
-		OtelCollectorExportingFailedCount = origFailed
-		ExportingFailedMutex.Unlock()
+		OtelColDiagMutex.Lock()
+		OtelColReceivedRate = origReceivedRate
+		OtelColSentRate = origSentRate
+		OtelColSendFailedTotal = origSendFailedTotal
+		OtelColDiagMutex.Unlock()
 	}()
 
 	type scrapeResult struct {
@@ -215,15 +210,16 @@ func TestDeltaAccumulation(t *testing.T) {
 
 	// Simulate a series of scrapes with monotonically increasing counters
 	scrapes := []scrapeResult{
-		{received: 100, sent: 80, sendFailed: 0},   // initial (no delta computed)
-		{received: 250, sent: 200, sendFailed: 2},  // delta: +150 received, +120 sent, +2 failed
-		{received: 400, sent: 350, sendFailed: 5},  // delta: +150 received, +150 sent, +3 failed
-		{received: 10, sent: 5, sendFailed: 0},     // counter reset: use raw value as delta
-		{received: 60, sent: 55, sendFailed: 1},    // delta: +50 received, +50 sent, +1 failed
+		{received: 100, sent: 80, sendFailed: 0},  // initial (no delta computed)
+		{received: 250, sent: 200, sendFailed: 2}, // delta: +150 received, +120 sent, +2 failed
+		{received: 400, sent: 350, sendFailed: 5}, // delta: +150 received, +150 sent, +3 failed
+		{received: 10, sent: 5, sendFailed: 0},    // counter reset: use raw value
+		{received: 60, sent: 55, sendFailed: 1},   // delta: +50 received, +50 sent, +1 failed
 	}
 
 	var prevReceived, prevSent, prevSendFailed float64
 	var initialized bool
+	minuteScale := 60.0 / otelColScrapeInterval.Seconds()
 
 	for _, s := range scrapes {
 		if initialized {
@@ -231,7 +227,6 @@ func TestDeltaAccumulation(t *testing.T) {
 			deltaSent := s.sent - prevSent
 			deltaSendFailed := s.sendFailed - prevSendFailed
 
-			// Handle counter resets
 			if deltaReceived < 0 {
 				deltaReceived = s.received
 			}
@@ -242,18 +237,11 @@ func TestDeltaAccumulation(t *testing.T) {
 				deltaSendFailed = s.sendFailed
 			}
 
-			if deltaReceived > 0 || deltaSent > 0 {
-				TimeseriesVolumeMutex.Lock()
-				TimeseriesReceivedTotal += deltaReceived
-				TimeseriesSentTotal += deltaSent
-				TimeseriesVolumeMutex.Unlock()
-			}
-
-			if deltaSendFailed > 0 {
-				ExportingFailedMutex.Lock()
-				OtelCollectorExportingFailedCount += int(deltaSendFailed)
-				ExportingFailedMutex.Unlock()
-			}
+			OtelColDiagMutex.Lock()
+			OtelColReceivedRate = deltaReceived * minuteScale
+			OtelColSentRate = deltaSent * minuteScale
+			OtelColSendFailedTotal += deltaSendFailed
+			OtelColDiagMutex.Unlock()
 		}
 
 		prevReceived = s.received
@@ -262,74 +250,23 @@ func TestDeltaAccumulation(t *testing.T) {
 		initialized = true
 	}
 
-	// Expected totals:
-	// received: 150 + 150 + 10 + 50 = 360
-	// sent: 120 + 150 + 5 + 50 = 325
-	// sendFailed: 2 + 3 + 0 + 1 = 6
-	TimeseriesVolumeMutex.Lock()
-	defer TimeseriesVolumeMutex.Unlock()
+	OtelColDiagMutex.Lock()
+	defer OtelColDiagMutex.Unlock()
 
-	if TimeseriesReceivedTotal != 360 {
-		t.Errorf("TimeseriesReceivedTotal = %f, want 360", TimeseriesReceivedTotal)
+	// Last delta: received 60-10=50, sent 55-5=50
+	// Rate = delta * (60/15) = delta * 4
+	expectedReceivedRate := 50.0 * minuteScale
+	expectedSentRate := 50.0 * minuteScale
+
+	if OtelColReceivedRate != expectedReceivedRate {
+		t.Errorf("OtelColReceivedRate = %f, want %f", OtelColReceivedRate, expectedReceivedRate)
 	}
-	if TimeseriesSentTotal != 325 {
-		t.Errorf("TimeseriesSentTotal = %f, want 325", TimeseriesSentTotal)
-	}
-
-	ExportingFailedMutex.Lock()
-	defer ExportingFailedMutex.Unlock()
-	if OtelCollectorExportingFailedCount != 6 {
-		t.Errorf("OtelCollectorExportingFailedCount = %d, want 6", OtelCollectorExportingFailedCount)
-	}
-}
-
-func TestDeltaAccumulation_NoNegativeDeltas(t *testing.T) {
-	// Verify that when current equals previous (no change), no delta is added
-
-	TimeseriesVolumeMutex.Lock()
-	origReceived := TimeseriesReceivedTotal
-	origSent := TimeseriesSentTotal
-	TimeseriesReceivedTotal = 0
-	TimeseriesSentTotal = 0
-	TimeseriesVolumeMutex.Unlock()
-
-	defer func() {
-		TimeseriesVolumeMutex.Lock()
-		TimeseriesReceivedTotal = origReceived
-		TimeseriesSentTotal = origSent
-		TimeseriesVolumeMutex.Unlock()
-	}()
-
-	// Same value twice means delta = 0, should not accumulate
-	prevReceived := 100.0
-	prevSent := 80.0
-	currentReceived := 100.0
-	currentSent := 80.0
-
-	deltaReceived := currentReceived - prevReceived
-	deltaSent := currentSent - prevSent
-
-	if deltaReceived < 0 {
-		deltaReceived = currentReceived
-	}
-	if deltaSent < 0 {
-		deltaSent = currentSent
+	if OtelColSentRate != expectedSentRate {
+		t.Errorf("OtelColSentRate = %f, want %f", OtelColSentRate, expectedSentRate)
 	}
 
-	if deltaReceived > 0 || deltaSent > 0 {
-		TimeseriesVolumeMutex.Lock()
-		TimeseriesReceivedTotal += deltaReceived
-		TimeseriesSentTotal += deltaSent
-		TimeseriesVolumeMutex.Unlock()
-	}
-
-	TimeseriesVolumeMutex.Lock()
-	defer TimeseriesVolumeMutex.Unlock()
-
-	if TimeseriesReceivedTotal != 0 {
-		t.Errorf("Expected no accumulation, got TimeseriesReceivedTotal=%f", TimeseriesReceivedTotal)
-	}
-	if TimeseriesSentTotal != 0 {
-		t.Errorf("Expected no accumulation, got TimeseriesSentTotal=%f", TimeseriesSentTotal)
+	// Total send failed: 2 + 3 + 0 + 1 = 6
+	if OtelColSendFailedTotal != 6 {
+		t.Errorf("OtelColSendFailedTotal = %f, want 6", OtelColSendFailedTotal)
 	}
 }
