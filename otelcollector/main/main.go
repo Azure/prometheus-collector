@@ -260,6 +260,9 @@ func main() {
 		// In CCP mode, expose health metrics directly without fluent-bit
 		log.Println("Starting Prometheus Collector Health metrics in CCP mode")
 		go shared.ExposePrometheusCollectorHealthMetrics()
+		// Scrape otelcollector internal metrics to feed timeseries volume counters
+		// (replaces fluent-bit's ME log parsing which is not available in CCP mode)
+		go shared.ScrapeOtelCollectorHealthMetrics()
 	}
 
 	if osType == "linux" && !otlpEnabled {
