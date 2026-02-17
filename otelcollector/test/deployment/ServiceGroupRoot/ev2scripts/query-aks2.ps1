@@ -17,6 +17,13 @@ param (
     [string]$containerName = "shellextlogs"
 )
 
+# Disable ANSI escape sequences for Linux container environment
+if ($PSStyle) {
+    $PSStyle.OutputRendering = 'PlainText'
+}
+$env:TERM = 'dumb'
+$env:NO_COLOR = '1'
+
 $cloudEnv = $null
 
 function Register-CustomAzEnvironment {
