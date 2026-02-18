@@ -80,6 +80,7 @@ type RegexValues struct {
 	ztunnel                    string
 	istiocni                   string
 	dcgmexporter               string
+	controlplaneistio          string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.

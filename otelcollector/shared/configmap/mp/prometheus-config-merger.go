@@ -637,16 +637,16 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	// Add Istio Control Plane (MCP) metrics scraping support
-	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the AKS RP
 	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
 	// The http_sd_configs endpoint is at /v1/targets and requires Bearer token auth
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		meshMemberMetricsFqdn := os.Getenv("MESH_MEMBER_METRICS_FQDN")
 		if meshMemberMetricsFqdn != "" {
 			log.Printf("Istio control plane metrics enabled with FQDN: %s\n", meshMemberMetricsFqdn)
+			parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
 
 			// Validate the URL format
-			parsedURL, parseErr := url.Parse(meshMemberMetricsFqdn)
 			if parseErr != nil {
 				log.Printf("Failed to parse MESH_MEMBER_METRICS_FQDN as URL: %s, skipping Istio scraping\n", parseErr)
 			} else if parsedURL.Host == "" {
@@ -1231,7 +1231,7 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 
 	// Add Istio Control Plane (MCP) metrics scraping support
-	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the RP
+	// This uses the MESH_MEMBER_METRICS_FQDN environment variable passed from the AKS RP
 	// The FQDN is a full URL like "https://mcp.metrics.endpoint.example.com"
 	// The http_sd_configs endpoint is at /v1/targets and requires Bearer token auth
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED"); exists && strings.ToLower(enabled) == "true" {

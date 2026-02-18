@@ -19,7 +19,6 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
-	config["controlplane-istio"] = "false"
 
 	return config, nil
 }
@@ -34,7 +33,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
-	config["controlplane-istio"] = "false"
 
 	// Override defaults with values from metricsConfigBySection
 	if schemaVersion == "v1" {
@@ -62,7 +60,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 				"kube-scheduler":          "controlplane-kube-scheduler",
 				"kube-controller-manager": "controlplane-kube-controller-manager",
 				"etcd":                    "controlplane-etcd",
-				"istio":                   "controlplane-istio",
 			}
 			for key, value := range settings {
 				if v1Key, ok := v2ToV1KeyMap[key]; ok {
@@ -80,7 +77,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	fmt.Printf("controlplane-kube-scheduler: %s\n", config["controlplane-kube-scheduler"])
 	fmt.Printf("controlplane-kube-controller-manager: %s\n", config["controlplane-kube-controller-manager"])
 	fmt.Printf("controlplane-etcd: %s\n", config["controlplane-etcd"])
-	fmt.Printf("controlplane-istio: %s\n", config["controlplane-istio"])
 
 	return config, nil
 }
@@ -112,10 +108,6 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 	if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
 		cp.ControlplaneEtcd = val
 		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
-	}
-	if val, ok := parsedConfig["controlplane-istio"]; ok && val != "" {
-		cp.ControlplaneIstio = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-istio: %v\n", cp.ControlplaneIstio)
 	}
 
 	// Check advanced mode
@@ -157,7 +149,6 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED=%v\n", cp.ControlplaneClusterAutoscaler))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_NODE_AUTO_PROVISIONING_ENABLED=%v\n", cp.ControlplaneNodeAutoProvisioning))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED=%v\n", cp.ControlplaneEtcd))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED=%v\n", cp.ControlplaneIstio))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
 
 	fmt.Println("WriteDefaultScrapeSettingsToFile::Settings written to file successfully")
