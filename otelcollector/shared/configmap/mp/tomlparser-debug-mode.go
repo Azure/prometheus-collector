@@ -62,7 +62,7 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
-			config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+			config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp_grpc", "prometheus"}
 			if os.Getenv("CCP_METRICS_ENABLED") != "true" {
 				config.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
 				config.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
