@@ -26,21 +26,21 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 
 			err := ConfigureDebugModeSettings()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify that the environment variable file is created
 			_, err = os.Stat(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify the content of the environment variable file
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-	
+
 			// Verify the modification of the YAML configuration file
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
+			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
 		})
 
 		ginkgo.It("should configure debug mode settings for a linux daemonset", func() {
@@ -49,21 +49,21 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 
 			err := ConfigureDebugModeSettings()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify that the environment variable file is created
 			_, err = os.Stat(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify the content of the environment variable file
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-	
+
 			// Verify the modification of the YAML configuration file
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
+			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
 		})
 
 		ginkgo.It("should configure debug mode settings for a windows daemonset", func() {
@@ -72,21 +72,21 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 
 			err := ConfigureDebugModeSettings()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify that the environment variable file is created
 			_, err = os.Stat(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	
+
 			// Verify the content of the environment variable file
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-	
+
 			// Verify the modification of the YAML configuration file
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
+			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
 		})
 
 		ginkgo.AfterEach(func() {
@@ -176,7 +176,7 @@ func parseYAMLConfigFile(filePath string) (map[string]interface{}, error) {
 	return config, nil
 }
 
-func createTempFiles(suffix string, debugModeString string) (error) {
+func createTempFiles(suffix string, debugModeString string) error {
 	err := os.Mkdir("temp", os.ModePerm)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func createTempFiles(suffix string, debugModeString string) (error) {
 	configMapDebugMountPath = fmt.Sprintf("temp/debug-mode-%s", suffix)
 	debugModeEnvVarPath = fmt.Sprintf("temp/config_debug_mode_env_var-%s", suffix)
 	replicaSetCollectorConfig = fmt.Sprintf("temp/collector-config-replicaset-%s.yml", suffix)
-  sourceFile := "testdata/collector-config-replicaset.yml"
+	sourceFile := "testdata/collector-config-replicaset.yml"
 
 	source, err := os.Open(sourceFile)
 	if err != nil {
@@ -216,7 +216,7 @@ func createTempFiles(suffix string, debugModeString string) (error) {
 	return nil
 }
 
-func cleanupTempFiles() (error) {
+func cleanupTempFiles() error {
 	return os.RemoveAll("temp")
 }
 
