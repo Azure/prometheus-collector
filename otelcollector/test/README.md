@@ -51,11 +51,12 @@
   - The Prometheus UI should return a 200 for its UI pages for both the `prometheus-collector` replicaset and daemonset containers.
 - Query Metrics from the AMW
   - Querying for the `up` metric returns data.
-- Health Metrics `label=ccp`
-  - The health metrics endpoint (:2234/metrics) is accessible in CCP mode.
-  - All 5 required health metrics are exposed: `timeseries_received_per_minute`, `timeseries_sent_per_minute`, `bytes_sent_per_minute`, `invalid_custom_prometheus_config`, `exporting_metrics_failed`.
-  - Health metrics have correct labels (computer, release, controller_type).
-  - fluent-bit process is NOT running in CCP mode (health metrics exposed directly).
+- Health Metrics (CCP)
+  - **These tests cannot run in the standard CI pipeline.** CCP pods live on standalone underlay clusters, not CI clusters.
+  - Run interactively via the [CCP Health Metrics Workflow](ccp/ccp-health-metrics-workflow.md) in a VS Code chat session.
+  - Validates all 8 health metrics: `timeseries_received_per_minute`, `timeseries_sent_per_minute`, `bytes_sent_per_minute`, `invalid_custom_prometheus_config`, `exporting_metrics_failed`, `otelcol_receiver_accepted_metric_points`, `otelcol_exporter_sent_metric_points`, `otelcol_exporter_send_failed_metric_points`.
+  - Validates correct labels (computer, release, controller_type).
+  - Validates CCP mode active in logs and fluent-bit NOT running.
 
 
 ## Current Labels for Tests
@@ -66,7 +67,8 @@
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 - `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
 - `fips`: Tests that should only run on clusters taht have FIPS nodes.
-- `ccp`: Tests that should only run on clusters with CCP (Control-Plane) metrics enabled.
+
+> **Note:** CCP tests are no longer run as ginkgo-e2e tests. See [CCP Health Metrics Workflow](ccp/ccp-health-metrics-workflow.md).
 
 # File Directory Structure
 ```
@@ -123,6 +125,10 @@
 │   │   ├── e2e_tests.sh                                      - The script to start the container to run the Ginkgo tests
 │   │   ├── local-e2e-tests.yaml                              - The YAML to deploy the conformance test pod locally to test any changes before using in the Arc conformance infra.
 │   │   ├── README.md
+│   ├── ccp                                                   - CCP health metrics validation (standalone-based, see workflow).
+│   │   ├── ccp-health-metrics-workflow.md                    - Interactive workflow for validating CCP health metrics.
+│   │   ├── tools/                                            - Helper scripts for the CCP workflow.
+│   │       ├── check_build.py                                - Check ADO build status for CCP image.
 │   ├── ci-cd                                                 - Files related to our CI/CD clusters
 │   │   ├── ci-cd-cluster.json                                - ARM template to deploy a new CI/CD cluster
 │   │   ├── ci-cd-cluster-parameters.json                     - ARM template parameters
