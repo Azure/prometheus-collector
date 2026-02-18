@@ -20,6 +20,11 @@ param (
 # Disable ANSI escape sequences for Linux container environment
 if ($PSStyle) {
     $PSStyle.OutputRendering = 'PlainText'
+    # Disable ANSI codes in error/warning/verbose/debug formatting
+    $PSStyle.Formatting.Error = ''
+    $PSStyle.Formatting.Warning = ''
+    $PSStyle.Formatting.Verbose = ''
+    $PSStyle.Formatting.Debug = ''
 }
 $env:TERM = 'dumb'
 $env:NO_COLOR = '1'
@@ -579,13 +584,50 @@ Stop-Transcript
 Get-ChildItem -Path "." | Select-Object Name
 
 try {
-    # Create context using connected account (no keys)
-    $ctx = New-AzStorageContext -StorageAccountName $logsStorageAccountName -UseConnectedAccount
+    # Get current Azure context to ensure we're authenticated
+    $currentContext = Get-AzContext
+    if (-not $currentContext) {
+        Write-Host "No Azure context found, skipping transcript upload"
+    } else {
+        Write-Host "Current context: $($currentContext.Account.Id)"
+        Write-Host "Current subscription: $($currentContext.Subscription.Name)"
 
-    # Upload transcript
-    Write-Host "Uploading transcript $transcriptFileName to storage account $logsStorageAccountName, container $containerName"
-    Set-AzStorageBlobContent -File $transcriptFileName -Container $containerName -Blob $transcriptFileName -Context $ctx 
+        # Verify storage account exists and get its resource ID
+        $storageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $logsStorageAccountName -ErrorAction SilentlyContinue
+        if (-not $storageAccount) {
+            Write-Host "Storage account $logsStorageAccountName not found in resource group $ResourceGroupName"
+            Write-Host "Attempting to upload anyway..."
+        } else {
+            Write-Host "Storage account found: $($storageAccount.StorageAccountName)"
+            Write-Host "Storage account resource ID: $($storageAccount.Id)"
+        }
+
+        # Create storage context using OAuth token (required for managed identity RBAC)
+        Write-Host "Creating storage context with UseConnectedAccount..."
+        $ctx = New-AzStorageContext -StorageAccountName $logsStorageAccountName -UseConnectedAccount -ErrorAction Stop
+        Write-Host "Storage context created successfully"
+
+        # Ensure container exists, create if it doesn't
+        Write-Host "Checking if container '$containerName' exists..."
+        $container = Get-AzStorageContainer -Name $containerName -Context $ctx -ErrorAction SilentlyContinue
+        if (-not $container) {
+            Write-Host "Container '$containerName' not found, creating it..."
+            New-AzStorageContainer -Name $containerName -Context $ctx -Permission Off -ErrorAction Stop
+            Write-Host "Container '$containerName' created successfully"
+        } else {
+            Write-Host "Container '$containerName' already exists"
+        }
+
+        # Upload transcript
+        Write-Host "Uploading transcript $transcriptFileName to storage account $logsStorageAccountName, container $containerName"
+        Set-AzStorageBlobContent -File $transcriptFileName -Container $containerName -Blob $transcriptFileName -Context $ctx -Force -ErrorAction Stop
+        Write-Host "Transcript uploaded successfully"
+    }
 }
 catch {
     Write-Host "Error uploading transcript: $_"
+    Write-Host "Error details: $($_.Exception.Message)"
+    if ($_.Exception.InnerException) {
+        Write-Host "Inner exception: $($_.Exception.InnerException.Message)"
+    }
 }
