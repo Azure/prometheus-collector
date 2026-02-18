@@ -1,8 +1,10 @@
 package shared
 
 import (
-	"strings"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestParseMEProcessedCountLine(t *testing.T) {
@@ -142,7 +144,7 @@ func TestParseMEProcessedCountLine_MultipleLines(t *testing.T) {
 	}
 }
 
-func TestTailMELogs(t *testing.T) {
+func TestTailMELogFile(t *testing.T) {
 	// Save and restore globals
 	TimeseriesVolumeMutex.Lock()
 	origReceived := TimeseriesReceivedTotal
@@ -153,34 +155,44 @@ func TestTailMELogs(t *testing.T) {
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
 
-	ExportingFailedMutex.Lock()
-	origFailed := OtelCollectorExportingFailedCount
-	OtelCollectorExportingFailedCount = 0
-	ExportingFailedMutex.Unlock()
-
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesReceivedTotal = origReceived
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
 		TimeseriesVolumeMutex.Unlock()
-		ExportingFailedMutex.Lock()
-		OtelCollectorExportingFailedCount = origFailed
-		ExportingFailedMutex.Unlock()
 	}()
 
-	// Simulate ME stdout with mixed log lines
-	input := strings.Join([]string{
-		`2026-02-18 12:00:00 Starting MetricsExtension`,
-		`2026-02-18 12:00:10.000 Info DefaultAccount ReceivedCount: 500 ProcessedCount: 480 ProcessedBytes: 12345 SentToPublicationCount: 475 SentToPublicationBytes: 11234`,
-		`2026-02-18 12:00:15 Some other log line`,
-		`2026-02-18 12:00:20.000 Info EventsProcessedLastPeriod: 300 TotalEventsProcessed: 1000`,
-		`2026-02-18 12:00:30.000 Info Account2 ReceivedCount: 100 ProcessedCount: 100 ProcessedBytes: 2000 SentToPublicationCount: 95 SentToPublicationBytes: 1900`,
-		`2026-02-18 12:00:40.000 Info EventsProcessedLastPeriod: 150 TotalEventsProcessed: 1150`,
-	}, "\n")
+	// Create temp file to simulate ME log
+	dir := t.TempDir()
+	logFile := filepath.Join(dir, "MetricsExtensionConsoleDebugLog.log")
+	f, err := os.Create(logFile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	reader := strings.NewReader(input)
-	TailMELogs(reader)
+	// Start the tailer in background
+	go TailMELogFile(logFile)
+
+	// Give tailer time to open and seek to end
+	time.Sleep(200 * time.Millisecond)
+
+	// Write ME log lines (these appear AFTER the tailer seeks to end)
+	lines := []string{
+		"2026-02-18 12:00:00 Starting MetricsExtension\n",
+		"2026-02-18 12:00:10.000 Info DefaultAccount ReceivedCount: 500 ProcessedCount: 480 ProcessedBytes: 12345 SentToPublicationCount: 475 SentToPublicationBytes: 11234\n",
+		"2026-02-18 12:00:15 Some other log line\n",
+		"2026-02-18 12:00:20.000 Info EventsProcessedLastPeriod: 300 TotalEventsProcessed: 1000\n",
+		"2026-02-18 12:00:30.000 Info Account2 ReceivedCount: 100 ProcessedCount: 100 ProcessedBytes: 2000 SentToPublicationCount: 95 SentToPublicationBytes: 1900\n",
+		"2026-02-18 12:00:40.000 Info EventsProcessedLastPeriod: 150 TotalEventsProcessed: 1150\n",
+	}
+	for _, line := range lines {
+		f.WriteString(line)
+	}
+	f.Sync()
+
+	// Wait for tailer to process (polls every 1s)
+	time.Sleep(3 * time.Second)
 
 	TimeseriesVolumeMutex.Lock()
 	defer TimeseriesVolumeMutex.Unlock()
@@ -199,9 +211,10 @@ func TestTailMELogs(t *testing.T) {
 	if TimeseriesReceivedTotal != 450 {
 		t.Errorf("TimeseriesReceivedTotal = %f, want 450", TimeseriesReceivedTotal)
 	}
+	f.Close()
 }
 
-func TestTailMELogs_EmptyInput(t *testing.T) {
+func TestTailMELogFile_NoNewContent(t *testing.T) {
 	TimeseriesVolumeMutex.Lock()
 	origReceived := TimeseriesReceivedTotal
 	origSent := TimeseriesSentTotal
@@ -215,8 +228,19 @@ func TestTailMELogs_EmptyInput(t *testing.T) {
 		TimeseriesVolumeMutex.Unlock()
 	}()
 
-	reader := strings.NewReader("")
-	TailMELogs(reader)
+	// Create temp file with existing content (before tailer starts)
+	dir := t.TempDir()
+	logFile := filepath.Join(dir, "MetricsExtensionConsoleDebugLog.log")
+	// Write some content BEFORE the tailer starts — it should seek past this
+	err := os.WriteFile(logFile, []byte("preexisting content\n"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go TailMELogFile(logFile)
+
+	// Wait — tailer should skip existing content, no new content arrives
+	time.Sleep(2 * time.Second)
 
 	TimeseriesVolumeMutex.Lock()
 	defer TimeseriesVolumeMutex.Unlock()

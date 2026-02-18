@@ -320,12 +320,7 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	}
 
 	// Goroutines to copy stdout and stderr to parent process
-	// In CCP mode, route ME stdout through the log tailer to parse health metrics
-	if os.Getenv("CCP_METRICS_ENABLED") == "true" {
-		go TailMELogs(stdout)
-	} else {
-		go copyOutputPipe(stdout, os.Stdout)
-	}
+	go copyOutputPipe(stdout, os.Stdout)
 	go copyOutputPipe(stderr, os.Stderr)
 
 	// Copy output to both stdout & stderr and file

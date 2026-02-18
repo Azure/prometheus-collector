@@ -259,9 +259,12 @@ func main() {
 	} else {
 		// In CCP mode, expose health metrics directly without fluent-bit.
 		// Primary health metrics (timeseries_received/sent_per_minute) are fed by
-		// ME log parsing in TailMELogs (started via StartMetricsExtensionWithConfigOverridesForUnderlay).
+		// TailMELogFile parsing /MetricsExtensionConsoleDebugLog.log (ME uses -Logger File).
 		log.Println("Starting Prometheus Collector Health metrics in CCP mode")
 		go shared.ExposePrometheusCollectorHealthMetrics()
+
+		// Tail ME log file for ProcessedCount/EventsProcessedLastPeriod → feeds primary health metrics
+		go shared.TailMELogFile("/MetricsExtensionConsoleDebugLog.log")
 
 		// Tail otelcollector log for "Exporting failed" messages → feeds exporting_metrics_failed
 		go shared.TailOtelCollectorLogFile("/opt/microsoft/otelcollector/collector-log.txt")

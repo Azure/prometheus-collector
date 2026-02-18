@@ -22,20 +22,47 @@ var (
 	meEventsProcessedRegex = regexp.MustCompile(`EventsProcessedLastPeriod: (\d+)`)
 )
 
-// TailMELogs reads ME stdout line by line, copies each line to os.Stdout,
-// and parses ProcessedCount/EventsProcessedLastPeriod lines to feed the
+// TailMELogFile tails the ME log file (e.g. /MetricsExtensionConsoleDebugLog.log)
+// line by line, parsing ProcessedCount/EventsProcessedLastPeriod lines to feed the
 // shared health metric globals (TimeseriesReceivedTotal, TimeseriesSentTotal, BytesSentTotal).
+// ME writes to this file when started with -Logger File.
 // This replaces the fluent-bit ME log parsing pipeline for CCP mode.
-func TailMELogs(reader io.Reader) {
-	scanner := bufio.NewScanner(reader)
-	// ME can emit long lines; increase buffer to 1MB
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+func TailMELogFile(filePath string) {
+	log.Printf("Waiting for ME log file: %s", filePath)
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	// Wait for the file to exist
+	for {
+		if _, err := os.Stat(filePath); err == nil {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
 
-		// Always echo to stdout so container logs are preserved
-		os.Stdout.WriteString(line + "\n")
+	log.Printf("Starting ME log tailer: %s", filePath)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("Error opening ME log file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	// Seek to end — we only care about new lines
+	file.Seek(0, io.SeekEnd)
+
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			// EOF — wait and retry (file is being appended to)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
 
 		// Parse ProcessedCount lines for SentToPublicationCount / SentToPublicationBytes
 		parseMEProcessedCountLine(line)
@@ -43,11 +70,6 @@ func TailMELogs(reader io.Reader) {
 		// Parse EventsProcessedLastPeriod lines for received count
 		parseMEEventsProcessedLine(line)
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading ME stdout: %v", err)
-	}
-	log.Println("ME stdout reader exited")
 }
 
 // parseMEProcessedCountLine extracts SentToPublicationCount and SentToPublicationBytes
