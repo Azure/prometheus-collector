@@ -3,7 +3,7 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: ${env:AZMON_CLUSTER_LABEL}
-  otlp:
+  otlp_grpc:
     endpoint: 127.0.0.1:55680
     tls:
       insecure: true
@@ -18,27 +18,27 @@ processors:
     send_batch_max_size: 7000
   resource:
     attributes:
-    - key: cluster
-      value: "${env:AZMON_CLUSTER_LABEL}"
-      action: "upsert"
-    - key: job
-      from_attribute: service.name
-      action: insert
-    - key: instance
-      from_attribute: service.instance.id
-      action: insert
+      - key: cluster
+        value: "${env:AZMON_CLUSTER_LABEL}"
+        action: "upsert"
+      - key: job
+        from_attribute: service.name
+        action: insert
+      - key: instance
+        from_attribute: service.instance.id
+        action: insert
 receivers:
-    prometheus:
-      target_allocator:
-        endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
-        interval: 30s
-        collector_id: "${env:POD_NAME}"
+  prometheus:
+    target_allocator:
+      endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
+      interval: 30s
+      collector_id: "${env:POD_NAME}"
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
-      processors: [batch,resource]
+      exporters: [otlp_grpc]
+      processors: [batch, resource]
   telemetry:
     logs:
       level: warn

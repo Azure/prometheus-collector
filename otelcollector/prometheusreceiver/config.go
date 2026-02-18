@@ -13,33 +13,21 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
-	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
 type Config struct {
 	PrometheusConfig   *PromConfig `mapstructure:"config"`
 	TrimMetricSuffixes bool        `mapstructure:"trim_metric_suffixes"`
-	// UseStartTimeMetric enables retrieving the start time of all counter metrics
-	// from the process_start_time_seconds metric. This is only correct if all counters on that endpoint
-	// started after the process start time, and the process is the only actor exporting the metric after
-	// the process started. It should not be used in "exporters" which export counters that may have
-	// started before the process itself. Use only if you know what you are doing, as this may result
-	// in incorrect rate calculations.
-	//
-	// Deprecated: use the metricstarttime processor instead.
-	UseStartTimeMetric   bool   `mapstructure:"use_start_time_metric"`
-	StartTimeMetricRegex string `mapstructure:"start_time_metric_regex"`
 
 	// ReportExtraScrapeMetrics - enables reporting of additional metrics for Prometheus client like scrape_body_size_bytes
 	//
@@ -237,22 +225,5 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 	if err := checkFile(tlsConfig.KeyFile); err != nil {
 		return fmt.Errorf("error checking client key file %q: %w", tlsConfig.KeyFile, err)
 	}
-	return nil
-}
-
-type APIServer struct {
-	Enabled      bool                    `mapstructure:"enabled"`
-	ServerConfig confighttp.ServerConfig `mapstructure:"server_config"`
-}
-
-func (cfg *APIServer) Validate() error {
-	if !cfg.Enabled {
-		return nil
-	}
-
-	if cfg.ServerConfig.Endpoint == "" {
-		return errors.New("if api_server is enabled, it requires a non-empty server_config endpoint")
-	}
-
 	return nil
 }
