@@ -61,11 +61,11 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// invalidCustomConfigMetric is true if the config provided failed validation and false otherwise
-	invalidCustomConfigMetric = prometheus.NewGaugeVec(
+	// invalidSettingsConfigMetric indicates whether the metrics settings configmap is invalid (1) or valid (0)
+	invalidSettingsConfigMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "invalid_custom_prometheus_config",
-			Help: "If an invalid custom prometheus config was given or not",
+			Name: "invalid_metrics_settings_config",
+			Help: "Whether the ama-metrics-settings-configmap is invalid (1) or valid (0)",
 		},
 		[]string{"computer", "release", "controller_type", "error"},
 	)
@@ -128,7 +128,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 	r.MustRegister(timeseriesReceivedMetric)
 	r.MustRegister(timeseriesSentMetric)
 	r.MustRegister(bytesSentMetric)
-	r.MustRegister(invalidCustomConfigMetric)
+	r.MustRegister(invalidSettingsConfigMetric)
 	r.MustRegister(exportingFailedMetric)
 	r.MustRegister(otelcolReceivedRateMetric)
 	r.MustRegister(otelcolSentRateMetric)
@@ -159,13 +159,13 @@ func ExposePrometheusCollectorHealthMetrics() {
 			BytesSentTotal = 0.0
 			TimeseriesVolumeMutex.Unlock()
 
-			isInvalidCustomConfig := 0
-			invalidConfigErrorString := ""
-			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
-				isInvalidCustomConfig = 1
-				invalidConfigErrorString = os.Getenv("INVALID_CONFIG_FATAL_ERROR")
+			isInvalidSettingsConfig := 0
+			settingsConfigErrorString := ""
+			if os.Getenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG") == "true" {
+				isInvalidSettingsConfig = 1
+				settingsConfigErrorString = os.Getenv("INVALID_SETTINGS_CONFIG_ERROR")
 			}
-			invalidCustomConfigMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType, "error": invalidConfigErrorString}).Set(float64(isInvalidCustomConfig))
+			invalidSettingsConfigMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType, "error": settingsConfigErrorString}).Set(float64(isInvalidSettingsConfig))
 
 			ExportingFailedMutex.Lock()
 			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))

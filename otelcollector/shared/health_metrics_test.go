@@ -21,12 +21,12 @@ func TestHealthMetricsRegistration(t *testing.T) {
 
 	// Create a new registry
 	registry := prometheus.NewRegistry()
-	
+
 	// Register all health metrics
 	registry.MustRegister(timeseriesReceivedMetric)
 	registry.MustRegister(timeseriesSentMetric)
 	registry.MustRegister(bytesSentMetric)
-	registry.MustRegister(invalidCustomConfigMetric)
+	registry.MustRegister(invalidSettingsConfigMetric)
 	registry.MustRegister(exportingFailedMetric)
 
 	// If we get here, registration was successful
@@ -36,7 +36,7 @@ func TestHealthMetricsRegistration(t *testing.T) {
 func TestHealthMetricsEndpoint(t *testing.T) {
 	// Create a test HTTP server
 	registry := prometheus.NewRegistry()
-	
+
 	// Create new instances of the metrics for testing
 	testTimeseriesReceived := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -59,10 +59,10 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
-	testInvalidConfig := prometheus.NewGaugeVec(
+	testInvalidSettings := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "invalid_custom_prometheus_config",
-			Help: "If an invalid custom prometheus config was given or not",
+			Name: "invalid_metrics_settings_config",
+			Help: "Whether the ama-metrics-settings-configmap is invalid (1) or valid (0)",
 		},
 		[]string{"computer", "release", "controller_type", "error"},
 	)
@@ -73,46 +73,46 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
-	
+
 	registry.MustRegister(testTimeseriesReceived)
 	registry.MustRegister(testTimeseriesSent)
 	registry.MustRegister(testBytesSent)
-	registry.MustRegister(testInvalidConfig)
+	registry.MustRegister(testInvalidSettings)
 	registry.MustRegister(testExportingFailed)
 
 	// Set some test values
 	testTimeseriesReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testTimeseriesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
-	testInvalidConfig.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test", "error": ""}).Set(0)
+	testInvalidSettings.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test", "error": ""}).Set(0)
 	testExportingFailed.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 
 	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
-	
+
 	// Create a test request
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	w := httptest.NewRecorder()
-	
+
 	// Serve the request
 	handler.ServeHTTP(w, req)
-	
+
 	// Check the response
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body := w.Body.String()
-	
+
 	// Verify all metrics are in the response
 	expectedMetrics := []string{
 		"timeseries_received_per_minute",
 		"timeseries_sent_per_minute",
 		"bytes_sent_per_minute",
-		"invalid_custom_prometheus_config",
+		"invalid_metrics_settings_config",
 		"exporting_metrics_failed",
 	}
-	
+
 	for _, metric := range expectedMetrics {
 		if !strings.Contains(body, metric) {
 			t.Errorf("Expected metric %s not found in response", metric)
@@ -165,7 +165,7 @@ func TestHealthMetricsLabels(t *testing.T) {
 
 			// Create a new registry for this test
 			r := prometheus.NewRegistry()
-			
+
 			// Create new metrics with labels
 			testMetric := prometheus.NewGaugeVec(
 				prometheus.GaugeOpts{
@@ -207,7 +207,7 @@ func TestHealthMetricsLabels(t *testing.T) {
 						for _, label := range m.GetLabel() {
 							labels[label.GetName()] = label.GetValue()
 						}
-						
+
 						if labels["computer"] != tc.nodeName {
 							t.Errorf("Expected computer=%s, got %s", tc.nodeName, labels["computer"])
 						}
@@ -228,13 +228,13 @@ func TestHealthMetricsLabels(t *testing.T) {
 	}
 }
 
-func TestInvalidCustomConfigMetric(t *testing.T) {
+func TestInvalidSettingsConfigMetric(t *testing.T) {
 	// Save original environment variables
-	origInvalidConfig := os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG")
-	origInvalidError := os.Getenv("INVALID_CONFIG_FATAL_ERROR")
+	origInvalidConfig := os.Getenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG")
+	origInvalidError := os.Getenv("INVALID_SETTINGS_CONFIG_ERROR")
 	defer func() {
-		os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", origInvalidConfig)
-		os.Setenv("INVALID_CONFIG_FATAL_ERROR", origInvalidError)
+		os.Setenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG", origInvalidConfig)
+		os.Setenv("INVALID_SETTINGS_CONFIG_ERROR", origInvalidError)
 	}()
 
 	tests := []struct {
@@ -269,22 +269,22 @@ func TestInvalidCustomConfigMetric(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", tc.invalidConfig)
-			os.Setenv("INVALID_CONFIG_FATAL_ERROR", tc.invalidError)
+			os.Setenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG", tc.invalidConfig)
+			os.Setenv("INVALID_SETTINGS_CONFIG_ERROR", tc.invalidError)
 
-			isInvalidCustomConfig := 0
-			invalidConfigErrorString := ""
-			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
-				isInvalidCustomConfig = 1
-				invalidConfigErrorString = os.Getenv("INVALID_CONFIG_FATAL_ERROR")
+			isInvalidSettingsConfig := 0
+			settingsConfigErrorString := ""
+			if os.Getenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG") == "true" {
+				isInvalidSettingsConfig = 1
+				settingsConfigErrorString = os.Getenv("INVALID_SETTINGS_CONFIG_ERROR")
 			}
 
-			if float64(isInvalidCustomConfig) != tc.expectedValue {
-				t.Errorf("Expected value %f, got %d", tc.expectedValue, isInvalidCustomConfig)
+			if float64(isInvalidSettingsConfig) != tc.expectedValue {
+				t.Errorf("Expected value %f, got %d", tc.expectedValue, isInvalidSettingsConfig)
 			}
 
-			if invalidConfigErrorString != tc.expectedErrorText {
-				t.Errorf("Expected error text %q, got %q", tc.expectedErrorText, invalidConfigErrorString)
+			if settingsConfigErrorString != tc.expectedErrorText {
+				t.Errorf("Expected error text %q, got %q", tc.expectedErrorText, settingsConfigErrorString)
 			}
 		})
 	}
@@ -300,7 +300,7 @@ func TestMetricMutexSafety(t *testing.T) {
 	TimeseriesSentTotal = 0
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
-	
+
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesReceivedTotal = origReceived
@@ -356,7 +356,7 @@ func TestExportingFailedCounter(t *testing.T) {
 	originalCount := OtelCollectorExportingFailedCount
 	OtelCollectorExportingFailedCount = 0
 	ExportingFailedMutex.Unlock()
-	
+
 	defer func() {
 		ExportingFailedMutex.Lock()
 		OtelCollectorExportingFailedCount = originalCount

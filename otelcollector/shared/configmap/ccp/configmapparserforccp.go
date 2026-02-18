@@ -15,6 +15,10 @@ func Configmapparserforccp() {
 	fmt.Printf("waiting for 30 secs...")
 	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
 
+	// Initialize settings config validation as valid; will be set to true if parsing fails
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "false", true)
+	shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", "", true)
+
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
@@ -33,7 +37,10 @@ func Configmapparserforccp() {
 	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
 		if err != nil {
-			fmt.Println("Error reading config version file:", err)
+			errMsg := fmt.Sprintf("Error reading config version file: %v", err)
+			fmt.Println(errMsg)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
+			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
 			return
 		}
 		// Remove all spaces and take the first 10 characters
@@ -52,7 +59,10 @@ func Configmapparserforccp() {
 	if shared.ExistsAndNotEmpty(configVersionPath) {
 		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
 		if err != nil {
-			fmt.Println("Error reading config schema version file:", err)
+			errMsg := fmt.Sprintf("Error reading config schema version file: %v", err)
+			fmt.Println(errMsg)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
+			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
 			return
 		}
 		// Remove all spaces and take the first 10 characters
@@ -73,14 +83,20 @@ func Configmapparserforccp() {
 		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			fmt.Printf("Error parsing files: %v\n", err)
+			errMsg := fmt.Sprintf("Error parsing v2 settings files: %v", err)
+			fmt.Println(errMsg)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
+			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
 			return
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			fmt.Printf("Error parsing config: %v\n", err)
+			errMsg := fmt.Sprintf("Error parsing v1 settings config: %v", err)
+			fmt.Println(errMsg)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
+			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
 			return
 		}
 	} else {
@@ -115,7 +131,6 @@ func Configmapparserforccp() {
 
 	prometheusCcpConfigMerger()
 
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
 
 	// No need to merge custom prometheus config, only merging in the default configs
