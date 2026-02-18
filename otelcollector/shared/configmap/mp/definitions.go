@@ -82,6 +82,7 @@ type RegexValues struct {
 	istiocni                   string
 	waypoint                   string
 	dcgmexporter               string
+	controlplaneistio          string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
