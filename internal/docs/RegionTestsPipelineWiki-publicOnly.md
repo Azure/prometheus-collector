@@ -5,6 +5,8 @@ h1 {
 }
 </style>
 
+# **Testing new regions via OneBranch pipelines (public cloud only)**
+
 # **azure-pipeline-aksdeploy.yml**
 
 This "AksDeploy" pipeline deploys the AKS cluster, AMW workspace, DCR, DCE, DCRA, and Prometheus rule groups using the ci-cd-cluster ARM template found in the GitHub prometheus-collector repository.
@@ -39,7 +41,7 @@ The "Integrated" pipeline first deploys the resources and then runs the region t
 
 # **Definition of Pipeline Variables**
 
-+ AZURESUBSCRIPTION - The name of the subscription where resources are deployed.
++ AZURESUBSCRIPTION - The ADO Service Connection providing access to the subscription and resource group where resources are deployed.
 + RESOURCE-GROUP - The name of the resource group where resources are deployed
 + PARAMETERS - A Json object giving parameter values to override defaults in the ci-cd-cluster ARM template.
 + CLUSTERNAME - The name of the AKS cluster.
