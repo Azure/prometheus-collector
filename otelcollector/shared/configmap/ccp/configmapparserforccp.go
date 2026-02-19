@@ -41,16 +41,16 @@ func Configmapparserforccp() {
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
-			return
+		} else {
+			// Remove all spaces and take the first 10 characters
+			configVersion = strings.ReplaceAll(configVersion, " ", "")
+			if len(configVersion) >= 10 {
+				configVersion = configVersion[:10]
+			}
+			// Set the environment variable
+			fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
 		}
-		// Remove all spaces and take the first 10 characters
-		configVersion = strings.ReplaceAll(configVersion, " ", "")
-		if len(configVersion) >= 10 {
-			configVersion = configVersion[:10]
-		}
-		// Set the environment variable
-		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
 	} else {
 		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
 	}
@@ -63,16 +63,16 @@ func Configmapparserforccp() {
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
-			return
+		} else {
+			// Remove all spaces and take the first 10 characters
+			configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
+			if len(configSchemaVersion) >= 10 {
+				configSchemaVersion = configSchemaVersion[:10]
+			}
+			// Set the environment variable
+			fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_SCHEMA_VERSION:", configSchemaVersion)
+			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
 		}
-		// Remove all spaces and take the first 10 characters
-		configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
-		if len(configSchemaVersion) >= 10 {
-			configSchemaVersion = configSchemaVersion[:10]
-		}
-		// Set the environment variable
-		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_SCHEMA_VERSION:", configSchemaVersion)
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
 	} else {
 		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
 	}
@@ -87,7 +87,7 @@ func Configmapparserforccp() {
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
-			return
+			fmt.Println("Continuing with default configuration despite settings parse error")
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
@@ -97,7 +97,7 @@ func Configmapparserforccp() {
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
-			return
+			fmt.Println("Continuing with default configuration despite settings parse error")
 		}
 	} else {
 		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
