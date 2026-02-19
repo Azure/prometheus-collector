@@ -538,6 +538,8 @@
       },
       "kind": "[parameters('kind')]",
       "properties": {
+        "allowSharedKeyAccess": false,
+        "publicNetworkAccess": "Enabled",
         "networkAcls": {
             "ipv6Rules": [],
             "resourceAccessRules": [],
