@@ -21,6 +21,8 @@ parameters:
 variables:
   GOPATH: 'C:\Users\cloudtest\go'
   GOMODCACHE: '$(GOPATH)\pkg\mod'
+  GOPROXY: 'https://goproxy.microsoft.com,direct'
+  GONOSUMDB: 'github.com/Azure/*,github.com/Microsoft/*'
   ManifestGeneratorTaskTimeoutInMinutes: 30
   1espt.codesignvalidation.enforced: true
 
@@ -49,11 +51,14 @@ resources:
     type: github
     endpoint: github.com_wtdoble
     name: azure/prometheus-collector
-    ##name: wtdoble/prometheus-collector 
     ref: refs/heads/williamd/agc
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    featureFlags:   # https://aka.ms/goproxy
+      golang:
+        internalModuleProxy:
+          enabled: true
     pool:
       name: 1ESPieminiBuildLarge
       image: 1ESPTGen2Large-ipie-prometheuscollector    ## https://aka.ms/1eshub
@@ -69,7 +74,6 @@ extends:
         enabled: true
         timeoutInMinutes: 30
         itemPattern: '**/*.ps1'
-        ##rootPaths: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
         rootPaths: '$(System.DefaultWorkingDirectory)/../promrepo'
       sourceRepositoriesToScan:
         exclude:
@@ -103,31 +107,34 @@ extends:
               set | findstr /i "go"
               dir "$(Agent.ToolsDirectory)\\go"
             displayName: 'Check Go Version'
-                         
-          - task: Go@0
+
+          - task: PowerShell@2
             displayName: go install ginkgo
             env:
               GOPATH: "$(GOPATH)"
               GOMODCACHE: "$(GOMODCACHE)"
             inputs:
-              command: 'install' # 'get' | 'build' | 'test' | 'custom'. Required. Command. Default: get.
-              arguments: github.com/onsi/ginkgo/v2/ginkgo@latest # string. Arguments. 
-              
+              targetType: 'inline'
+              script: |
+                Write-Host "GOPROXY: $env:GOPROXY"
+                Write-Host "GONOSUMDB: $env:GONOSUMDB"
+                go env GOPROXY
+                go install github.com/onsi/ginkgo/v2/ginkgo@latest
+
           - task: PowerShell@2
             displayName: Go pkg cleanup
             env:
               GOPATH: "$(GOPATH)"
-              GOMODCACHE: "$(GOMODCACHE)"            
+              GOMODCACHE: "$(GOMODCACHE)"
             inputs:
-              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
-              script: | # string. Required when targetType = inline. Script. 
+              targetType: 'inline'
+              script: |
                 go clean -modcache
 
           - checkout: self
             persistCredentials: true          
             path: selfrepo
           - checkout: prometheus-collector
-            ##sparseCheckoutDirectories: otelcollector/test/ci-cd otelcollector/test/ginkgo-e2e
             sparseCheckoutDirectories: otelcollector/test
             persistCredentials: true
             path: promrepo
@@ -143,10 +150,10 @@ extends:
             displayName: go mod tidy
             env:
               GOPATH: "$(GOPATH)"
-              GOMODCACHE: "$(GOMODCACHE)"            
+              GOMODCACHE: "$(GOMODCACHE)"
             inputs:
-              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
-              script: | # string. Required when targetType = inline. Script. 
+              targetType: 'inline'
+              script: |
                 $goPathDir = "$(GOPATH)"
 
                 $pkgs = @("k8s.io/client-go",
@@ -229,14 +236,14 @@ extends:
             displayName: Build regionTests - Linux
             env:
               GOPATH: "$(GOPATH)"
-              GOMODCACHE: "$(GOMODCACHE)"  
-              PATH: "$(GOPATH)\\bin;$(PATH)" # Ensure ginkgo is in the PATH  
+              GOMODCACHE: "$(GOMODCACHE)"
+              PATH: "$(GOPATH)\\bin;$(PATH)"   # Ensure ginkgo is in PATH
               GOOS: "linux"
               GOARCH: "amd64"
               CGO_ENABLED: 0
             inputs:
-              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
-              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests" # string. Optional. Working directory.
+              targetType: 'inline'
+              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests"
               script: |
                 ginkgo build
                 Rename-Item regionTests.test regionTests-linux.exe

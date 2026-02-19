@@ -276,6 +276,14 @@
             "name": "[parameters('shellExtSubnetName')]",
             "properties": {
               "addressPrefix": "10.0.1.0/24",
+              "serviceEndpoints": [
+                  {
+                      "service": "Microsoft.Storage",
+                      "locations": [
+                          "[parameters('clusterLocation')]"
+                      ]
+                  }
+              ],              
               "delegations": [
                 {
                   "name": "shellDelegation",
@@ -518,6 +526,34 @@
             ]
         }
     },
+
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "condition": "[variables('isValidClusterLocation')]",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('clusterLocation')]",
+      "sku": {
+        "name": "[parameters('skuName')]"
+      },
+      "kind": "[parameters('kind')]",
+      "properties": {
+        "networkAcls": {
+            "ipv6Rules": [],
+            "resourceAccessRules": [],
+            "bypass": "AzureServices",
+            "virtualNetworkRules": [
+                {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('shellExtSubnetName'))]",
+                    "action": "Allow"
+                }
+            ],
+            "defaultAction": "Deny"
+        }
+
+      }
+    },
+
     {
       "type": "Microsoft.Monitor/accounts",
       "condition": "[variables('isValidAmwLocation')]",
