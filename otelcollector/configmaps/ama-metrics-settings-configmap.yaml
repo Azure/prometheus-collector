@@ -31,6 +31,7 @@ data:
     controlplane-kube-scheduler = false
     controlplane-kube-controller-manager = false
     controlplane-etcd = true
+    controlplane-istio = false
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
     local-csi-driver = true
@@ -64,6 +65,7 @@ data:
     controlplane-kube-scheduler = ""
     controlplane-kube-controller-manager = ""
     controlplane-etcd = ""
+    controlplane-istio = ""
     acstor-capacity-provisioner = ""
     acstor-metrics-exporter = ""
     local-csi-driver = ""
