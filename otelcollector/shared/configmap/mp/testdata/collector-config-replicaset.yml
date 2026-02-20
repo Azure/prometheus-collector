@@ -1,5 +1,5 @@
 exporters:
-  otlp:
+  otlp_grpc:
     compression: gzip
     endpoint: 127.0.0.1:55680
     retry_on_failure:
@@ -18,15 +18,15 @@ processors:
     timeout: 200ms
   resource:
     attributes:
-    - action: upsert
-      key: cluster
-      value: ${env:AZMON_CLUSTER_LABEL}
-    - action: insert
-      from_attribute: service.name
-      key: job
-    - action: insert
-      from_attribute: service.instance.id
-      key: instance
+      - action: upsert
+        key: cluster
+        value: ${env:AZMON_CLUSTER_LABEL}
+      - action: insert
+        from_attribute: service.name
+        key: job
+      - action: insert
+        from_attribute: service.instance.id
+        key: instance
 receivers:
   prometheus:
     target_allocator:
@@ -37,13 +37,13 @@ service:
   pipelines:
     metrics:
       exporters:
-      - otlp
-      - prometheus
+        - otlp_grpc
+        - prometheus
       processors:
-      - batch
-      - resource
+        - batch
+        - resource
       receivers:
-      - prometheus
+        - prometheus
   telemetry:
     logs:
       encoding: json
