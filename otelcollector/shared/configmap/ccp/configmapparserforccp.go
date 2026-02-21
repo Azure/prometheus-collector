@@ -1,6 +1,7 @@
 package ccpconfigmapsettings
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -37,7 +38,7 @@ func Configmapparserforccp() {
 	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
 		if err != nil {
-			errMsg := fmt.Sprintf("Error reading config version file: %v", err)
+			errMsg := fmt.Sprintf("Unable to read config version from ama-metrics-settings-configmap (%s): %v. Using default configuration", configVersionPath, err)
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
@@ -59,7 +60,7 @@ func Configmapparserforccp() {
 	if shared.ExistsAndNotEmpty(configVersionPath) {
 		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
 		if err != nil {
-			errMsg := fmt.Sprintf("Error reading config schema version file: %v", err)
+			errMsg := fmt.Sprintf("Unable to read schema version from ama-metrics-settings-configmap (%s): %v. Using default configuration", configSchemaPath, err)
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
@@ -83,7 +84,7 @@ func Configmapparserforccp() {
 		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			errMsg := fmt.Sprintf("Error parsing v2 settings files: %v", err)
+			errMsg := fmt.Sprintf("Failed to parse v2 settings from ama-metrics-settings-configmap: %v. Falling back to default configuration", cleanSettingsError(err))
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
@@ -93,7 +94,7 @@ func Configmapparserforccp() {
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			errMsg := fmt.Sprintf("Error parsing v1 settings config: %v", err)
+			errMsg := fmt.Sprintf("Failed to parse v1 settings from ama-metrics-settings-configmap: %v. Falling back to default configuration", cleanSettingsError(err))
 			fmt.Println(errMsg)
 			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_METRICS_SETTINGS_CONFIG", "true", true)
 			shared.SetEnvAndSourceBashrcOrPowershell("INVALID_SETTINGS_CONFIG_ERROR", errMsg, true)
@@ -148,4 +149,18 @@ func Configmapparserforccp() {
 			fmt.Println("File copied successfully.")
 		}
 	}
+}
+
+// cleanSettingsError produces a concise, actionable error message for the health metric.
+// It strips redundant OS-level detail (e.g. duplicate paths from os.Open wrapping)
+// and adds context about the expected configmap source.
+func cleanSettingsError(err error) string {
+	if errors.Is(err, os.ErrNotExist) {
+		// Extract the path from the wrapped error chain
+		var pathErr *os.PathError
+		if errors.As(err, &pathErr) {
+			return fmt.Sprintf("settings file not found: %s (expected from ama-metrics-settings-configmap)", pathErr.Path)
+		}
+	}
+	return err.Error()
 }
