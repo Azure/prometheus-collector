@@ -1,5 +1,10 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 02-23-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260223.1`
+* Change log -
+  * golang upgrade 1.25.3 -> 1.25.7
+
 ## Release 10-30-2025
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20251030.1`
 * Change log -
