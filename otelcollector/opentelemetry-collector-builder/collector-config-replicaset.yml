@@ -5,7 +5,7 @@ exporters:
       cluster: ${env:AZMON_CLUSTER_LABEL}
   prometheus/telemetry:
     endpoint: "127.0.0.1:9095"
-  otlp:
+  otlp_grpc:
     endpoint: 127.0.0.1:55680
     tls:
       insecure: true
@@ -20,38 +20,38 @@ processors:
     send_batch_max_size: 7000
   resource:
     attributes:
-    - key: cluster
-      value: "${env:AZMON_CLUSTER_LABEL}"
-      action: "upsert"
-    - key: job
-      from_attribute: service.name
-      action: insert
-    - key: instance
-      from_attribute: service.instance.id
-      action: insert
+      - key: cluster
+        value: "${env:AZMON_CLUSTER_LABEL}"
+        action: "upsert"
+      - key: job
+        from_attribute: service.name
+        action: insert
+      - key: instance
+        from_attribute: service.instance.id
+        action: insert
   filter/telemetry:
     metrics:
       metric:
         - 'name != "scrape_samples_post_metric_relabeling"'
 receivers:
-    prometheus:
-      api_server:
-        server_config:
-          endpoint: "localhost:9092"
-      target_allocator:
-        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443
-        interval: 30s
-        collector_id: "${env:POD_NAME}"
-        tls:
-          ca_file: /etc/operator-targets/client/certs/ca.crt
-          cert_file: /etc/operator-targets/client/certs/client.crt
-          key_file: /etc/operator-targets/client/certs/client.key
+  prometheus:
+    api_server:
+      server_config:
+        endpoint: "localhost:9092"
+    target_allocator:
+      endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443
+      interval: 30s
+      collector_id: "${env:POD_NAME}"
+      tls:
+        ca_file: /etc/operator-targets/client/certs/ca.crt
+        cert_file: /etc/operator-targets/client/certs/client.crt
+        key_file: /etc/operator-targets/client/certs/client.key
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
-      processors: [batch,resource]
+      exporters: [otlp_grpc]
+      processors: [batch, resource]
   telemetry:
     logs:
       level: warn

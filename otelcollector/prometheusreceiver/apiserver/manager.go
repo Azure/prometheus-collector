@@ -97,10 +97,10 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	o := &web.Options{
 		ScrapeManager:   m.scrapeManager,
 		Context:         ctx,
-		ListenAddresses: []string{m.cfg.ServerConfig.Endpoint},
+		ListenAddresses: []string{m.cfg.ServerConfig.NetAddr.Endpoint},
 		ExternalURL: &url.URL{
 			Scheme: "http",
-			Host:   m.cfg.ServerConfig.Endpoint,
+			Host:   m.cfg.ServerConfig.NetAddr.Endpoint,
 			Path:   "",
 		},
 		RoutePrefix:    "/",
@@ -175,17 +175,18 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.NotificationsSub,
 		o.Gatherer,
 		o.Registerer,
-		nil,
+		nil, // StatsRenderer
 		o.EnableRemoteWriteReceiver,
 		o.AcceptRemoteWriteProtoMsgs,
 		o.EnableOTLPWriteReceiver,
 		o.ConvertOTLPDelta,
 		o.NativeOTLPDeltaIngestion,
-		o.CTZeroIngestionEnabled,
+		o.STZeroIngestionEnabled,
 		5*time.Minute, // LookbackDelta - Using the default value of 5 minutes
 		o.EnableTypeAndUnitLabels,
-		o.AppendMetadata,
-		nil,
+		false, // appendMetadata from remote write
+		nil,   // OverrideErrorCode
+		nil,   // FeatureRegistry
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
