@@ -2056,11 +2056,11 @@ extends:
         - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
-          HELM_SEMVER: 6.24.3-main-01-28-2026-e05105c7
+          HELM_SEMVER: 6.24.3-ext-main-01-28-2026-e05105c7
           IMAGE_TAG: 6.24.3-main-01-28-2026-e05105c7
           IMAGE_TAG_WINDOWS: 6.24.3-main-01-28-2026-e05105c7-win
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.24.3-main-01-28-2026-e05105c7
+          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.24.3-ext-main-01-28-2026-e05105c7
           #ARC_EXTENSION: false
           INCLUDE_DEPENDENT_CHARTS: true
           skipComponentGovernanceDetection: true
