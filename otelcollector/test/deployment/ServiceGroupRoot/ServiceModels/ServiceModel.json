@@ -9,6 +9,61 @@
         "environment": "$config(environment)"
   },  
   "serviceResourceGroupDefinitions": [
+     {
+      "name": "PromTestsCommonResources",
+      "subscriptionKey": "prom-test",
+      "azureResourceGroupName": "prom-test",
+      "stamps": {
+        "Count": 1
+      },
+      "scopeTags": [    
+        {
+          "name": "Common"
+        }
+      ],
+      "serviceResourceDefinitions": [
+        {
+          "name": "UserAssignedIdentity",
+          "composedOf": {
+            "template": {
+              "templatePath": "Templates/UserAssignedIdentity.Template.json"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Run.PromTests",
+      "subscriptionKey": "prom-test-$location()",
+      "azureResourceGroupName": "prom-test-$location()",
+      "stamps": {
+        "Count": 1
+      },
+      "scopeTags": [    
+        {
+          "name": "Common"
+        }
+      ],
+      "serviceResourceDefinitions": [
+        {
+          "name": "PromCollectorTestsShellExtension",
+          "composedOf": {
+            "extension": {
+              "rolloutParametersPath": "RolloutParameters/PromCollectorTests.ShellExtension.RolloutParameters.json",
+              "shell": [
+                {
+                  "type": "runScriptShell",
+                  "properties": {
+                      "imageName": "adm-mariner-20-l",
+                      "imageVersion": "v4"
+                  }                  
+                }
+              ]
+            }            
+          }
+        }
+      ]
+    },
     {
       "name": "Run.PromTests",
       "subscriptionKey": "prom-test-$location()",

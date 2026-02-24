@@ -38,9 +38,13 @@
                     "replaceWith": "$config(shellExtSubnetNameBase)"
                 },
                 {
-                    "find": "$_CLIENT_ID_$",
+                    "find": "$_CLIENT_ID_222__$",
                     "replaceWith": "$config(clientId)"
                 },
+                {
+                    "find": "$_CLIENT_ID_$",
+                    "replaceWith": "$resource($config(managedIdentityName)).action(deploy).outputs(clientId.value)"
+                },                
                 {
                     "find": "$_PRINCIPAL_ID_$",
                     "replaceWith": "$config(principalId)"
@@ -50,9 +54,13 @@
                     "replaceWith": "$config(managedIdentityName)"
                 },
                 {
-                    "find": "$_MANAGED_IDENTITY_ID_$",
+                    "find": "$_MANAGED_IDENTITY_ID_222_$",
                     "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/prom-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$config(managedIdentityName)"
                 },
+                {
+                    "find": "$_MANAGED_IDENTITY_ID_$",
+                    "replaceWith": "$resource($config(managedIdentityName)).action(deploy).outputs(id.value)"
+                },                
                 {
                     "find": "$_AKS_NAME_$",
                     "replaceWith": "aks-$azureResourceGroup()"

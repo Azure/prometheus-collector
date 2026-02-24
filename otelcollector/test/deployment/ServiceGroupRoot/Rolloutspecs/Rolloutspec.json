@@ -17,10 +17,19 @@
   },
   "orchestratedSteps": [
     {
+      "name": "deployCommonResources",
+      "targetType": "ServiceResourceGroupDefinition",
+      "targetName": "PromTestsCommonResources",
+      "actions": [ "deploy" ]
+    },
+    {
       "name": "PromCollectorTestsShellExtension",
       "targetType": "ServiceResourceDefinition",
       "targetName": "PromCollectorTestsShellExtension",
-      "actions": [ "shell/runPromCollectorTests" ]
+      "actions": [ "shell/runPromCollectorTests" ],
+      "dependsOn": [
+        "deployCommonResources"
+      ]
     }
   ]
 }

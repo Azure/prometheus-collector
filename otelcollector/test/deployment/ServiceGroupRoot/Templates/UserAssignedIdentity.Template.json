@@ -1,0 +1,44 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "managedIdentityName": {
+            "type": "string",
+            "defaultValue": "prom-test-msi"
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "prom-test"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2024-11-30",
+            "name": "[parameters('managedIdentityName')]",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "location": "[parameters('location')]",
+            "tags": {},
+            "properties": {
+                "isolationScope": "None"
+            }
+        }
+    ],
+    "outputs": {
+        "tenantId": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2024-11-30').tenantId]"
+        },        
+        "id": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+        },   
+        "clientId": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2024-11-30').clientId]"
+        },
+        "principalId": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2024-11-30').principalId]"
+        }
+    }
+}
