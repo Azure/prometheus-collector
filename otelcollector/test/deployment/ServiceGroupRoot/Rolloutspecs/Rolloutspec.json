@@ -17,9 +17,9 @@
   },
   "orchestratedSteps": [
     {
-      "name": "deployCommonResources",
-      "targetType": "ServiceResourceGroupDefinition",
-      "targetName": "PromTestsCommonResources",
+      "name": "UserAssignedIdentity",
+      "targetType": "serviceResourceDefinitions",
+      "targetName": "UserAssignedIdentity",
       "actions": [ "deploy" ]
     },
     {
