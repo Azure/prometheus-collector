@@ -18,7 +18,7 @@
   "orchestratedSteps": [
     {
       "name": "UserAssignedIdentity",
-      "targetType": "serviceResourceDefinitions",
+      "targetType": "ServiceResourceDefinition",
       "targetName": "UserAssignedIdentity",
       "actions": [ "deploy" ]
     },
@@ -28,7 +28,7 @@
       "targetName": "PromCollectorTestsShellExtension",
       "actions": [ "shell/runPromCollectorTests" ],
       "dependsOn": [
-        "deployCommonResources"
+        "UserAssignedIdentity"
       ]
     }
   ]
