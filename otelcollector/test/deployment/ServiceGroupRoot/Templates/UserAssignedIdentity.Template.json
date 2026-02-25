@@ -8,7 +8,7 @@
         },
         "location": {
             "type": "string",
-            "defaultValue": "prom-test"
+            "defaultValue": "[resourceGroup().location]"
         }
     },
     "resources": [
