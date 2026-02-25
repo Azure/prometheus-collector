@@ -26,7 +26,8 @@
           "name": "UserAssignedIdentity",
           "composedOf": {
             "arm": {
-              "templatePath": "Templates/UserAssignedIdentity.Template.json"
+              "templatePath": "Templates/UserAssignedIdentity.Template.json",
+              "parametersPath": "Parameters/UserAssignedIdentity.Parameters.json"
             }
           }
         }
