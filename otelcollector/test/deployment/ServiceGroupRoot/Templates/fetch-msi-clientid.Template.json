@@ -22,4 +22,5 @@
       "value": "[reference(resourceId(parameters('msiResourceGroup'), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2018-11-30').principalId]"
     }    
   }
+  
 }
