@@ -11,16 +11,53 @@
       "defaultValue": "prom-test"
     }
   },
-  "resources": [],
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2021-04-01",
+      "name": "fetchMsiProperties",
+      "resourceGroup": "[parameters('msiResourceGroup')]",
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+          "msiName": {
+            "value": "[parameters('msiName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "msiName": {
+              "type": "string"
+            }
+          },
+          "resources": [],
+          "outputs": {
+            "clientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2023-01-31').clientId]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2023-01-31').principalId]"
+            }
+          }
+        }
+      }
+    }
+  ],
   "outputs": {
     "clientId": {
       "type": "string",
-      "value": "[reference(resourceId(parameters('msiResourceGroup'), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2018-11-30').clientId]"
+      "value": "[reference('fetchMsiProperties').outputs.clientId.value]"
     },
     "principalId": {
       "type": "string",
-      "value": "[reference(resourceId(parameters('msiResourceGroup'), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2018-11-30').principalId]"
-    }    
+      "value": "[reference('fetchMsiProperties').outputs.principalId.value]"
+    }
   }
-  
 }
