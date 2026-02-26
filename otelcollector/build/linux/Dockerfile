@@ -179,49 +179,49 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-# ENTRYPOINT ["./opt/main"]
+ENTRYPOINT ["./opt/main"]
 
-FROM mcr.microsoft.com/azurelinux/base/core:3.0
-# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
-# Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
-# Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
-# Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
-# Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
-# Below is for CIAgentPromCollectorAI AppInsights Resource in Bleu
-ENV APPLICATIONINSIGHTS_AUTH_BLEU NTI3MjJjYTgtYWZiMy1iYWVjLWFiMWEtZGYzZjZjNDZlNWE5
-# Set environment variables for mdsd
-ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
-ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
-ENV MDSD_FLUENT_SOCKET_PORT="28230"
-ENV ENABLE_MCS="true"
-ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
-ENV MDSD_USE_LOCAL_PERSISTENCY="false"
-ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
-ENV TELEMETRY_DISABLED false
-# Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
-ENV MALLOC_ARENA_MAX=2
-ENV PATH="/busybin:${PATH}"
-ENV OS_TYPE "linux"
+# FROM mcr.microsoft.com/azurelinux/base/core:3.0
+# # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+# # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
+# # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
+# # Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
+# # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# # Below is for CIAgentPromCollectorAI AppInsights Resource in Bleu
+# ENV APPLICATIONINSIGHTS_AUTH_BLEU NTI3MjJjYTgtYWZiMy1iYWVjLWFiMWEtZGYzZjZjNDZlNWE5
+# # Set environment variables for mdsd
+# ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+# ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+# ENV MDSD_FLUENT_SOCKET_PORT="28230"
+# ENV ENABLE_MCS="true"
+# ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+# ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+# ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
+# ENV TELEMETRY_DISABLED false
+# # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
+# ENV MALLOC_ARENA_MAX=2
+# ENV PATH="/busybin:${PATH}"
+# ENV OS_TYPE "linux"
 
-# files
-COPY --from=builder /opt /opt
-COPY --from=builder /etc /etc
+# # files
+# COPY --from=builder /opt /opt
+# COPY --from=builder /etc /etc
 # COPY --from=builder /busybin /busybin
-COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
-COPY --from=builder /var/opt/microsoft /var/opt/microsoft
+# COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
+# COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 # COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 # COPY --from=builder /var/spool/cron /var/spool/cron
 # COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 # COPY --from=builder /usr/share/pki/ /usr/share/pki
-COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
-COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
+# COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
+# COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
-# executables
+# # executables
 # COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 # COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 # COPY --from=builder /usr/bin/bash /usr/bin/bash
@@ -241,7 +241,7 @@ COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparse
 # COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
 # COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 
-# bash dependencies
+# # bash dependencies
 # COPY --from=builder /usr/lib/libreadline.so.8 /usr/lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # # inotifywait dependencies
 # COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
@@ -273,10 +273,10 @@ COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparse
 # COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
 # COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 
-# Run the Go executable, entrypoint
-ENTRYPOINT ["./opt/main"]
+# # Run the Go executable, entrypoint
+# ENTRYPOINT ["./opt/main"]
