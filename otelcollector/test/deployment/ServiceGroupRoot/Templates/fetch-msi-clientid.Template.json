@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "msiName": {
+      "type": "string",
+      "defaultValue": "prom-test-msi"
+    },
+    "msiResourceGroup": {
+      "type": "string",
+      "defaultValue": "prom-test"
+    }
+  },
+  "resources": [],
+  "outputs": {
+    "clientId": {
+      "type": "string",
+      "value": "[reference(resourceId(parameters('msiResourceGroup'), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2018-11-30').clientId]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId(parameters('msiResourceGroup'), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('msiName')), '2018-11-30').principalId]"
+    }    
+  }
+}

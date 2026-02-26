@@ -43,7 +43,7 @@
                 },
                 {
                     "find": "$_CLIENT_ID_$",
-                    "replaceWith": "$resource(UserAssignedIdentity).action(deploy).outputs(clientId)"
+                    "replaceWith": "$resource(FetchMSIClientId).action(deploy).outputs(clientId.value)"
                 },                
                 {
                     "find": "$_PRINCIPAL_ID_$",
@@ -54,7 +54,7 @@
                     "replaceWith": "$config(managedIdentityName)"
                 },
                 {
-                    "find": "$_MANAGED_IDENTITY_ID_222_$",
+                    "find": "$_MANAGED_IDENTITY_ID_$",
                     "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/prom-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$config(managedIdentityName)"
                 },
                 {

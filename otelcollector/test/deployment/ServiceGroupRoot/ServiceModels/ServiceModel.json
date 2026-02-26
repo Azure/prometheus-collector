@@ -47,6 +47,15 @@
       ],
       "serviceResourceDefinitions": [
         {
+          "name": "FetchMSIClientId",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/fetch-msi-clientid.Template.json",
+              "parametersPath": "Parameters/fetch-msi-clientid.parameters.json"
+            }
+          }          
+        },       
+        {
           "name": "PromCollectorTestsShellExtension",
           "composedOf": {
             "extension": {

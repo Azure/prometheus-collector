@@ -23,12 +23,22 @@
       "actions": [ "deploy" ]
     },
     {
+       "name": "FetchMSIClientId",
+       "targetType": "ServiceResourceDefinition",
+       "targetName": "FetchMSIClientId",
+       "actions": [ "deploy" ],
+       "dependsOn": [
+         "UserAssignedIdentity"
+       ]
+    },      
+    {
       "name": "PromCollectorTestsShellExtension",
       "targetType": "ServiceResourceDefinition",
       "targetName": "PromCollectorTestsShellExtension",
       "actions": [ "shell/runPromCollectorTests" ],
       "dependsOn": [
-        "UserAssignedIdentity"
+        "UserAssignedIdentity",
+        "FetchMSIClientId"
       ]
     }
   ]
