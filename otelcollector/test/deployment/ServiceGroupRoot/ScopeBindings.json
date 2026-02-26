@@ -43,7 +43,7 @@
                 },
                 {
                     "find": "$_CLIENT_ID_$",
-                    "replaceWith": "$resource(UserAssignedIdentity).action(deploy).outputs(clientId.value)"
+                    "replaceWith": "$resource(UserAssignedIdentity).action(deploy).outputs(clientId)"
                 },                
                 {
                     "find": "$_PRINCIPAL_ID_$",
@@ -59,7 +59,7 @@
                 },
                 {
                     "find": "$_MANAGED_IDENTITY_ID_$",
-                    "replaceWith": "$resource(UserAssignedIdentity).action(deploy).outputs(id.value)"
+                    "replaceWith": "$resource(UserAssignedIdentity).action(deploy).outputs(id)"
                 },                
                 {
                     "find": "$_AKS_NAME_$",
