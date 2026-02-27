@@ -46,9 +46,13 @@
                     "replaceWith": "$config(clientId)"
                 },                
                 {
-                    "find": "$_PRINCIPAL_ID_$",
+                    "find": "$_PRINCIPAL_ID_RES_$",
                     "replaceWith": "$resource(FetchMSIClientId).action(deploy).outputs(principalId)"
                 },
+                {
+                    "find": "$_PRINCIPAL_ID_$",
+                    "replaceWith": "$config(principalId)"
+                },                
                 {
                     "find": "$_MANAGED_IDENTITY_NAME_$",
                     "replaceWith": "$config(managedIdentityName)"
@@ -71,8 +75,8 @@
                 },
                 {
                     "find": "$_ENABLE_DEFENDER_$",
-                    "replaceWith": "true"
-                }
+                    "replaceWith": true
+                },
                 {
                     "find": "$_SHELL_SUBNET_ID_$",
                     "replaceWith": "/subscriptions/$azureSubscriptionId()/resourceGroups/$azureResourceGroup()/providers/Microsoft.Network/virtualNetworks/$config(vnetNameBase)/subnets/$config(shellExtSubnetNameBase)"
