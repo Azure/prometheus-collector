@@ -39,7 +39,7 @@
             },
             {
                 "name": "AZURE_SDK_GO_LOGGING",
-                "value": "all"
+                "value": "$_AZURE_SDK_GO_LOGGING_$"
             }            
         ],                    
           "identity": {

@@ -65,7 +65,7 @@
     },
     "clusterName": {
       "type": "string",
-      "defaultValue": "[concat('aks-cluster-', resourceGroup().location)]  ",
+      "defaultValue": "[concat('aks-cluster-', resourceGroup().location)]",
       "metadata": {
         "description": "The name of the Managed Cluster resource."
       }
@@ -537,6 +537,9 @@
         "name": "[parameters('skuName')]"
       },
       "kind": "[parameters('kind')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
       "properties": {
         "allowSharedKeyAccess": false,
         "publicNetworkAccess": "Enabled",
@@ -575,9 +578,9 @@
         "sku": {
           "name": "PerGB2018"
         },
-        "retentionInDays": "30",
+        "retentionInDays": 30,
         "workspaceCapping": {
-          "dailyQuotaGb": "-1"
+          "dailyQuotaGb": -1
         },
         "publicNetworkAccessForIngestion": "Enabled",
         "publicNetworkAccessForQuery": "Enabled"
@@ -734,6 +737,14 @@
         ],
         "autoUpgradeProfile": {
           "nodeOSUpgradeChannel": "NodeImage"
+        },
+        "securityProfile": {
+          "defender": {
+            "securityMonitoring": {
+              "enabled": "[parameters('enableDefender')]"
+            },
+            "logAnalyticsWorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
+          }          
         },
         "azureMonitorProfile": {
           "metrics": {
@@ -1030,7 +1041,7 @@
           "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
           "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
         ],
-        "enabled": "true",
+        "enabled": true,
         "clusterName": "[parameters('clusterName')]",
         "interval": "PT1M",
         "rules": [
@@ -1113,7 +1124,7 @@
           "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
           "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
         ],
-        "enabled": "true",
+        "enabled": true,
         "clusterName": "[parameters('clusterName')]",
         "interval": "PT1M",
         "rules": [
@@ -1229,7 +1240,7 @@
               "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
               "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
           ],
-          "enabled": "false",
+          "enabled": false,
           "clusterName": "[parameters('clusterName')]",
           "rules": [
               {
@@ -1413,11 +1424,11 @@
                   ]
               },
               {
-                  "alert": "Concat['CPU usage % greater than 75 for prometheus-collector on cluster', parameters('clusterName')]",
+                  "alert": "[Concat('CPU usage % greater than 75 for prometheus-collector on cluster', parameters('clusterName'))]",
                   "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\"}) )) by (container, pod) *100 > 75",
                   "for": "PT3M",
                   "annotations": {
-                      "description": "Concat['CPU usage greater than 75% for prometheus-collector on cluster', parameters('clusterName')]"
+                      "description": "[Concat('CPU usage greater than 75% for prometheus-collector on cluster', parameters('clusterName'))]"
                   },
                   "severity": 4,
                   "resolveConfiguration": {

@@ -46,6 +46,9 @@
     },
     "logAnalyticsWorkspaceName": {
       "value": "$_LOG_ANALYTICS_WORKSPACE_NAME_$"
-    }         
+    },
+    "enableDefender": {
+      "value": "$_ENABLE_DEFENDER_$"  
+    }    
   }
 }
