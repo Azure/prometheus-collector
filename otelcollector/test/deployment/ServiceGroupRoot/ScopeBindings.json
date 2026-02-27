@@ -39,7 +39,7 @@
                 },
                 {
                     "find": "$_CLIENT_ID_$",
-                    "replaceWith": "$resource(FetchMSIClientId).action(deploy).outputs(clientId)"
+                    "replaceWith": "$config(clientId)"
                 },                
                 {
                     "find": "$_PRINCIPAL_ID_$",

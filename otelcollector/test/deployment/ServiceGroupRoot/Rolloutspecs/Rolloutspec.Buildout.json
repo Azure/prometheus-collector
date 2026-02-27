@@ -17,17 +17,16 @@
   },
   "orchestratedSteps": [
     {
+      "name": "Deploy.UserAssignedIdentity",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "UserAssignedIdentity",
+      "actions": [ "deploy" ]
+    },    
+    {
       "name": "Deploy.AksCluster",
       "targetType": "ServiceResourceDefinition",
       "targetName": "Deploy.AksCluster",
       "actions": [ "deploy" ]
-    },
-    {
-      "name": "Deploy.ClusterRoleAssignments",
-      "targetType": "ServiceResourceDefinition",
-      "targetName": "Deploy.ClusterRoleAssignments",
-      "actions": [ "deploy" ],
-      "dependsOn": ["Deploy.AksCluster"]
-    }    
+    }   
   ]
 }

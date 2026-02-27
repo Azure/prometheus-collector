@@ -15,30 +15,29 @@
       }
     }
   },
-  "orchestratedSteps": [
+  "orchestratedSteps": [    
     {
-      "name": "UserAssignedIdentity",
-      "targetType": "ServiceResourceDefinition",
-      "targetName": "UserAssignedIdentity",
-      "actions": [ "deploy" ]
-    },
-    {
-       "name": "FetchMSIClientId",
+       "name": "Deploy.FetchMSIClientId",
        "targetType": "ServiceResourceDefinition",
        "targetName": "FetchMSIClientId",
-       "actions": [ "deploy" ],
+       "actions": [ "deploy" ]
+    },
+    {
+      "name": "Deploy.ClusterRoleAssignments",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "ClusterRoleAssignments",
+      "actions": [ "deploy" ],
        "dependsOn": [
-         "UserAssignedIdentity"
+         "Deploy.FetchMSIClientId"
        ]
-    },      
+    },       
     {
       "name": "PromCollectorTestsShellExtension",
       "targetType": "ServiceResourceDefinition",
       "targetName": "PromCollectorTestsShellExtension",
       "actions": [ "shell/runPromCollectorTests" ],
       "dependsOn": [
-        "UserAssignedIdentity",
-        "FetchMSIClientId"
+        "Deploy.ClusterRoleAssignments"
       ]
     }
   ]

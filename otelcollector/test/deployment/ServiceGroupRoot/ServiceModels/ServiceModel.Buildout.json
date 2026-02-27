@@ -9,6 +9,30 @@
         "environment": "$config(environment)"
   },  
   "serviceResourceGroupDefinitions": [
+     {
+      "name": "PromTestsCommonResources",
+      "subscriptionKey": "prom-test",
+      "azureResourceGroupName": "prom-test",
+      "stamps": {
+        "Count": 1
+      },
+      "scopeTags": [    
+        {
+          "name": "Common"
+        }
+      ],
+      "serviceResourceDefinitions": [
+        {
+          "name": "UserAssignedIdentity",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/UserAssignedIdentity.Template.json",
+              "parametersPath": "Parameters/UserAssignedIdentity.Parameters.json"
+            }
+          }
+        }
+      ]
+    },    
     {
       "name": "Deploy.AksCluster",
       "subscriptionKey": "prom-test-$location()",
@@ -30,16 +54,7 @@
               "parametersPath": "Parameters/ci-cd-cluster.parameters.json"
             }
           }
-        },
-        {
-          "name": "Deploy.ClusterRoleAssignments",
-          "composedOf": {
-            "arm": {
-              "templatePath": "Templates/RoleAssignments.Template.json",
-              "parametersPath": "Parameters/RoleAssignments.Parameters.json"
-            }
-          }
-        }        
+        }       
       ]
     }
 
