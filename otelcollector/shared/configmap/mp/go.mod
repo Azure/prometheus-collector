@@ -15,6 +15,8 @@ require (
 )
 
 require (
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
@@ -23,11 +25,14 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kr/text v0.2.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/prometheus/client_golang v1.20.4 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect

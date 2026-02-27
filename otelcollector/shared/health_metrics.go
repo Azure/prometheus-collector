@@ -1,0 +1,191 @@
+package shared
+
+import (
+	"log"
+	"math"
+	"net/http"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+var (
+	// TimeseriesReceivedTotal adds up the number of timeseries received that is logged by ME in a minute
+	TimeseriesReceivedTotal float64 = 0
+
+	// TimeseriesSentTotal adds up the number of timeseries sent that is logged by ME in a minute
+	TimeseriesSentTotal float64 = 0
+
+	// BytesSentTotal adds up the number of timeseries sent that is logged by ME in a minute
+	BytesSentTotal float64 = 0
+
+	// TimeseriesVolumeTicker tracks the minute-long period for adding up the number of timeseries and bytes logged by ME
+	TimeseriesVolumeTicker *time.Ticker
+
+	// TimeseriesVolumeMutex handles adding to the timeseries volume totals and setting these values as gauges for Prometheus metrics
+	TimeseriesVolumeMutex = &sync.Mutex{}
+
+	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
+	ExportingFailedMutex = &sync.Mutex{}
+
+	// OtelCollectorExportingFailedCount tracks the number of times exporting failed
+	OtelCollectorExportingFailedCount = 0
+
+	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
+	timeseriesReceivedMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "timeseries_received_per_minute",
+			Help: "Number of timeseries to be sent to storage",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries sent in a minute
+	timeseriesSentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "timeseries_sent_per_minute",
+			Help: "Number of timeseries sent to storage",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// bytesSentMetric is the Prometheus metric measuring the number of bytes sent in a minute
+	bytesSentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "bytes_sent_per_minute",
+			Help: "Number of bytes of timeseries sent to storage",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// invalidSettingsConfigMetric indicates whether the metrics settings configmap is invalid (1) or valid (0)
+	invalidSettingsConfigMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "invalid_metrics_settings_config",
+			Help: "Whether the ama-metrics-settings-configmap is invalid (1) or valid (0)",
+		},
+		[]string{"computer", "release", "controller_type", "error"},
+	)
+
+	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
+	exportingFailedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "exporting_metrics_failed",
+			Help: "If exporting metrics failed or not",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// Diagnostic metrics from otelcollector internal counters (supplementary to ME-based health metrics)
+	// These help diagnose where failures occur: otelcol→ME vs ME→workspace
+
+	// otelcolReceivedRateMetric shows what otelcollector's receiver accepted per minute
+	otelcolReceivedRateMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_receiver_accepted_metric_points_per_minute",
+			Help: "Rate of metric points accepted by otelcollector receiver (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelcolSentRateMetric shows what otelcollector's exporter sent to ME per minute
+	otelcolSentRateMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_exporter_sent_metric_points_per_minute",
+			Help: "Rate of metric points sent by otelcollector exporter to ME (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelcolSendFailedMetric shows cumulative metric points that failed to export from otelcol to ME
+	otelcolSendFailedTotalMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "otelcol_exporter_send_failed_metric_points_total",
+			Help: "Total metric points that failed to export from otelcollector to ME",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+)
+
+const (
+	prometheusCollectorHealthInterval = 60
+	prometheusCollectorHealthPort     = ":2234"
+)
+
+// ExposePrometheusCollectorHealthMetrics exposes Prometheus metrics about the health of the agent
+// This can be called from both CCP mode (main.go) and non-CCP mode (fluent-bit plugin)
+func ExposePrometheusCollectorHealthMetrics() {
+	// Get common properties from environment variables
+	computer := GetEnv("NODE_NAME", "")
+	helmReleaseName := GetEnv("HELM_RELEASE_NAME", "")
+	controllerType := GetEnv("CONTROLLER_TYPE", "")
+
+	// A new registry excludes go_* and promhttp_* metrics for the endpoint
+	r := prometheus.NewRegistry()
+	r.MustRegister(timeseriesReceivedMetric)
+	r.MustRegister(timeseriesSentMetric)
+	r.MustRegister(bytesSentMetric)
+	r.MustRegister(invalidSettingsConfigMetric)
+	r.MustRegister(exportingFailedMetric)
+	r.MustRegister(otelcolReceivedRateMetric)
+	r.MustRegister(otelcolSentRateMetric)
+	r.MustRegister(otelcolSendFailedTotalMetric)
+
+	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
+	http.Handle("/metrics", handler)
+
+	go func() {
+		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(prometheusCollectorHealthInterval))
+		lastTickerStart := time.Now()
+
+		for ; true; <-TimeseriesVolumeTicker.C {
+			elapsed := time.Since(lastTickerStart)
+			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(prometheusCollectorHealthInterval)
+
+			TimeseriesVolumeMutex.Lock()
+			timeseriesReceivedRate := math.Round(TimeseriesReceivedTotal / timePassedInMinutes)
+			timeseriesSentRate := math.Round(TimeseriesSentTotal / timePassedInMinutes)
+			bytesSentRate := math.Round(BytesSentTotal / timePassedInMinutes)
+
+			timeseriesReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesReceivedRate)
+			timeseriesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
+			bytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
+
+			TimeseriesReceivedTotal = 0.0
+			TimeseriesSentTotal = 0.0
+			BytesSentTotal = 0.0
+			TimeseriesVolumeMutex.Unlock()
+
+			isInvalidSettingsConfig := 0
+			settingsConfigErrorString := ""
+			if os.Getenv("AZMON_INVALID_METRICS_SETTINGS_CONFIG") == "true" {
+				isInvalidSettingsConfig = 1
+				settingsConfigErrorString = os.Getenv("INVALID_SETTINGS_CONFIG_ERROR")
+			}
+			invalidSettingsConfigMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType, "error": settingsConfigErrorString}).Set(float64(isInvalidSettingsConfig))
+
+			ExportingFailedMutex.Lock()
+			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))
+			OtelCollectorExportingFailedCount = 0
+			ExportingFailedMutex.Unlock()
+
+			// Update diagnostic metrics from otelcol scraper
+			OtelColDiagMutex.Lock()
+			otelcolReceivedRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
+			otelcolSentRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSentRate)
+			otelcolSendFailedTotalMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSendFailedTotal)
+			OtelColDiagMutex.Unlock()
+
+			lastTickerStart = time.Now()
+		}
+	}()
+
+	log.Printf("Starting Prometheus Collector Health metrics endpoint on %s\n", prometheusCollectorHealthPort)
+	err := http.ListenAndServe(prometheusCollectorHealthPort, nil)
+	if err != nil {
+		log.Printf("Error for Prometheus Collector Health endpoint: %s\n", err.Error())
+	}
+}

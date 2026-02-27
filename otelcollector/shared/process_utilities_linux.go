@@ -322,7 +322,6 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string,
 	}
 
 	// Goroutines to copy stdout and stderr to parent process
-	// Copy output to only stdout & stderr
 	go copyOutputPipe(stdout, os.Stdout)
 	go copyOutputPipe(stderr, os.Stderr)
 
