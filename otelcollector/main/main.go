@@ -40,7 +40,7 @@ func main() {
 	if osType == "windows" {
 		env := strings.ToLower(customEnvironment)
 		switch env {
-		case "usnat", "ussec", "azurebleucloud":
+		case "usnat", "ussec", "azurebleucloud", "azuredeloscloud":
 			shared.BootstrapCACertificates()
 		default:
 			// non-sovereign cloud

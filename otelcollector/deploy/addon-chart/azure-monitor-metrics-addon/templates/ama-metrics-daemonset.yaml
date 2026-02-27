@@ -217,14 +217,14 @@ spec:
               name: ama-metrics-proxy-cert
               readOnly: true
             {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 8080
+          #   initialDelaySeconds: 60
+          #   periodSeconds: 15
+          #   timeoutSeconds: 5
+          #   failureThreshold: 3
         {{- if $arcExtensionSettings.isArcExtension }}
           {{- if (eq $arcExtensionSettings.distribution "openshift") }}
         - name: arc-msi-adapter
@@ -580,19 +580,19 @@ spec:
               readOnly: true
               mountPath: /var/log/pods
           {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
-          {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") }}
+          {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") (eq $cloudEnv "azuredeloscloud") }}
             - mountPath: C:\ca
               name: ca-certs
               readOnly: true
           {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            periodSeconds: 60
-            initialDelaySeconds: 300
-            timeoutSeconds: 60
-            failureThreshold: 3
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 8080
+          #   periodSeconds: 60
+          #   initialDelaySeconds: 300
+          #   timeoutSeconds: 60
+          #   failureThreshold: 3
         - name: addon-token-adapter-win
           command:
            - addon-token-adapter-win
@@ -662,7 +662,7 @@ spec:
             secretName: ama-metrics-mtls-secret
             optional: true
       {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
-      {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") }}
+      {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") (eq $cloudEnv "azuredeloscloud") }}
         - name: ca-certs
           hostPath:
             path: C:\ca
