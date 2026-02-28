@@ -231,7 +231,7 @@ spec:
                   name: kube-apiserver-ssl
               - secret:
                   name: etcd-client-tls
-        - name: ama-metrics-token
+        - name: mcp-metrics-ama-metrics-token
           projected:
             defaultMode: 420
             sources:
