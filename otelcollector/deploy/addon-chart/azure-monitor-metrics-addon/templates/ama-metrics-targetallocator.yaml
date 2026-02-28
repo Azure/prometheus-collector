@@ -91,7 +91,7 @@ spec:
 {{- end }}
         {{- if .Values.global.commonGlobals.endpointFQDN }}
         - mountPath: /var/run/secrets/ama-metrics
-          name: ama-metrics-token
+          name: mcp-metrics-ama-metrics-token
           readOnly: true
         {{- end }}
         livenessProbe:
@@ -177,8 +177,6 @@ spec:
         - name: MESH_MEMBER_METRICS_FQDN
           value: "{{ .Values.AzureMonitorMetrics.MeshMembershipMetricsFQDN }}"
         {{- end }}
-        - name: ENDPOINT_FQDN
-          value: "{{ .Values.global.commonGlobals.endpointFQDN }}"
         ports:
         - containerPort: 8081
           name: health
@@ -194,11 +192,6 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
-          {{- if .Values.global.commonGlobals.endpointFQDN }}
-          - mountPath: /var/run/secrets/ama-metrics
-            name: ama-metrics-token
-            readOnly: true
-          {{- end }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
           - mountPath: /etc/operator-targets/client/certs
             name: ama-metrics-operator-targets-client-tls-secret-volume
@@ -299,7 +292,7 @@ spec:
       - name: ta-config-shared
         emptyDir: {}
       {{- if .Values.global.commonGlobals.endpointFQDN }}
-      - name: ama-metrics-token
+      - name: mcp-metrics-ama-metrics-token
         projected:
           defaultMode: 420
           sources:

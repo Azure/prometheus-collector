@@ -227,7 +227,7 @@ spec:
               readOnly: true
             {{- if .Values.global.commonGlobals.endpointFQDN }}
             - mountPath: /var/run/secrets/ama-metrics
-              name: ama-metrics-token
+              name: mcp-metrics-ama-metrics-token
               readOnly: true
             {{- end }}
             - name: host-log-containers
@@ -478,12 +478,12 @@ spec:
             optional: true
         {{- end }}
 {{- if .Values.global.commonGlobals.endpointFQDN }}
-      - name: ama-metrics-token
-        projected:
-          defaultMode: 420
-          sources:
-            - serviceAccountToken:
-                path: token
-                expirationSeconds: 3600
-                audience: {{ printf "https://%s:443" .Values.global.commonGlobals.endpointFQDN | quote }}
-        {{- end }}
+        - name: mcp-metrics-ama-metrics-token
+          projected:
+            defaultMode: 420
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+                  audience: {{ printf "https://%s:443" .Values.global.commonGlobals.endpointFQDN | quote }}
+{{- end }}
