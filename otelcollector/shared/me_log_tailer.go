@@ -74,6 +74,8 @@ func TailMELogFile(filePath string) {
 
 // parseMEProcessedCountLine extracts SentToPublicationCount and SentToPublicationBytes
 // from an ME log line and feeds them into the shared globals.
+// It also computes ME-level export failures (ProcessedCount - SentToPublicationCount)
+// for metric points that ME received but couldn't publish to the workspace.
 func parseMEProcessedCountLine(line string) {
 	if !strings.Contains(line, "ProcessedCount:") {
 		return
@@ -81,6 +83,11 @@ func parseMEProcessedCountLine(line string) {
 
 	matches := meProcessedCountRegex.FindStringSubmatch(line)
 	if len(matches) < 8 {
+		return
+	}
+
+	processedCount, err := strconv.ParseFloat(matches[4], 64)
+	if err != nil {
 		return
 	}
 
@@ -98,6 +105,14 @@ func parseMEProcessedCountLine(line string) {
 	TimeseriesSentTotal += sentCount
 	BytesSentTotal += sentBytes
 	TimeseriesVolumeMutex.Unlock()
+
+	// Track ME-level export failures: metric points ME received but couldn't publish
+	failedCount := processedCount - sentCount
+	if failedCount > 0 {
+		MEExportingFailedMutex.Lock()
+		MEExportingFailedCount += failedCount
+		MEExportingFailedMutex.Unlock()
+	}
 }
 
 // parseMEEventsProcessedLine extracts EventsProcessedLastPeriod from an ME log line

@@ -28,6 +28,7 @@ func TestHealthMetricsRegistration(t *testing.T) {
 	registry.MustRegister(bytesSentMetric)
 	registry.MustRegister(invalidSettingsConfigMetric)
 	registry.MustRegister(exportingFailedMetric)
+	registry.MustRegister(otelExportingFailedMetric)
 
 	// If we get here, registration was successful
 	t.Log("All health metrics registered successfully")
@@ -69,7 +70,14 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	testExportingFailed := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "exporting_metrics_failed",
-			Help: "If exporting metrics failed or not",
+			Help: "Count of metric points ME received but failed to publish to workspace",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+	testOtelExportingFailed := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "otel_exporting_metrics_failed",
+			Help: "Count of otelcollector export failure events (otelcol to ME)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -79,6 +87,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	registry.MustRegister(testBytesSent)
 	registry.MustRegister(testInvalidSettings)
 	registry.MustRegister(testExportingFailed)
+	registry.MustRegister(testOtelExportingFailed)
 
 	// Set some test values
 	testTimeseriesReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
@@ -86,6 +95,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	testBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
 	testInvalidSettings.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test", "error": ""}).Set(0)
 	testExportingFailed.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
+	testOtelExportingFailed.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 
 	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
@@ -111,6 +121,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		"bytes_sent_per_minute",
 		"invalid_metrics_settings_config",
 		"exporting_metrics_failed",
+		"otel_exporting_metrics_failed",
 	}
 
 	for _, metric := range expectedMetrics {
@@ -350,7 +361,7 @@ func TestMetricMutexSafety(t *testing.T) {
 	TimeseriesVolumeMutex.Unlock()
 }
 
-func TestExportingFailedCounter(t *testing.T) {
+func TestOtelExportingFailedCounter(t *testing.T) {
 	// Save original count
 	ExportingFailedMutex.Lock()
 	originalCount := OtelCollectorExportingFailedCount
@@ -381,6 +392,40 @@ func TestExportingFailedCounter(t *testing.T) {
 
 	if finalCount != 0 {
 		t.Errorf("Expected count=0 after reset, got %d", finalCount)
+	}
+}
+
+func TestMEExportingFailedCounter(t *testing.T) {
+	// Save original count
+	MEExportingFailedMutex.Lock()
+	originalCount := MEExportingFailedCount
+	MEExportingFailedCount = 0
+	MEExportingFailedMutex.Unlock()
+
+	defer func() {
+		MEExportingFailedMutex.Lock()
+		MEExportingFailedCount = originalCount
+		MEExportingFailedMutex.Unlock()
+	}()
+
+	// Increment the counter
+	MEExportingFailedMutex.Lock()
+	MEExportingFailedCount += 10.0
+	currentCount := MEExportingFailedCount
+	MEExportingFailedMutex.Unlock()
+
+	if currentCount != 10.0 {
+		t.Errorf("Expected count=10, got %f", currentCount)
+	}
+
+	// Reset the counter (simulating the metric update cycle)
+	MEExportingFailedMutex.Lock()
+	MEExportingFailedCount = 0
+	finalCount := MEExportingFailedCount
+	MEExportingFailedMutex.Unlock()
+
+	if finalCount != 0 {
+		t.Errorf("Expected count=0 after reset, got %f", finalCount)
 	}
 }
 

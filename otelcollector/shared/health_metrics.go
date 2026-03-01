@@ -31,8 +31,15 @@ var (
 	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
 	ExportingFailedMutex = &sync.Mutex{}
 
-	// OtelCollectorExportingFailedCount tracks the number of times exporting failed
+	// OtelCollectorExportingFailedCount tracks the number of times otelcollector logged "Exporting failed"
 	OtelCollectorExportingFailedCount = 0
+
+	// MEExportingFailedMutex protects MEExportingFailedCount
+	MEExportingFailedMutex = &sync.Mutex{}
+
+	// MEExportingFailedCount tracks the number of metric points ME received but couldn't publish
+	// (ProcessedCount - SentToPublicationCount from ME log lines)
+	MEExportingFailedCount float64 = 0
 
 	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesReceivedMetric = prometheus.NewGaugeVec(
@@ -70,11 +77,22 @@ var (
 		[]string{"computer", "release", "controller_type", "error"},
 	)
 
-	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
+	// exportingFailedMetric counts ME-level export failures: metric points ME received (ProcessedCount)
+	// but couldn't publish to the workspace (SentToPublicationCount). Derived from ME log parsing.
 	exportingFailedMetric = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "exporting_metrics_failed",
-			Help: "If exporting metrics failed or not",
+			Help: "Count of metric points ME received but failed to publish to workspace",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelExportingFailedMetric counts the number of times the otelcollector logged "Exporting failed"
+	// (otelcol→ME failures). Distinct from exportingFailedMetric which tracks ME→workspace failures.
+	otelExportingFailedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "otel_exporting_metrics_failed",
+			Help: "Count of otelcollector export failure events (otelcol to ME)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -130,6 +148,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 	r.MustRegister(bytesSentMetric)
 	r.MustRegister(invalidSettingsConfigMetric)
 	r.MustRegister(exportingFailedMetric)
+	r.MustRegister(otelExportingFailedMetric)
 	r.MustRegister(otelcolReceivedRateMetric)
 	r.MustRegister(otelcolSentRateMetric)
 	r.MustRegister(otelcolSendFailedTotalMetric)
@@ -167,8 +186,13 @@ func ExposePrometheusCollectorHealthMetrics() {
 			}
 			invalidSettingsConfigMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType, "error": settingsConfigErrorString}).Set(float64(isInvalidSettingsConfig))
 
+			MEExportingFailedMutex.Lock()
+			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEExportingFailedCount)
+			MEExportingFailedCount = 0
+			MEExportingFailedMutex.Unlock()
+
 			ExportingFailedMutex.Lock()
-			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))
+			otelExportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))
 			OtelCollectorExportingFailedCount = 0
 			ExportingFailedMutex.Unlock()
 
