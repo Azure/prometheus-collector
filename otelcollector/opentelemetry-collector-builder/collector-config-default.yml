@@ -5,7 +5,7 @@ exporters:
       cluster: ${env:AZMON_CLUSTER_LABEL}
   prometheus/telemetry:
     endpoint: "127.0.0.1:9095"
-  otlp:
+  otlp_grpc:
     endpoint: 127.0.0.1:55680
     tls:
       insecure: true
@@ -20,34 +20,34 @@ processors:
     send_batch_max_size: 7000
   resource:
     attributes:
-    - key: cluster
-      value: "${env:AZMON_CLUSTER_LABEL}"
-      action: "upsert"
-    - key: job
-      from_attribute: service.name
-      action: insert
-    - key: instance
-      from_attribute: service.instance.id
-      action: insert
+      - key: cluster
+        value: "${env:AZMON_CLUSTER_LABEL}"
+        action: "upsert"
+      - key: job
+        from_attribute: service.name
+        action: insert
+      - key: instance
+        from_attribute: service.instance.id
+        action: insert
   filter/telemetry:
     metrics:
       metric:
         - 'name != "scrape_samples_post_metric_relabeling"'
 receivers:
-    prometheus:
-      api_server:
-        server_config:
-          endpoint: "localhost:9092"
-      config:
-        scrape_configs:
+  prometheus:
+    api_server:
+      server_config:
+        endpoint: "localhost:9092"
+    config:
+      scrape_configs:
         # scrape_configs must be non-null for collector to start
         - job_name: empty_job
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
-      processors: [batch,resource]
+      exporters: [otlp_grpc]
+      processors: [batch, resource]
   telemetry:
     logs:
       level: warn

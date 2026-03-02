@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as builder
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
+    CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
 

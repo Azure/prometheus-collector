@@ -9,7 +9,7 @@ AzureMonitorMetrics:
     CPULimit: 1
     MemoryLimit: 5Gi
 # Kube-state-metrics ImageTag - 2.17.0, corresponds to chart version - 6.2.0
-    ImageTag: "v2.17.0-4"
+    ImageTag: "v2.17.0-6"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -80,9 +80,9 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.250423.2"
+    ImageTag: "master.260209.2"
     ImageRepositoryWin: "/aks/msi/addon-token-adapter"
-    ImageTagWin: "master.250423.2"
+    ImageTagWin: "master.260209.2"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous

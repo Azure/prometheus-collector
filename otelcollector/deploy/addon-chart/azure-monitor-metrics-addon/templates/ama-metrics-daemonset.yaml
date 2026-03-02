@@ -580,7 +580,7 @@ spec:
               readOnly: true
               mountPath: /var/log/pods
           {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
-          {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "bleu") }}
+          {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") }}
             - mountPath: C:\ca
               name: ca-certs
               readOnly: true
@@ -662,7 +662,7 @@ spec:
             secretName: ama-metrics-mtls-secret
             optional: true
       {{- $cloudEnv := lower $.Values.global.commonGlobals.CloudEnvironment }}
-      {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "bleu") }}
+      {{- if or (eq $cloudEnv "usnat") (eq $cloudEnv "ussec") (eq $cloudEnv "azurebleucloud") }}
         - name: ca-certs
           hostPath:
             path: C:\ca

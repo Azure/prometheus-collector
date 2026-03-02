@@ -28,7 +28,7 @@ data:
       ztunnel = false
       istio-cni = false
       waypoint-proxy = false
-      dcgmexporter = false
+      dcgmexporter = true
       prometheuscollectorhealth = false
     pod-annotation-based-scraping: |-
       podannotationnamespaceregex = ""

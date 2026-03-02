@@ -32,7 +32,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["waypoint-proxy"] = "false"
-	config["dcgmexporter"] = "false"
+	config["dcgmexporter"] = "true"
 	config["controlplane-istio"] = "false"
 
 	return config, nil
@@ -62,7 +62,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["waypoint-proxy"] = "false"
-	config["dcgmexporter"] = "false"
+	config["dcgmexporter"] = "true"
 	config["controlplane-istio"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"

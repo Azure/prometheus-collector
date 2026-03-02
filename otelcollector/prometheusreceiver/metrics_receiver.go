@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
-	"regexp"
 	"sync"
 	"time"
 	"unsafe"
@@ -57,9 +56,17 @@ type pReceiver struct {
 
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) (*pReceiver, error) {
+	// This serves as the default for all ScrapeConfigs that don't have it explicitly set.
+	// TODO: Remove this once feature-gates and configuration options are removed.
+	extraMetrics := enableReportExtraScrapeMetricsGate.IsEnabled() || (cfg.ReportExtraScrapeMetrics && !removeReportExtraScrapeMetricsConfigGate.IsEnabled())
+	if extraMetrics {
+		cfg.PrometheusConfig.GlobalConfig.ExtraScrapeMetrics = &extraMetrics
+	}
+
 	if err := cfg.PrometheusConfig.Reload(); err != nil {
 		return nil, fmt.Errorf("failed to reload Prometheus config: %w", err)
 	}
+
 	baseCfg := promconfig.Config(*cfg.PrometheusConfig)
 	registry := prometheus.NewRegistry()
 	registerer := prometheus.WrapRegistererWith(
@@ -137,19 +144,9 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		}
 	}()
 
-	var startTimeMetricRegex *regexp.Regexp
-	if r.cfg.StartTimeMetricRegex != "" {
-		startTimeMetricRegex, err = regexp.Compile(r.cfg.StartTimeMetricRegex)
-		if err != nil {
-			return err
-		}
-	}
-
 	store, err := internal.NewAppendable(
 		r.consumer,
 		r.settings,
-		r.cfg.UseStartTimeMetric,
-		startTimeMetricRegex,
 		!r.cfg.ignoreMetadata,
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 		r.cfg.TrimMetricSuffixes,
@@ -208,11 +205,10 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 func (r *pReceiver) initScrapeOptions() *scrape.Options {
 	opts := &scrape.Options{
 		PassMetadataInContext: true,
-		ExtraMetrics:          enableReportExtraScrapeMetricsGate.IsEnabled() || r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
-		EnableCreatedTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
+		EnableStartTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
 	}
 
 	return opts
