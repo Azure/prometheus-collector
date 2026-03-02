@@ -74,8 +74,8 @@
                     "replaceWith": "aks-$azureResourceGroup()-laws"
                 },
                 {
-                    "find": "$_ENABLE_DEFENDER_$",
-                    "replaceWith": true
+                    "find": "\"$_ENABLE_DEFENDER_$\"",
+                    "replaceWith": "true"
                 },
                 {
                     "find": "$_SHELL_SUBNET_ID_$",
