@@ -106,12 +106,12 @@ func parseMEProcessedCountLine(line string) {
 	BytesSentTotal += sentBytes
 	TimeseriesVolumeMutex.Unlock()
 
-	// Track ME-level export failures: metric points ME received but couldn't publish
+	// Track ME-level drops: metric points ME received but couldn't publish
 	failedCount := processedCount - sentCount
 	if failedCount > 0 {
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount += failedCount
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount += failedCount
+		MEDroppedMutex.Unlock()
 	}
 }
 
@@ -179,9 +179,9 @@ func TailOtelCollectorLogFile(filePath string) {
 
 		// Check for "Exporting failed" — same pattern fluent-bit used
 		if strings.Contains(line, "Exporting failed") {
-			ExportingFailedMutex.Lock()
-			OtelCollectorExportingFailedCount += 1
-			ExportingFailedMutex.Unlock()
+			OtelColExportingFailedMutex.Lock()
+			OtelColExportFailureEventCount += 1
+			OtelColExportingFailedMutex.Unlock()
 		}
 	}
 }

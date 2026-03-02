@@ -263,15 +263,15 @@ func main() {
 		log.Println("Starting Prometheus Collector Health metrics in CCP mode")
 		go shared.ExposePrometheusCollectorHealthMetrics()
 
-		// Tail ME log file for ProcessedCount/EventsProcessedLastPeriod → feeds primary health metrics
+		// Tail ME log file for ProcessedCount/EventsProcessedLastPeriod → feeds ME and overall metrics
 		go shared.TailMELogFile("/MetricsExtensionConsoleDebugLog.log")
 
-		// Tail otelcollector log for "Exporting failed" messages → feeds exporting_metrics_failed
+		// Tail otelcollector log for "Exporting failed" messages → feeds otelcol_export_failures_total
 		go shared.TailOtelCollectorLogFile("/opt/microsoft/otelcollector/collector-log.txt")
 
-		// Scrape otelcollector internal metrics for supplementary diagnostics
-		// (otelcol_receiver_accepted, otelcol_exporter_sent, otelcol_exporter_send_failed)
-		// These help diagnose otelcol→ME failures vs ME→workspace failures.
+		// Scrape otelcollector internal metrics for sub-component diagnostics
+		// (otelcol_metrics_received, otelcol_metrics_sent, otelcol_metrics_dropped)
+		// Also provides overall_metrics_received (= otelcol receiver rate).
 		go shared.ScrapeOtelCollectorHealthMetrics()
 	}
 

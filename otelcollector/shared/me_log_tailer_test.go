@@ -15,18 +15,18 @@ func TestParseMEProcessedCountLine(t *testing.T) {
 	TimeseriesSentTotal = 0
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
-	MEExportingFailedMutex.Lock()
-	origFailed := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	origFailed := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
 		TimeseriesVolumeMutex.Unlock()
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = origFailed
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origFailed
+		MEDroppedMutex.Unlock()
 	}()
 
 	// Real ME ProcessedCount log line format
@@ -46,10 +46,10 @@ func TestParseMEProcessedCountLine(t *testing.T) {
 	}
 
 	// Verify ME export failures: 480 processed - 475 sent = 5 failed
-	MEExportingFailedMutex.Lock()
-	defer MEExportingFailedMutex.Unlock()
-	if MEExportingFailedCount != 5 {
-		t.Errorf("MEExportingFailedCount = %f, want 5", MEExportingFailedCount)
+	MEDroppedMutex.Lock()
+	defer MEDroppedMutex.Unlock()
+	if MEDroppedCount != 5 {
+		t.Errorf("MEDroppedCount = %f, want 5", MEDroppedCount)
 	}
 }
 
@@ -60,18 +60,18 @@ func TestParseMEProcessedCountLine_NoMatch(t *testing.T) {
 	TimeseriesSentTotal = 0
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
-	MEExportingFailedMutex.Lock()
-	origFailed := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	origFailed := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
 		TimeseriesVolumeMutex.Unlock()
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = origFailed
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origFailed
+		MEDroppedMutex.Unlock()
 	}()
 
 	// Line that doesn't match the ProcessedCount pattern
@@ -87,10 +87,10 @@ func TestParseMEProcessedCountLine_NoMatch(t *testing.T) {
 		t.Errorf("BytesSentTotal = %f, want 0", BytesSentTotal)
 	}
 
-	MEExportingFailedMutex.Lock()
-	defer MEExportingFailedMutex.Unlock()
-	if MEExportingFailedCount != 0 {
-		t.Errorf("MEExportingFailedCount = %f, want 0", MEExportingFailedCount)
+	MEDroppedMutex.Lock()
+	defer MEDroppedMutex.Unlock()
+	if MEDroppedCount != 0 {
+		t.Errorf("MEDroppedCount = %f, want 0", MEDroppedCount)
 	}
 }
 
@@ -145,18 +145,18 @@ func TestParseMEProcessedCountLine_MultipleLines(t *testing.T) {
 	TimeseriesSentTotal = 0
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
-	MEExportingFailedMutex.Lock()
-	origFailed := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	origFailed := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
 		TimeseriesVolumeMutex.Unlock()
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = origFailed
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origFailed
+		MEDroppedMutex.Unlock()
 	}()
 
 	lines := []string{
@@ -179,10 +179,10 @@ func TestParseMEProcessedCountLine_MultipleLines(t *testing.T) {
 	}
 
 	// Verify ME export failures: (100-90) + (200-180) = 10 + 20 = 30
-	MEExportingFailedMutex.Lock()
-	defer MEExportingFailedMutex.Unlock()
-	if MEExportingFailedCount != 30 { // (100-90) + (200-180)
-		t.Errorf("MEExportingFailedCount = %f, want 30", MEExportingFailedCount)
+	MEDroppedMutex.Lock()
+	defer MEDroppedMutex.Unlock()
+	if MEDroppedCount != 30 { // (100-90) + (200-180)
+		t.Errorf("MEDroppedCount = %f, want 30", MEDroppedCount)
 	}
 }
 
@@ -301,17 +301,17 @@ func TestParseMEProcessedCountLine_PartialMatch(t *testing.T) {
 	origSent := TimeseriesSentTotal
 	TimeseriesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
-	MEExportingFailedMutex.Lock()
-	origFailed := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	origFailed := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesSentTotal = origSent
 		TimeseriesVolumeMutex.Unlock()
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = origFailed
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origFailed
+		MEDroppedMutex.Unlock()
 	}()
 
 	// Truncated line — contains "ProcessedCount:" but not the full pattern
@@ -325,19 +325,19 @@ func TestParseMEProcessedCountLine_PartialMatch(t *testing.T) {
 		t.Errorf("TimeseriesSentTotal = %f, want 0 for partial match", TimeseriesSentTotal)
 	}
 
-	MEExportingFailedMutex.Lock()
-	defer MEExportingFailedMutex.Unlock()
-	if MEExportingFailedCount != 0 {
-		t.Errorf("MEExportingFailedCount = %f, want 0 for partial match", MEExportingFailedCount)
+	MEDroppedMutex.Lock()
+	defer MEDroppedMutex.Unlock()
+	if MEDroppedCount != 0 {
+		t.Errorf("MEDroppedCount = %f, want 0 for partial match", MEDroppedCount)
 	}
 }
 
 func TestParseMEProcessedCountLine_ZeroFailures(t *testing.T) {
 	// When ProcessedCount == SentToPublicationCount, no failures should be recorded
-	MEExportingFailedMutex.Lock()
-	origFailed := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	origFailed := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 	TimeseriesVolumeMutex.Lock()
 	origSent := TimeseriesSentTotal
 	origBytes := BytesSentTotal
@@ -345,9 +345,9 @@ func TestParseMEProcessedCountLine_ZeroFailures(t *testing.T) {
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
 	defer func() {
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = origFailed
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origFailed
+		MEDroppedMutex.Unlock()
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
@@ -358,9 +358,9 @@ func TestParseMEProcessedCountLine_ZeroFailures(t *testing.T) {
 	line := `2026-02-18 12:00:00.000 Info Account1 ReceivedCount: 100 ProcessedCount: 100 ProcessedBytes: 5000 SentToPublicationCount: 100 SentToPublicationBytes: 5000`
 	parseMEProcessedCountLine(line)
 
-	MEExportingFailedMutex.Lock()
-	defer MEExportingFailedMutex.Unlock()
-	if MEExportingFailedCount != 0 {
-		t.Errorf("MEExportingFailedCount = %f, want 0 when ProcessedCount == SentToPublicationCount", MEExportingFailedCount)
+	MEDroppedMutex.Lock()
+	defer MEDroppedMutex.Unlock()
+	if MEDroppedCount != 0 {
+		t.Errorf("MEDroppedCount = %f, want 0 when ProcessedCount == SentToPublicationCount", MEDroppedCount)
 	}
 }

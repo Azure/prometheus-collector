@@ -37,8 +37,9 @@ var (
 	// OtelColSentRate is the per-minute rate of metric points sent by otelcollector's exporter (to ME)
 	OtelColSentRate float64
 
-	// OtelColSendFailedTotal is the cumulative count of metric points that failed to export from otelcol to ME
-	OtelColSendFailedTotal float64
+	// OtelColDroppedCount is the per-tick count of metric points that failed to export from otelcol to ME.
+	// Reset to 0 each tick after the health metrics loop reads it.
+	OtelColDroppedCount float64
 )
 
 // ScrapeOtelCollectorHealthMetrics periodically scrapes the otelcollector's
@@ -99,7 +100,7 @@ func ScrapeOtelCollectorHealthMetrics() {
 			OtelColDiagMutex.Lock()
 			OtelColReceivedRate = deltaReceived * minuteScale
 			OtelColSentRate = deltaSent * minuteScale
-			OtelColSendFailedTotal += deltaSendFailed
+			OtelColDroppedCount += deltaSendFailed
 			OtelColDiagMutex.Unlock()
 		}
 

@@ -188,17 +188,17 @@ func TestDiagnosticDeltaAccumulation(t *testing.T) {
 	OtelColDiagMutex.Lock()
 	origReceivedRate := OtelColReceivedRate
 	origSentRate := OtelColSentRate
-	origSendFailedTotal := OtelColSendFailedTotal
+	origSendFailedTotal := OtelColDroppedCount
 	OtelColReceivedRate = 0
 	OtelColSentRate = 0
-	OtelColSendFailedTotal = 0
+	OtelColDroppedCount = 0
 	OtelColDiagMutex.Unlock()
 
 	defer func() {
 		OtelColDiagMutex.Lock()
 		OtelColReceivedRate = origReceivedRate
 		OtelColSentRate = origSentRate
-		OtelColSendFailedTotal = origSendFailedTotal
+		OtelColDroppedCount = origSendFailedTotal
 		OtelColDiagMutex.Unlock()
 	}()
 
@@ -240,7 +240,7 @@ func TestDiagnosticDeltaAccumulation(t *testing.T) {
 			OtelColDiagMutex.Lock()
 			OtelColReceivedRate = deltaReceived * minuteScale
 			OtelColSentRate = deltaSent * minuteScale
-			OtelColSendFailedTotal += deltaSendFailed
+			OtelColDroppedCount += deltaSendFailed
 			OtelColDiagMutex.Unlock()
 		}
 
@@ -266,7 +266,7 @@ func TestDiagnosticDeltaAccumulation(t *testing.T) {
 	}
 
 	// Total send failed: 2 + 3 + 0 + 1 = 6
-	if OtelColSendFailedTotal != 6 {
-		t.Errorf("OtelColSendFailedTotal = %f, want 6", OtelColSendFailedTotal)
+	if OtelColDroppedCount != 6 {
+		t.Errorf("OtelColDroppedCount = %f, want 6", OtelColDroppedCount)
 	}
 }

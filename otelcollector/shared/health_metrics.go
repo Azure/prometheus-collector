@@ -28,42 +28,83 @@ var (
 	// TimeseriesVolumeMutex handles adding to the timeseries volume totals and setting these values as gauges for Prometheus metrics
 	TimeseriesVolumeMutex = &sync.Mutex{}
 
-	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
-	ExportingFailedMutex = &sync.Mutex{}
+	// OtelColExportingFailedMutex protects the otelcollector export failure event count
+	OtelColExportingFailedMutex = &sync.Mutex{}
 
-	// OtelCollectorExportingFailedCount tracks the number of times otelcollector logged "Exporting failed"
-	OtelCollectorExportingFailedCount = 0
+	// OtelColExportFailureEventCount tracks the number of times otelcollector logged "Exporting failed"
+	OtelColExportFailureEventCount = 0
 
-	// MEExportingFailedMutex protects MEExportingFailedCount
-	MEExportingFailedMutex = &sync.Mutex{}
+	// MEDroppedMutex protects MEDroppedCount
+	MEDroppedMutex = &sync.Mutex{}
 
-	// MEExportingFailedCount tracks the number of metric points ME received but couldn't publish
+	// MEDroppedCount tracks the number of metric points ME received but couldn't publish
 	// (ProcessedCount - SentToPublicationCount from ME log lines)
-	MEExportingFailedCount float64 = 0
+	MEDroppedCount float64 = 0
 
-	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
-	timeseriesReceivedMetric = prometheus.NewGaugeVec(
+	// --- Overall (component-level) metrics ---
+	// These represent the full pipeline: input = otelcol receiver, output = ME publication
+
+	// overallReceivedMetric is the pipeline input rate (what otelcol's receiver accepted per minute)
+	overallReceivedMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "timeseries_received_per_minute",
-			Help: "Number of timeseries to be sent to storage",
+			Name: "overall_metrics_received_per_minute",
+			Help: "Rate of metric points entering the collection pipeline (per minute)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries sent in a minute
-	timeseriesSentMetric = prometheus.NewGaugeVec(
+	// overallSentMetric is the pipeline output rate (what ME published to Azure Monitor per minute)
+	overallSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "timeseries_sent_per_minute",
-			Help: "Number of timeseries sent to storage",
+			Name: "overall_metrics_sent_per_minute",
+			Help: "Rate of metric points delivered to Azure Monitor (per minute)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// bytesSentMetric is the Prometheus metric measuring the number of bytes sent in a minute
-	bytesSentMetric = prometheus.NewGaugeVec(
+	// overallBytesSentMetric is the pipeline output byte rate
+	overallBytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "bytes_sent_per_minute",
-			Help: "Number of bytes of timeseries sent to storage",
+			Name: "overall_bytes_sent_per_minute",
+			Help: "Bytes of metric data delivered to Azure Monitor (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// overallDroppedMetric is the sum of all stage drops (otelcol + ME)
+	overallDroppedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "overall_metrics_dropped_total",
+			Help: "Total metric points dropped across all pipeline stages",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// --- ME (sub-component) metrics ---
+
+	// meReceivedMetric is what ME received (EventsProcessedLastPeriod)
+	meReceivedMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "me_metrics_received_per_minute",
+			Help: "Rate of metric points received by ME (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// meSentMetric is what ME published (SentToPublicationCount) — same as overall output
+	meSentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "me_metrics_sent_per_minute",
+			Help: "Rate of metric points published by ME to Azure Monitor (per minute)",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// meDroppedMetric counts metric points ME received but couldn't publish
+	meDroppedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "me_metrics_dropped_total",
+			Help: "Total metric points ME received but failed to publish to Azure Monitor",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -77,52 +118,40 @@ var (
 		[]string{"computer", "release", "controller_type", "error"},
 	)
 
-	// exportingFailedMetric counts ME-level export failures: metric points ME received (ProcessedCount)
-	// but couldn't publish to the workspace (SentToPublicationCount). Derived from ME log parsing.
-	exportingFailedMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "exporting_metrics_failed",
-			Help: "Count of metric points ME received but failed to publish to workspace",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
+	// --- OtelCol (sub-component) metrics ---
 
-	// otelExportingFailedMetric counts the number of times the otelcollector logged "Exporting failed"
-	// (otelcol→ME failures). Distinct from exportingFailedMetric which tracks ME→workspace failures.
-	otelExportingFailedMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "otel_exporting_metrics_failed",
-			Help: "Count of otelcollector export failure events (otelcol to ME)",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-
-	// Diagnostic metrics from otelcollector internal counters (supplementary to ME-based health metrics)
-	// These help diagnose where failures occur: otelcol→ME vs ME→workspace
-
-	// otelcolReceivedRateMetric shows what otelcollector's receiver accepted per minute
+	// otelcolReceivedRateMetric is what otelcol's receiver accepted per minute (= overall input)
 	otelcolReceivedRateMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "otelcol_receiver_accepted_metric_points_per_minute",
+			Name: "otelcol_metrics_received_per_minute",
 			Help: "Rate of metric points accepted by otelcollector receiver (per minute)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// otelcolSentRateMetric shows what otelcollector's exporter sent to ME per minute
+	// otelcolSentRateMetric is what otelcol's exporter sent to ME per minute
 	otelcolSentRateMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "otelcol_exporter_sent_metric_points_per_minute",
+			Name: "otelcol_metrics_sent_per_minute",
 			Help: "Rate of metric points sent by otelcollector exporter to ME (per minute)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// otelcolSendFailedMetric shows cumulative metric points that failed to export from otelcol to ME
-	otelcolSendFailedTotalMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "otelcol_exporter_send_failed_metric_points_total",
-			Help: "Total metric points that failed to export from otelcollector to ME",
+	// otelcolDroppedMetric counts metric points that otelcol failed to send to ME
+	otelcolDroppedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "otelcol_metrics_dropped_total",
+			Help: "Total metric points otelcollector failed to export to ME",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// otelcolExportFailuresMetric counts the number of "Exporting failed" log events from otelcol
+	otelcolExportFailuresMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "otelcol_export_failures_total",
+			Help: "Count of otelcollector export failure log events",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -143,15 +172,22 @@ func ExposePrometheusCollectorHealthMetrics() {
 
 	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
-	r.MustRegister(timeseriesReceivedMetric)
-	r.MustRegister(timeseriesSentMetric)
-	r.MustRegister(bytesSentMetric)
-	r.MustRegister(invalidSettingsConfigMetric)
-	r.MustRegister(exportingFailedMetric)
-	r.MustRegister(otelExportingFailedMetric)
+	// Overall (component-level) metrics
+	r.MustRegister(overallReceivedMetric)
+	r.MustRegister(overallSentMetric)
+	r.MustRegister(overallBytesSentMetric)
+	r.MustRegister(overallDroppedMetric)
+	// ME (sub-component) metrics
+	r.MustRegister(meReceivedMetric)
+	r.MustRegister(meSentMetric)
+	r.MustRegister(meDroppedMetric)
+	// OtelCol (sub-component) metrics
 	r.MustRegister(otelcolReceivedRateMetric)
 	r.MustRegister(otelcolSentRateMetric)
-	r.MustRegister(otelcolSendFailedTotalMetric)
+	r.MustRegister(otelcolDroppedMetric)
+	r.MustRegister(otelcolExportFailuresMetric)
+	// Config validation
+	r.MustRegister(invalidSettingsConfigMetric)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	http.Handle("/metrics", handler)
@@ -169,9 +205,13 @@ func ExposePrometheusCollectorHealthMetrics() {
 			timeseriesSentRate := math.Round(TimeseriesSentTotal / timePassedInMinutes)
 			bytesSentRate := math.Round(BytesSentTotal / timePassedInMinutes)
 
-			timeseriesReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesReceivedRate)
-			timeseriesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
-			bytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
+			// ME sub-component metrics (ME receives from otelcol, sends to Azure Monitor)
+			meReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesReceivedRate)
+			meSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
+
+			// Overall metrics: input = otelcol receiver, output = ME publication
+			overallSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
+			overallBytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
 
 			TimeseriesReceivedTotal = 0.0
 			TimeseriesSentTotal = 0.0
@@ -186,21 +226,26 @@ func ExposePrometheusCollectorHealthMetrics() {
 			}
 			invalidSettingsConfigMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType, "error": settingsConfigErrorString}).Set(float64(isInvalidSettingsConfig))
 
-			MEExportingFailedMutex.Lock()
-			exportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEExportingFailedCount)
-			MEExportingFailedCount = 0
-			MEExportingFailedMutex.Unlock()
+			MEDroppedMutex.Lock()
+			meDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEDroppedCount)
+			overallDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEDroppedCount)
+			MEDroppedCount = 0
+			MEDroppedMutex.Unlock()
 
-			ExportingFailedMutex.Lock()
-			otelExportingFailedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelCollectorExportingFailedCount))
-			OtelCollectorExportingFailedCount = 0
-			ExportingFailedMutex.Unlock()
+			OtelColExportingFailedMutex.Lock()
+			otelcolExportFailuresMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(float64(OtelColExportFailureEventCount))
+			OtelColExportFailureEventCount = 0
+			OtelColExportingFailedMutex.Unlock()
 
-			// Update diagnostic metrics from otelcol scraper
+			// Update otelcol sub-component metrics from otelcol scraper
 			OtelColDiagMutex.Lock()
 			otelcolReceivedRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
 			otelcolSentRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSentRate)
-			otelcolSendFailedTotalMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSendFailedTotal)
+			otelcolDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
+			overallDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
+			// Overall input = otelcol receiver rate
+			overallReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
+			OtelColDroppedCount = 0
 			OtelColDiagMutex.Unlock()
 
 			lastTickerStart = time.Now()

@@ -23,12 +23,18 @@ func TestHealthMetricsRegistration(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	// Register all health metrics
-	registry.MustRegister(timeseriesReceivedMetric)
-	registry.MustRegister(timeseriesSentMetric)
-	registry.MustRegister(bytesSentMetric)
+	registry.MustRegister(overallReceivedMetric)
+	registry.MustRegister(overallSentMetric)
+	registry.MustRegister(overallBytesSentMetric)
+	registry.MustRegister(overallDroppedMetric)
+	registry.MustRegister(meReceivedMetric)
+	registry.MustRegister(meSentMetric)
+	registry.MustRegister(meDroppedMetric)
 	registry.MustRegister(invalidSettingsConfigMetric)
-	registry.MustRegister(exportingFailedMetric)
-	registry.MustRegister(otelExportingFailedMetric)
+	registry.MustRegister(otelcolReceivedRateMetric)
+	registry.MustRegister(otelcolSentRateMetric)
+	registry.MustRegister(otelcolDroppedMetric)
+	registry.MustRegister(otelcolExportFailuresMetric)
 
 	// If we get here, registration was successful
 	t.Log("All health metrics registered successfully")
@@ -39,24 +45,52 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	// Create new instances of the metrics for testing
-	testTimeseriesReceived := prometheus.NewGaugeVec(
+	testOverallReceived := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "timeseries_received_per_minute",
-			Help: "Number of timeseries to be sent to storage",
+			Name: "overall_metrics_received_per_minute",
+			Help: "Rate of metric points entering the collection pipeline",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
-	testTimeseriesSent := prometheus.NewGaugeVec(
+	testOverallSent := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "timeseries_sent_per_minute",
-			Help: "Number of timeseries sent to storage",
+			Name: "overall_metrics_sent_per_minute",
+			Help: "Rate of metric points delivered to Azure Monitor",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
-	testBytesSent := prometheus.NewGaugeVec(
+	testOverallBytesSent := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "bytes_sent_per_minute",
-			Help: "Number of bytes of timeseries sent to storage",
+			Name: "overall_bytes_sent_per_minute",
+			Help: "Rate of bytes delivered to Azure Monitor",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+	testOverallDropped := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "overall_metrics_dropped_total",
+			Help: "Total metric points dropped across all pipeline stages",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+	testMEReceived := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "me_metrics_received_per_minute",
+			Help: "Rate of metric points received by ME",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+	testMESent := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "me_metrics_sent_per_minute",
+			Help: "Rate of metric points ME published to workspace",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+	testMEDropped := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "me_metrics_dropped_total",
+			Help: "Metric points ME received but failed to publish",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -67,35 +101,34 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		},
 		[]string{"computer", "release", "controller_type", "error"},
 	)
-	testExportingFailed := prometheus.NewCounterVec(
+	testOtelColExportFailures := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "exporting_metrics_failed",
-			Help: "Count of metric points ME received but failed to publish to workspace",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-	testOtelExportingFailed := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "otel_exporting_metrics_failed",
-			Help: "Count of otelcollector export failure events (otelcol to ME)",
+			Name: "otelcol_export_failures_total",
+			Help: "Number of otelcol export failure events",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	registry.MustRegister(testTimeseriesReceived)
-	registry.MustRegister(testTimeseriesSent)
-	registry.MustRegister(testBytesSent)
+	registry.MustRegister(testOverallReceived)
+	registry.MustRegister(testOverallSent)
+	registry.MustRegister(testOverallBytesSent)
+	registry.MustRegister(testOverallDropped)
+	registry.MustRegister(testMEReceived)
+	registry.MustRegister(testMESent)
+	registry.MustRegister(testMEDropped)
 	registry.MustRegister(testInvalidSettings)
-	registry.MustRegister(testExportingFailed)
-	registry.MustRegister(testOtelExportingFailed)
+	registry.MustRegister(testOtelColExportFailures)
 
 	// Set some test values
-	testTimeseriesReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
-	testTimeseriesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
-	testBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
+	testOverallReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
+	testOverallSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
+	testOverallBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
+	testOverallDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
+	testMEReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
+	testMESent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
+	testMEDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 	testInvalidSettings.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test", "error": ""}).Set(0)
-	testExportingFailed.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
-	testOtelExportingFailed.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
+	testOtelColExportFailures.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 
 	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
@@ -116,12 +149,15 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 
 	// Verify all metrics are in the response
 	expectedMetrics := []string{
-		"timeseries_received_per_minute",
-		"timeseries_sent_per_minute",
-		"bytes_sent_per_minute",
+		"overall_metrics_received_per_minute",
+		"overall_metrics_sent_per_minute",
+		"overall_bytes_sent_per_minute",
+		"overall_metrics_dropped_total",
+		"me_metrics_received_per_minute",
+		"me_metrics_sent_per_minute",
+		"me_metrics_dropped_total",
 		"invalid_metrics_settings_config",
-		"exporting_metrics_failed",
-		"otel_exporting_metrics_failed",
+		"otelcol_export_failures_total",
 	}
 
 	for _, metric := range expectedMetrics {
@@ -363,32 +399,32 @@ func TestMetricMutexSafety(t *testing.T) {
 
 func TestOtelExportingFailedCounter(t *testing.T) {
 	// Save original count
-	ExportingFailedMutex.Lock()
-	originalCount := OtelCollectorExportingFailedCount
-	OtelCollectorExportingFailedCount = 0
-	ExportingFailedMutex.Unlock()
+	OtelColExportingFailedMutex.Lock()
+	originalCount := OtelColExportFailureEventCount
+	OtelColExportFailureEventCount = 0
+	OtelColExportingFailedMutex.Unlock()
 
 	defer func() {
-		ExportingFailedMutex.Lock()
-		OtelCollectorExportingFailedCount = originalCount
-		ExportingFailedMutex.Unlock()
+		OtelColExportingFailedMutex.Lock()
+		OtelColExportFailureEventCount = originalCount
+		OtelColExportingFailedMutex.Unlock()
 	}()
 
 	// Increment the counter
-	ExportingFailedMutex.Lock()
-	OtelCollectorExportingFailedCount += 5
-	currentCount := OtelCollectorExportingFailedCount
-	ExportingFailedMutex.Unlock()
+	OtelColExportingFailedMutex.Lock()
+	OtelColExportFailureEventCount += 5
+	currentCount := OtelColExportFailureEventCount
+	OtelColExportingFailedMutex.Unlock()
 
 	if currentCount != 5 {
 		t.Errorf("Expected count=5, got %d", currentCount)
 	}
 
 	// Reset the counter (simulating the metric update cycle)
-	ExportingFailedMutex.Lock()
-	OtelCollectorExportingFailedCount = 0
-	finalCount := OtelCollectorExportingFailedCount
-	ExportingFailedMutex.Unlock()
+	OtelColExportingFailedMutex.Lock()
+	OtelColExportFailureEventCount = 0
+	finalCount := OtelColExportFailureEventCount
+	OtelColExportingFailedMutex.Unlock()
 
 	if finalCount != 0 {
 		t.Errorf("Expected count=0 after reset, got %d", finalCount)
@@ -397,32 +433,32 @@ func TestOtelExportingFailedCounter(t *testing.T) {
 
 func TestMEExportingFailedCounter(t *testing.T) {
 	// Save original count
-	MEExportingFailedMutex.Lock()
-	originalCount := MEExportingFailedCount
-	MEExportingFailedCount = 0
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	originalCount := MEDroppedCount
+	MEDroppedCount = 0
+	MEDroppedMutex.Unlock()
 
 	defer func() {
-		MEExportingFailedMutex.Lock()
-		MEExportingFailedCount = originalCount
-		MEExportingFailedMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = originalCount
+		MEDroppedMutex.Unlock()
 	}()
 
 	// Increment the counter
-	MEExportingFailedMutex.Lock()
-	MEExportingFailedCount += 10.0
-	currentCount := MEExportingFailedCount
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	MEDroppedCount += 10.0
+	currentCount := MEDroppedCount
+	MEDroppedMutex.Unlock()
 
 	if currentCount != 10.0 {
 		t.Errorf("Expected count=10, got %f", currentCount)
 	}
 
 	// Reset the counter (simulating the metric update cycle)
-	MEExportingFailedMutex.Lock()
-	MEExportingFailedCount = 0
-	finalCount := MEExportingFailedCount
-	MEExportingFailedMutex.Unlock()
+	MEDroppedMutex.Lock()
+	MEDroppedCount = 0
+	finalCount := MEDroppedCount
+	MEDroppedMutex.Unlock()
 
 	if finalCount != 0 {
 		t.Errorf("Expected count=0 after reset, got %f", finalCount)
