@@ -47,7 +47,7 @@
                 },                
                 {
                     "find": "$_PRINCIPAL_ID_$",
-                    "replaceWith": "$serviceResourceDefinition(FetchMSIClientId).action(deploy).outputs(principalId)"
+                    "replaceWith": "$serviceResourceDefinition(FetchMSIClientId).action(deploy).outputs(principalId.value)"
                 },
                 {
                     "find": "$_PRINCIPAL_ID_OLD_$",
