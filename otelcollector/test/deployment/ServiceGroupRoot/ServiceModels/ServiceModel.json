@@ -27,19 +27,10 @@
           "composedOf": {
             "arm": {
               "templatePath": "Templates/fetch-msi-clientid.Template.json",
-              "parametersPath": "Parameters/fetch-msi-clientid.parameters.json"
+              "parametersPath": "Parameters/fetch-msi-clientid.Parameters.json"
             }
           }          
         },        
-        {
-          "name": "ClusterRoleAssignments",
-          "composedOf": {
-            "arm": {
-              "templatePath": "Templates/RoleAssignments.Template.json",
-              "parametersPath": "Parameters/RoleAssignments.Parameters.json"
-            }
-          }
-        },      
         {
           "name": "PromCollectorTestsShellExtension",
           "composedOf": {

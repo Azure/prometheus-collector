@@ -47,6 +47,15 @@
       ],
       "serviceResourceDefinitions": [
         {
+          "name": "FetchMSIClientId",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/fetch-msi-clientid.Template.json",
+              "parametersPath": "Parameters/fetch-msi-clientid.Parameters.json"
+            }
+          }          
+        },          
+        {
           "name": "LogAnalyticsWorkspace",
           "composedOf": {
             "arm": {
@@ -55,6 +64,15 @@
             }
           }
         },
+        {
+          "name": "ClusterRoleAssignments",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/RoleAssignments.Template.json",
+              "parametersPath": "Parameters/RoleAssignments.Parameters.json"
+            }
+          }
+        },        
         {
           "name": "Deploy.AksCluster",
           "composedOf": {

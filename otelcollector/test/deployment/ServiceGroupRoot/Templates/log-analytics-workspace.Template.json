@@ -64,24 +64,25 @@
         "publicNetworkAccessForQuery": "Enabled"
       }
     }
-    // ,{
-    //   "type": "Microsoft.OperationsManagement/solutions",
-    //   "apiVersion": "2015-11-01-preview",
-    //   "name": "[concat('Security(', parameters('logAnalyticsWorkspaceName'), ')')]",
-    //   "location": "[parameters('location')]",
-    //   "dependsOn": [
-    //     "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
-    //   ],
-    //   "properties": {
-    //     "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
-    //   },
-    //   "plan": {
-    //     "name": "[concat('Security(', parameters('logAnalyticsWorkspaceName'), ')')]",
-    //     "publisher": "Microsoft",
-    //     "product": "OMSGallery/Security",
-    //     "promotionCode": ""
-    //   }
-    // }
+    ,{
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[concat('Security(', parameters('logAnalyticsWorkspaceName'), ')')]",
+      "location": "[parameters('location')]",
+      "condition": false,
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ],
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      },
+      "plan": {
+        "name": "[concat('Security(', parameters('logAnalyticsWorkspaceName'), ')')]",
+        "publisher": "Microsoft",
+        "product": "OMSGallery/Security",
+        "promotionCode": ""
+      }
+    }
   ],
   "outputs": {
     "workspaceId": {

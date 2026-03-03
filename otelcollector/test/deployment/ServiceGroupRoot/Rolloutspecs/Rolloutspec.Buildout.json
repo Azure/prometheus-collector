@@ -4,7 +4,7 @@
   "rolloutMetadata": {
     "name": "prometheus-collector-ginkgoe2e-tests-rollout",
     "serviceModelPath": "ServiceModels/ServiceModel.Buildout.json",
-    "ScopeBindingsPath": "ScopeBindings.json",
+    "scopeBindingsPath": "ScopeBindings.json",
     "rolloutType": "Major",
     "configuration": {
       "serviceGroupScope": { "specPath": "config/$rolloutInfra().json" }
@@ -21,7 +21,25 @@
       "targetType": "ServiceResourceDefinition",
       "targetName": "UserAssignedIdentity",
       "actions": [ "deploy" ]
-    },    
+    },  
+    {
+       "name": "Deploy.FetchMSIClientId",
+       "targetType": "ServiceResourceDefinition",
+       "targetName": "FetchMSIClientId",
+       "actions": [ "deploy" ],
+       "dependsOn": [
+          "Deploy.UserAssignedIdentity"
+        ]
+    },     
+    {
+      "name": "Deploy.ClusterRoleAssignments",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "ClusterRoleAssignments",
+      "actions": [ "deploy" ],
+      "dependsOn": [  
+        "Deploy.FetchMSIClientId"
+      ]
+    },       
     {
       "name": "Deploy.LogAnalyticsWorkspace",
       "targetType": "ServiceResourceDefinition",
@@ -34,7 +52,8 @@
       "targetName": "Deploy.AksCluster",
       "actions": [ "deploy" ],
       "dependsOn": [
-        "Deploy.LogAnalyticsWorkspace"
+        "Deploy.LogAnalyticsWorkspace",
+        "Deploy.ClusterRoleAssignments"
       ]
     }   
   ]
