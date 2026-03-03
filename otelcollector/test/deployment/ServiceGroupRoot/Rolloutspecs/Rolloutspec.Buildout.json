@@ -23,10 +23,19 @@
       "actions": [ "deploy" ]
     },    
     {
+      "name": "Deploy.LogAnalyticsWorkspace",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "LogAnalyticsWorkspace",
+      "actions": [ "deploy" ]
+    },
+    {
       "name": "Deploy.AksCluster",
       "targetType": "ServiceResourceDefinition",
       "targetName": "Deploy.AksCluster",
-      "actions": [ "deploy" ]
+      "actions": [ "deploy" ],
+      "dependsOn": [
+        "Deploy.LogAnalyticsWorkspace"
+      ]
     }   
   ]
 }

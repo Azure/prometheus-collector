@@ -569,24 +569,6 @@
       }
     },
     {
-      "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2022-10-01",
-      "condition": "[variables('isValidClusterLocation')]",      
-      "name": "[variables('logAnalyticsWorkspaceName')]",
-      "location": "[parameters('clusterLocation')]",
-      "properties": {
-        "sku": {
-          "name": "PerGB2018"
-        },
-        "retentionInDays": 30,
-        "workspaceCapping": {
-          "dailyQuotaGb": -1
-        },
-        "publicNetworkAccessForIngestion": "Enabled",
-        "publicNetworkAccessForQuery": "Enabled"
-      }
-    },
-    {
       "type": "Microsoft.ContainerService/managedClusters",
       "condition": "[variables('isValidClusterLocation')]",
       "apiVersion": "2025-07-01",
@@ -756,9 +738,6 @@
           }
         }
       },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
-      ]
     },
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",

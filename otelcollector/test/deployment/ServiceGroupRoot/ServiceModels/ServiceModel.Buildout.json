@@ -45,7 +45,16 @@
           "name": "Common"
         }
       ],
-      "serviceResourceDefinitions": [       
+      "serviceResourceDefinitions": [
+        {
+          "name": "LogAnalyticsWorkspace",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates/log-analytics-workspace.Template.json",
+              "parametersPath": "Parameters/log-analytics-workspace.Parameters.json"
+            }
+          }
+        },
         {
           "name": "Deploy.AksCluster",
           "composedOf": {
