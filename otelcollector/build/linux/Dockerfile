@@ -89,12 +89,17 @@ ARG TARGETARCH
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
 ARG TARGETARCH
 WORKDIR /
-# Install with the same exact dependencies and code source that Mariner uses
-# luajit-devel is not available for ARM64 on Azure Linux, installed conditionally below
+# Install with the same exact dependencies and code source that Mariner uses.
+# luajit-devel is not available for ARM64 on Azure Linux 3.0, so it is only
+# installed on AMD64. On ARM64 we create an empty stub at the expected path
+# so that the unconditional COPY --from=fluent-bit-binary-builder in the
+# final distroless stage does not fail (the real lib is only needed when
+# fluent-bit is built with FLB_LUAJIT=On, which we disable on ARM64).
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
     gnutls-devel graphviz libpq-devel libyaml-devel make openssl-devel pkgconfig \
     systemd-devel systemd-rpm-macros zlib-devel build-essential postgresql-devel -y && \
-    if [ "$TARGETARCH" != "arm64" ]; then tdnf install luajit-devel -y; fi
+    if [ "$TARGETARCH" != "arm64" ]; then tdnf install luajit-devel -y; \
+    else touch /usr/lib/libluajit-5.1.so.2; fi
 ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
@@ -260,6 +265,7 @@ COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6
 COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # fluent-bit dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# libluajit-5.1.so.2 is a real library on AMD64 but an empty stub on ARM64 (see fluent-bit-binary-builder stage)
 COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libpq.so.5 /usr/lib/libldap.so.2 /usr/lib/liblber.so.2 /usr/lib/libgnutls.so.30 /usr/lib/libidn2.so.0 /usr/lib/libunistring.so.5 /usr/lib/libnettle.so.8 /usr/lib/libhogweed.so.6 /usr/lib/
 # mdsd dependencies
 COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
