@@ -1,6 +1,6 @@
 ARG GOLANG_VERSION
 ARG FLUENTBIT_GOLANG_VERSION
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${FLUENTBIT_GOLANG_VERSION} as fluent-bit-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${FLUENTBIT_GOLANG_VERSION} AS fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
 RUN go version
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prometheus-ui
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} AS prometheus-ui
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
@@ -25,7 +25,7 @@ RUN tar -xvzf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
 RUN rm -rf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as otelcollector-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} AS otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
@@ -40,7 +40,7 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prom-config-validator-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} AS prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
@@ -59,7 +59,7 @@ COPY ./shared/ /src/shared/
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as main-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} AS main-builder
 WORKDIR /
 # Create directories
 RUN mkdir -p ./shared/configmap/mp/
@@ -87,11 +87,14 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 ARG TARGETARCH
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
+ARG TARGETARCH
 WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
+# luajit-devel is not available for ARM64 on Azure Linux, installed conditionally below
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
-    gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
-    systemd-devel systemd-rpm-macros zlib-devel build-essential postgresql-devel -y
+    gnutls-devel graphviz libpq-devel libyaml-devel make openssl-devel pkgconfig \
+    systemd-devel systemd-rpm-macros zlib-devel build-essential postgresql-devel -y && \
+    if [ "$TARGETARCH" != "arm64" ]; then tdnf install luajit-devel -y; fi
 ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
@@ -101,7 +104,9 @@ COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/
 RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
 WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
 # Run cmake with the same flags that Mariner uses
-RUN cmake \ 
+# LuaJIT is disabled on ARM64 since luajit-devel is not available for that architecture
+RUN FLB_LUAJIT_OPT=$(if [ "${TARGETARCH}" = "arm64" ]; then echo "Off"; else echo "On"; fi) && \
+    cmake \ 
 -DOPENSSL_ROOT_DIR=/usr \
 -DOPENSSL_LIBRARIES=/usr/lib \
 -DFLB_JEMALLOC=On \
@@ -116,12 +121,13 @@ RUN cmake \
 -DFLB_OUT_KAFKA=On \
 -DFLB_OUT_PGSQL=On \
 -DFLB_LOG_NO_CONTROL_CHARS=On \
--DFLB_CHUNK_TRACE=On ../
+-DFLB_CHUNK_TRACE=On \
+-DFLB_LUAJIT=${FLB_LUAJIT_OPT} ../
 
 RUN make
 RUN make install
 
-FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
