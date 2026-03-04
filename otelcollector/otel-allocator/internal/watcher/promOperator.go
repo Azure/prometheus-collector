@@ -4,14 +4,13 @@
 package watcher
 
 import (
+	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	"k8s.io/client-go/metadata"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"time"
-
-	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
-	"k8s.io/client-go/metadata"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
