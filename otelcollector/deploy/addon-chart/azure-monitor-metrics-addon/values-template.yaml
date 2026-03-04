@@ -40,7 +40,7 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRegistry: mcr.microsoft.com
-  ImageRepository: ${MCR_REPOSITORY}
+  ImageRepository: /azuremonitor/containerinsights/ciprod/prometheus-collector/images
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
   RsCPULimit: 7
