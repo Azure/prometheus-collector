@@ -37,6 +37,7 @@ data:
     istio-cni = true
     waypoint-proxy = true
     dcgmexporter = true
+    controlplane-istio = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -61,6 +62,7 @@ data:
     istio-cni = ""
     waypoint-proxy = ""
     dcgmexporter = "DCGM_FI_DEV_GPU_UTIL|DCGM_FI_DEV_MEM_COPY_UTIL|DCGM_FI_DEV_POWER_USAGE"
+    controlplane-istio = "pilot_xds_pushes|pilot_xds_push_context_errors|pilot_conflict_inbound_listener"
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -89,6 +91,7 @@ data:
     istio-cni = "30s"
     waypoint-proxy = "30s"
     dcgmexporter = "60s"
+    controlplane-istio = "60s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"

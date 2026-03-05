@@ -40,6 +40,7 @@ data:
     istio-cni = false
     waypoint-proxy = false
     dcgmexporter = true
+    controlplane-istio = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -73,6 +74,7 @@ data:
     acstor-metrics-exporter = ""
     local-csi-driver = ""
     dcgmexporter = ""
+    controlplane-istio = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -97,6 +99,7 @@ data:
     podannotations = "30s"
     local-csi-driver = "30s"
     dcgmexporter = "30s"
+    controlplane-istio = "30s"
   debug-mode: |-
     enabled = false
 metadata:
