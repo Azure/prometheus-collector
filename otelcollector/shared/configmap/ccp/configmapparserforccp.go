@@ -29,7 +29,7 @@ func Configmapparserforccp() {
 
 	fmt.Println("done listing /etc/config/settings")
 
-	// Set agent config schema version
+	// Set agent config file version
 	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
 		if err != nil {
@@ -48,7 +48,7 @@ func Configmapparserforccp() {
 		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
 	}
 
-	// Set agent config file version
+	// Set agent config schema version
 	if shared.ExistsAndNotEmpty(configVersionPath) {
 		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
 		if err != nil {
