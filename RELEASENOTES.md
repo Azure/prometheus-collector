@@ -6,7 +6,11 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images :
+  + Dakydd/update ccp health metrics (https://github.com/Azure/prometheus-collector/pull/1436)
   + upgrade ME for otel metrics empty bucket fix (https://github.com/Azure/prometheus-collector/pull/1439)
+
+* Pipeline/Docs/Templates Updates:
+  + add image in release note (https://github.com/Azure/prometheus-collector/pull/1435)
 
 ## Release 02-26-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.25.0-main-02-26-2026-12118731`
