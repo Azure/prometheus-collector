@@ -2,8 +2,8 @@ package main
 
 import (
 	"math"
-	"net/http"
 	"os"
+	"net/http"
 	"sync"
 	"time"
 
@@ -28,10 +28,10 @@ var (
 	// TimeseriesVolumeMutex handles adding to the timeseries volume totals and setting these values as gauges for Prometheus metrics
 	TimeseriesVolumeMutex = &sync.Mutex{}
 
-	// OtelColExportingFailedMutex handles if the otelcollector has logged that exporting failed
-	OtelColExportingFailedMutex = &sync.Mutex{}
+	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
+	ExportingFailedMutex = &sync.Mutex{}
 
-	OtelColExportFailureEventCount = 0
+	OtelCollectorExportingFailedCount = 0
 
 	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesReceivedMetric = prometheus.NewGaugeVec(
@@ -69,11 +69,11 @@ var (
 		[]string{"computer", "release", "controller_type", "error"},
 	)
 
-	// otelcolExportFailuresMetric counts the number of times the otelcollector was unable to export
-	otelcolExportFailuresMetric = prometheus.NewCounterVec(
+	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
+	exportingFailedMetric = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "otelcol_export_failures_total",
-			Help: "Number of otelcol export failure events",
+			Name: "exporting_metrics_failed",
+			Help: "If exporting metrics failed or not",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -94,7 +94,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 	r.MustRegister(timeseriesSentMetric)
 	r.MustRegister(bytesSentMetric)
 	r.MustRegister(invalidCustomConfigMetric)
-	r.MustRegister(otelcolExportFailuresMetric)
+	r.MustRegister(exportingFailedMetric)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	http.Handle("/metrics", handler)
@@ -129,10 +129,10 @@ func ExposePrometheusCollectorHealthMetrics() {
 			}
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"], "error":invalidConfigErrorString}).Set(float64(isInvalidCustomConfig))
 		
-			OtelColExportingFailedMutex.Lock()
-			otelcolExportFailuresMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Add(float64(OtelColExportFailureEventCount))
-			OtelColExportFailureEventCount = 0
-			OtelColExportingFailedMutex.Unlock()
+			ExportingFailedMutex.Lock()
+			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Add(float64(OtelCollectorExportingFailedCount))
+			OtelCollectorExportingFailedCount = 0
+			ExportingFailedMutex.Unlock()
 
 			lastTickerStart = time.Now()
 		}
