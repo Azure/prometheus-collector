@@ -1,7 +1,3 @@
 # This file contains CVEs to be ignored by Trivy
-
-# CRITICAL
-
-# HIGH
-
-# MEDIUM
+# temp override for high priority ME upgrade, need to remove.
+CVE-2026-24051
