@@ -16,8 +16,8 @@ New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyCon
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.24.3-main-02-06-2026-57b43b9e/MdmMetricsExtension.2.2026.126.1932.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.126.1932.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.126.1932.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.227.1509.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
