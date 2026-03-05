@@ -40,6 +40,10 @@ func (r *reportingGauge) Record(_ context.Context, value int64, _ ...metric.Reco
 	r.value.Store(value)
 }
 
+func (r *reportingGauge) Enabled(_ context.Context) bool {
+	return true
+}
+
 func getTestPodWatcher(collectorNotReadyGracePeriod time.Duration) *Watcher {
 	podWatcher := Watcher{
 		k8sClient:                    fake.NewClientset(),
@@ -128,16 +132,19 @@ func Test_runWatch(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod1": {
-					Name:     "test-pod1",
-					NodeName: "test-node",
+					Name:          "test-pod1",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod2": {
-					Name:     "test-pod2",
-					NodeName: "test-node",
+					Name:          "test-pod2",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod3": {
-					Name:     "test-pod3",
-					NodeName: "test-node",
+					Name:          "test-pod3",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
@@ -168,8 +175,9 @@ func Test_runWatch(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod1": {
-					Name:     "test-pod1",
-					NodeName: "test-node",
+					Name:          "test-pod1",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
@@ -242,16 +250,19 @@ func Test_gracePeriodWithNonRunningPodPhase(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod-running": {
-					Name:     "test-pod-running",
-					NodeName: "test-node",
+					Name:          "test-pod-running",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-unknown-within-grace-period": {
-					Name:     "test-pod-unknown-within-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-unknown-within-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-pending-over-grace-period": {
-					Name:     "test-pod-pending-over-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-pending-over-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
@@ -276,12 +287,14 @@ func Test_gracePeriodWithNonRunningPodPhase(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod-running": {
-					Name:     "test-pod-running",
-					NodeName: "test-node",
+					Name:          "test-pod-running",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-unknown-within-grace-period": {
-					Name:     "test-pod-unknown-within-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-unknown-within-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
@@ -365,16 +378,19 @@ func Test_gracePeriodWithNonReadyPodCondition(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod-ready": {
-					Name:     "test-pod-ready",
-					NodeName: "test-node",
+					Name:          "test-pod-ready",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-non-ready-within-grace-period": {
-					Name:     "test-pod-non-ready-within-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-non-ready-within-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-non-ready-over-grace-period": {
-					Name:     "test-pod-non-ready-over-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-non-ready-over-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
@@ -399,12 +415,14 @@ func Test_gracePeriodWithNonReadyPodCondition(t *testing.T) {
 			},
 			want: map[string]*allocation.Collector{
 				"test-pod-ready": {
-					Name:     "test-pod-ready",
-					NodeName: "test-node",
+					Name:          "test-pod-ready",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 				"test-pod-non-ready-within-grace-period": {
-					Name:     "test-pod-non-ready-within-grace-period",
-					NodeName: "test-node",
+					Name:          "test-pod-non-ready-within-grace-period",
+					NodeName:      "test-node",
+					TargetsPerJob: map[string]int{},
 				},
 			},
 		},
