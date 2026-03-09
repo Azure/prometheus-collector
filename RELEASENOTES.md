@@ -1,21 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 03-05-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
-* AKS and Arc Container Images :
-  + upgrade ME for otel metrics empty bucket fix (https://github.com/Azure/prometheus-collector/pull/1439)
-
-* Pipeline/Docs/Templates Updates:
-  + add image in release note (https://github.com/Azure/prometheus-collector/pull/1435)
-
-## Release 02-26-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.25.0-main-02-26-2026-12118731`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.25.0-main-02-26-2026-12118731-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.25.0-main-02-26-2026-12118731-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.25.0-main-02-26-2026-12118731-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-cfg`
 * AKS and Arc Container Images :
   + BUG: Missing log columns: Add pod and containerID columns to logged output (https://github.com/Azure/prometheus-collector/pull/1398)
   + Add AI resource for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1408)
@@ -33,11 +22,13 @@
   + build(deps): bump go.opentelemetry.io/otel/exporters/stdout/stdoutmetric from 1.39.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1421)
   + build(deps): bump k8s.io/client-go from 0.34.2 to 0.35.1 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1413)
   + fix: upgrade ME to fix otel bug (https://github.com/Azure/prometheus-collector/pull/1407)
+  + upgrade ME for otel metrics empty bucket fix (https://github.com/Azure/prometheus-collector/pull/1439)
 
 * Pipeline/Docs/Templates Updates:
   + test: nightly build notification fix (https://github.com/Azure/prometheus-collector/pull/1404)
   + test: fix nightly build (https://github.com/Azure/prometheus-collector/pull/1409)
   + Update REMOTE-WRITE-RELEASENOTES.md (https://github.com/Azure/prometheus-collector/pull/1422)
+  + add image in release note (https://github.com/Azure/prometheus-collector/pull/1435)
 
 ## Release 01-22-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.3-main-01-28-2026-e05105c7`
