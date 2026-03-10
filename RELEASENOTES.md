@@ -11,7 +11,7 @@
   + build(deps): bump go.opentelemetry.io/otel/exporters/stdout/stdoutmetric from 1.38.0 to 1.39.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1382)
   + build(deps): bump github.com/shirou/gopsutil/v4 from 4.25.9 to 4.26.1 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1406)
   + build(deps): bump go.opentelemetry.io/otel/sdk from 1.39.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1405)
-  + build(deps): Upgrade otelcollector to v0.144.0 (https://github.com/Azure/prometheus-collector/pull/1401)
+  + build(deps): Upgrade otelcollector to v0.144.0 and kube-state-metrics to v2.17.0-6 (https://github.com/Azure/prometheus-collector/pull/1401)
   + Remove nodes/proxy from clusterrole (https://github.com/Azure/prometheus-collector/pull/1418)
   + feat: Add OperationEnvironment argument to MetricsExtension command execution (https://github.com/Azure/prometheus-collector/pull/1403)
   + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc from 1.38.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1410)
