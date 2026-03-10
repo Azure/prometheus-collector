@@ -32,11 +32,11 @@ scrape_configs:
       - regex: 'source_zone|destination_zone'
         action: labeldrop
       # Drop identity
-      - regex: 'source_principal|destination_principal'
-        action: labeldrop  
+      - regex: 'source_principal'
+        action: labeldrop
       # Drop all version/revision labels
       - regex: 'source_version|destination_version|source_canonical_revision|destination_canonical_revision'
         action: labeldrop
-      # Drop all redundant service labels
-      - regex: 'source_canonical_service|destination_canonical_service|destination_service|destination_service_name|destination_service_namespace'
+      # Drop redundant service labels
+      - regex: 'source_canonical_service|destination_canonical_service|destination_service_name|destination_service_namespace'
         action: labeldrop
