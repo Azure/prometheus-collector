@@ -35,7 +35,6 @@ data:
     local-csi-driver = true
     ztunnel = true
     istio-cni = true
-    waypoint-proxy = true
     dcgmexporter = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.

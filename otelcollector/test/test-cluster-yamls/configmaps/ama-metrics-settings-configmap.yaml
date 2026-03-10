@@ -29,7 +29,6 @@ data:
     local-csi-driver = true
     ztunnel = false
     istio-cni = false
-    waypoint-proxy = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
