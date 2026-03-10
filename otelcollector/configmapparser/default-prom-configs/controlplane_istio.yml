@@ -1,28 +1,28 @@
 scrape_configs:
-- job_name: controlplane-istio
-  scrape_interval: $$SCRAPE_INTERVAL$$
-  scrape_timeout: 10s
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  http_sd_configs:
-    - url: '$$MESH_MEMBER_METRICS_FQDN$$/v1/targets'
-      refresh_interval: 30s
-      authorization:
-        type: Bearer
-        credentials_file: /var/run/secrets/ama-metrics/token
-  authorization:
-    type: Bearer
-    credentials_file: /var/run/secrets/ama-metrics/token
-  tls_config:
-    insecure_skip_verify: false
-  relabel_configs:
-    - source_labels: [__address__]
-      regex: (.*)
-      target_label: instance
-      action: replace
-  metric_relabel_configs:
-    - action: drop
-      regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-      source_labels:
-        - __name__
+  - job_name: controlplane-istio
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    scrape_timeout: 10s
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    http_sd_configs:
+      - url: '$$MESH_MEMBER_METRICS_FQDN$$/v1/targets'
+        refresh_interval: 30s
+        authorization:
+          type: Bearer
+          credentials_file: /var/run/secrets/ama-metrics/token
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/ama-metrics/token
+    tls_config:
+      insecure_skip_verify: false
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: (.*)
+        target_label: instance
+        action: replace
+    metric_relabel_configs:
+      - action: keep
+        regex: (pilot_xds_pushes|pilot_conflict_inbound_listener|pilot_conflict_outbound_listener_tcp_over_current_tcp|pilot_virt_services|pilot_services|pilot_proxy_convergence_time|pilot_xds|pilot_info|pilot_k8s_reg_events|pilot_k8s_cfg_events|pilot_push_triggers|pilot_total_xds_rejects|pilot_total_xds_internal_errors|pilot_xds_push_time|pilot_xds_config_size_bytes|citadel_server_csr_count|galley_validation_passed|galley_validation_failed|sidecar_injection_success_total|sidecar_injection_failure_total|istio_build|go_goroutines|go_memstats_stack_inuse_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_sys_bytes|go_memstats_alloc_bytes|go_memstats_alloc_bytes_total|go_memstats_mallocs_total|process_cpu_seconds_total|process_open_fds|process_resident_memory_bytes|process_virtual_memory_bytes)
+        source_labels:
+          - __name__
