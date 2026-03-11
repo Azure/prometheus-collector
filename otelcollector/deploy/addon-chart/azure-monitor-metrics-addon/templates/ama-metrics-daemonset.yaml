@@ -557,7 +557,7 @@ spec:
               protocol: TCP
             - name: otlp-grpc-port
               containerPort: 56680
-              hostPort: {{ .Values.AppmonitoringAgent.openTelemetryMetricsPortGrpc | default 28334 }}
+              hostPort: {{ $.Values.AppmonitoringAgent.openTelemetryMetricsPortGrpc | default 28334 }}
               protocol: TCP
           {{- end }}
           securityContext:

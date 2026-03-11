@@ -3,5 +3,7 @@
 # CRITICAL
 
 # HIGH
+# temp override for high priority ME upgrade, need to remove.
+CVE-2026-24051
 
 # MEDIUM
