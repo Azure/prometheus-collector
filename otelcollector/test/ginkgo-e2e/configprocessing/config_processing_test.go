@@ -764,7 +764,7 @@ var _ = DescribeTable("The Prometheus UI API should respect dcgm-exporter custom
 // Controlplane Istio with custom scrape interval and regex override
 // This test requires MESH_MEMBER_METRICS_FQDN to be set in the deployment environment
 var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio custom scrape interval and regex overrides",
-	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string) {
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string, notExpectedRegexPatterns []string) {
 		time.Sleep(120 * time.Second)
 		var apiResponse utils.APIResponse
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
@@ -818,6 +818,11 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 
 					// Verify it still includes the minimal ingestion profile patterns
 					Expect(regex).To(ContainSubstring("pilot_xds_pushes"), "controlplane-istio regex should still include minimal ingestion profile pilot_xds_pushes pattern")
+
+					// Verify unconfigured patterns are NOT in the regex (negative test)
+					for _, pattern := range notExpectedRegexPatterns {
+						Expect(regex).NotTo(ContainSubstring(pattern), "controlplane-istio regex should NOT contain unconfigured pattern: %s", pattern)
+					}
 					break
 				}
 			}
@@ -829,5 +834,6 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 	Entry("when controlplane-istio has custom 60s interval and specific metric regex",
 		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m",
 		[]string{"pilot_xds_pushes", "pilot_xds_push_context_errors", "pilot_conflict_inbound_listener"},
+		[]string{"dummy_metric_not_configured"},
 		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )
