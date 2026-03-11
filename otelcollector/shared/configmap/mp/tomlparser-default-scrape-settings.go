@@ -31,7 +31,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["local-csi-driver"] = "true"
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
-	config["dcgmexporter"] = "true"
+	config["waypoint-proxy"] = "false"
+	config["dcgmexporter"] = "false"
 
 	return config, nil
 }
@@ -59,7 +60,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["local-csi-driver"] = "true"
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
-	config["dcgmexporter"] = "true"
+	config["waypoint-proxy"] = "false"
+	config["dcgmexporter"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
@@ -174,6 +176,11 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for istio-cni: %v\n", cp.IstioCni)
 	}
 
+	if val, ok := parsedConfig["waypoint-proxy"]; ok && val != "" {
+		cp.WaypointProxy = val
+		fmt.Printf("config:: Using scrape settings for waypoint-proxy: %v\n", cp.WaypointProxy)
+	}
+
 	if val, ok := parsedConfig["dcgmexporter"]; ok && val != "" {
 		cp.DcgmExporter = val
 		fmt.Printf("config:: Using scrape settings for dcgmexporter: %v\n", cp.DcgmExporter)
@@ -223,6 +230,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_LOCALCSIDRIVER_SCRAPING_ENABLED=%v\n", cp.LocalCSIDriver))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED=%v\n", cp.Ztunnel))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED=%v\n", cp.IstioCni))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WAYPOINT_PROXY_SCRAPING_ENABLED=%v\n", cp.WaypointProxy))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED=%v\n", cp.DcgmExporter))
 
 	return nil
