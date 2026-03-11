@@ -57,8 +57,8 @@ spec:
           resources:
             limits:
               {{- $containerResources := index $size.containers "prometheus-collector" }}
-              cpu: {{ $.Values.ama-metrics-ds-cpu-limit-linux | default $containerResources.cpuLimit }}
-              memory: {{ $.Values.ama-metrics-ds-memory-limit-linux | default $containerResources.memoryLimit }}
+              cpu: {{ $.Values.AzureMonitorMetrics.DsCPULimitLinux }}
+              memory: {{ $.Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
             requests:
               cpu: {{ $containerResources.cpuRequest }}
               memory: {{ $containerResources.memoryRequest }}

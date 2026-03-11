@@ -75,8 +75,8 @@ AzureMonitorMetrics:
     singleSize:
       containers:
         prometheus-collector:
-          cpuLimit: "200m"  # Will be overridden by toggle
-          memoryLimit: "1Gi"  # Will be overridden by toggle
+          # cpuLimit Will be overridden by toggle
+          # memoryLimit Will be overridden by toggle
           cpuRequest: "50m"
           memoryRequest: "150Mi"
         addon-token-adapter:
@@ -89,8 +89,8 @@ AzureMonitorMetrics:
         maxCPU: 2
         containers:
           prometheus-collector:
-            cpuLimit: "200m"  # Will be overridden by toggle
-            memoryLimit: "1Gi"  # Will be overridden by toggle
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
             cpuRequest: "20m"
             memoryRequest: "336Mi"
           addon-token-adapter:
@@ -102,8 +102,8 @@ AzureMonitorMetrics:
         maxCPU: 4
         containers:
           prometheus-collector:
-            cpuLimit: "200m"  # Will be overridden by toggle
-            memoryLimit: "1Gi"  # Will be overridden by toggle
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
             cpuRequest: "28m"
             memoryRequest: "401Mi"
           addon-token-adapter:
@@ -115,8 +115,8 @@ AzureMonitorMetrics:
         maxCPU: 8
         containers:
           prometheus-collector:
-            cpuLimit: "200m"  # Will be overridden by toggle
-            memoryLimit: "1Gi"  # Will be overridden by toggle
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
             cpuRequest: "43m"
             memoryRequest: "513Mi"
           addon-token-adapter:
@@ -128,8 +128,8 @@ AzureMonitorMetrics:
         maxCPU: 16
         containers:
           prometheus-collector:
-            cpuLimit: "200m"  # Will be overridden by toggle
-            memoryLimit: "1Gi"  # Will be overridden by toggle
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
             cpuRequest: "51m"
             memoryRequest: "562Mi"
           addon-token-adapter:
@@ -140,8 +140,8 @@ AzureMonitorMetrics:
       - name: "xl"
         containers:
           prometheus-collector:
-            cpuLimit: "200m"  # Will be overridden by toggle
-            memoryLimit: "1Gi"  # Will be overridden by toggle
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
             cpuRequest: "51m"
             memoryRequest: "634Mi"
           addon-token-adapter:
