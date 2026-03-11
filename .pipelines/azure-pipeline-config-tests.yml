@@ -492,6 +492,45 @@ stages:
             condition: always()
 
           - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-controlplane-istio-enabled.yaml
+
+              # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
+              # The test only validates config generation via /api/v1/status/config, not actual scraping.
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for controlplane-istio with custom interval and regex"
+            continueOnError: true
+
+          - bash: |
+              # Clean up the fake MESH_MEMBER_METRICS_FQDN env var for subsequent tests
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="controlplane-istio"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-controlplane-istio.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary and cleanup controlplane-istio env"
+            condition: always()
+
+          - bash: |
               # Remove any leftover custom Prometheus configmaps first
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml

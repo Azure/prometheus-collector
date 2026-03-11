@@ -782,6 +782,10 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
 
 		if controllerLabelValue == "ama-metrics" {
+			// Verify total scrape config count includes controlplane-istio (10 default RS + controlplane-istio)
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 11),
+				"should have 11 scrape configs (10 default RS + controlplane-istio)")
+
 			var controlplaneIstioJobConfig *config.ScrapeConfig
 			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
 				if scrapeJob.JobName == "controlplane-istio" {
@@ -823,7 +827,7 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 		}
 	},
 	Entry("when controlplane-istio has custom 60s interval and specific metric regex",
-		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m0s",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m",
 		[]string{"pilot_xds_pushes", "pilot_xds_push_context_errors", "pilot_conflict_inbound_listener"},
 		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )
