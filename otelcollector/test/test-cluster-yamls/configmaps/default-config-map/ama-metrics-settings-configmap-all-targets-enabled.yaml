@@ -35,7 +35,6 @@ data:
     local-csi-driver = true
     ztunnel = true
     istio-cni = true
-    waypoint-proxy = true
     dcgmexporter = true
     controlplane-istio = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
@@ -60,7 +59,6 @@ data:
     networkobservabilityCilium = ""
     ztunnel = ""
     istio-cni = ""
-    waypoint-proxy = ""
     dcgmexporter = "DCGM_FI_DEV_GPU_UTIL|DCGM_FI_DEV_MEM_COPY_UTIL|DCGM_FI_DEV_POWER_USAGE"
     controlplane-istio = "pilot_xds_pushes|pilot_xds_push_context_errors|pilot_conflict_inbound_listener"
     controlplane-apiserver = ""
@@ -89,7 +87,6 @@ data:
     networkobservabilityCilium = "30s"
     ztunnel = "30s"
     istio-cni = "30s"
-    waypoint-proxy = "30s"
     dcgmexporter = "60s"
     controlplane-istio = "60s"
     prometheuscollectorhealth = "30s"

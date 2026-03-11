@@ -20,7 +20,7 @@ var (
 	networkobservabilityCiliumRegex, podAnnotationsRegex                string
 	acstorCapacityProvisionerRegex, acstorMetricsExporterRegex          string
 	localCSIDriverRegex                                                 string
-	ztunnelRegex, istioCniRegex, waypointRegex                          string
+	ztunnelRegex, istioCniRegex                                         string
 	dcgmExporterRegex                                                   string
 	controlplaneIstioRegex                                              string
 	kubeletRegex_minimal_mac                                            = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase"
@@ -43,7 +43,6 @@ var (
 	localCsiDriver_minimal_mac    = "rpc.server.duration_milliseconds_bucket|rpc.server.duration_milliseconds_sum|rpc.server.duration_milliseconds_count|rpc_server_duration_milliseconds_bucket|rpc_server_duration_milliseconds_sum|rpc_server_duration_milliseconds_count"
 	ztunnel_minimal_mac           = "istio_build|istio_xds_connection_terminations_total|istio_xds_message_total|istio_tcp_connections_opened_total|istio_tcp_connections_closed_total|istio_tcp_sent_bytes_total|istio_tcp_received_bytes_total|istio_dns_requests_total|workload_manager_active_proxy_count|workload_manager_pending_proxy_count"
 	istioCni_minimal_mac          = "istio_cni_install_ready|istio_cni_installs_total|nodeagent_reconcile_events_total|ztunnel_connected"
-	waypoint_minimal_mac          = "istio_build|istio_requests_total|istio_request_duration_milliseconds_sum|istio_request_duration_milliseconds_count|envoy_cluster_upstream_cx_active|envoy_cluster_upstream_cx_connect_fail|envoy_server_memory_allocated"
 	dcgmexporter_minimal_mac      = "DCGM_.*"
 	controlplaneIstio_minimal_mac = "pilot_xds_pushes|pilot_conflict_inbound_listener|pilot_conflict_outbound_listener_tcp_over_current_tcp|pilot_virt_services|pilot_services|pilot_proxy_convergence_time|pilot_xds|pilot_info|pilot_k8s_reg_events|pilot_k8s_cfg_events|pilot_push_triggers|pilot_total_xds_rejects|pilot_total_xds_internal_errors|pilot_xds_push_time|pilot_xds_config_size_bytes|citadel_server_csr_count|galley_validation_passed|galley_validation_failed|sidecar_injection_success_total|sidecar_injection_failure_total|istio_build|go_goroutines|go_memstats_stack_inuse_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_sys_bytes|go_memstats_alloc_bytes|go_memstats_alloc_bytes_total|go_memstats_mallocs_total|process_cpu_seconds_total|process_open_fds|process_resident_memory_bytes|process_virtual_memory_bytes"
 )
@@ -130,7 +129,6 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		localcsidriver:             getStringValue(keeplist["local-csi-driver"]),
 		ztunnel:                    getStringValue(keeplist["ztunnel"]),
 		istiocni:                   getStringValue(keeplist["istio-cni"]),
-		waypoint:                   getStringValue(keeplist["waypoint-proxy"]),
 		dcgmexporter:               getStringValue(keeplist["dcgmexporter"]),
 		controlplaneistio:          getStringValue(keeplist["controlplane-istio"]),
 		minimalingestionprofile:    minimalingestionprofile_value,
@@ -167,7 +165,6 @@ func validateRegexValues(regexValues RegexValues) error {
 		"local-csi-driver":            regexValues.localcsidriver,
 		"ztunnel":                     regexValues.ztunnel,
 		"istio-cni":                   regexValues.istiocni,
-		"waypoint-proxy":              regexValues.waypoint,
 		"dcgmexporter":                regexValues.dcgmexporter,
 		"controlplane-istio":          regexValues.controlplaneistio,
 	}
@@ -223,7 +220,6 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		localCSIDriverRegex = fmt.Sprintf("%s|%s", regexValues.localcsidriver, localCsiDriver_minimal_mac)
 		ztunnelRegex = fmt.Sprintf("%s|%s", regexValues.ztunnel, ztunnel_minimal_mac)
 		istioCniRegex = fmt.Sprintf("%s|%s", regexValues.istiocni, istioCni_minimal_mac)
-		waypointRegex = fmt.Sprintf("%s|%s", regexValues.waypoint, waypoint_minimal_mac)
 		dcgmExporterRegex = fmt.Sprintf("%s|%s", regexValues.dcgmexporter, dcgmexporter_minimal_mac)
 		controlplaneIstioRegex = fmt.Sprintf("%s|%s", regexValues.controlplaneistio, controlplaneIstio_minimal_mac)
 
@@ -249,7 +245,6 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		localCSIDriverRegex = regexValues.localcsidriver
 		ztunnelRegex = regexValues.ztunnel
 		istioCniRegex = regexValues.istiocni
-		waypointRegex = regexValues.waypoint
 		dcgmExporterRegex = regexValues.dcgmexporter
 		controlplaneIstioRegex = regexValues.controlplaneistio
 	}
@@ -289,7 +284,6 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 		"LOCALCSIDRIVER_KEEP_LIST_REGEX":                     localCSIDriverRegex,
 		"ZTUNNEL_METRICS_KEEP_LIST_REGEX":                    ztunnelRegex,
 		"ISTIOCNI_METRICS_KEEP_LIST_REGEX":                   istioCniRegex,
-		"WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX":             waypointRegex,
 		"DCGMEXPORTER_METRICS_KEEP_LIST_REGEX":               dcgmExporterRegex,
 		"CONTROLPLANE_ISTIO_KEEP_LIST_REGEX":                 controlplaneIstioRegex,
 	}

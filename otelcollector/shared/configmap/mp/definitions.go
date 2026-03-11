@@ -54,7 +54,6 @@ var (
 	LocalCSIDriverDefaultFile                    = "localCSIDriverDefaultFile.yml"
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
-	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
 	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
@@ -80,7 +79,6 @@ type RegexValues struct {
 	localcsidriver             string
 	ztunnel                    string
 	istiocni                   string
-	waypoint                   string
 	dcgmexporter               string
 	controlplaneistio          string
 }
@@ -128,7 +126,6 @@ type ConfigProcessor struct {
 	LocalCSIDriver             string
 	Ztunnel                    string
 	IstioCni                   string
-	WaypointProxy              string
 	DcgmExporter               string
 }
 

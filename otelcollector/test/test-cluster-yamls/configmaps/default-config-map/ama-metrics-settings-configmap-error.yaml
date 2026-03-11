@@ -35,8 +35,8 @@ data:
     local-csi-driver = true
     ztunnel = false
     istio-cni = false
-    waypoint-proxy = false
     controlplane-istio = false
+
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
