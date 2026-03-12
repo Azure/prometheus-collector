@@ -178,9 +178,6 @@ global:
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
-  Azure:
-    Cluster:
-      Kind: "automatic"
 
 # For ARC backdoor testing
 Azure:
@@ -191,6 +188,7 @@ Azure:
     Region: "${ARC_REGION}"
     Cloud: "azurepubliccloud"
     Distribution: ""
+    Kind: "base"
   proxySettings:
     isProxyEnabled: "false"
     httpProxy: ""
