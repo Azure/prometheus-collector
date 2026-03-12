@@ -143,8 +143,6 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        - operator: "Exists"
-          effect: NoExecute
       {{- end }}
       volumes:
         - name: settings-vol-config
