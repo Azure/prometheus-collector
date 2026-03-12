@@ -497,7 +497,9 @@ stages:
               # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
               # The test only validates config generation via /api/v1/status/config, not actual scraping.
               kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
               kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
@@ -521,7 +523,9 @@ stages:
           - bash: |
               # Clean up the fake MESH_MEMBER_METRICS_FQDN env var for subsequent tests
               kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN-
               kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
               TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="controlplane-istio"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
               echo $TESTKUBE_RESULTS_OTEL
