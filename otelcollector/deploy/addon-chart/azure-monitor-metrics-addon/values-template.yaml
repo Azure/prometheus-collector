@@ -169,9 +169,9 @@ AzureMonitorMetrics:
     customResourceEndpoint: ""
 AppmonitoringAgent:
     enabled: false
-    isOpenTelemetryLogsEnabled: false
     isOpenTelemetryMetricsEnabled: false
     openTelemetryMetricsPort: 28333
+    openTelemetryMetricsPortGrpc: 28334
 global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
