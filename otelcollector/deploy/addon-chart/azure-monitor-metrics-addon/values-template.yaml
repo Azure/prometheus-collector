@@ -67,9 +67,6 @@ AzureMonitorMetrics:
   TargetAllocatorMemoryLimit: 8Gi
   TargetAllocatorCPURequest: 10m
   TargetAllocatorMemoryRequest: 50Mi
-  IsAppMonitoringAutoInstrumentationEnabled: false
-  IsAppMonitoringOpenTelemetryMetricsEnabled: false
-  OpenTelemetryMetricsPort: "28333"
   enableDaemonSetSizing: true
   daemonSetSizingValues:
     singleSize:
