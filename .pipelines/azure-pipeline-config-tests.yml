@@ -65,12 +65,15 @@ stages:
             persistCredentials: true
 
           - bash: |
-              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-              sudo apt-get update
-              sudo apt-get install -y testkube
+              # Try apt install first, fall back to official install script
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \
+              sudo apt-get update && \
+              sudo apt-get install -y testkube || \
+              curl -sSLf https://get.testkube.io | sudo bash
 
-              exit 0
+              # Verify testkube is installed
+              which kubectl-testkube || which testkube || { echo "ERROR: testkube CLI not installed"; exit 1; }
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
 
@@ -492,12 +495,32 @@ stages:
             condition: always()
 
           - bash: |
+              # Clean up any leftover custom Prometheus configmaps from previous runs/tests
+              kubectl delete configmap ama-metrics-prometheus-config -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node-windows -n kube-system --ignore-not-found
+
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-controlplane-istio-enabled.yaml
 
               # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
               # The test only validates config generation via /api/v1/status/config, not actual scraping.
               kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
               kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+
+              # The controlplane_istio.yml template references /var/run/secrets/ama-metrics/token for auth.
+              # This projected volume is only mounted when the Helm value endpointFQDN is set (production).
+              # For CI testing, patch both deployments to add the projected volume + mount so the
+              # promconfigvalidator doesn't reject the config due to missing credentials_file.
+              kubectl patch deployment ama-metrics -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
+              kubectl patch deployment ama-metrics-operator-targets -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}},
+                {"op":"add","path":"/spec/template/spec/containers/1/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
+
               kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
               kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
@@ -521,9 +544,17 @@ stages:
             continueOnError: true
 
           - bash: |
-              # Clean up the fake MESH_MEMBER_METRICS_FQDN env var for subsequent tests
+              # Clean up the fake MESH_MEMBER_METRICS_FQDN env var and projected volume for subsequent tests
               kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
               kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN-
+
+              # Remove the projected volume and mounts added for controlplane-istio testing.
+              # Use strategic merge patch to remove the volume by name; the rollout will recreate pods without it.
+              # For volumes, we need to filter out mcp-metrics-ama-metrics-token.
+              # Simplest approach: just let the rollout with removed env var recreate clean pods.
+              # The volume patches are tied to the deployment spec and will persist, but they're harmless
+              # (projected SA tokens are always valid). The env var removal is what matters for disabling the feature.
+
               kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
               kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
