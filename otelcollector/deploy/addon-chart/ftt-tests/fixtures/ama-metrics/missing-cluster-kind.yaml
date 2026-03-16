@@ -1,0 +1,9 @@
+name: missing-cluster-kind
+description: Cluster kind is not specified - t-shirt sizing should be disabled since kind is not automatic
+values:
+    AzureMonitorMetrics:
+        DsCPULimitLinux: 200m
+        DsCPURequestLinux: 50m
+        DsMemoryLimitLinux: 1Gi
+        DsMemoryRequestLinux: 150Mi
+        enableDaemonSetSizing: "true"

@@ -1,0 +1,189 @@
+AzureMonitorMetrics:
+  KubeStateMetrics:
+    ImageRegistry: mcr.microsoft.com
+    ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
+    CPULimit: 1
+    MemoryLimit: 5Gi
+    ImageTag: "v2.17.0-6"
+    ImageTagWin: "v2.17.0-6-win"
+    Collectors:
+      - certificatesigningrequests
+      - configmaps
+      - cronjobs
+      - daemonsets
+      - deployments
+      - endpoints
+      - horizontalpodautoscalers
+      - ingresses
+      - jobs
+      - leases
+      - limitranges
+      - mutatingwebhookconfigurations
+      - namespaces
+      - networkpolicies
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - poddisruptionbudgets
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - resourcequotas
+      - secrets
+      - services
+      - statefulsets
+      - storageclasses
+      - validatingwebhookconfigurations
+      - volumeattachments
+  ImageRegistry: mcr.microsoft.com
+  ImageRepository: /azuremonitor/containerinsights/ciprod/prometheus-collector/images
+  ImageTag: "0.1.0"
+  ImageTagWin: "0.1.0-win"
+  RsCPULimit: 7
+  RsMemoryLimit: 14Gi
+  RsCPURequest: 150m
+  RsMemoryRequest: 500Mi
+  DsCPULimitLinux: 200m
+  DsMemoryLimitLinux: 1Gi
+  DsCPURequestLinux: 50m
+  DsMemoryRequestLinux: 150Mi
+  DsCPULimitWindows: 500m
+  DsMemoryLimitWindows: 1Gi
+  ImageTagTargetAllocator: "0.1.0-targetallocator"
+  ImageTagCfgReader: "0.1.0-cfg"
+  TargetAllocatorEnabled: true
+  CollectorHPAEnabled: true
+  OperatorTargetsHttpsEnabled: true
+  DeploymentReplicas: 2
+  CfgReaderCPULimit: 1
+  CfgReaderMemoryLimit: 1Gi
+  CfgReaderCPURequest: 1m
+  CfgReaderMemoryRequest: 10Mi
+  TargetAllocatorCPULimit: 5
+  TargetAllocatorMemoryLimit: 8Gi
+  TargetAllocatorCPURequest: 10m
+  TargetAllocatorMemoryRequest: 50Mi
+  enableDaemonSetSizing: true
+  daemonSetSizingValues:
+    singleSize:
+      containers:
+        prometheus-collector:
+          cpuRequest: "50m"
+          memoryRequest: "150Mi"
+        addon-token-adapter:
+          cpuLimit: "500m"
+          memoryLimit: "500Mi"
+          cpuRequest: "20m"
+          memoryRequest: "30Mi"
+    tShirtSizes:
+      - name: "xs"
+        maxCPU: 2
+        containers:
+          prometheus-collector:
+            cpuRequest: "20m"
+            memoryRequest: "336Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "s"
+        maxCPU: 4
+        containers:
+          prometheus-collector:
+            cpuRequest: "28m"
+            memoryRequest: "401Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "m"
+        maxCPU: 8
+        containers:
+          prometheus-collector:
+            cpuRequest: "43m"
+            memoryRequest: "513Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "l"
+        maxCPU: 16
+        containers:
+          prometheus-collector:
+            cpuRequest: "51m"
+            memoryRequest: "562Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "xl"
+        containers:
+          prometheus-collector:
+            cpuRequest: "51m"
+            memoryRequest: "634Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+  AddonTokenAdapter:
+    ImageRegistry: mcr.microsoft.com
+    ImageRepository: "/aks/msi/addon-token-adapter"
+    ImageTag: "master.260209.2"
+    ImageRepositoryWin: "/aks/msi/addon-token-adapter"
+    ImageTagWin: "master.260209.2"
+  ArcExtension: false
+  ArcEnableOperator: true
+  isArcACluster: false
+  arcAutonomousSettings:
+    customRegionalEndpoint: ""
+    customGlobalEndpoint: ""
+    customResourceEndpoint: ""
+AppmonitoringAgent:
+    enabled: false
+    isOpenTelemetryMetricsEnabled: false
+    openTelemetryMetricsPort: 28333
+    openTelemetryMetricsPortGrpc: 28334
+global:
+  commonGlobals:
+    CloudEnvironment: "azurepubliccloud"
+    Region: "eastus"
+    Customer:
+      AzureResourceID: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster
+
+Azure:
+  Extension:
+    Name: azuremonitor-metrics
+  Cluster:
+    ResourceId: ""
+    Region: "eastus"
+    Cloud: "azurepubliccloud"
+    Distribution: ""
+    Kind: "base"
+  proxySettings:
+    isProxyEnabled: "false"
+    httpProxy: ""
+    httpsProxy: ""
+    noProxy: ""
+    proxyCert: ""
+  Identity:
+      MSIAdapterYaml: ""
+
+ClusterDistribution: ""
+CloudEnvironment: ""
+MountCATrustAnchorsDirectory: true
+MountUbuntuCACertDirectory: true
+
+prometheus-node-exporter:
+  service:
+    enabled: true
+    port: 9110
+    targetPort: 9110
+  image:
+    registry: mcr.microsoft.com
+    repository: oss/v2/prometheus/node-exporter
+tolerationsOnlyForControlPlane: false

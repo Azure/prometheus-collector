@@ -1,0 +1,9 @@
+name: daemonset-sizing-no-kind-template
+description: Template for testing DaemonSet behavior when cluster kind is not specified
+template:
+  AzureMonitorMetrics:
+    enableDaemonSetSizing: "{{.enableDaemonSetSizing}}"
+    DsCPULimitLinux: "{{.dsCPULimitLinux}}"
+    DsMemoryLimitLinux: "{{.dsMemoryLimitLinux}}"
+    DsCPURequestLinux: "{{.dsCPURequestLinux}}"
+    DsMemoryRequestLinux: "{{.dsMemoryRequestLinux}}"

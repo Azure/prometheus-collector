@@ -1,0 +1,12 @@
+name: base-cluster
+description: Base cluster kind - single DaemonSet without t-shirt sizing
+values:
+    Azure:
+        Cluster:
+            Kind: base
+    AzureMonitorMetrics:
+        DsCPULimitLinux: 200m
+        DsCPURequestLinux: 50m
+        DsMemoryLimitLinux: 1Gi
+        DsMemoryRequestLinux: 150Mi
+        enableDaemonSetSizing: "true"

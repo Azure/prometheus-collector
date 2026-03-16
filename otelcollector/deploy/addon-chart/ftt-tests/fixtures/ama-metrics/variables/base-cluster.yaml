@@ -1,0 +1,9 @@
+name: base-cluster
+description: Base cluster kind - single DaemonSet without t-shirt sizing
+variables:
+  clusterKind: "base"
+  enableDaemonSetSizing: true
+  dsCPULimitLinux: "200m"
+  dsMemoryLimitLinux: "1Gi"
+  dsCPURequestLinux: "50m"
+  dsMemoryRequestLinux: "150Mi"

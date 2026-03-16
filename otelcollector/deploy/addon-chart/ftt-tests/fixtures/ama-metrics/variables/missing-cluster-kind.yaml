@@ -1,0 +1,8 @@
+name: missing-cluster-kind
+description: Cluster kind is not specified - t-shirt sizing should be disabled since kind is not automatic
+variables:
+  enableDaemonSetSizing: true
+  dsCPULimitLinux: "200m"
+  dsMemoryLimitLinux: "1Gi"
+  dsCPURequestLinux: "50m"
+  dsMemoryRequestLinux: "150Mi"
