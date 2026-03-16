@@ -7,3 +7,6 @@
 CVE-2026-24051
 
 # MEDIUM
+CVE-2026-25679 #stdlib
+CVE-2026-27142 #stdlib
+
