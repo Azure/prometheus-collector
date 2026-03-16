@@ -24,9 +24,9 @@ COPY ./shared /src/shared
 
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; \
+        CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOEXPERIMENT=systemcrypto GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; \
     else \
-        CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; \
+        CGO_ENABLED=1 GOEXPERIMENT=systemcrypto GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; \
     fi
 
 # Stage 2: configuration-reader-builder
@@ -50,9 +50,9 @@ COPY ./configuration-reader-builder /src/configuration-reader-builder
 ARG TARGETOS TARGETARCH
 RUN echo "TARGETOS: $TARGETOS, TARGETARCH: $TARGETARCH"
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; \
+        CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOEXPERIMENT=systemcrypto GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; \
     else \
-        CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; \
+        CGO_ENABLED=1 GOEXPERIMENT=systemcrypto GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; \
     fi
 
 # Stage 3: builder
