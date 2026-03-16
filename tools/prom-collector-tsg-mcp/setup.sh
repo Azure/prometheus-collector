@@ -19,7 +19,8 @@ set -euo pipefail
 #   3. Builds the TSG MCP server
 #   4. Writes ~/.copilot/mcp.json with correct absolute paths
 #   5. Creates azureauth shim (WSL2 only)
-#   6. Verifies connectivity
+#   6. Launches Edge with CDP and sets up port proxy (WSL2 only)
+#   7. Verifies connectivity
 #
 # Usage:
 #   bash tools/prom-collector-tsg-mcp/setup.sh           # interactive
@@ -167,6 +168,61 @@ AUTHSCRIPT
     ok "azureauth shim installed"
 fi
 
+# --- WSL2: Edge CDP setup for tsg_icm_page ---
+if [[ "$PLATFORM" == "wsl2" ]]; then
+    info "Setting up Edge CDP for ICM browser scraping..."
+    EDGE_PATH='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+    EDGE_DATA_DIR="C:\\Users\\$(cmd.exe /C "echo %USERNAME%" 2>/dev/null | tr -d '\r')\\.playwright-mcp-edge3"
+
+    # Check if Edge is already running with remote debugging
+    EDGE_CDP_RUNNING=false
+    if powershell.exe -Command "Get-CimInstance Win32_Process -Filter \"name='msedge.exe'\" | Where-Object { \$_.CommandLine -match 'remote-debugging-port' }" 2>/dev/null | grep -q "debugging"; then
+        EDGE_CDP_RUNNING=true
+        ok "Edge already running with CDP debugging port"
+    fi
+
+    if [[ "$EDGE_CDP_RUNNING" == "false" ]]; then
+        if confirm "Launch Edge with CDP debugging port (--remote-debugging-port=9222)?"; then
+            # Kill existing Edge instances first
+            powershell.exe -Command "Stop-Process -Name msedge -Force -ErrorAction SilentlyContinue" 2>/dev/null || true
+            sleep 2
+            powershell.exe -Command "Start-Process '$EDGE_PATH' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=$EDGE_DATA_DIR','--no-first-run'" 2>/dev/null
+            sleep 3
+
+            # Verify it launched with the debugging port
+            if powershell.exe -Command "Get-CimInstance Win32_Process -Filter \"name='msedge.exe'\" | Where-Object { \$_.CommandLine -match 'remote-debugging-port' }" 2>/dev/null | grep -q "debugging"; then
+                ok "Edge launched with CDP on port 9222"
+            else
+                warn "Edge launched but CDP flag not detected — you may need to relaunch manually"
+            fi
+        else
+            info "Skipping Edge CDP launch — tsg_icm_page will not work without it"
+        fi
+    fi
+
+    # Set up port proxy so WSL can reach Edge's CDP on the Windows host
+    WSL_GATEWAY=$(ip route show default 2>/dev/null | awk '{print $3}')
+    if [[ -n "$WSL_GATEWAY" ]]; then
+        # Test if CDP is already reachable
+        if curl -s --connect-timeout 3 "http://${WSL_GATEWAY}:9223/json/version" >/dev/null 2>&1; then
+            ok "Edge CDP reachable at ${WSL_GATEWAY}:9223"
+        elif curl -s --connect-timeout 3 "http://${WSL_GATEWAY}:9222/json/version" >/dev/null 2>&1; then
+            ok "Edge CDP reachable at ${WSL_GATEWAY}:9222 (no port proxy needed)"
+        else
+            info "Setting up Windows port proxy (requires admin elevation)..."
+            powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command','netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1; netsh advfirewall firewall add rule name=\"\"\"WSL Edge CDP\"\"\" dir=in action=allow protocol=TCP localport=9223'" 2>/dev/null
+            sleep 3
+            if curl -s --connect-timeout 3 "http://${WSL_GATEWAY}:9223/json/version" >/dev/null 2>&1; then
+                ok "Port proxy configured — Edge CDP reachable at ${WSL_GATEWAY}:9223"
+            else
+                warn "Port proxy may not have been applied (UAC prompt may need approval)"
+                warn "Run this in an admin PowerShell on Windows:"
+                warn "  netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1"
+            fi
+        fi
+    fi
+fi
+
 # --- Verify ---
 if az account show &>/dev/null 2>&1; then
     ok "Azure CLI logged in"
@@ -195,11 +251,13 @@ echo "    prom-collector-tsg → TSG diagnostic queries"
 echo "    playwright         → browser automation"
 echo ""
 if [[ "$PLATFORM" == "wsl2" ]]; then
-    echo "  WSL2: For ICM portal browsing, start Edge on Windows with:"
-    echo "    msedge --remote-debugging-port=9222"
-    echo "  Then set up port proxy (admin PowerShell):"
-    echo "    netsh interface portproxy add v4tov4 listenport=9223 \\"
-    echo "      listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1"
+    echo "  WSL2: Edge CDP for ICM browsing:"
+    echo "    If setup.sh configured it, tsg_icm_page should work."
+    echo "    If not, launch Edge manually with:"
+    echo "      powershell.exe -Command \"Start-Process 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\<user>\\.playwright-mcp-edge3','--no-first-run'\""
+    echo "    Then set up port proxy (admin PowerShell):"
+    echo "      netsh interface portproxy add v4tov4 listenport=9223 \\"
+    echo "        listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1"
     echo ""
 fi
 

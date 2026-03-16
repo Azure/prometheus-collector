@@ -13,8 +13,25 @@
  */
 
 import WebSocket from "ws";
+import { execSync } from "child_process";
 
-const CDP_HTTP = process.env.CDP_ENDPOINT || "http://172.29.112.1:9223";
+/** Auto-detect the WSL2 default gateway IP (the Windows host) */
+function detectWSLGateway(): string {
+  try {
+    const route = execSync("ip route show default 2>/dev/null", {
+      encoding: "utf-8",
+      timeout: 3000,
+    });
+    const match = route.match(/via\s+([\d.]+)/);
+    if (match) return match[1];
+  } catch {
+    // not on WSL2 or ip command unavailable
+  }
+  return "172.29.112.1"; // fallback
+}
+
+const CDP_HTTP =
+  process.env.CDP_ENDPOINT || `http://${detectWSLGateway()}:9223`;
 
 interface CDPTab {
   id: string;

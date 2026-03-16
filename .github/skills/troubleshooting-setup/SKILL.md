@@ -16,7 +16,7 @@ cd ~/go/src/prometheus-collector
 bash tools/prom-collector-tsg-mcp/setup.sh
 ```
 
-This builds the MCP server, writes `~/.copilot/mcp.json` with correct paths, and sets up auth workarounds (WSL2 only). Everything else is already in the repo:
+This builds the MCP server, writes `~/.copilot/mcp.json` with correct paths, sets up auth workarounds (WSL2 only), and configures Edge CDP for ICM browser scraping (WSL2 only). Everything else is already in the repo:
 
 | What | Where | Auto-discovered? |
 |------|-------|-------------------|
@@ -25,6 +25,7 @@ This builds the MCP server, writes `~/.copilot/mcp.json` with correct paths, and
 | Repo context | `.github/copilot-instructions.md` | ✅ Yes — Copilot reads it automatically |
 | VS Code MCP config | `.vscode/mcp.json` | ✅ Yes — VS Code reads it automatically |
 | Custom MCP (prom-collector-tsg binary) | `~/.copilot/mcp.json` | ⚠️ Needs setup.sh — requires absolute path to built `dist/index.js` |
+| Edge CDP (WSL2 only) | Windows port proxy + Edge launch | ⚠️ Needs setup.sh — launches Edge with `--remote-debugging-port=9222` and configures port proxy |
 
 After setup:
 ```bash
@@ -139,25 +140,28 @@ sudo apt-get install -f  # fix any dependency issues
 
 Since WSL2 cannot launch a GUI browser, the `tsg_icm_page` tool connects to Edge running on the **Windows host** via the Chrome DevTools Protocol (CDP).
 
-**One-time setup on the Windows host (run in PowerShell as Administrator):**
+**Automated setup (recommended):** `setup.sh` handles this automatically — it launches Edge with `--remote-debugging-port=9222`, sets up the Windows port proxy via admin-elevated PowerShell, and auto-detects the WSL gateway IP.
 
-```powershell
-# 1. Create a shortcut/alias to launch Edge with debugging port
-# Add this to a .bat file or PowerShell profile:
-& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --remote-debugging-port=9222
+```bash
+# setup.sh does all of this for you, but if you need to do it manually:
 
-# 2. Set up port forwarding so WSL can reach Windows Edge on port 9223
-netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1
+# 1. From WSL, launch Edge with CDP debugging port
+powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\<user>\.playwright-mcp-edge3','--no-first-run'"
 
-# 3. Allow the port through Windows Firewall (if needed)
-netsh advfirewall firewall add rule name="WSL Edge CDP" dir=in action=allow protocol=TCP localport=9223
+# 2. Set up port proxy with admin elevation (from WSL)
+powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command','netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1; netsh advfirewall firewall add rule name=\"\"\"WSL Edge CDP\"\"\" dir=in action=allow protocol=TCP localport=9223'"
 ```
+
+> **Note:** The admin elevation will trigger a Windows UAC prompt — you must click "Yes" on the Windows side.
 
 **Verify from WSL:**
 ```bash
-curl -s http://$(hostname).local:9223/json/version | python3 -m json.tool
-# Should return Edge version info
+WSL_GATEWAY=$(ip route show default | awk '{print $3}')
+curl -s "http://${WSL_GATEWAY}:9223/json/version" | python3 -m json.tool
+# Should return Edge version info with "Browser": "Edg/..."
 ```
+
+> **Key detail:** The `tsg_icm_page` tool auto-detects the WSL gateway IP at runtime (via `ip route show default`). It no longer uses a hardcoded IP. You can also override it with `CDP_ENDPOINT=http://host:port`.
 
 Then `tsg_icm_page` will work from WSL2 to scrape the authored summary from the ICM portal.
 
@@ -994,6 +998,49 @@ sudo dpkg -i google-chrome-stable_current_amd64.deb && sudo apt-get install -f
 ```
 
 For ICM portal on WSL2, use `tsg_icm_page` instead of Playwright (see Section 1 for Edge CDP proxy setup).
+
+### tsg_icm_page: "Cannot connect to Edge browser via CDP"
+
+This means the Edge CDP connection from WSL2 to the Windows host isn't working. Debug step by step:
+
+```bash
+# 1. Is Edge running with the debugging port?
+powershell.exe -Command "Get-CimInstance Win32_Process -Filter \"name='msedge.exe'\" | Where-Object { \$_.CommandLine -match 'remote-debugging-port' } | Select-Object ProcessId" 2>/dev/null
+# If empty, Edge wasn't launched with --remote-debugging-port=9222
+
+# 2. Does CDP work on the Windows side?
+powershell.exe -Command "(Invoke-WebRequest -Uri 'http://localhost:9222/json/version' -UseBasicParsing -TimeoutSec 3).Content" 2>/dev/null
+# Should return JSON with "Browser": "Edg/..."
+
+# 3. What's your WSL gateway IP?
+ip route show default | awk '{print $3}'
+# e.g., 172.24.208.1
+
+# 4. Is the port proxy forwarding correctly?
+WSL_GATEWAY=$(ip route show default | awk '{print $3}')
+curl -s --connect-timeout 3 "http://${WSL_GATEWAY}:9223/json/version"
+# If empty, port proxy isn't set up or firewall is blocking
+```
+
+**Common fixes:**
+- **Edge not launched with CDP**: Relaunch from WSL:
+  ```bash
+  powershell.exe -Command "Stop-Process -Name msedge -Force -ErrorAction SilentlyContinue"
+  sleep 2
+  powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\$USER\.playwright-mcp-edge3','--no-first-run'"
+  ```
+- **Port proxy not set up** (needs admin — will trigger UAC prompt):
+  ```bash
+  powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command','netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1; netsh advfirewall firewall add rule name=\"\"\"WSL Edge CDP\"\"\" dir=in action=allow protocol=TCP localport=9223'"
+  ```
+- **Gateway IP mismatch**: The tool auto-detects the gateway via `ip route`. If it doesn't work, override with:
+  ```bash
+  export CDP_ENDPOINT="http://$(ip route show default | awk '{print $3}'):9223"
+  ```
+- **Re-run setup.sh**: This automates all of the above:
+  ```bash
+  bash tools/prom-collector-tsg-mcp/setup.sh
+  ```
 
 ### Kusto queries: "403 Forbidden"
 
