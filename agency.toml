@@ -1,0 +1,6 @@
+[mcps]
+
+[mcps.builtins]
+ado = { organization = "msazure", type = "ado" }
+icm = true
+es-chat = true

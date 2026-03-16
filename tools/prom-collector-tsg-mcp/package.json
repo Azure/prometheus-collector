@@ -1,0 +1,26 @@
+{
+  "name": "prom-collector-tsg-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Azure Managed Prometheus troubleshooting - runs diagnostic KQL queries from the TSG dashboard",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "prom-collector-tsg-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.10.0",
+    "@azure/monitor-query": "^1.3.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.7.0"
+  }
+}

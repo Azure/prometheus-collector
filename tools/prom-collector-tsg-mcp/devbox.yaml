@@ -1,0 +1,323 @@
+# ============================================================================
+# Microsoft Dev Box — Prometheus-Collector TSG Devbox Configuration
+# ============================================================================
+# This devbox.yaml configures a Windows Dev Box with everything needed for
+# Azure Managed Prometheus ICM investigation using Copilot CLI.
+#
+# What it installs:
+#   - Git, Azure CLI, Node.js, .NET 8 SDK, kubectl, Helm (core tools)
+#   - Docker Desktop with WSL2 backend
+#   - WSL2 with Ubuntu (fully provisioned with same tools)
+#   - VS Code, Windows Terminal (editor + terminal)
+#   - Agency CLI / Copilot CLI (AI assistant)
+#   - The prometheus-collector repo (cloned and built on both Windows + WSL2)
+#
+# Usage:
+#   1. Create a Dev Box pool that uses this configuration
+#   2. Create a Dev Box from that pool
+#   3. Open terminal and run: cd ~\go\src\prometheus-collector && agency copilot
+#
+# Reference: https://learn.microsoft.com/en-us/azure/dev-box/reference-dev-box-customizations
+# ============================================================================
+
+$schema: 1.0
+name: prom-collector-tsg-devbox
+image: MicrosoftWindowsDesktop_windows-ent-cpc_win11-22h2-ent-cpc-m365
+
+tasks:
+  # ---- Core Development Tools ----
+
+  - name: winget
+    parameters:
+      package: Git.Git
+
+  - name: winget
+    parameters:
+      package: Microsoft.AzureCLI
+
+  - name: winget
+    parameters:
+      package: OpenJS.NodeJS.LTS
+
+  - name: winget
+    parameters:
+      package: Microsoft.DotNet.SDK.8
+
+  - name: winget
+    parameters:
+      package: Microsoft.VisualStudioCode
+
+  - name: winget
+    parameters:
+      package: Docker.DockerDesktop
+
+  - name: winget
+    parameters:
+      package: Microsoft.WindowsTerminal
+
+  - name: winget
+    parameters:
+      package: Kubernetes.kubectl
+
+  - name: winget
+    parameters:
+      package: Helm.Helm
+
+  # ---- WSL2 ----
+
+  - name: powershell
+    timeout: 600
+    parameters:
+      command: |
+        # Enable WSL features
+        dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+        dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+
+        # Install WSL2 with Ubuntu
+        wsl --install -d Ubuntu --no-launch
+        wsl --set-default-version 2
+
+  # ---- Configure Docker Desktop for WSL2 ----
+
+  - name: powershell
+    timeout: 60
+    parameters:
+      command: |
+        # Docker Desktop settings file — enable WSL2 backend and Ubuntu integration
+        $settingsDir = "$env:APPDATA\Docker"
+        $settingsFile = "$settingsDir\settings.json"
+
+        New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+
+        # Write settings: WSL2 backend enabled, Ubuntu integration enabled
+        $settings = @{
+            wslEngineEnabled = $true
+            useWindowsContainers = $false
+            integratedWslDistros = @("Ubuntu")
+            exposeDockerAPIOnTCP2375 = $false
+            autoStart = $true
+        }
+
+        $settings | ConvertTo-Json -Depth 3 | Set-Content -Path $settingsFile -Encoding UTF8
+        Write-Host "Docker Desktop configured: WSL2 backend + Ubuntu integration"
+
+  # ---- Agency CLI — Windows ----
+
+  - name: powershell
+    timeout: 300
+    parameters:
+      command: |
+        Invoke-WebRequest -Uri "https://aka.ms/install-agency" -OutFile "$env:TEMP\install-agency.ps1"
+        & "$env:TEMP\install-agency.ps1"
+
+  # ---- Clone and Build the Repo — Windows ----
+
+  - name: powershell
+    timeout: 300
+    parameters:
+      command: |
+        $repoDir = "$env:USERPROFILE\go\src\prometheus-collector"
+
+        if (-not (Test-Path $repoDir)) {
+            git clone https://github.com/Azure/prometheus-collector.git $repoDir
+        }
+
+        Set-Location "$repoDir\tools\prom-collector-tsg-mcp"
+        npm install
+        npx tsc
+
+        if (Test-Path "dist\index.js") {
+            Write-Host "TSG MCP server built successfully (Windows)"
+        } else {
+            Write-Error "TSG MCP server build failed"
+        }
+
+  # ---- Configure Copilot MCP (custom MCPs only — builtins are in agency.toml) ----
+
+  - name: powershell
+    timeout: 60
+    parameters:
+      command: |
+        $repoDir = "$env:USERPROFILE\go\src\prometheus-collector"
+        $mcpDir = "$env:USERPROFILE\.copilot"
+        $mcpFile = "$mcpDir\mcp.json"
+
+        # Create .copilot directory
+        New-Item -ItemType Directory -Force -Path $mcpDir | Out-Null
+
+        # Write mcp.json with the custom MCP server (prom-collector-tsg)
+        # Built-in MCPs (ado, icm, es-chat) come from agency.toml in the repo
+        $mcpConfig = @{
+            mcpServers = @{
+                "prom-collector-tsg" = @{
+                    command = "node"
+                    args = @("$repoDir\tools\prom-collector-tsg-mcp\dist\index.js")
+                }
+                "playwright" = @{
+                    command = "npx"
+                    args = @("-y", "@playwright/mcp@latest")
+                }
+            }
+        }
+
+        $mcpConfig | ConvertTo-Json -Depth 5 | Set-Content -Path $mcpFile -Encoding UTF8
+        Write-Host "MCP config written to $mcpFile"
+
+  # ---- Configure Edge for WSL2 CDP proxy (optional — for tsg_icm_page) ----
+
+  - name: powershell
+    timeout: 60
+    parameters:
+      command: |
+        # Set up port forwarding so WSL2 can reach Edge's CDP port
+        # Edge needs to be started with --remote-debugging-port=9222
+        # This creates the netsh rule; Edge shortcut is created below
+
+        # Add port proxy rule
+        netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1
+
+        # Allow through firewall
+        netsh advfirewall firewall add rule name="WSL Edge CDP" dir=in action=allow protocol=TCP localport=9223
+
+        # Create a desktop shortcut to launch Edge with CDP enabled
+        $shortcutPath = "$env:USERPROFILE\Desktop\Edge (CDP Debug).lnk"
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+        $shortcut.Arguments = "--remote-debugging-port=9222"
+        $shortcut.Description = "Edge with Chrome DevTools Protocol for WSL2 ICM scraping"
+        $shortcut.Save()
+
+        Write-Host "Edge CDP shortcut created on desktop"
+        Write-Host "Port proxy 9223->9222 configured for WSL2"
+
+  # ---- Provision WSL2 Ubuntu with all tools ----
+  # This runs INSIDE the Ubuntu WSL2 distro to install the same toolset.
+  # NOTE: WSL must be functional (may require a reboot after the dism/wsl install above).
+  # If this task fails, run setup.sh from within WSL2 after first reboot.
+
+  - name: powershell
+    timeout: 900
+    parameters:
+      command: |
+        # Check if WSL Ubuntu is ready
+        $wslCheck = wsl -l -q 2>&1
+        if ($wslCheck -notmatch "Ubuntu") {
+            Write-Host "WSL Ubuntu not yet available — will be provisioned on first reboot."
+            Write-Host "After reboot, open Ubuntu from Start Menu, then run:"
+            Write-Host "  cd ~/go/src/prometheus-collector && bash tools/prom-collector-tsg-mcp/setup.sh"
+            exit 0
+        }
+
+        Write-Host "Provisioning WSL2 Ubuntu..."
+
+        # Run a single script inside WSL that installs everything
+        wsl -d Ubuntu -- bash -c @'
+        set -e
+
+        echo "=== Installing packages ==="
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq git curl wget ca-certificates gnupg lsb-release jq python3
+
+        echo "=== Installing Node.js 22 ==="
+        if ! command -v node &>/dev/null; then
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+            sudo apt-get install -y -qq nodejs
+        fi
+        echo "Node.js: $(node --version)"
+
+        echo "=== Installing Azure CLI ==="
+        if ! command -v az &>/dev/null; then
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        fi
+        echo "Azure CLI: $(az --version 2>/dev/null | head -1)"
+
+        echo "=== Installing .NET 8 SDK ==="
+        if ! command -v dotnet &>/dev/null; then
+            curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
+            echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> ~/.bashrc
+            echo 'export PATH="$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH"' >> ~/.bashrc
+        fi
+
+        # Docker is provided by Docker Desktop via WSL2 integration — no install needed here.
+        # After Docker Desktop starts, the docker CLI is automatically available in WSL2.
+
+        echo "=== Installing kubectl ==="
+        if ! command -v kubectl &>/dev/null; then
+            curl -fsSL https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -o /tmp/kubectl
+            sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+            rm -f /tmp/kubectl
+        fi
+
+        echo "=== Installing Helm ==="
+        if ! command -v helm &>/dev/null; then
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        fi
+
+        echo "=== Installing Agency CLI ==="
+        if ! command -v agency &>/dev/null; then
+            curl -fsSL https://aka.ms/install-agency | bash
+        fi
+
+        echo "=== Installing Google Chrome (for Playwright) ==="
+        if ! command -v google-chrome &>/dev/null; then
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
+            rm -f google-chrome-stable_current_amd64.deb
+        fi
+
+        echo "=== Cloning repo ==="
+        REPO_DIR="$HOME/go/src/prometheus-collector"
+        if [ ! -d "$REPO_DIR" ]; then
+            mkdir -p "$(dirname $REPO_DIR)"
+            git clone https://github.com/Azure/prometheus-collector.git "$REPO_DIR"
+        fi
+
+        echo "=== Building TSG MCP server ==="
+        cd "$REPO_DIR/tools/prom-collector-tsg-mcp"
+        npm install --quiet 2>&1 | tail -3
+        npx tsc
+
+        echo "=== Running setup.sh ==="
+        cd "$REPO_DIR"
+        bash tools/prom-collector-tsg-mcp/setup.sh --yes
+
+        echo ""
+        echo "=== WSL2 Ubuntu provisioning complete ==="
+        '@
+
+  # ---- Summary ----
+
+  - name: powershell
+    timeout: 30
+    parameters:
+      command: |
+        Write-Host ""
+        Write-Host "=========================================="
+        Write-Host " Dev Box Setup Complete!"
+        Write-Host "=========================================="
+        Write-Host ""
+        Write-Host "  Next steps:"
+        Write-Host "    1. Restart the Dev Box (needed for WSL2 if first install)"
+        Write-Host "    2. Run: az login  (on Windows AND inside WSL2)"
+        Write-Host ""
+        Write-Host "  To investigate from Windows:"
+        Write-Host "    cd ~\go\src\prometheus-collector"
+        Write-Host "    agency copilot"
+        Write-Host '    > "Investigate ICM 12345678"'
+        Write-Host ""
+        Write-Host "  To investigate from WSL2:"
+        Write-Host "    wsl"
+        Write-Host "    cd ~/go/src/prometheus-collector"
+        Write-Host "    agency copilot"
+        Write-Host '    > "Investigate ICM 12345678"'
+        Write-Host ""
+        Write-Host "  Installed on BOTH Windows and WSL2:"
+        Write-Host "    Git, Azure CLI, Node.js, .NET 8, Agency CLI, kubectl, Helm"
+        Write-Host "    prometheus-collector repo cloned + TSG MCP built"
+        Write-Host "    ~/.copilot/mcp.json configured"
+        Write-Host ""
+        Write-Host "  Windows only:  VS Code, Docker Desktop (WSL2 backend), Windows Terminal,"
+        Write-Host "                 Playwright (native), Edge CDP shortcut"
+        Write-Host "  WSL2 only:     Google Chrome, azureauth shim, docker CLI (via Docker Desktop)"
+        Write-Host ""
