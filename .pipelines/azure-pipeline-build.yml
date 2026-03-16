@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - rashmi/fips
 pr:
   autoCancel: true
   branches:
