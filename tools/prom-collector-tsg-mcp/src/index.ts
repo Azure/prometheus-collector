@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { ProgressNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
@@ -9,6 +10,8 @@ import { QUERIES, parameterizeQuery, type QueryCategory } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
 import { queryMdmThrottling, queryScrapeTargetHealth } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
 const credential = new DefaultAzureCredential();
 const logsClient = new LogsQueryClient(credential);
@@ -41,6 +44,33 @@ interface QueryResult {
   data?: Record<string, unknown>[];
   error?: string;
   rowCount?: number;
+}
+
+// Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
+const QUERY_TIMEOUT_MS = parseInt(process.env.KQL_TIMEOUT_MS || "180000", 10); // 3 minutes
+
+type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
+
+/**
+ * Send a progress notification to reset the client's timeout counter.
+ * Only sends if the client provided a progressToken in the request.
+ */
+async function sendProgress(
+  extra: ToolExtra,
+  progress: number,
+  total: number,
+  message: string
+): Promise<void> {
+  const progressToken = extra._meta?.progressToken;
+  if (progressToken === undefined) return;
+  try {
+    await extra.sendNotification({
+      method: "notifications/progress",
+      params: { progressToken, progress, total, message },
+    });
+  } catch {
+    // Best-effort — don't let notification failures break the tool
+  }
 }
 
 /**
@@ -78,7 +108,8 @@ async function runAppInsightsQuery(
   const result = await logsClient.queryResource(
     APP_INSIGHTS.resourceId,
     kql,
-    timespan
+    timespan,
+    { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }
   );
 
   const rows: Record<string, unknown>[] = [];
@@ -138,6 +169,7 @@ async function runKustoQuery(
       db: database,
       csl: kql,
     }),
+    signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -218,10 +250,12 @@ async function executeQuery(
 
 /**
  * Run all queries in a category and return combined results.
+ * Sends progress notifications after each batch to keep the client timeout alive.
  */
 async function runCategory(
   category: QueryCategory,
-  params: { cluster: string; timeRange: string; interval: string; mdmAccountId?: string; aksClusterId?: string; startTime?: string; endTime?: string }
+  params: { cluster: string; timeRange: string; interval: string; mdmAccountId?: string; aksClusterId?: string; startTime?: string; endTime?: string },
+  extra?: ToolExtra
 ): Promise<QueryResult[]> {
   const queries = QUERIES[category];
   if (!queries || queries.length === 0) {
@@ -231,6 +265,7 @@ async function runCategory(
   // Run queries in parallel with concurrency limit
   const CONCURRENCY = 5;
   const results: QueryResult[] = [];
+  const totalQueries = queries.length;
 
   for (let i = 0; i < queries.length; i += CONCURRENCY) {
     const batch = queries.slice(i, i + CONCURRENCY);
@@ -238,6 +273,12 @@ async function runCategory(
       batch.map((q) => executeQuery(q, params))
     );
     results.push(...batchResults);
+
+    // Send progress notification to reset client timeout
+    if (extra) {
+      const completed = Math.min(i + CONCURRENCY, totalQueries);
+      await sendProgress(extra, completed, totalQueries, `${category}: ${completed}/${totalQueries} queries complete`);
+    }
   }
 
   return results;
@@ -329,9 +370,9 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
-    const results = await runCategory("triage", { cluster, timeRange, interval, aksClusterId, startTime, endTime });
+    const results = await runCategory("triage", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -349,8 +390,8 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
-    const results = await runCategory("errors", { cluster, timeRange, interval, startTime, endTime });
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    const results = await runCategory("errors", { cluster, timeRange, interval, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -368,9 +409,9 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
-    const results = await runCategory("config", { cluster, timeRange, interval, aksClusterId, startTime, endTime });
+    const results = await runCategory("config", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -388,9 +429,9 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
-    const results = await runCategory("workload", { cluster, timeRange, interval, aksClusterId, startTime, endTime });
+    const results = await runCategory("workload", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -408,9 +449,9 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
-    const results = await runCategory("pods", { cluster, timeRange, interval, aksClusterId, startTime, endTime });
+    const results = await runCategory("pods", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -470,9 +511,9 @@ server.tool(
     startTime: startTimeParam,
     endTime: endTimeParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
-    const results = await runCategory("controlPlane", { cluster, timeRange, interval, aksClusterId, startTime, endTime });
+    const results = await runCategory("controlPlane", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
@@ -569,13 +610,13 @@ server.tool(
         "MDM monitoring account name from tsg_triage, e.g. 'cirruspl_promws_at52044_neu1'"
       ),
   },
-  async ({ mdmAccountId }) => {
+  async ({ mdmAccountId }, extra) => {
     const results = await runCategory("metricInsights", {
       cluster: "",
       timeRange: "24h",
       interval: "6h",
       mdmAccountId,
-    });
+    }, extra);
     return {
       content: [{ type: "text", text: formatResults(results) }],
     };
