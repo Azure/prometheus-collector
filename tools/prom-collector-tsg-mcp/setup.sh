@@ -251,13 +251,24 @@ echo "    prom-collector-tsg → TSG diagnostic queries"
 echo "    playwright         → browser automation"
 echo ""
 if [[ "$PLATFORM" == "wsl2" ]]; then
-    echo "  WSL2: Edge CDP for ICM browsing:"
-    echo "    If setup.sh configured it, tsg_icm_page should work."
-    echo "    If not, launch Edge manually with:"
-    echo "      powershell.exe -Command \"Start-Process 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\<user>\\.playwright-mcp-edge3','--no-first-run'\""
-    echo "    Then set up port proxy (admin PowerShell):"
-    echo "      netsh interface portproxy add v4tov4 listenport=9223 \\"
-    echo "        listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1"
+    echo "  WSL2: For ICM portal browsing, run in PowerShell (Admin):"
+    echo "    powershell.exe -File $(pwd)/start-edge-cdp.ps1"
+    echo ""
+    echo "  Or manually:"
+    echo "    msedge --remote-debugging-port=9222 --user-data-dir=%USERPROFILE%\\.edge-cdp"
+    echo "    netsh interface portproxy add v4tov4 listenport=9223 \\"
+    echo "      listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1"
+    echo ""
+    # Add WSL alias for convenience
+    ALIAS_LINE='alias start-edge-cdp="powershell.exe -File '"$(pwd)"'/start-edge-cdp.ps1"'
+    for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [[ -f "$RC_FILE" ]] && ! grep -q "start-edge-cdp" "$RC_FILE" 2>/dev/null; then
+            echo "" >> "$RC_FILE"
+            echo "# Edge CDP for ICM browsing from WSL" >> "$RC_FILE"
+            echo "$ALIAS_LINE" >> "$RC_FILE"
+            echo "  Added 'start-edge-cdp' alias to $(basename $RC_FILE)"
+        fi
+    done
     echo ""
 fi
 

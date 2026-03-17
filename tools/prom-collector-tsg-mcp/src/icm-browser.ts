@@ -16,34 +16,40 @@
  */
 
 import WebSocket from "ws";
-import { platform } from "os";
 import { execSync } from "child_process";
 
-/** Auto-detect the WSL2 default gateway IP (the Windows host) */
-function detectWSLGateway(): string {
+/**
+ * Auto-detect the Windows host IP from WSL2.
+ * Tries in order: /etc/resolv.conf nameserver, default route, fallback.
+ */
+function detectWindowsHostIP(): string {
+  // Allow explicit override
+  if (process.env.CDP_HOST) return process.env.CDP_HOST;
+
   try {
-    const route = execSync("ip route show default 2>/dev/null", {
-      encoding: "utf-8",
-      timeout: 3000,
-    });
-    const match = route.match(/via\s+([\d.]+)/);
-    if (match) return match[1];
-  } catch {
-    // not on WSL2 or ip command unavailable
-  }
-  return "172.29.112.1"; // fallback
+    // Primary: /etc/resolv.conf nameserver (most reliable on WSL2)
+    const resolv = execSync("grep nameserver /etc/resolv.conf 2>/dev/null | head -1 | awk '{print $2}'", { encoding: "utf-8" }).trim();
+    if (resolv && resolv !== "127.0.0.53") return resolv;
+  } catch {}
+
+  try {
+    // Fallback: default gateway
+    const gw = execSync("ip route show default 2>/dev/null | awk '{print $3}' | head -1", { encoding: "utf-8" }).trim();
+    if (gw) return gw;
+  } catch {}
+
+  // Last resort
+  return "172.29.112.1";
 }
 
-/** Auto-detect the CDP endpoint based on platform (overridable via CDP_ENDPOINT env var) */
-function getDefaultCdpEndpoint(): string {
-  if (platform() === "win32") {
-    return "http://localhost:9222";
-  }
-  // WSL2 / Linux: reach the Windows host Edge via port proxy, auto-detect gateway
-  return `http://${detectWSLGateway()}:9223`;
+function getCDPEndpoint(): string {
+  if (process.env.CDP_ENDPOINT) return process.env.CDP_ENDPOINT;
+  const host = detectWindowsHostIP();
+  const port = process.env.CDP_PORT || "9223";
+  return `http://${host}:${port}`;
 }
 
-const CDP_HTTP = process.env.CDP_ENDPOINT || getDefaultCdpEndpoint();
+const CDP_HTTP = getCDPEndpoint();
 
 interface CDPTab {
   id: string;
@@ -262,30 +268,30 @@ export async function scrapeICMIncident(
   try {
     await fetchJSON(`${CDP_HTTP}/json/version`);
   } catch {
-    const isWindows = platform() === "win32";
-    const instructions = isWindows
-      ? [
-          "❌ Cannot connect to Edge browser via CDP.",
-          "",
-          "To use this tool on Windows, launch Edge with remote debugging enabled:",
-          "",
-          '  Start-Process "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\\Users\\<user>\\.edge-cdp-debug","--no-first-run"',
-          "",
-          `Then navigate to https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary and sign in if needed.`,
-        ]
-      : [
-          "❌ Cannot connect to Edge browser via CDP.",
-          "",
-          "To use this tool from WSL2, launch Edge on the Windows host with remote debugging:",
-          "",
-          '  powershell.exe -Command "Start-Process \'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\' -ArgumentList \'--remote-debugging-port=9222\',\'--user-data-dir=C:\\Users\\<user>\\.edge-cdp-debug\',\'--no-first-run\'"',
-          "",
-          "Ensure the Windows port proxy is set up:",
-          "  netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1",
-          "",
-          `Then navigate to https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary and sign in if needed.`,
-        ];
-    return instructions.join("\n");
+    const winUser = process.env.WINDOWS_USER || process.env.USER || "your-username";
+    return [
+      `❌ Cannot connect to Edge browser via CDP at ${CDP_HTTP}`,
+      "",
+      "**Quick setup (run in PowerShell on Windows as Admin):**",
+      "",
+      "```powershell",
+      "# 1. Set up port proxy (one-time, persists across reboots)",
+      "netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1",
+      "",
+      "# 2. Allow through firewall (one-time)",
+      'New-NetFirewallRule -DisplayName "Edge CDP for WSL" -Direction Inbound -LocalPort 9223 -Protocol TCP -Action Allow',
+      "",
+      "# 3. Launch Edge with remote debugging (run each session)",
+      `Start-Process 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\${winUser}\\.edge-cdp','--no-first-run'`,
+      "```",
+      "",
+      "Or run this one-liner from WSL:",
+      `  powershell.exe -Command "Start-Process msedge -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\${winUser}\\.edge-cdp','--no-first-run'"`,
+      "",
+      `Then sign in to ICM at: https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary`,
+      "",
+      "**Tip:** Add `start-edge-cdp` to your shell aliases for quick access.",
+    ].join("\n");
   }
 
   try {
