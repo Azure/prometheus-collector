@@ -1294,7 +1294,9 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - configmaps
       verbs:
         - list
@@ -1320,7 +1322,9 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - endpoints
       verbs:
         - list
@@ -1353,7 +1357,9 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - limitranges
       verbs:
         - list
@@ -1365,7 +1371,9 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - namespaces
       verbs:
         - list
@@ -1377,17 +1385,23 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - nodes
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - persistentvolumeclaims
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - persistentvolumes
       verbs:
         - list
@@ -1399,7 +1413,9 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - pods
       verbs:
         - list
@@ -1411,22 +1427,30 @@ rules:
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - replicationcontrollers
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - resourcequotas
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - secrets
       verbs:
         - list
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - services
       verbs:
         - list
@@ -1466,7 +1490,9 @@ kind: ClusterRole
 metadata:
     name: ama-metrics-reader
 rules:
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - pods
         - nodes
         - nodes/stats
@@ -1487,7 +1513,9 @@ rules:
         - list
         - get
         - watch
-    - resourceNames:
+    - apiGroups:
+        - ""
+      resourceNames:
         - aad-msi-auth-token
         - ama-metrics-mtls-secret
       resources:
@@ -1495,13 +1523,17 @@ rules:
       verbs:
         - get
         - watch
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - secrets
       verbs:
         - get
         - list
         - watch
-    - resourceNames:
+    - apiGroups:
+        - ""
+      resourceNames:
         - ama-metrics-operator-targets-client-tls-secret
         - ama-metrics-operator-targets-server-tls-secret
       resources:
@@ -1509,11 +1541,15 @@ rules:
       verbs:
         - get
         - update
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - secrets
       verbs:
         - create
-    - resources:
+    - apiGroups:
+        - ""
+      resources:
         - events
       verbs:
         - create
