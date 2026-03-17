@@ -4,13 +4,14 @@
 package watcher
 
 import (
-	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
-	"k8s.io/client-go/metadata"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"time"
+
+	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	"k8s.io/client-go/metadata"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -64,10 +65,15 @@ func NewPrometheusCRWatcher(
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 
-	// Scope the metadata informer factory to the collector namespace only.
-	// This is used for the secrets informer so that it only needs namespace-scoped RBAC
-	// (a Role in kube-system) rather than cluster-wide secrets list/watch access.
-	secretsAllowList := map[string]struct{}{cfg.CollectorNamespace: {}}
+	// Scope the metadata informer factory to specific namespaces for secrets access.
+	// This avoids requiring cluster-wide secrets list/watch RBAC.
+	// If SecretsAccessNamespaces is not configured, no namespaces are watched for secrets.
+	secretsAllowList := make(map[string]struct{})
+	if len(cfg.SecretsAccessNamespaces) > 0 {
+		for _, ns := range cfg.SecretsAccessNamespaces {
+			secretsAllowList[ns] = struct{}{}
+		}
+	}
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
 
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)

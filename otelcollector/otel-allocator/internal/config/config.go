@@ -66,6 +66,7 @@ type Config struct {
 	RootLogger                   logr.Logger           `yaml:"-"`
 	CollectorSelector            *metav1.LabelSelector `yaml:"collector_selector,omitempty"`
 	CollectorNamespace           string                `yaml:"collector_namespace,omitempty"`
+	SecretsAccessNamespaces      []string              `yaml:"secrets_access_namespaces,omitempty"`
 	PromConfig                   *promconfig.Config    `yaml:"config"`
 	AllocationStrategy           string                `yaml:"allocation_strategy,omitempty"`
 	AllocationFallbackStrategy   string                `yaml:"allocation_fallback_strategy,omitempty"`
