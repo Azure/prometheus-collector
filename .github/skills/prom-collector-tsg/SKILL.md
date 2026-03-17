@@ -37,7 +37,7 @@ Call the ICM API tools AND the browser scrape simultaneously. The API tools give
 | `icm-get_incident_context` | AI-generated `Description`, `BriefSummary`, `DiscussionSection`, `DescriptionEntriesSummary`, symptoms, causes, mitigation, similar incidents, Kusto queries, bridge info | ⚠️ Works for ~60% of incidents; returns "Error fetching context" for others |
 | `icm-get_incident_location` | Region, cluster, datacenter info | ✅ Usually works |
 | `icm-get_support_requests_crisit` | Linked support requests and CritSits | ✅ Usually works |
-| **`tsg_icm_page`** (WSL) or **Playwright** (Windows) | **Authored summary** (full problem description, ARM IDs, AMW IDs), **discussion entries** (full thread with all context) | ✅ Works when Edge/browser is running |
+| **`tsg_icm_page`** | **Authored summary** (full problem description, ARM IDs, AMW IDs), **discussion entries** (full thread with all context) | ✅ Works on both Windows and WSL2 when Edge is running with `--remote-debugging-port=9222` |
 
 **⚠️ CRITICAL:** The `icm-get_incident_context` `Description` and `DescriptionEntriesSummary` fields are **AI-generated paraphrases**, NOT the original authored text. They often omit ARM IDs, specific metric names, PromQL queries, and reproduction details. Always use the browser scrape to get the real authored summary.
 
@@ -80,19 +80,25 @@ The cluster ARM resource ID is critical for running TSG queries. It looks like:
    
    The ICM MCP API tools (`get_incident_details_by_id`, `get_ai_summary`, `get_incident_context`) do NOT return this field. The AI-generated descriptions are often too vague to understand the real issue. **Always scrape the ICM page to get the full authored summary before starting diagnosis.**
 
-   **On Windows (native):** Use the **Playwright MCP** tools:
-   - `playwright-browser_navigate` to `https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary`
-   - `playwright-browser_snapshot` to capture the page content
-   - Read the authored summary for the full problem description, ARM IDs, and context
-   - The user may need to sign in via the browser popup on first use
-
-   **On WSL2:** Playwright cannot launch Edge directly from WSL. Use the **`tsg_icm_page`** MCP tool instead:
+   **Use the `tsg_icm_page` MCP tool** (works on both Windows and WSL2):
    - Call `tsg_icm_page` with the incident ID
-   - This connects to a running Edge instance on Windows via CDP (Chrome DevTools Protocol)
-   - **Prerequisite:** Edge must be running on the Windows host with `--remote-debugging-port=9222` and a netsh port proxy from `0.0.0.0:9223` → `127.0.0.1:9222`
-   - If Edge is not running, the tool will show launch instructions
+   - This connects to a running Edge instance via CDP (Chrome DevTools Protocol)
+   - **On Windows:** connects directly to `localhost:9222` — just launch Edge with `--remote-debugging-port=9222` and a unique `--user-data-dir` (see below)
+   - **On WSL2:** connects via port proxy on `9223` — requires Edge on the Windows host with `--remote-debugging-port=9222` and a netsh port proxy from `0.0.0.0:9223` → `127.0.0.1:9222`
+   - If Edge is not running, the tool will show platform-appropriate launch instructions
    - If sign-in is needed, the tool will prompt you to tell the user to sign in
    - The tool returns: authored summary, extracted ARM IDs, and all discussion entries
+
+   **Windows Edge CDP quick start** (if `tsg_icm_page` fails with connection error):
+   ```powershell
+   # Launch a separate Edge with CDP enabled (don't reuse your main Edge profile!)
+   Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+     -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\Users\$env:USERNAME\.edge-cdp-debug","--no-first-run","--disable-sync"
+   # Then sign in to ICM in that Edge window
+   ```
+   > ⚠️ Use a **dedicated** `--user-data-dir` (not your main Edge profile). If another Edge instance already uses that profile, the new one merges into it and CDP becomes inaccessible.
+
+   **Do NOT use Playwright MCP for ICM scraping.** The ICM portal SPA is extremely heavy — `browser_snapshot` hangs on the DOM, and the authored summary is loaded via XHR API calls (not visible in `innerText`). Playwright is fine for Grafana, Azure portal, etc. — just not ICM.
 
    **Important:** Read the full authored summary AND discussion entries carefully — they contain the reporter's actual problem description, specific metric names, PromQL queries, and evidence that the AI summary loses. This context is essential for targeted diagnosis.
 6. **Ask the user** — if none of the above have it, ask: "What is the cluster ARM resource ID? It's usually in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
@@ -137,7 +143,7 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 | `tsg_dashboard_link` | Get a link to the ADX dashboard pre-filtered for the cluster |
 | `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
 | `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
-| `tsg_icm_page` | **(WSL2 only)** Scrape ICM incident page via Edge CDP. Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222` and Windows port proxy on 9223. On native Windows, use Playwright MCP instead. |
+| `tsg_icm_page` | Scrape ICM incident page via Edge CDP. Works on both **Windows** (localhost:9222) and **WSL2** (port proxy on 9223). Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222`. On WSL2, also needs Windows port proxy on 9223. |
 
 All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 

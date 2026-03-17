@@ -2,17 +2,21 @@
  * ICM Browser Scraper — connects to a running Edge instance via CDP
  * to scrape ICM portal pages for incident details not available via API.
  *
- * Prerequisites:
- * 1. Edge running with --remote-debugging-port=9222
- * 2. Windows netsh port proxy: 0.0.0.0:9223 → 127.0.0.1:9222
- * 3. User authenticated to ICM in that Edge instance
+ * Works on both **Windows (native)** and **WSL2**:
  *
- * Launch Edge:
- *   powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' \
- *     -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\<user>\.playwright-mcp-edge3','--no-first-run'"
+ * **Windows:** Edge connects directly on localhost:9222.
+ *   Launch Edge:
+ *     Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' `
+ *       -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\<user>\.edge-cdp-debug','--no-first-run'
+ *
+ * **WSL2:** Edge runs on the Windows host; WSL reaches it via netsh port proxy on 9223.
+ *   1. Launch Edge on Windows with --remote-debugging-port=9222
+ *   2. Set up port proxy: netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1
+ *   3. User authenticated to ICM in that Edge instance
  */
 
 import WebSocket from "ws";
+import { platform } from "os";
 import { execSync } from "child_process";
 
 /** Auto-detect the WSL2 default gateway IP (the Windows host) */
@@ -30,8 +34,16 @@ function detectWSLGateway(): string {
   return "172.29.112.1"; // fallback
 }
 
-const CDP_HTTP =
-  process.env.CDP_ENDPOINT || `http://${detectWSLGateway()}:9223`;
+/** Auto-detect the CDP endpoint based on platform (overridable via CDP_ENDPOINT env var) */
+function getDefaultCdpEndpoint(): string {
+  if (platform() === "win32") {
+    return "http://localhost:9222";
+  }
+  // WSL2 / Linux: reach the Windows host Edge via port proxy, auto-detect gateway
+  return `http://${detectWSLGateway()}:9223`;
+}
+
+const CDP_HTTP = process.env.CDP_ENDPOINT || getDefaultCdpEndpoint();
 
 interface CDPTab {
   id: string;
@@ -250,18 +262,30 @@ export async function scrapeICMIncident(
   try {
     await fetchJSON(`${CDP_HTTP}/json/version`);
   } catch {
-    return [
-      "❌ Cannot connect to Edge browser via CDP.",
-      "",
-      "To use this tool, launch Edge with remote debugging enabled:",
-      "",
-      '  powershell.exe -Command "Start-Process \'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\' -ArgumentList \'--remote-debugging-port=9222\',\'--user-data-dir=C:\\Users\\<user>\\.playwright-mcp-edge3\',\'--no-first-run\'"',
-      "",
-      "Ensure the Windows port proxy is set up:",
-      "  netsh interface portproxy add v4tov4 listenport=9223 connectaddress=127.0.0.1 connectport=9222",
-      "",
-      `Then navigate to https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary and sign in if needed.`,
-    ].join("\n");
+    const isWindows = platform() === "win32";
+    const instructions = isWindows
+      ? [
+          "❌ Cannot connect to Edge browser via CDP.",
+          "",
+          "To use this tool on Windows, launch Edge with remote debugging enabled:",
+          "",
+          '  Start-Process "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\\Users\\<user>\\.edge-cdp-debug","--no-first-run"',
+          "",
+          `Then navigate to https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary and sign in if needed.`,
+        ]
+      : [
+          "❌ Cannot connect to Edge browser via CDP.",
+          "",
+          "To use this tool from WSL2, launch Edge on the Windows host with remote debugging:",
+          "",
+          '  powershell.exe -Command "Start-Process \'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\' -ArgumentList \'--remote-debugging-port=9222\',\'--user-data-dir=C:\\Users\\<user>\\.edge-cdp-debug\',\'--no-first-run\'"',
+          "",
+          "Ensure the Windows port proxy is set up:",
+          "  netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1",
+          "",
+          `Then navigate to https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary and sign in if needed.`,
+        ];
+    return instructions.join("\n");
   }
 
   try {

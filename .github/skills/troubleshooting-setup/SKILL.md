@@ -66,7 +66,7 @@ The setup differs depending on whether you're running on **native Windows** or *
 
 | Concern | Windows (native) | WSL2 (Linux) |
 |---------|-------------------|--------------|
-| **ICM browsing** | ✅ Playwright MCP opens Edge/Chrome directly | ⚠️ Cannot launch GUI browsers — use `tsg_icm_page` tool via Edge CDP proxy |
+| **ICM browsing** | ✅ `tsg_icm_page` connects to Edge on localhost:9222 | ⚠️ `tsg_icm_page` connects via port proxy on 9223 — needs netsh setup |
 | **Browser automation** | ✅ Playwright MCP works natively | ⚠️ Needs Google Chrome installed + `--disable-gpu` flag |
 | **EngHub auth** | ✅ Keytar/keychain works natively | ⚠️ Needs gnome-keyring-daemon shim (see Section 8) |
 | **azureauth** | ✅ Usually pre-installed on corp machines | ⚠️ Often missing — needs shim script (see Section 8) |
@@ -87,7 +87,27 @@ The setup differs depending on whether you're running on **native Windows** or *
 - **.NET 8+ SDK** — `winget install Microsoft.DotNet.SDK.8` or from https://dot.net
 - **Docker** (optional) — only if running local Aspire workloads
 
-No additional browser setup needed — Playwright MCP launches Edge/Chrome directly on Windows.
+#### Edge CDP for ICM browsing (Windows)
+
+The `tsg_icm_page` tool connects directly to Edge on `localhost:9222`. Launch a **separate** Edge instance with a dedicated profile:
+
+```powershell
+# Launch Edge with remote debugging (use a dedicated profile to avoid conflicts with your main Edge)
+Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+  -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\Users\$env:USERNAME\.edge-cdp-debug","--no-first-run","--disable-sync"
+```
+
+**Verify:**
+```powershell
+(Invoke-WebRequest -Uri "http://localhost:9222/json/version" -UseBasicParsing).Content | ConvertFrom-Json | Select-Object Browser
+# Should show: Edg/xxx.x.xxxx.xx
+```
+
+Then sign in to ICM in that Edge window (navigate to `https://portal.microsofticm.com` and authenticate). After that, `tsg_icm_page` can scrape any incident.
+
+> **⚠️ IMPORTANT — Edge profile locking:** You **must** use a `--user-data-dir` that is different from your main Edge profile (`%LOCALAPPDATA%\Microsoft\Edge\User Data`). If you point to your existing profile while Edge is already running, the new instance will merge into the existing session and close — the CDP port won't work. Always use a dedicated directory like `C:\Users\<user>\.edge-cdp-debug`.
+
+> **Why not Playwright for ICM?** Playwright MCP can browse most sites, but the ICM portal SPA is extremely heavy (~150 console warnings, lazy-rendered React UI). `browser_snapshot` hangs on the complex DOM, and the authored summary is never in the visible `innerText` — ICM loads it via XHR API calls. `tsg_icm_page` is purpose-built for this: it intercepts the raw `GetIncidentDetails` and `getdescriptionentries` API responses via CDP Network capture during page reload, reliably extracting the full authored summary and discussion entries.
 
 ---
 
@@ -136,9 +156,27 @@ sudo dpkg -i google-chrome-stable_current_amd64.deb
 sudo apt-get install -f  # fix any dependency issues
 ```
 
-#### ICM Browser Access (WSL2 only — Edge CDP proxy)
+#### ICM Browser Access — Edge CDP setup
 
-Since WSL2 cannot launch a GUI browser, the `tsg_icm_page` tool connects to Edge running on the **Windows host** via the Chrome DevTools Protocol (CDP).
+The `tsg_icm_page` tool connects to Edge via the Chrome DevTools Protocol (CDP) to scrape ICM incident pages. This works on both **Windows (native)** and **WSL2**.
+
+**Windows (native) — one-time setup:**
+
+```powershell
+# Launch Edge with remote debugging port (add to a .bat file or PowerShell profile)
+Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+  -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\Users\$env:USERNAME\.edge-cdp-debug","--no-first-run"
+```
+
+**Verify:**
+```powershell
+(Invoke-WebRequest -Uri "http://localhost:9222/json/version" -UseBasicParsing).Content | ConvertFrom-Json | Select-Object Browser
+# Should return Edge version info
+```
+
+No port proxy or firewall rules needed — the tool connects directly to `localhost:9222`.
+
+**WSL2 (Linux) — one-time setup on the Windows host (run in PowerShell as Administrator):**
 
 **Automated setup (recommended):** `setup.sh` handles this automatically — it launches Edge with `--remote-debugging-port=9222`, sets up the Windows port proxy via admin-elevated PowerShell, and auto-detects the WSL gateway IP.
 
@@ -161,9 +199,9 @@ curl -s "http://${WSL_GATEWAY}:9223/json/version" | python3 -m json.tool
 # Should return Edge version info with "Browser": "Edg/..."
 ```
 
-> **Key detail:** The `tsg_icm_page` tool auto-detects the WSL gateway IP at runtime (via `ip route show default`). It no longer uses a hardcoded IP. You can also override it with `CDP_ENDPOINT=http://host:port`.
+> **Key detail:** The `tsg_icm_page` tool auto-detects the WSL gateway IP at runtime (via `ip route show default`). On Windows, it connects directly to `localhost:9222`. You can also override with `CDP_ENDPOINT=http://host:port`.
 
-Then `tsg_icm_page` will work from WSL2 to scrape the authored summary from the ICM portal.
+Then `tsg_icm_page` will work from both platforms to scrape the authored summary from the ICM portal.
 
 ---
 
@@ -241,9 +279,53 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 
 ## 5. Set Up the Geneva MDM MCP Server
 
-The Geneva MDM MCP server provides tools to query MDM time-series metrics — used for checking account throttling, dropped events, and QoS health.
+The Geneva MDM MCP server provides tools to query MDM time-series metrics — used for checking account throttling, dropped events, QoS health, and per-metric scrape target health (e.g., the `up` metric filtered by `job` and `cluster` dimensions).
 
-### One-time setup
+### One-time setup (Windows)
+
+```powershell
+# Clone the MDM MCP repo
+cd $env:USERPROFILE\go\src
+git clone https://msazure@dev.azure.com/msazure/One/_git/Networking-MadariExt-MdmMCP mdm-mcp
+
+# Get a token for the private NuGet feed
+$token = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
+
+# Add credentials for the private NuGet feed
+dotnet nuget update source networking-madari-Consumption `
+  --username az --password $token --store-password-in-clear-text `
+  --configfile $env:USERPROFILE\go\src\mdm-mcp\nuget.config
+
+# Enable nuget.org — edit nuget.config:
+#   1. Remove the <clear /> line under <packageSources>
+#   2. Remove the <disabledPackageSources> section
+#   3. Add:  <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+
+# Restore and build
+dotnet restore $env:USERPROFILE\go\src\mdm-mcp\src\MdmMcp\GenevaMDM-MCP.csproj
+dotnet build $env:USERPROFILE\go\src\mdm-mcp\src\MdmMcp\GenevaMDM-MCP.csproj --no-restore
+```
+
+### Start the server (Windows)
+
+```powershell
+$env:DOTNET_EnableDiagnostics = "0"
+$env:ASPNETCORE_URLS = "http://localhost:5050"
+$env:ASPNETCORE_ENVIRONMENT = "Local"
+
+# Start in a new window so it persists
+Start-Process dotnet -ArgumentList "run","--project","$env:USERPROFILE\go\src\mdm-mcp\src\MdmMcp\GenevaMDM-MCP.csproj","--no-build","--","--urls","http://localhost:5050" `
+  -WindowStyle Minimized
+
+# Verify (wait ~10 seconds for startup)
+Start-Sleep -Seconds 10
+(Invoke-WebRequest -Uri "http://localhost:5050/mcp" -Method POST -ContentType "application/json" `
+  -Body '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' `
+  -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 3
+# Should return serverInfo with name "GenevaMDM-MCP"
+```
+
+### One-time setup (WSL2 / Linux)
 
 ```bash
 # Clone the MDM MCP repo
@@ -268,7 +350,7 @@ dotnet restore /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj
 dotnet build /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj --no-restore
 ```
 
-### Start the server
+### Start the server (WSL2 / Linux)
 
 ```bash
 export DOTNET_ROOT="$HOME/.dotnet"
@@ -295,6 +377,7 @@ curl -s http://localhost:5050/mcp \
 > - `DOTNET_EnableDiagnostics=0` is **required** — without it the server hangs on startup
 > - This is an HTTP MCP server (not stdio) — it must be running before Copilot can use it
 > - Auth uses `DefaultAzureCredential` — ensure you're logged in with `az login`
+> - **Windows:** clone to `%USERPROFILE%\go\src\mdm-mcp`; **WSL2:** clone to `/tmp/mdm-mcp`
 
 ---
 
@@ -346,8 +429,9 @@ Create or update `~/.copilot/mcp.json`:
 ```
 
 > **Windows notes:**
-> - Playwright MCP works out of the box — no `--browser`, `--executable-path`, or `CHROMIUM_FLAGS` needed
-> - Use Playwright to navigate to ICM portal and read the authored summary directly
+> - For ICM portal browsing, use `tsg_icm_page` (not Playwright). It connects to Edge on `localhost:9222` and reliably extracts the authored summary via CDP network interception. See Section 1 for Edge CDP setup.
+> - Playwright MCP works for general web browsing but **hangs on the ICM portal** (heavy SPA with lazy-rendered content). Use it for dashboards, Grafana, etc. — not ICM.
+> - If Playwright fails to launch, run `npx playwright install msedge` to install the Edge browser. Chrome is not installed by default on Windows — use `--browser msedge`.
 > - EngHub MCP works natively with Windows keychain (no gnome-keyring needed)
 > - `azureauth` is typically pre-installed on corp Windows machines (no shim needed)
 
@@ -396,7 +480,7 @@ Create or update `~/.copilot/mcp.json`:
 
 > **WSL2 notes:**
 > - Playwright needs explicit `--browser chrome --executable-path /usr/bin/google-chrome` and `CHROMIUM_FLAGS: --disable-gpu` (see Section 1 for Chrome install)
-> - Playwright in WSL can browse most sites, but **ICM portal auth is unreliable** from WSL Playwright. Use the `tsg_icm_page` tool instead (see Section 1 for Edge CDP proxy setup)
+> - Playwright in WSL can browse most sites, but **ICM portal auth is unreliable** from WSL Playwright. Use `tsg_icm_page` instead — it works on both Windows and WSL2 (see Section 1 for Edge CDP setup)
 > - EngHub MCP needs `LD_LIBRARY_PATH` pointing to libsecret (see Section 8)
 > - `azureauth` usually needs a shim script (see Section 8)
 
@@ -419,12 +503,11 @@ The ICM MCP server provides several tools for querying incidents. Be aware of th
 | `icm-get_incident_context` | Rich structured data: description, symptoms, discussion, Kusto queries | ⚠️ Works ~60% of the time; returns "Error fetching context" for others |
 | `icm-get_incident_location` | Region, cluster, datacenter | Usually works |
 
-**Key limitation:** The raw HTML authored summary visible in the ICM portal is NOT returned by any MCP tool. To get the full authored description (which usually contains the cluster ARM resource ID), you must either:
-1. **On Windows:** Use **Playwright MCP** to navigate to `https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary` and `playwright-browser_snapshot` to read the authored summary directly
-2. **On WSL2:** Use the **`tsg_icm_page`** tool (requires Edge CDP proxy — see Section 1 prerequisites)
-3. Rely on `icm-get_ai_summary` which often quotes the ARM ID from the authored summary
-4. Check `icm-get_incident_context` → `DescriptionEntriesSummary` field (when available)
-5. Ask the user to paste it from the ICM portal
+**Key limitation:** The raw HTML authored summary visible in the ICM portal is NOT returned by any ICM MCP API tool. To get the full authored description (which usually contains the cluster ARM resource ID), you must either:
+1. **Use `tsg_icm_page`** (works on both Windows and WSL2) — connects to Edge via CDP, intercepts the raw API responses on page reload, and extracts the authored summary + discussion entries. Requires Edge running with `--remote-debugging-port=9222` (see Section 1).
+2. Rely on `icm-get_ai_summary` which often quotes the ARM ID from the authored summary
+3. Check `icm-get_incident_context` → `DescriptionEntriesSummary` field (when available)
+4. Ask the user to paste it from the ICM portal
 
 ### What each server provides
 
@@ -436,7 +519,7 @@ The ICM MCP server provides several tools for querying incidents. Be aware of th
 | **ado-tracing** | stdio | ADO with tracing org context — repos, PRs, work items for msazure org |
 | **enghub** | stdio | Engineering Hub — docs, TSGs, ServiceTree |
 | **es-chat** | stdio | Engineering Systems Chat — internal knowledge search |
-| **playwright** | stdio | Browser automation — navigate, click, screenshot dashboards. **On Windows:** use for ICM portal browsing (navigate to ICM summary page, snapshot to read authored summary). **On WSL2:** works for general browsing but ICM portal auth is unreliable — use `tsg_icm_page` instead |
+| **playwright** | stdio | Browser automation — navigate, click, screenshot dashboards. For ICM portal browsing, prefer `tsg_icm_page` (faster and more reliable via CDP network interception) |
 
 ### Optional servers
 
@@ -719,6 +802,17 @@ Then update your EngHub MCP config to include the library path:
 
 ### Step 1: Verify TSG MCP server
 
+**Windows (PowerShell):**
+```powershell
+Set-Location $env:USERPROFILE\go\src\prometheus-collector\tools\prom-collector-tsg-mcp
+
+# Send initialize + tools/list via JSON-RPC
+$init = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+$list = '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+"$init`n$list" | node dist/index.js 2>$null | Select-String '"name"' | ForEach-Object { $_.Line.Trim() }
+```
+
+**WSL2 / Linux (bash):**
 ```bash
 cd ~/go/src/prometheus-collector/tools/prom-collector-tsg-mcp
 
@@ -739,9 +833,33 @@ for line in sys.stdin:
 EOF
 ```
 
-Expected: **10 tools** including `tsg_triage`, `tsg_errors`, `tsg_config`, `tsg_workload`, `tsg_pods`, `tsg_logs`, `tsg_control_plane`, `tsg_query`, `tsg_dashboard_link`, `tsg_mdm_throttling`.
+Expected: **11 tools** including `tsg_triage`, `tsg_errors`, `tsg_config`, `tsg_workload`, `tsg_pods`, `tsg_logs`, `tsg_control_plane`, `tsg_query`, `tsg_dashboard_link`, `tsg_mdm_throttling`, `tsg_icm_page`.
 
-### Step 2: Verify Geneva MDM MCP server
+### Step 2: Verify Edge CDP for ICM browsing
+
+**Windows (PowerShell):**
+```powershell
+# Check that Edge CDP is running
+try {
+    $ver = (Invoke-WebRequest -Uri "http://localhost:9222/json/version" -UseBasicParsing).Content | ConvertFrom-Json
+    Write-Host "✅ Edge CDP: $($ver.Browser)"
+} catch {
+    Write-Host "❌ Edge CDP not running. Launch Edge with --remote-debugging-port=9222 (see Section 1)"
+}
+
+# Test tsg_icm_page scrape (replace 12345678 with a real ICM ID)
+Set-Location $env:USERPROFILE\go\src\prometheus-collector\tools\prom-collector-tsg-mcp
+node -e "require('./dist/icm-browser.js').scrapeICMIncident(12345678).then(r => console.log(r.substring(0, 200)))"
+```
+
+**WSL2 (bash):**
+```bash
+# Check that Edge CDP is reachable via port proxy
+curl -s http://$(hostname).local:9223/json/version | python3 -m json.tool
+# Should return Edge version info
+```
+
+### Step 3: Verify Geneva MDM MCP server
 
 ```bash
 # Check it's running
@@ -987,7 +1105,11 @@ cp -r .github/skills/* ~/.copilot/skills/
 
 ### Playwright / browser issues
 
-**Windows:** Should work out of the box. Try `npx playwright install` if browsers are missing.
+**Windows:**
+- Playwright MCP works for general browsing (dashboards, Grafana, Azure portal)
+- **Do NOT use Playwright for ICM portal** — the SPA is too heavy and `browser_snapshot` hangs. Use `tsg_icm_page` instead
+- If Playwright fails to find a browser, run `npx playwright install msedge` (Chrome is not installed by default on Windows)
+- If using `--browser msedge` and it says "Opening in existing browser session", that means Edge merged into the running session. Playwright needs its own profile; this is handled automatically by the Playwright MCP
 
 **WSL2:** Needs Google Chrome:
 ```bash
@@ -997,7 +1119,25 @@ wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.de
 sudo dpkg -i google-chrome-stable_current_amd64.deb && sudo apt-get install -f
 ```
 
-For ICM portal on WSL2, use `tsg_icm_page` instead of Playwright (see Section 1 for Edge CDP proxy setup).
+For ICM portal browsing on **both platforms**, use `tsg_icm_page` instead of Playwright — it works on both Windows and WSL2 (see Section 1 for Edge CDP setup).
+
+### Edge CDP / tsg_icm_page issues
+
+**Edge CDP not responding (`localhost:9222`):**
+1. Verify Edge is running with CDP: `Invoke-WebRequest http://localhost:9222/json/version` (PowerShell) or `curl localhost:9222/json/version` (bash)
+2. If no response, launch Edge with `--remote-debugging-port=9222` (see Section 1)
+3. **Profile locking:** If Edge says "Opening in existing browser session" → you're using a `--user-data-dir` that's already in use by another Edge process. Use a unique directory (e.g., `C:\Users\<user>\.edge-cdp-debug`)
+4. **Edge merges into existing session:** When you launch `msedge.exe` with a data-dir that already has an Edge process, the new instance sends a message to the existing one and exits. The CDP port becomes inaccessible. Solution: ensure no other Edge instance uses that profile directory, or pick a fresh `--user-data-dir`
+
+**ICM shows blank / auth required:**
+- Sign in to ICM manually in the CDP Edge window first (navigate to `https://portal.microsofticm.com`)
+- Windows Entra ID SSO with FIDO keys works even in the separate CDP Edge profile
+- After initial sign-in, the session persists across page reloads
+
+**tsg_icm_page returns empty summary:**
+- The tool intercepts `GetIncidentDetails` and `getdescriptionentries` API calls during page reload. If ICM loads from cache without XHR, it may miss the data
+- Try with a different ICM ID to rule out incident-specific issues
+- Check `CDP_ENDPOINT` env var — on Windows it should be unset (auto-detects `localhost:9222`); on WSL2 it auto-detects `172.29.112.1:9223`
 
 ### tsg_icm_page: "Cannot connect to Edge browser via CDP"
 
