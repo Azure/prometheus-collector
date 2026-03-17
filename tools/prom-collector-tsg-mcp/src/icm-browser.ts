@@ -261,37 +261,134 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * Detect the Windows username for Edge user-data-dir.
+ * Tries WINDOWS_USER env, then reads from /mnt/c/Users/, falls back to USER.
+ */
+function getWindowsUser(): string {
+  if (process.env.WINDOWS_USER) return process.env.WINDOWS_USER;
+  try {
+    const out = execSync(
+      "powershell.exe -NoProfile -Command \"$env:USERNAME\" 2>/dev/null",
+      { encoding: "utf-8", timeout: 5000 }
+    ).trim().replace(/\r/g, "");
+    if (out) return out;
+  } catch {}
+  return process.env.USER || "your-username";
+}
+
+/**
+ * Check if the netsh port proxy from 9223→9222 already exists.
+ */
+function hasPortProxy(proxyPort: number, cdpPort: number): boolean {
+  try {
+    const out = execSync(
+      'powershell.exe -NoProfile -Command "netsh interface portproxy show v4tov4" 2>/dev/null',
+      { encoding: "utf-8", timeout: 5000 }
+    );
+    return out.includes(String(proxyPort)) && out.includes(String(cdpPort));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Set up the netsh port proxy (requires admin on first run — may fail silently).
+ */
+function ensurePortProxy(proxyPort: number, cdpPort: number): void {
+  if (hasPortProxy(proxyPort, cdpPort)) return;
+  try {
+    execSync(
+      `powershell.exe -NoProfile -Command "netsh interface portproxy add v4tov4 listenport=${proxyPort} listenaddress=0.0.0.0 connectport=${cdpPort} connectaddress=127.0.0.1" 2>/dev/null`,
+      { encoding: "utf-8", timeout: 10000 }
+    );
+  } catch {
+    // May fail without admin — will surface in the final error message
+  }
+}
+
+/**
+ * Launch Edge with --remote-debugging-port via powershell.exe.
+ */
+function launchEdge(cdpPort: number, winUser: string): void {
+  try {
+    execSync(
+      `powershell.exe -NoProfile -Command "Start-Process 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' -ArgumentList '--remote-debugging-port=${cdpPort}','--user-data-dir=C:\\Users\\${winUser}\\.edge-cdp','--no-first-run'" 2>/dev/null`,
+      { encoding: "utf-8", timeout: 10000 }
+    );
+  } catch {
+    // Edge may already be running or path differs — will detect via CDP check
+  }
+}
+
+/**
+ * Wait for CDP endpoint to become available, with retries.
+ */
+async function waitForCDP(endpoint: string, maxWaitSec: number): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitSec * 1000) {
+    try {
+      await fetchJSON(`${endpoint}/json/version`);
+      return true;
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  return false;
+}
+
 /** Scrape the ICM incident summary page */
 export async function scrapeICMIncident(
   incidentId: number
 ): Promise<string> {
+  const cdpPort = 9222;
+  const proxyPort = parseInt(process.env.CDP_PORT || "9223", 10);
+
+  // Step 1: Check if CDP is already reachable
+  let cdpReady = false;
   try {
     await fetchJSON(`${CDP_HTTP}/json/version`);
+    cdpReady = true;
   } catch {
-    const winUser = process.env.WINDOWS_USER || process.env.USER || "your-username";
-    return [
-      `❌ Cannot connect to Edge browser via CDP at ${CDP_HTTP}`,
-      "",
-      "**Quick setup (run in PowerShell on Windows as Admin):**",
-      "",
-      "```powershell",
-      "# 1. Set up port proxy (one-time, persists across reboots)",
-      "netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1",
-      "",
-      "# 2. Allow through firewall (one-time)",
-      'New-NetFirewallRule -DisplayName "Edge CDP for WSL" -Direction Inbound -LocalPort 9223 -Protocol TCP -Action Allow',
-      "",
-      "# 3. Launch Edge with remote debugging (run each session)",
-      `Start-Process 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\${winUser}\\.edge-cdp','--no-first-run'`,
-      "```",
-      "",
-      "Or run this one-liner from WSL:",
-      `  powershell.exe -Command "Start-Process msedge -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\Users\\${winUser}\\.edge-cdp','--no-first-run'"`,
-      "",
-      `Then sign in to ICM at: https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary`,
-      "",
-      "**Tip:** Add `start-edge-cdp` to your shell aliases for quick access.",
-    ].join("\n");
+    // Not running — try auto-setup
+  }
+
+  if (!cdpReady) {
+    const winUser = getWindowsUser();
+    const setupLog: string[] = ["🔧 Edge CDP not running — attempting auto-setup..."];
+
+    // Step 2: Ensure port proxy
+    setupLog.push("  Setting up port proxy...");
+    ensurePortProxy(proxyPort, cdpPort);
+
+    // Step 3: Launch Edge
+    setupLog.push("  Launching Edge with --remote-debugging-port...");
+    launchEdge(cdpPort, winUser);
+
+    // Step 4: Wait for CDP
+    setupLog.push("  Waiting for Edge CDP to be ready (up to 10s)...");
+    cdpReady = await waitForCDP(CDP_HTTP, 10);
+
+    if (!cdpReady) {
+      // Auto-setup failed — give manual instructions
+      return [
+        ...setupLog,
+        "",
+        `❌ Auto-setup failed. Could not connect to Edge CDP at ${CDP_HTTP}`,
+        "",
+        "This can happen if:",
+        "- Edge is already running without CDP (close all Edge windows first)",
+        "- Port proxy needs admin rights (run PowerShell as Admin once):",
+        `  netsh interface portproxy add v4tov4 listenport=${proxyPort} listenaddress=0.0.0.0 connectport=${cdpPort} connectaddress=127.0.0.1`,
+        `  New-NetFirewallRule -DisplayName "Edge CDP for WSL" -Direction Inbound -LocalPort ${proxyPort} -Protocol TCP -Action Allow`,
+        "",
+        "Then retry this tool.",
+      ].join("\n");
+    }
+
+    setupLog.push("  ✅ Edge CDP is ready!");
+    // Log setup steps to stderr so they don't pollute the tool output
+    console.error(setupLog.join("\n"));
   }
 
   try {
