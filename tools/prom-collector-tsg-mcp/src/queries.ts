@@ -2941,7 +2941,7 @@ dimsOldest | join kind=leftanti dimsLatest on dim
 | order by dim asc`,
     },
     {
-      name: "Metrics At or Near Dimension Ceiling (49+)",
+      name: "Metrics with High Dimension Count (45+)",
       datasource: "MetricInsights",
       kql: `StorageInsightsUsageV2
 | where monitoringAccount == mdmAccountID

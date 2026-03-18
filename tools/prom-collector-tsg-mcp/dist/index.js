@@ -484,10 +484,10 @@ server.tool("tsg_metric_insights", "Analyze metric volume and cardinality using 
     };
 });
 // Tool: tsg_dimension_analysis
-server.tool("tsg_dimension_analysis", "Analyze metric dimension counts, trends, and growth over time using StorageInsightsUsageV2. Shows max dimensions across all metrics in an account, weekly dimension count trend for a specific metric, dimension name diff (added/removed labels), and metrics near the observed ~49 dimension ceiling. Use this when investigating missing metrics that may be silently dropped due to high dimension count. Requires the MDM account name (get it from tsg_triage → 'MDM Account ID' query).", {
+server.tool("tsg_dimension_analysis", "Analyze metric dimension counts, trends, and growth over time using StorageInsightsUsageV2. Shows max dimensions across all metrics in an account, weekly dimension count trend for a specific metric, dimension name diff (added/removed labels), and metrics with high dimension counts. Use this when investigating missing metrics that may be silently dropped due to high dimension count — helps gather evidence for MDM team escalation. Requires the MDM account name (get it from tsg_triage → 'MDM Account ID' query).", {
     mdmAccountId: z
         .string()
-        .describe("MDM monitoring account name from tsg_triage, e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+        .describe("MDM monitoring account name from tsg_triage, e.g. 'mac_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'"),
     metricName: z
         .string()
         .optional()
