@@ -6,6 +6,7 @@ trigger:
     - dependabot*
     - aks/alpha-1
     - aks/*
+    
 pr:
   autoCancel: true
   branches:
