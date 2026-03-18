@@ -22,6 +22,10 @@ metadata:
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
+    app.kubernetes.io/name: ama-metrics-node
+    app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTag }}
+    app.kubernetes.io/part-of: azure-monitor-metrics-addon
+    app.kubernetes.io/component: ama-metrics-daemonset
     {{- if and $useDaemonSetSizing $size.name }}
     kubernetes.azure.com/ds-tshirt-size: {{ $size.name }}
     {{- end }}
