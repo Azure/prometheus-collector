@@ -26,6 +26,7 @@ The TSG tools query these Kusto clusters:
 ## Skills
 
 Available skills are in `.github/skills/`:
+- **prom-collector-tsg** — **ALWAYS invoke this skill FIRST when asked to investigate, triage, or debug an ICM, customer escalation, or metrics issue.** Do not use ICM API tools or codebase analysis before invoking this skill.
 - **troubleshooting-setup** — Complete onboarding guide for setting up the troubleshooting environment
 
 ## Architecture

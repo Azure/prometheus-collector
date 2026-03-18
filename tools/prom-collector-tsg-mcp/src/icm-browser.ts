@@ -133,41 +133,59 @@ async function listTabs(): Promise<CDPTab[]> {
   return fetchJSON(`${CDP_HTTP}/json/list`);
 }
 
-/** Find or open an ICM incident page, return the tab's WS URL */
-async function getOrOpenICMTab(
+/** Close an existing ICM tab if open, then open a fresh one with Network
+ *  monitoring enabled BEFORE navigation so we capture the initial API calls.
+ *  This avoids the stale-tab problem where the SPA has cached data and
+ *  Page.reload doesn't trigger fresh GetIncidentDetails / getdescriptionentries calls. */
+async function openFreshICMTab(
   incidentId: number
-): Promise<{ wsUrl: string; alreadyOpen: boolean }> {
+): Promise<{ session: CDPSession }> {
   const icmUrl = `https://portal.microsofticm.com/imp/v5/incidents/details/${incidentId}/summary`;
 
-  // Check if already open
+  // Close any existing ICM tabs for this incident to avoid stale SPA state
   const tabs = await listTabs();
-  for (const tab of tabs) {
-    if (tab.type === "page" && tab.url.includes(`${incidentId}`)) {
-      return { wsUrl: tab.webSocketDebuggerUrl, alreadyOpen: true };
-    }
-  }
-
-  // Open a new tab via CDP browser-level WS
   const version = await fetchJSON(`${CDP_HTTP}/json/version`);
   const browserWs = version.webSocketDebuggerUrl as string;
-  const session = await CDPSession.connect(browserWs);
-  const result = await session.send("Target.createTarget", { url: icmUrl });
-  session.close();
-  const targetId = result.targetId;
 
-  // Wait for tab to load
-  await new Promise((r) => setTimeout(r, 8000));
-
-  const updatedTabs = await listTabs();
-  for (const tab of updatedTabs) {
-    if (tab.id === targetId || tab.url.includes(`${incidentId}`)) {
-      return { wsUrl: tab.webSocketDebuggerUrl, alreadyOpen: false };
+  for (const tab of tabs) {
+    if (tab.type === "page" && tab.url.includes(`${incidentId}`)) {
+      const bSession = await CDPSession.connect(browserWs);
+      await bSession.send("Target.closeTarget", { targetId: tab.id });
+      bSession.close();
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
 
-  throw new Error(
-    `Could not find ICM tab for incident ${incidentId} after opening`
+  // Open a blank tab first so we can enable Network monitoring before navigation
+  const bSession = await CDPSession.connect(browserWs);
+  const result = await bSession.send("Target.createTarget", {
+    url: "about:blank",
+  });
+  bSession.close();
+  const targetId = result.targetId;
+
+  await new Promise((r) => setTimeout(r, 1000));
+
+  // Find the new blank tab
+  const updatedTabs = await listTabs();
+  const newTab = updatedTabs.find(
+    (t) => t.id === targetId || t.url === "about:blank"
   );
+  if (!newTab) {
+    throw new Error("Could not find newly opened blank tab");
+  }
+
+  // Connect to the tab and enable Network BEFORE navigating to ICM
+  const session = await CDPSession.connect(newTab.webSocketDebuggerUrl);
+  await session.send("Network.enable", {
+    maxTotalBufferSize: 50_000_000,
+    maxResourceBufferSize: 10_000_000,
+  });
+
+  // Now navigate — Network will capture all API calls from the initial load
+  await session.send("Page.navigate", { url: icmUrl });
+
+  return { session };
 }
 
 interface DiscussionEntry {
@@ -183,7 +201,8 @@ interface ICMPageData {
 }
 
 /**
- * Reload the ICM page and capture API responses via CDP Network domain:
+ * Capture API responses via CDP Network domain (Network.enable must already be active).
+ * Waits for GetIncidentDetails and getdescriptionentries responses from the page load.
  * - GetIncidentDetails → Summary (authored summary) + Description fields
  * - getdescriptionentries → Discussion entries (Items array)
  */
@@ -200,14 +219,8 @@ async function captureIncidentData(
     }
   });
 
-  await session.send("Network.enable", {
-    maxTotalBufferSize: 50_000_000,
-    maxResourceBufferSize: 10_000_000,
-  });
-  await session.send("Page.reload", { ignoreCache: true });
-
-  // Wait for API responses
-  await new Promise((r) => setTimeout(r, 12000));
+  // Wait for the page to load and API responses to arrive
+  await new Promise((r) => setTimeout(r, 15000));
 
   let summary = "";
   let description = "";
@@ -392,12 +405,10 @@ export async function scrapeICMIncident(
   }
 
   try {
-    const { wsUrl, alreadyOpen } = await getOrOpenICMTab(incidentId);
-    const session = await CDPSession.connect(wsUrl);
+    const { session } = await openFreshICMTab(incidentId);
 
-    if (!alreadyOpen) {
-      await new Promise((r) => setTimeout(r, 5000));
-    }
+    // Wait for page to settle after navigation
+    await new Promise((r) => setTimeout(r, 5000));
 
     // Check if we landed on a sign-in page
     const currentUrl = await session.eval("window.location.href");
@@ -413,9 +424,8 @@ export async function scrapeICMIncident(
     }
 
     // Capture authored summary + discussion entries via Network interception.
-    // The ICM "Authored summary" is the `Summary` field in GetIncidentDetails.
-    // Discussion entries come from the getdescriptionentries API.
-    // Neither is in the DOM innerText — ICM's React UI lazy-renders them.
+    // Network.enable was called before navigation in openFreshICMTab, so
+    // all API responses from the initial page load are being captured.
     const details = await captureIncidentData(session, incidentId);
 
     // Also get the visible page text for context (title, status, etc.)

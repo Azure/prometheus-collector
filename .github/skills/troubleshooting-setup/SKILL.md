@@ -16,7 +16,7 @@ cd ~/go/src/prometheus-collector
 bash tools/prom-collector-tsg-mcp/setup.sh
 ```
 
-This builds the MCP server, writes `~/.copilot/mcp.json` with correct paths, sets up auth workarounds (WSL2 only), and configures Edge CDP for ICM browser scraping (WSL2 only). Everything else is already in the repo:
+This builds the MCP server, writes `~/.copilot/mcp-config.json` with correct paths, sets up auth workarounds (WSL2 only), and configures Edge CDP for ICM browser scraping (WSL2 only). Everything else is already in the repo:
 
 | What | Where | Auto-discovered? |
 |------|-------|-------------------|
@@ -24,8 +24,10 @@ This builds the MCP server, writes `~/.copilot/mcp.json` with correct paths, set
 | Skills (prom-collector-tsg, troubleshooting-setup) | `.github/skills/` | ✅ Yes — Copilot loads them when cwd is in the repo |
 | Repo context | `.github/copilot-instructions.md` | ✅ Yes — Copilot reads it automatically |
 | VS Code MCP config | `.vscode/mcp.json` | ✅ Yes — VS Code reads it automatically |
-| Custom MCP (prom-collector-tsg binary) | `~/.copilot/mcp.json` | ⚠️ Needs setup.sh — requires absolute path to built `dist/index.js` |
+| Custom MCPs (prom-collector-tsg) | `~/.copilot/mcp-config.json` | ⚠️ Needs setup.sh — requires absolute path to built `dist/index.js` |
 | Edge CDP (WSL2 only) | Windows port proxy + Edge launch | ⚠️ Needs setup.sh — launches Edge with `--remote-debugging-port=9222` and configures port proxy |
+
+> **⚠️ IMPORTANT:** Copilot CLI reads custom MCP servers from **`~/.copilot/mcp-config.json`**, NOT `~/.copilot/mcp.json`. If your tools aren't loading, check the filename.
 
 After setup:
 ```bash
@@ -67,7 +69,6 @@ The setup differs depending on whether you're running on **native Windows** or *
 | Concern | Windows (native) | WSL2 (Linux) |
 |---------|-------------------|--------------|
 | **ICM browsing** | ✅ `tsg_icm_page` connects to Edge on localhost:9222 | ⚠️ `tsg_icm_page` connects via port proxy on 9223 — needs netsh setup |
-| **Browser automation** | ✅ Playwright MCP works natively | ⚠️ Needs Google Chrome installed + `--disable-gpu` flag |
 | **EngHub auth** | ✅ Keytar/keychain works natively | ⚠️ Needs gnome-keyring-daemon shim (see Section 8) |
 | **azureauth** | ✅ Usually pre-installed on corp machines | ⚠️ Often missing — needs shim script (see Section 8) |
 | **Node.js / .NET / az CLI** | Install via winget or official installers | Install via apt / curl scripts |
@@ -107,8 +108,6 @@ Then sign in to ICM in that Edge window (navigate to `https://portal.microsoftic
 
 > **⚠️ IMPORTANT — Edge profile locking:** You **must** use a `--user-data-dir` that is different from your main Edge profile (`%LOCALAPPDATA%\Microsoft\Edge\User Data`). If you point to your existing profile while Edge is already running, the new instance will merge into the existing session and close — the CDP port won't work. Always use a dedicated directory like `C:\Users\<user>\.edge-cdp-debug`.
 
-> **Why not Playwright for ICM?** Playwright MCP can browse most sites, but the ICM portal SPA is extremely heavy (~150 console warnings, lazy-rendered React UI). `browser_snapshot` hangs on the complex DOM, and the authored summary is never in the visible `innerText` — ICM loads it via XHR API calls. `tsg_icm_page` is purpose-built for this: it intercepts the raw `GetIncidentDetails` and `getdescriptionentries` API responses via CDP Network capture during page reload, reliably extracting the full authored summary and discussion entries.
-
 ---
 
 ### WSL2 (Linux) prerequisites
@@ -146,16 +145,6 @@ echo 'export PATH="$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-#### Install Google Chrome (WSL2 only — for Playwright browser automation)
-
-```bash
-# Chrome is needed for Playwright MCP to work on Linux/WSL
-# The bundled Chromium often has GPU rendering issues
-wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo dpkg -i google-chrome-stable_current_amd64.deb
-sudo apt-get install -f  # fix any dependency issues
-```
-
 #### ICM Browser Access — Edge CDP setup
 
 The `tsg_icm_page` tool connects to Edge via the Chrome DevTools Protocol (CDP) to scrape ICM incident pages. This works on both **Windows (native)** and **WSL2**.
@@ -184,7 +173,7 @@ No port proxy or firewall rules needed — the tool connects directly to `localh
 # setup.sh does all of this for you, but if you need to do it manually:
 
 # 1. From WSL, launch Edge with CDP debugging port
-powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\<user>\.playwright-mcp-edge3','--no-first-run'"
+powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\<user>\.edge-cdp-debug','--no-first-run'"
 
 # 2. Set up port proxy with admin elevation (from WSL)
 powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command','netsh interface portproxy add v4tov4 listenport=9223 listenaddress=0.0.0.0 connectport=9222 connectaddress=127.0.0.1; netsh advfirewall firewall add rule name=\"\"\"WSL Edge CDP\"\"\" dir=in action=allow protocol=TCP localport=9223'"
@@ -383,11 +372,11 @@ curl -s http://localhost:5050/mcp \
 
 ## 6. Configure Copilot CLI MCP Servers
 
-Copilot CLI reads MCP server config from **two files** (either works, both are checked):
-- `~/.copilot/mcp.json` — primary config
-- `~/.copilot/mcp-config.json` — alternative (same format)
+Copilot CLI reads custom MCP server config from **`~/.copilot/mcp-config.json`**.
 
-Create or update `~/.copilot/mcp.json`:
+> **⚠️ CRITICAL:** The file must be named **`mcp-config.json`**, NOT `mcp.json`. The CLI ignores `mcp.json`.
+
+Create or update `~/.copilot/mcp-config.json`:
 
 > **IMPORTANT:** Replace `/home/yourname` with your actual home directory (Linux/WSL) or `C:\\Users\\yourname` (Windows). JSON doesn't expand `$HOME` or `~`.
 
@@ -399,39 +388,13 @@ Create or update `~/.copilot/mcp.json`:
     "prom-collector-tsg": {
       "command": "node",
       "args": ["C:\\Users\\yourname\\go\\src\\prometheus-collector\\tools\\prom-collector-tsg-mcp\\dist\\index.js"]
-    },
-    "icm": {
-      "command": "agency",
-      "args": ["mcp", "remote", "--url", "https://icmmcpprod-centralus.azurewebsites.net/"]
-    },
-    "azure-devops": {
-      "command": "npx",
-      "args": ["-y", "@azure-devops/mcp", "msazure"]
-    },
-    "ado-tracing": {
-      "command": "agency",
-      "args": ["mcp", "ado", "--organization", "msazure"]
-    },
-    "enghub": {
-      "command": "enghub-mcp",
-      "args": ["start"]
-    },
-    "es-chat": {
-      "command": "agency",
-      "args": ["mcp", "es-chat"]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
 ```
 
 > **Windows notes:**
-> - For ICM portal browsing, use `tsg_icm_page` (not Playwright). It connects to Edge on `localhost:9222` and reliably extracts the authored summary via CDP network interception. See Section 1 for Edge CDP setup.
-> - Playwright MCP works for general web browsing but **hangs on the ICM portal** (heavy SPA with lazy-rendered content). Use it for dashboards, Grafana, etc. — not ICM.
-> - If Playwright fails to launch, run `npx playwright install msedge` to install the Edge browser. Chrome is not installed by default on Windows — use `--browser msedge`.
+> - For ICM portal browsing, use `tsg_icm_page`. It connects to Edge on `localhost:9222` and reliably extracts the authored summary via CDP network interception. See Section 1 for Edge CDP setup.
 > - EngHub MCP works natively with Windows keychain (no gnome-keyring needed)
 > - `azureauth` is typically pre-installed on corp Windows machines (no shim needed)
 
@@ -443,44 +406,13 @@ Create or update `~/.copilot/mcp.json`:
     "prom-collector-tsg": {
       "command": "node",
       "args": ["/home/yourname/go/src/prometheus-collector/tools/prom-collector-tsg-mcp/dist/index.js"]
-    },
-    "icm": {
-      "command": "agency",
-      "args": ["mcp", "remote", "--url", "https://icmmcpprod-centralus.azurewebsites.net/"]
-    },
-    "azure-devops": {
-      "command": "npx",
-      "args": ["-y", "@azure-devops/mcp", "msazure"]
-    },
-    "ado-tracing": {
-      "command": "agency",
-      "args": ["mcp", "ado", "--organization", "msazure"]
-    },
-    "enghub": {
-      "command": "enghub-mcp",
-      "args": ["start"],
-      "env": {
-        "LD_LIBRARY_PATH": "/home/yourname/.local/libsecret/usr/lib/x86_64-linux-gnu"
-      }
-    },
-    "es-chat": {
-      "command": "agency",
-      "args": ["mcp", "es-chat"]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome", "--executable-path", "/usr/bin/google-chrome"],
-      "env": {
-        "CHROMIUM_FLAGS": "--disable-gpu"
-      }
     }
   }
 }
 ```
 
 > **WSL2 notes:**
-> - Playwright needs explicit `--browser chrome --executable-path /usr/bin/google-chrome` and `CHROMIUM_FLAGS: --disable-gpu` (see Section 1 for Chrome install)
-> - Playwright in WSL can browse most sites, but **ICM portal auth is unreliable** from WSL Playwright. Use `tsg_icm_page` instead — it works on both Windows and WSL2 (see Section 1 for Edge CDP setup)
+> - For ICM portal browsing, use `tsg_icm_page` — it works on both Windows and WSL2 (see Section 1 for Edge CDP setup)
 > - EngHub MCP needs `LD_LIBRARY_PATH` pointing to libsecret (see Section 8)
 > - `azureauth` usually needs a shim script (see Section 8)
 
@@ -519,7 +451,6 @@ The ICM MCP server provides several tools for querying incidents. Be aware of th
 | **ado-tracing** | stdio | ADO with tracing org context — repos, PRs, work items for msazure org |
 | **enghub** | stdio | Engineering Hub — docs, TSGs, ServiceTree |
 | **es-chat** | stdio | Engineering Systems Chat — internal knowledge search |
-| **playwright** | stdio | Browser automation — navigate, click, screenshot dashboards. For ICM portal browsing, prefer `tsg_icm_page` (faster and more reliable via CDP network interception) |
 
 ### Optional servers
 
@@ -581,11 +512,6 @@ Create `.vscode/mcp.json` in the repo for VS Code Copilot integration:
       "type": "stdio",
       "command": "agency",
       "args": ["mcp", "es-chat"]
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
@@ -625,14 +551,6 @@ Create `.vscode/mcp.json` in the repo for VS Code Copilot integration:
       "type": "stdio",
       "command": "agency",
       "args": ["mcp", "es-chat"]
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome", "--executable-path", "/usr/bin/google-chrome"],
-      "env": {
-        "CHROMIUM_FLAGS": "--disable-gpu"
-      }
     }
   }
 }
@@ -925,7 +843,6 @@ copilot
 | **icm** | Query incidents, create incidents, update severity/status |
 | **enghub** | Search EngHub docs, fetch TSG pages, resolve services |
 | **es-chat** | Ask engineering systems questions, search internal KB |
-| **playwright** | Navigate to dashboards, take screenshots, fill forms |
 
 ---
 
@@ -1051,18 +968,33 @@ npx tsc
 
 ### MCP tools don't appear in Copilot
 
-1. **Check mcp.json path is correct:**
+> **⚠️ Most common cause:** The config file is named `mcp.json` instead of `mcp-config.json`. Copilot CLI reads **`~/.copilot/mcp-config.json`** — it silently ignores `mcp.json`.
+
+1. **Check the file exists with the right name:**
 ```bash
-cat ~/.copilot/mcp.json | python3 -m json.tool
-# Verify dist/index.js exists at the path listed
+cat ~/.copilot/mcp-config.json | python3 -m json.tool
+# If you have mcp.json instead, rename it:
+# mv ~/.copilot/mcp.json ~/.copilot/mcp-config.json
 ```
 
-2. **Test MCP server directly:**
+2. **Verify dist/index.js exists at the path listed:**
+```bash
+ls tools/prom-collector-tsg-mcp/dist/index.js
+```
+
+3. **Test MCP server directly:**
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | timeout 5 node tools/prom-collector-tsg-mcp/dist/index.js 2>/dev/null
 ```
 
-3. **Re-run setup.sh** to rebuild and regenerate config.
+4. **Restart the CLI** after any config change — MCP servers connect at session startup:
+```bash
+exit
+agency copilot
+/mcp    # verify servers are connected
+```
+
+5. **Re-run setup.sh** to rebuild and regenerate config.
 
 ### ICM MCP: "Failed to get access token" / azureauth
 
@@ -1090,6 +1022,10 @@ agency config list       # should find the file
 pwd                      # must be inside the repo
 ```
 
+### Custom MCPs (prom-collector-tsg) not loading
+
+Custom MCP servers must be in **`~/.copilot/mcp-config.json`** (NOT `mcp.json`). See Section 6 for the correct config format. Re-run `setup.sh` to generate the file with the correct name.
+
 ### Skills not loading
 
 Skills auto-load from `.github/skills/` when cwd is inside the repo:
@@ -1102,24 +1038,6 @@ If running copilot from outside the repo, copy skills globally:
 ```bash
 cp -r .github/skills/* ~/.copilot/skills/
 ```
-
-### Playwright / browser issues
-
-**Windows:**
-- Playwright MCP works for general browsing (dashboards, Grafana, Azure portal)
-- **Do NOT use Playwright for ICM portal** — the SPA is too heavy and `browser_snapshot` hangs. Use `tsg_icm_page` instead
-- If Playwright fails to find a browser, run `npx playwright install msedge` (Chrome is not installed by default on Windows)
-- If using `--browser msedge` and it says "Opening in existing browser session", that means Edge merged into the running session. Playwright needs its own profile; this is handled automatically by the Playwright MCP
-
-**WSL2:** Needs Google Chrome:
-```bash
-which google-chrome   # check if installed
-# If not:
-wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo dpkg -i google-chrome-stable_current_amd64.deb && sudo apt-get install -f
-```
-
-For ICM portal browsing on **both platforms**, use `tsg_icm_page` instead of Playwright — it works on both Windows and WSL2 (see Section 1 for Edge CDP setup).
 
 ### Edge CDP / tsg_icm_page issues
 
@@ -1167,7 +1085,7 @@ curl -s --connect-timeout 3 "http://${WSL_GATEWAY}:9223/json/version"
   ```bash
   powershell.exe -Command "Stop-Process -Name msedge -Force -ErrorAction SilentlyContinue"
   sleep 2
-  powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\$USER\.playwright-mcp-edge3','--no-first-run'"
+  powershell.exe -Command "Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\Users\$USER\.edge-cdp-debug','--no-first-run'"
   ```
 - **Port proxy not set up** (needs admin — will trigger UAC prompt):
   ```bash

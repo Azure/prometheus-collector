@@ -101,12 +101,18 @@ The cluster ARM resource ID is critical for running TSG queries. It looks like:
    **Do NOT use Playwright MCP for ICM scraping.** The ICM portal SPA is extremely heavy — `browser_snapshot` hangs on the DOM, and the authored summary is loaded via XHR API calls (not visible in `innerText`). Playwright is fine for Grafana, Azure portal, etc. — just not ICM.
 
    **Important:** Read the full authored summary AND discussion entries carefully — they contain the reporter's actual problem description, specific metric names, PromQL queries, and evidence that the AI summary loses. This context is essential for targeted diagnosis.
-6. **Ask the user** — if none of the above have it, ask: "What is the cluster ARM resource ID? It's usually in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
+6. **Ask the user (LAST RESORT ONLY)** — if none of the above have it, ask: "What is the cluster ARM resource ID? It's usually in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
 
-**STOP and ask the user if you cannot find the ARM ID after checking steps 1–5.**
-Do NOT proceed to triage queries without it — every query requires the cluster ARM ID.
-Do NOT guess, fabricate, or skip this step. Ask the user immediately:
-> "I couldn't find the cluster ARM resource ID in the ICM details. Can you provide it?
+**⚠️ MANDATORY: You MUST call `tsg_icm_page` (step 5) before asking the user for the ARM ID.**
+The ICM MCP API tools (steps 1–4) almost never return the ARM ID because they don't expose the authored summary. The browser scrape via `tsg_icm_page` is the primary method for getting the ARM ID — it intercepts the raw ICM API response which contains the full authored summary where reporters paste the cluster ARM ID. Do NOT skip it. Do NOT go straight to asking the user.
+
+**STOP and ask the user ONLY after `tsg_icm_page` has been attempted and failed to find the ARM ID.**
+Do NOT proceed to triage queries without the ARM ID — every query requires the cluster ARM ID.
+Do NOT guess, fabricate, or skip this step. If `tsg_icm_page` failed (e.g. Edge not running, sign-in needed), tell the user what happened and ask them to either:
+- Fix the browser issue and retry, OR
+- Provide the ARM ID manually
+
+> "I couldn't find the cluster ARM resource ID in the ICM details or via browser scrape. Can you provide it?
 > It looks like: `/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.ContainerService/managedClusters/{name}`
 > You can find it in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
 
@@ -143,7 +149,11 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 | `tsg_dashboard_link` | Get a link to the ADX dashboard pre-filtered for the cluster |
 | `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
 | `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_mdm_query` | Query any Prometheus metric from Geneva MDM for a specific cluster. Returns time series data with summary statistics (min/max/avg/latest, trend sparkline, significant changes). Use to verify a specific metric has recent data, check values over time, or investigate metric-specific issues. **Requires Geneva MDM MCP server running on localhost:5050.** Use `MDMAccountName` from `tsg_triage`. |
+| `tsg_me_diagnostics` | Check MetricsExtension internal QoS metrics (`MetricsExtension2` namespace) in the customer's MDM account. Queries `RawEventsDroppedCount`, `MetricAggregatesDroppedCount`, `MetricEventsDroppedCount`, and `MeErrorsCount`. When drops are detected, drills down by `Reason` dimension (e.g. `TooManyDimensions`, `Throttled`, `BlackListedMetric`, `OversizedHistogram`). Critical for diagnosing "scrape healthy but metrics missing in MDM" — ME may be silently dropping metrics. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_scrape_health` | Check scrape target health by querying `up`, `scrape_samples_scraped`, and `scrape_samples_post_metric_relabeling` from Geneva MDM. **Requires Geneva MDM MCP server running on localhost:5050.** |
 | `tsg_icm_page` | Scrape ICM incident page via Edge CDP. Works on both **Windows** (localhost:9222) and **WSL2** (port proxy on 9223). Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222`. On WSL2, also needs Windows port proxy on 9223. |
+| `tsg_dimension_analysis` | Analyze metric dimension counts, trends, and growth over time using `StorageInsightsUsageV2`. Shows max dimensions across all metrics in account, weekly dimension count trend for a specific metric, dimension name diffs (added/removed labels over time), and metrics near the observed ~49 dimension ceiling. Use when investigating missing metrics that may be silently dropped due to high dimension count. Takes `mdmAccountId` (required) and `metricName` (optional — omit for account-wide overview). |
 
 All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 
@@ -155,21 +165,24 @@ All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 
 #### Checking Scrape Target Health via Geneva MDM
 
-When investigating **intermittent missing metrics** for a specific target (e.g. kube-state-metrics), use the Geneva MDM MCP server to query the `up` metric:
+When investigating **intermittent missing metrics** for a specific target (e.g. kube-state-metrics), use `tsg_scrape_health` and `tsg_mdm_query`:
 
-1. Run `tsg_triage` → extract the `MDMAccountName` (e.g. `mac_0d8947c8_...`)
-2. Use the `geneva-mdm` MCP tools to query the `up` metric:
-   - Namespace: `customdefault` (or `prometheus` depending on configuration)
-   - Metric: `up`
-   - Filter by dimension `job` = target name (e.g. `kube-state-metrics`)
-   - Look at the `Sum` field (not `Min` — gauge metrics without pre-agg always show NaN for Min)
-3. **Interpreting results:**
-   - Typical Sum = N × scrapes_per_minute (e.g. Sum=45 means 3 replicas × 15 scrapes/min at 4s interval)
-   - Sum dips below typical → some scrapes returned `up=0` (target unreachable)
-   - Calculate failure rate: `(typical_sum - actual_sum) / typical_sum × 100`
+1. Run `tsg_triage` → extract the `MDMAccountName` (e.g. `mac_0d8947c8_...`) and the cluster short name (the `cluster` label in MDM)
+2. Run `tsg_scrape_health` with `monitoringAccount`, `cluster`, and optionally `job` (e.g. `kube-state-metrics`):
+   - Without `job`: probes all common scrape targets in parallel, returns per-job summary table
+   - With `job`: detailed analysis of `up`, `scrape_samples_scraped`, `scrape_samples_post_metric_relabeling` for that job
+3. **Interpreting `tsg_scrape_health` results:**
+   - 100% success rate → scrape is healthy, issue is downstream (ME, MDSD, or MDM)
+   - Scrape failures (up=0) → target is unreachable or timing out, check target pod logs
+   - High relabeling drop rate (>50%) → many samples dropped by `metric_relabel_configs` or keep list
    - Failure rate < 1% → transient scrape timeouts, usually self-healing
    - Failure rate > 5% → persistent target health issue, check target pod logs
-4. **Correlate with App Insights logs** — search for target-specific log tags:
+4. **Verify the specific metric has recent data** — run `tsg_mdm_query` with the metric name:
+   - If `tsg_mdm_query` returns "Data exists" → metric is being ingested, issue may be query-side
+   - If `tsg_mdm_query` returns "No data" but `tsg_scrape_health` shows healthy scrapes → metric is being **scraped but silently dropped** downstream (ME dimension limit, keep list filtering, or MDM rejection). This is the key diagnostic signal
+   - **Test related metrics too** — if `kube_node_labels` has no data but `kube_node_info` does, the issue is specific to that metric (likely high dimension count causing ME to drop it)
+   - To filter by specific dimensions, pass `dimensions` as JSON: `{"job": ["kube-state-metrics"], "node": ["node1"]}`
+5. **Correlate with App Insights logs** — search for target-specific log tags:
    - `prometheus.log.kubestatemetricscontainer` — KSM pod logs
    - `prometheus.log.targetallocator.tacontainer` — target allocator logs
    - `prometheus.log.prometheuscollectorcontainer` — otelcollector scrape logs (ReplicaSet)
@@ -188,6 +201,67 @@ After running `tsg_triage`, extract the `MDMAccountName` from the "MDM Account I
 The throttling check queries the **MdmQos** namespace for: `ThrottledClientMetricCount`, `DroppedClientMetricCount`, `ThrottledTimeSeriesCount`, `MStoreDroppedSamplesCount`, `ClientAggregatedMetricCount` vs Limit, `MStoreActiveTimeSeriesCount` vs Limit, and `ThrottledQueriesCount`.
 
 Run `tsg_triage` first, then based on findings, run the relevant deep-dive tools.
+
+#### Addon and MetricsExtension Version Check
+
+When investigating issues that may be caused by a version change (regression, new behavior, dimension handling change), check what addon version and MetricsExtension (ME) version the cluster is running:
+
+1. **Get the addon version from `tsg_triage`** — the "Agent Version" query returns the image tag (e.g. `6.17.0-main-05-29-2025-1a3ab39b`). The first number is the addon version (e.g. `6.17.0`)
+2. **Map the addon version to the ME version** — check `RELEASENOTES.md` in the repo root for ME version changes listed in each release. Also check the exact ME version pinned in `otelcollector/scripts/setup.sh` (line: `sudo tdnf install -y metricsext2-X.XXXX.XXX.XXXX`)
+3. **Check git history for ME upgrades**: `git log --oneline -- otelcollector/scripts/setup.sh` shows every commit that changed the ME version
+
+**Known addon → ME version mapping:**
+
+| Addon Version | Release Date | ME Version | Notable ME Changes |
+|---|---|---|---|
+| v6.10 | Oct 2024 | metricsext2-2.2024.823.1539 | — |
+| v6.16 | Apr 2025 | metricsext2-2.2025.123.2222 | Skip dimension trimming for raw typed metrics; remove reading global config from disk |
+| v6.17 | May 2025 | metricsext2-2.2025.123.2222 | (same ME as v6.16) |
+| v6.20 | Jul 2025 | metricsext2-2.2025.722.956 | Fix 3P/AMW ingestion in Mooncake (broken since ME v2.2025.613); Account Policies support |
+| v6.22–v6.24 | Sep 2025–Jan 2026 | metricsext2-2.2025.722.956 | (same ME) |
+
+**ME release notes** (EngHub, requires VPN): https://eng.ms/docs/products/geneva/metrics/metricsagentsdk/releasenotes
+
+**Key ME versions with dimension-related changes** (NOT all shipped in our images):
+
+| ME Version | Date | Change |
+|---|---|---|
+| v2.2024.905.1816 | 2024-09-05 | Optimize dimension trimming code |
+| v2.2024.1114.1757 | 2024-11-14 | Fix dimension trimming bug when bloom filter is off (bug #29894887) |
+| v2.2025.123.2222 | 2025-01-23 | Skip dimension trimming for raw typed metrics |
+| v2.2025.1003.1122 | 2025-10-03 | Add dimension truncating in 3P scenarios for large dimensions (>1024 chars) |
+
+**ME ConfigOverrides reference** (EngHub): https://eng.ms/docs/products/geneva/collect/metrics/metricsextconfigoverrides
+
+**ME source code**: https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension?version=GBmaster
+
+**Key ME dimension limits** (from source code in `SourceConstants.h`):
+
+| Constant | Value | Effect |
+|----------|-------|--------|
+| `g_maxDimensions` | **74** | Hard cap. Events with >74 dimensions are **dropped entirely** with `MdmEventDropReason::TooManyDimensions`. Comment: "Enforcing the 74 maximum number of dimensions allowed by IfxMetrics which is also the maximum supported by MStore" |
+| `g_maxDimensionNameSize` | **512** | Max chars per dimension name. Exceeded → event dropped (or truncated in 3P mode) |
+| `g_maxDimensionValueSize` | **1024** | Max chars per dimension value. Exceeded → event dropped (or truncated in 3P mode) |
+
+**Key dimension-related ME settings** (set via `-ConfigOverridesFilePath` in our `me.config` files):
+- `enableDimensionTrimming` — Default: **`true`**. When enabled AND a BloomFilter has been downloaded from the server, ME trims dimensions not in the server's registered set. **However, in Prometheus/AMW scenarios (local control channel mode), ME does NOT download metric configs or BloomFilters from the server** — so this trimming path is effectively inactive. The log message "Metric Configuration is not found on disk" confirms this
+- `enableDimensionSortingOnIngestion` — Default: **`true`**. Sorts dimensions before trimming/aggregation
+- `truncateLargeDimensions` — **Automatically `true` in 3P/AMW scenarios** (set in `MetricsExtensionConfiguration.cpp`). Instead of dropping events that exceed `g_maxDimensionValueSize` (1024 chars) or `g_maxDimensionNameSize` (512 chars), ME truncates the values. If truncation makes previously-distinct values identical, time series collapse into one combo
+- These are ME binary defaults — they are NOT set in our `me.config` files in `otelcollector/metricextension/`
+
+**ME dimension handling flow** (from source code):
+1. **OTLP ingestion** (`OtlpPromProcessor`): All metric labels + resource attributes → dimensions. `honorResourceAttributes: true` adds cluster, job, instance
+2. **CheckDimensionLimits** (`PreRawEvent.cpp`): If dims > 74 → drop event. In 3P mode (`truncateLargeDimensions=true`), values >1024 chars are truncated instead of dropped
+3. **BloomFilter trimming** (`MetricAggregatorCollection::TrimDimensionValues`): ONLY runs if `enableDimensionTrimming=true` AND a BloomFilter exists. In local control channel mode (Prometheus/AMW), **the BloomFilter is never downloaded** — the `MetricConfigurationLoader` skips server download when `UseLocalControlChannel()` is true. So this trimming path is inactive
+4. **MStore server-side**: After ME publishes, MStore may reject or merge events based on its own limits. `MStoreDroppedSamplesCount` with reason `Duplicated` indicates MStore is deduplicating events
+
+**Diagnosing dimension issues:**
+- Request debug logs from the customer (or use `tsg_logs`)
+- In ME's `MetricsExtensionConsoleDebugLog.log`, look for `AggregatedDiagnosticInfoLogger` entries
+- Compare `ComboCount` vs `ReceivedEventCount` — if ComboCount < ReceivedEventCount, time series are being merged. In 3P/AMW mode this is NOT caused by ME BloomFilter trimming (inactive). It may be caused by: (a) dimension value truncation making values identical, (b) MStore-side deduplication, or (c) some dimensions being empty/missing on certain scrapes
+- Check heartbeat lines for `EtwEventsDropped > 0` or `AggregatedMetricsDropped > 0` — these indicate ME is dropping events
+- Use MDM `GetDimensions` (via Geneva MDM MCP server) to check how many dimensions a metric has registered: `GetDimensions(monitoringAccount, "customdefault", "metric_name")`
+- Check `tsg_mdm_throttling` for `MStoreDroppedSamplesCount` with reason `Duplicated` — this indicates MStore server-side deduplication, which is separate from ME dimension trimming
 
 #### CCP Cluster ID Resolution
 
@@ -269,7 +343,24 @@ Run `tsg_triage`, `tsg_config`, `tsg_workload`. Then:
 
 1. **Check addon is enabled** — run `tsg_config`, check "Addon Enabled in AKS Profile". If `metricsEnabled == false`, the monitoring addon isn't enabled. Customer needs `az aks update --enable-azure-monitor-metrics`
 2. **Check for OOMKill / pod crashes first** — missing metrics are often a SYMPTOM of pod OOMKills. If App Insights queries return "path does not exist", the addon is crash-looping and not sending telemetry at all. Go directly to `tsg_pods` for pod restart analysis and follow the Pod Restarts TSG below
-3. **Check if the metric name exists in the account** — run `tsg_metric_insights` with the `MDMAccountName` from triage. The "View All Metric Names" panel returns every metric name ever ingested (180-day lookback). If the missing metric is NOT in this list, it was never successfully ingested — focus on scrape config, keep list regex, or config validation errors. If it IS in the list, the metric was ingested at some point — the issue may be throttling, intermittent scrape failures, or dimension fragmentation (see step 4)
+3. **Check if the metric name exists in the account** — run `tsg_metric_insights` with the `MDMAccountName` from triage. The "View All Metric Names" panel returns every metric name ever ingested (180-day lookback). If the missing metric is NOT in this list, it was never successfully ingested — focus on scrape config, keep list regex, or config validation errors. If it IS in the list, the metric was ingested at some point — the issue may be throttling, intermittent scrape failures, or dimension fragmentation (see step 3a)
+3a. **Verify the metric has RECENT data in MDM** — `tsg_metric_insights` uses a 180-day lookback, so a metric appearing there does NOT mean it is currently flowing. Run `tsg_mdm_query` with the specific metric name, cluster, and MDM account to check for recent data:
+   - If `tsg_mdm_query` returns "Data exists" with active buckets → metric IS currently flowing. The issue may be query-side (wrong AMW, PromQL syntax, Grafana time range)
+   - If `tsg_mdm_query` returns "No data" → metric is NOT currently being ingested. Continue to step 3b
+   - **Always test related metrics for comparison** — e.g. if `kube_node_labels` has no data, also check `kube_node_info`, `kube_pod_labels`, `kube_node_status_condition`. If these sibling metrics from the same scrape job DO have data, the issue is specific to that metric (not a scrape or pipeline problem)
+3b. **If scrape is healthy but metric has no MDM data** — this means the metric is being scraped but **silently dropped** somewhere downstream. Common causes:
+   - **High dimension count exceeding MStore limit (observed max: 49)** — metrics with many dimensions are silently rejected by MStore. Despite documented limits of 63 labels/timeseries (Azure Monitor Prometheus) and 74 (IfxMetrics `g_maxDimensions`), **empirical data from `StorageInsightsUsageV2` shows that 49 is the highest dimension count ever stored for ANY metric in affected accounts**. No row with ≥50 dimensions has ever been observed across 9+ months of data. The total dimension count includes: scrape labels + `cluster` + `instance` + `job` + `node` + **4 `microsoft.*` dimensions** added by the pipeline (`microsoft.resourcegroupname`, `microsoft.resourceid`, `microsoft.resourcetype`, `microsoft.subscriptionid`). For `kube_node_labels` with `metricLabelsAllowlist: nodes=[*]`, every Kubernetes node label becomes a `label_*` dimension — AKS nodes typically have 35–45+ labels, easily exceeding the 49-dim ceiling. Events exceeding this limit are silently dropped — ME shows 0 drops (it publishes successfully), and MdmQos may not even count them. **Investigation:** Run `tsg_dimension_analysis` with the `mdmAccountId` and `metricName` to automate all of the following: (1) "Max Dimensions Across All Metrics" — confirms the account-wide ceiling. (2) "Dimension Count Weekly Trend" — shows how dimension count grew over time as AKS added new node labels (topology, storage, instance-type). (3) "Dimension Diff (Added/Removed Labels)" — identifies exactly which labels were added between the oldest and newest data, e.g. `label_topology_kubernetes_io_*`, `label_storageprofile`, `label_storagetier`. (4) "Current Dimension Names (Max Set)" — lists all dimension names in the highest-dim set. (5) "Metrics At or Near Dimension Ceiling (49+)" — finds all metrics in the account that are close to the limit. Also verify locally: `kubectl get nodes -o jsonpath='{.items[0].metadata.labels}' | jq 'keys | length'` → calculate total: node_label_count + 8 (cluster, instance, job, node, 4 microsoft.*). If total >49, this is the root cause. **Mitigation:** reduce `metricLabelsAllowlist` to specific needed labels instead of `[*]`. Only `kube_node_labels` and `kube_node_spec_taint` are affected by `nodes=[*]` — other `kube_node_*` metrics have far fewer fixed dimensions
+   - **Keep list filtering** — the metric may be scraped but filtered out by the minimal ingestion profile keep list regex. Check `tsg_config` → "Default Targets KeepListRegex"
+   - **ME hard dimension limit (74)** — if a metric has >74 dimensions at scrape time (all labels + resource attributes + microsoft.* enriched), ME drops the event entirely with `MdmEventDropReason::TooManyDimensions`. This is rare but possible with `metricLabelsAllowlist: [*]` on resources with 60+ Kubernetes labels. Check ME heartbeat logs for `EtwEventsDropped > 0`
+   - **ME silent drops** — MetricsExtension may reject individual metrics without logging errors. Run `tsg_me_diagnostics` to check the `MetricsExtension2` namespace for `RawEventsDroppedCount` (look for `TooManyDimensions`, `BlackListedMetric`), `MetricEventsDroppedCount`, and `MeErrorsCount`. Also check `tsg_workload` → "ME Ingestion Success Rate" and "ReplicaSet Samples Dropped"
+3c. **Check ME internal QoS metrics** — run `tsg_me_diagnostics` with the `MDMAccountName` from triage. This queries the `MetricsExtension2` namespace in the **customer's own MDM account** for ME-level drops and errors:
+   - `RawEventsDroppedCount` with `Reason=TooManyDimensions` → metric exceeds ME's hard limit of **74 dimensions** (hardcoded in `SourceConstants.h:g_maxDimensions`). Reduce labels via `metricLabelsAllowlist` or `metric_relabel_configs`
+   - `RawEventsDroppedCount` with `Reason=BlackListedMetric` → metric name is blocked at the account level
+   - `RawEventsDroppedCount` with `Reason=Throttled` or `IngestionLimitExceed` → ME is backpressure-throttling
+   - `MetricAggregatesDroppedCount` with `Reason=PublicationFailedThrottled` → MDM backend rejecting publications
+   - `MeErrorsCount` with `Reason=OversizedHistogram` → histogram has too many buckets
+   - `MeErrorsCount` with `Reason=MaxPublicationMetricsPerMinuteExceeded` → ME publication rate limit hit
+   - If ALL ME metrics show zero drops → issue is likely at **MStore level** due to exceeding the ~49 dimension ceiling. MStore silently drops these events without incrementing MdmQos drop counters. Run `tsg_dimension_analysis` with the `mdmAccountId` and `metricName` to verify — if "Max Dimensions Across All Metrics" shows 49 as the ceiling and your metric's actual dimension count exceeds it, the limit is confirmed. Escalate to `Geneva Monitoring/MDM-Support-Core-IngestionAndStorage-Tier2` with the metric name, actual dimension count (including `microsoft.*` dims), and the `tsg_dimension_analysis` output showing the account-wide max
 4. **Check AMW quota and MDM throttling** — this is the most common cause of missing metrics at scale:
    - Run `tsg_triage` → extract `MDMAccountName` from "MDM Account ID" result
    - Run `tsg_mdm_throttling` with that `monitoringAccount` to check for throttling
@@ -280,7 +371,7 @@ Run `tsg_triage`, `tsg_config`, `tsg_workload`. Then:
    - If event volume utilization is > 80% → approaching limit, will start throttling soon
    - If time series utilization is > 80% → approaching limit, need to reduce cardinality
    - **Resolution for throttling**: escalate to `Geneva Monitoring/MDM-Support-Manageability-Tier2` for quota increase, or help customer reduce cardinality via `metric_relabel_configs`
-4. **Check ME ingestion success rate** — run `tsg_workload`, check "ME Ingestion Success Rate". If `successRate < 99%`, ME is dropping significant metrics. Cross-reference with ME queue sizes and drops
+5. **Check ME ingestion success rate** — run `tsg_workload`, check "ME Ingestion Success Rate". If `successRate < 99%`, ME is dropping significant metrics. Cross-reference with ME queue sizes and drops
 5. **Check auth issues** — look for `DCR/DCE/AMCS Configuration Errors`, `Liveness Probe Logs` with "No configuration present", `MDSD Errors`, `MetricsExtension Errors`. If `tsg_logs` shows repeated `TokenConfig.json does not exist`, this is the firewall/blocked endpoints pattern — see TSG: Firewall / Network Connectivity. If errors mention "private link is needed", also see that TSG
 6. **Check CPU/memory** — if resources are very high, pods may be overwhelmed. Check if samples per minute per ReplicaSet exceed ~3.5 million
 7. **Check ME queue/drops** — run `tsg_workload`, look at `ReplicaSet Samples Dropped` and queue sizes. If growing, need HPA or more shards
@@ -527,6 +618,111 @@ After each investigation, if you wrote any **ad-hoc KQL queries via `tsg_query`*
 
 This ensures the tooling continuously improves — every investigation makes the next one faster.
 
+### Researching Internal Documentation via EngHub and ES Chat
+
+When TSG tools and logs aren't enough — e.g. you need to understand an internal component's behavior, find release notes, look up config options, or understand a codepath — use the **Engineering Systems (ES) Chat** MCP tools to search EngHub and internal wikis.
+
+#### Available ES Chat Tools
+
+| Tool | When to use | Example |
+|------|------------|---------|
+| `es-chat-es_search` | Keyword search across EngHub docs, ADO wikis, and internal KBs. Best for finding specific pages. | Find ME release notes, ConfigOverrides reference, diagnostic log docs |
+| `es-chat-es_ask` | Ask a natural language question. Best for "how does X work?" questions. | "How does MetricsExtension dimension trimming work?" |
+| `es-chat-es_resolve` | Resolve a specific identifier (URL, GUID) to entity info. | Resolve an EngHub doc URL to its content |
+
+**⚠️ IMPORTANT:** Do NOT prefix queries with "engineering systems" or "engsys" — the tools are already scoped to engineering. This misleads the search.
+
+#### Key EngHub Pages for MetricsExtension / Geneva Metrics
+
+Bookmark these — they are the most useful references for ME troubleshooting:
+
+| Topic | EngHub URL |
+|-------|-----------|
+| ME Release Notes | https://eng.ms/docs/products/geneva/metrics/metricsagentsdk/releasenotes |
+| ME ConfigOverrides Reference | https://eng.ms/docs/products/geneva/collect/metrics/metricsextconfigoverrides |
+| ME Diagnostic Logs Guide | https://eng.ms/docs/products/geneva/metrics/troubleshooting/me_diagnosticlogs |
+| Geneva Metrics Overview | https://eng.ms/docs/products/geneva/metrics/ |
+| MDM Ingestion Troubleshooting | https://eng.ms/docs/products/geneva/metrics/troubleshooting/ |
+| IFx Metrics Reference (dimension limits) | https://eng.ms/docs/products/geneva/collect/references/ifxref/ifxmetrics |
+| **ME Source Code (ADO)** | https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension?version=GBmaster |
+
+**Key source code paths in ME repo** (for deep investigation):
+
+| File | What it contains |
+|------|-----------------|
+| `src/NativeMetricsExtension/Lib/sources/SourceConstants.h` | `g_maxDimensions=74`, `g_maxDimensionNameSize=512`, `g_maxDimensionValueSize=1024` |
+| `src/NativeMetricsExtension/Lib/events/PreRawEvent.cpp` | `CheckDimensionLimits()` — enforces dimension count and size limits |
+| `src/NativeMetricsExtension/Lib/MetricAggregatorCollection.cpp` | `TrimDimensionValues()` — BloomFilter-based dimension trimming (only active with server config) |
+| `src/NativeMetricsExtension/Lib/sources/OtlpPromProcessor.cpp` | OTLP Prometheus ingestion — how labels become dimensions |
+| `src/NativeMetricsExtension/Lib/sources/RawMdmEventsQueue.cpp` | Event validation — 74-dim hard cap enforcement |
+| `src/NativeMetricsExtension/Lib/config/loaders/MetricConfigurationLoader.cpp` | BloomFilter download and local control channel mode logic |
+| `src/NativeMetricsExtension/Lib/config/loaders/ConfigurationLoadersManager.cpp` | "Do not try to load configurations from remote endpoint if local control channel is enabled" |
+| `src/NativeMetricsExtension/Lib/config/MetricsExtensionConfiguration.cpp` | Where `truncateLargeDimensions=true` is set for 3P scenarios |
+| `CHANGELOG.md` | Full history of all ME changes (more detail than EngHub release notes) |
+
+To clone the ME repo for source investigation:
+```powershell
+git clone --depth 1 https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension C:\temp\me-repo
+# Then search: Get-ChildItem -Recurse -Filter "*.cpp" | Select-String -Pattern "your_pattern"
+```
+
+#### How to Search Effectively
+
+1. **Finding ME release notes for a specific version or feature:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension release notes dimension trimming 2025",
+     question: "What MetricsExtension release notes mention dimension trimming changes?"
+   )
+   ```
+
+2. **Understanding an ME config option:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension ConfigOverrides enableDimensionTrimming maxDefaultDimensions",
+     question: "What does the enableDimensionTrimming ConfigOverride do and what is the default dimension limit?"
+   )
+   ```
+
+3. **Understanding ME diagnostic log fields:**
+   ```
+   es-chat-es_ask(
+     question: "What does ComboCount mean in MetricsExtension diagnostic logs? How does it relate to ReceivedEventCount?"
+   )
+   ```
+
+4. **Finding how a Geneva component works internally:**
+   ```
+   es-chat-es_search(
+     keywords: "Geneva ingestion gateway GIG dimension limit MStore metric auto-create",
+     question: "What is the max dimension count per metric enforced by the Geneva Ingestion Gateway?"
+   )
+   ```
+
+5. **Checking if a behavior changed in a specific ME version:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension v2.2025.722.956 changes 3P OTLP Prometheus",
+     question: "What changes were in MetricsExtension version v2.2025.722.956?"
+   )
+   ```
+
+#### Search Tips
+
+- **Use multiple keyword variants** — EngHub search is keyword-based, not semantic. Include synonyms: "dimension trimming", "dimension limit", "maxDimensions", "maxDefaultDimensions"
+- **Include component names** — always include "MetricsExtension" or "ME" in keywords, plus "Geneva", "MDM", "GIG" as relevant
+- **Search iteratively** — if the first search doesn't find what you need, try different keyword combinations. EngHub docs use inconsistent terminology
+- **Cross-reference with code** — EngHub docs can be outdated. After finding a doc reference, verify against the actual ME config dump in debug logs or the ME binary behavior
+- **Check both `es_search` and `es_ask`** — `es_search` is better for finding specific doc pages; `es_ask` is better for synthesized answers to "how does X work?" questions
+- **EngHub results may reference internal bug numbers** (e.g. "bug #29894887") — these can be resolved via `es-chat-es_resolve` or looked up in ADO
+
+#### When EngHub Isn't Enough
+
+Some ME internals are not documented in EngHub (e.g. the exact dimension count limit for 3P/AMW accounts, the dimension trimming algorithm). In these cases:
+1. Check the ME debug logs for clues (ConfigOverrides dump, diagnostic trace output)
+2. Check the `me.config` files in `otelcollector/metricextension/` for any override that might apply
+3. Escalate to the ME team: `Geneva Monitoring/MDM-Support-Core-IngestionAndStorage-Tier2`
+
 ## Escalation Contacts
 
 | Issue/Area | ICM Team |
@@ -547,10 +743,12 @@ This ensures the tooling continuously improves — every investigation makes the
 | Symptom | MCP Tool | TSG Category |
 |---------|----------|--------------|
 | No metrics flowing | `tsg_triage` + `tsg_errors` + `tsg_mdm_throttling` | Missing Metrics |
+| Verify specific metric has data | `tsg_mdm_query` | Missing Metrics (confirm recent ingestion) |
 | Account throttling / drops | `tsg_mdm_throttling` | Missing Metrics (MDM quota) |
+| ME-level drops (TooManyDimensions, Throttled) | `tsg_me_diagnostics` | Missing Metrics (ME silent drops) |
 | Pod CrashLoopBackOff / OOM | `tsg_errors` + `tsg_workload` | Pod Restarts and OOMKills |
 | High CPU/Memory | `tsg_workload` | Pod Restarts / Resource Consumption |
-| Partial metrics / drops | `tsg_workload` + `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM throttle) |
+| Partial metrics / drops | `tsg_workload` + `tsg_me_diagnostics` + `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM throttle) |
 | Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
 | Config validation failed | `tsg_config` | Missing Metrics (check "Custom Config Validation Errors") |
 | Private link errors | `tsg_errors` | Firewall / Network / Private Link |
@@ -563,6 +761,8 @@ This ensures the tooling continuously improves — every investigation makes the
 | Control plane metrics missing | `tsg_control_plane` | Control Plane Metrics |
 | Spike in ingestion | `tsg_workload` + `tsg_config` + `tsg_metric_insights` + `tsg_mdm_throttling` | Spike in Metrics Ingested |
 | High cardinality / volume | `tsg_metric_insights` | Spike in Metrics (cardinality) |
+| High dimension count / silent drops | `tsg_dimension_analysis` | Missing Metrics (dimension ceiling) |
+| Dimension growth over time | `tsg_dimension_analysis` | Missing Metrics (label growth) |
 | AMW cost optimization | `tsg_metric_insights` + `tsg_config` | AMW Usage Optimization |
 | Pods not created | `tsg_triage` | Pods Not Created / Addon Not Deploying |
 | Duplicate label errors | `tsg_config` | Duplicate Labels (kube-state-metrics) |

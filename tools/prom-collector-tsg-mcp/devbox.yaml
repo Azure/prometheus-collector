@@ -140,13 +140,13 @@ tasks:
       command: |
         $repoDir = "$env:USERPROFILE\go\src\prometheus-collector"
         $mcpDir = "$env:USERPROFILE\.copilot"
-        $mcpFile = "$mcpDir\mcp.json"
+        $mcpFile = "$mcpDir\mcp-config.json"
 
         # Create .copilot directory
         New-Item -ItemType Directory -Force -Path $mcpDir | Out-Null
 
-        # Write mcp.json with the custom MCP server (prom-collector-tsg)
-        # Built-in MCPs (ado, icm, es-chat) come from agency.toml in the repo
+        # Write mcp-config.json with the custom MCP server (prom-collector-tsg)
+        # NOTE: Copilot CLI reads mcp-config.json, NOT mcp.json
         $mcpConfig = @{
             mcpServers = @{
                 "prom-collector-tsg" = @{
@@ -315,7 +315,7 @@ tasks:
         Write-Host "  Installed on BOTH Windows and WSL2:"
         Write-Host "    Git, Azure CLI, Node.js, .NET 8, Agency CLI, kubectl, Helm"
         Write-Host "    prometheus-collector repo cloned + TSG MCP built"
-        Write-Host "    ~/.copilot/mcp.json configured"
+        Write-Host "    ~/.copilot/mcp-config.json configured"
         Write-Host ""
         Write-Host "  Windows only:  VS Code, Docker Desktop (WSL2 backend), Windows Terminal,"
         Write-Host "                 Playwright (native), Edge CDP shortcut"

@@ -10,14 +10,14 @@ set -euo pipefail
 # What's already in the repo (no setup needed):
 #   agency.toml          → built-in MCPs (ado, icm, es-chat) — auto-discovered
 #   .github/skills/      → skills (prom-collector-tsg, troubleshooting-setup)
-#   .vscode/mcp.json     → VS Code MCP config
+#   .vscode/mcp.json     → VS Code MCP config (different from Copilot CLI config)
 #   .github/copilot-instructions.md → repo context for Copilot
 #
 # What this script does:
 #   1. Detects platform (Windows vs WSL2)
 #   2. Finds Node.js (system or Agency-bundled)
 #   3. Builds the TSG MCP server
-#   4. Writes ~/.copilot/mcp.json with correct absolute paths
+#   4. Writes ~/.copilot/mcp-config.json with correct absolute paths
 #   5. Creates azureauth shim (WSL2 only)
 #   6. Launches Edge with CDP and sets up port proxy (WSL2 only)
 #   7. Verifies connectivity
@@ -29,7 +29,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MCP_CONFIG="$HOME/.copilot/mcp.json"
+MCP_CONFIG="$HOME/.copilot/mcp-config.json"
 AUTO_YES="${1:-}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
@@ -91,9 +91,10 @@ else
     fail "Build failed"; exit 1
 fi
 
-# --- Write ~/.copilot/mcp.json ---
+# --- Write ~/.copilot/mcp-config.json ---
 # This is the only file that MUST live outside the repo because it needs
 # absolute paths to the built MCP server binary.
+# NOTE: Copilot CLI reads mcp-config.json, NOT mcp.json.
 # Built-in MCPs (ado, icm, es-chat) are in agency.toml and auto-discovered.
 info "Writing MCP config..."
 mkdir -p "$(dirname "$MCP_CONFIG")"
@@ -246,7 +247,7 @@ echo "  What's auto-discovered from the repo:"
 echo "    agency.toml        → ado, icm, es-chat MCPs"
 echo "    .github/skills/    → prom-collector-tsg, troubleshooting-setup"
 echo ""
-echo "  What's in ~/.copilot/mcp.json:"
+echo "  What's in ~/.copilot/mcp-config.json:"
 echo "    prom-collector-tsg → TSG diagnostic queries"
 echo "    playwright         → browser automation"
 echo ""

@@ -6,7 +6,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
 import { QUERIES, parameterizeQuery } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
-import { queryMdmThrottling } from "./mdm.js";
+import { queryMdmThrottling, queryScrapeTargetHealth, queryMdmMetric, queryMeInternalMetrics } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
 const credential = new DefaultAzureCredential();
 const logsClient = new LogsQueryClient(credential);
@@ -159,6 +159,7 @@ async function executeQuery(queryDef, params) {
             aksClusterId: params.aksClusterId,
             startTime: params.startTime,
             endTime: params.endTime,
+            metricName: params.metricName,
         });
         const ds = DATA_SOURCES[queryDef.datasource];
         if (!ds) {
@@ -482,6 +483,39 @@ server.tool("tsg_metric_insights", "Analyze metric volume and cardinality using 
         content: [{ type: "text", text: formatResults(results) }],
     };
 });
+// Tool: tsg_dimension_analysis
+server.tool("tsg_dimension_analysis", "Analyze metric dimension counts, trends, and growth over time using StorageInsightsUsageV2. Shows max dimensions across all metrics in an account, weekly dimension count trend for a specific metric, dimension name diff (added/removed labels), and metrics near the observed ~49 dimension ceiling. Use this when investigating missing metrics that may be silently dropped due to high dimension count. Requires the MDM account name (get it from tsg_triage → 'MDM Account ID' query).", {
+    mdmAccountId: z
+        .string()
+        .describe("MDM monitoring account name from tsg_triage, e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+    metricName: z
+        .string()
+        .optional()
+        .describe("Optional metric name to analyze dimensions for, e.g. 'kube_node_labels'. If omitted, only the account-wide 'Max Dimensions Across All Metrics' and 'Metrics At or Near Dimension Ceiling' queries run."),
+}, async ({ mdmAccountId, metricName }) => {
+    const allQueries = QUERIES["dimensionAnalysis"];
+    // If no metric name, only run account-wide queries (no _metricName parameter needed)
+    const queries = metricName
+        ? allQueries
+        : allQueries.filter(q => !q.kql.includes("_metricName"));
+    const params = {
+        cluster: "",
+        timeRange: "24h",
+        interval: "6h",
+        mdmAccountId,
+        metricName,
+    };
+    const CONCURRENCY = 5;
+    const results = [];
+    for (let i = 0; i < queries.length; i += CONCURRENCY) {
+        const batch = queries.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(batch.map((q) => executeQuery(q, params)));
+        results.push(...batchResults);
+    }
+    return {
+        content: [{ type: "text", text: formatResults(results) }],
+    };
+});
 // Tool: tsg_mdm_throttling
 server.tool("tsg_mdm_throttling", "Check Geneva MDM QoS metrics for account throttling, dropped events, and time series limits. Queries the MdmQos namespace for: ThrottledClientMetricCount, DroppedClientMetricCount, ThrottledTimeSeriesCount, MStoreDroppedSamplesCount, ClientAggregatedMetricCount vs Limit, MStoreActiveTimeSeriesCount vs Limit, and ThrottledQueriesCount. Requires the Geneva MDM MCP server running on localhost:5050.", {
     monitoringAccount: z
@@ -497,7 +531,74 @@ server.tool("tsg_mdm_throttling", "Check Geneva MDM QoS metrics for account thro
         content: [{ type: "text", text }],
     };
 });
-server.tool("tsg_icm_page", "Scrape an ICM incident page via Edge browser CDP connection. Opens the incident in Edge (or finds an already-open tab) and extracts the page content including authored summary and discussion entries. Requires Edge running with --remote-debugging-port=9222 and Windows netsh port proxy on 9223. Use this to get ICM details not available via the ICM API (authored summary text, discussion content, ARM resource IDs mentioned in descriptions).", {
+// Tool: tsg_scrape_health
+server.tool("tsg_scrape_health", "Check scrape target health by querying the `up`, `scrape_samples_scraped`, and `scrape_samples_post_metric_relabeling` metrics from Geneva MDM. When called with a specific job, shows detailed per-bucket success/failure analysis and relabeling drop rate. When called without a job, probes all common scrape targets and returns a per-job summary table. Always requires a cluster name to filter to a specific cluster. Requires the Geneva MDM MCP server running on localhost:5050. Use the MDMAccountName from tsg_triage results.", {
+    monitoringAccount: z
+        .string()
+        .describe("Geneva MDM monitoring account name (from tsg_triage 'MDM Account ID' result), e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+    job: z
+        .string()
+        .default("")
+        .describe("Scrape job name to check, e.g. 'kube-state-metrics', 'kubelet', 'node', 'cadvisor'. If omitted, probes all common jobs and shows a per-job summary."),
+    cluster: z
+        .string()
+        .describe("Cluster name (the 'cluster' label in MDM, typically the AKS cluster short name). Required because MDM accounts serve multiple clusters."),
+    timeRangeHours: z
+        .number()
+        .default(24)
+        .describe("Number of hours to look back (default: 24)"),
+}, async ({ monitoringAccount, job, cluster, timeRangeHours }) => {
+    const text = await queryScrapeTargetHealth(monitoringAccount, job, cluster, timeRangeHours);
+    return {
+        content: [{ type: "text", text }],
+    };
+});
+// Tool: tsg_mdm_query
+server.tool("tsg_mdm_query", "Query any Prometheus metric from Geneva MDM for a specific cluster. Returns time series data with summary statistics (min, max, avg, latest, trend). Use this to verify whether a specific metric has recent data in MDM, check metric values over time, or investigate metric-specific issues. Requires the Geneva MDM MCP server running on localhost:5050. Use the MDMAccountName from tsg_triage results.", {
+    monitoringAccount: z
+        .string()
+        .describe("Geneva MDM monitoring account name (from tsg_triage 'MDM Account ID' result), e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+    metric: z
+        .string()
+        .describe("Prometheus metric name to query, e.g. 'kube_node_labels', 'container_cpu_usage_seconds_total', 'up'"),
+    cluster: z
+        .string()
+        .describe("Cluster name (the 'cluster' label in MDM, typically the AKS cluster short name). Required because MDM accounts serve multiple clusters."),
+    nameSpace: z
+        .string()
+        .default("customdefault")
+        .describe("MDM metric namespace. Defaults to 'customdefault' for Prometheus metrics. Use 'prometheus' for some configurations."),
+    dimensions: z
+        .string()
+        .default("{}")
+        .describe("Additional dimension filters as JSON object, e.g. '{\"job\": [\"kubelet\"], \"node\": [\"node1\"]}'. The 'cluster' dimension is always added automatically."),
+    timeRangeHours: z
+        .number()
+        .default(24)
+        .describe("Number of hours to look back (default: 24)"),
+}, async ({ monitoringAccount, metric, cluster, nameSpace, dimensions, timeRangeHours }) => {
+    const text = await queryMdmMetric(monitoringAccount, metric, cluster, nameSpace, dimensions, timeRangeHours);
+    return {
+        content: [{ type: "text", text }],
+    };
+});
+// Tool: tsg_me_diagnostics
+server.tool("tsg_me_diagnostics", "Check MetricsExtension internal QoS metrics from the customer's MDM account (MetricsExtension2 namespace). Queries RawEventsDroppedCount, MetricAggregatesDroppedCount, MetricEventsDroppedCount, and MeErrorsCount. When drops are detected, drills down by Reason dimension to identify root cause (TooManyDimensions, Throttled, BlackListedMetric, OversizedHistogram, etc). Critical for diagnosing 'scrape healthy but metrics missing in MDM' — ME may be silently dropping metrics. Requires the Geneva MDM MCP server running on localhost:5050.", {
+    monitoringAccount: z
+        .string()
+        .describe("Geneva MDM monitoring account name (from tsg_triage 'MDM Account ID' result), e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+    timeRangeHours: z
+        .number()
+        .default(6)
+        .describe("Number of hours to look back (default: 6)"),
+}, async ({ monitoringAccount, timeRangeHours }) => {
+    const text = await queryMeInternalMetrics(monitoringAccount, timeRangeHours);
+    return {
+        content: [{ type: "text", text }],
+    };
+});
+// Tool: tsg_icm_page
+server.tool("tsg_icm_page", "Scrape an ICM incident page via Edge browser CDP connection. Works on both Windows (native) and WSL2. Opens the incident in Edge (or finds an already-open tab) and extracts the authored summary, discussion entries, and ARM resource IDs. On Windows, connects to localhost:9222. On WSL2, connects via port proxy on 9223. Requires Edge running with --remote-debugging-port=9222. Use this to get ICM details not available via the ICM API (authored summary text, discussion content, ARM resource IDs mentioned in descriptions).", {
     incidentId: z
         .number()
         .describe("The ICM incident ID to scrape, e.g. 749876123"),
