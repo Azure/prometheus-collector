@@ -128,6 +128,18 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 
 	var targetAllocatorConfig shared.Config
 
+	// Parse secrets access namespaces from configmap setting
+	var secretsAccessNamespaces []string
+	if sns := os.Getenv("AZMON_SECRETS_ACCESS_NAMESPACES"); sns != "" {
+		for _, ns := range strings.Split(sns, ",") {
+			ns = strings.TrimSpace(ns)
+			if ns != "" {
+				secretsAccessNamespaces = append(secretsAccessNamespaces, ns)
+			}
+		}
+		log.Printf("SecretsAccessNamespaces from configmap: %v\n", secretsAccessNamespaces)
+	}
+
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
 		targetAllocatorConfig = shared.Config{
@@ -151,6 +163,8 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				TLSKeyFilePath:  "/etc/operator-targets/server/certs/server.key",
 				CAFilePath:      "/etc/operator-targets/server/certs/ca.crt",
 			},
+SecretsAccessNamespaces: secretsAccessNamespaces,
+			
 		}
 	} else {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation, not setting tls config in TargetAllocator")
@@ -168,6 +182,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				ServiceMonitorSelector: &metav1.LabelSelector{},
 				PodMonitorSelector:     &metav1.LabelSelector{},
 			},
+			SecretsAccessNamespaces: secretsAccessNamespaces,
 		}
 	}
 
