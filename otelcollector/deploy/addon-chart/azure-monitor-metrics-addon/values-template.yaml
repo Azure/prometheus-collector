@@ -67,7 +67,7 @@ AzureMonitorMetrics:
   TargetAllocatorMemoryLimit: 8Gi
   TargetAllocatorCPURequest: 10m
   TargetAllocatorMemoryRequest: 50Mi
-  enableDaemonSetSizing: true
+  enableDaemonSetSizing: false
   daemonSetSizingValues:
     singleSize:
       containers:
