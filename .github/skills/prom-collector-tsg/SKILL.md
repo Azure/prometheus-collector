@@ -616,6 +616,14 @@ After each investigation, if you wrote any **ad-hoc KQL queries via `tsg_query`*
 3. Wire it into the relevant tool in `tools/prom-collector-tsg-mcp/src/index.ts`
 4. Rebuild: `cd tools/prom-collector-tsg-mcp && npx tsc`
 
+When updating the SKILL.md or MCP tools with findings from an investigation:
+
+- **Generalize all content** — write for future investigations, not the current one. Describe the pattern, not the specific incident
+- **Never include customer-specific details** — no cluster names, ARM resource IDs, MDM account names, subscription IDs, or ICM numbers. Use generic placeholders (e.g. `mac_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) in examples
+- **Present unconfirmed findings as hypotheses** — if you observed a behavior but haven't confirmed the root cause with the owning team, use language like "may", "possible", "suggests" rather than asserting it as fact
+- **Include the investigation technique** — describe HOW to diagnose the issue (which tools to run, what to look for) not just what you found in one specific case
+- **Add escalation paths** — if the issue requires another team, include the verified ICM team public ID
+
 This ensures the tooling continuously improves — every investigation makes the next one faster.
 
 ### Researching Internal Documentation via EngHub and ES Chat
