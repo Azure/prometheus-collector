@@ -44,6 +44,7 @@ interface QueryResult {
   data?: Record<string, unknown>[];
   error?: string;
   rowCount?: number;
+  truncated?: boolean;
 }
 
 // Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
@@ -235,8 +236,9 @@ async function executeQuery(
       name: queryDef.name,
       datasource: queryDef.datasource,
       status: "success",
-      data: data.slice(0, 100), // Limit rows to avoid huge responses
+      data: data.slice(0, 100),
       rowCount: data.length,
+      truncated: data.length > 100,
     };
   } catch (err) {
     return {
@@ -311,8 +313,8 @@ async function resolveCcpClusterId(
       const id = String(result.data[0].cluster_id);
       if (id && id !== "undefined" && id !== "null") return id;
     }
-  } catch {
-    // Silently fail — queries that need CCP ID will get errors individually
+  } catch (err) {
+    console.error(`[tsg] CCP cluster ID resolution failed: ${err instanceof Error ? err.message : String(err)}`);
   }
   return undefined;
 }
@@ -328,6 +330,9 @@ function formatResults(results: QueryResult[]): string {
       parts.push(`❌ Error: ${r.error}`);
     } else if (r.data && r.data.length > 0) {
       parts.push(`✅ ${r.rowCount} row(s) returned`);
+      if (r.truncated) {
+        parts.push(`⚠️ Results truncated to 100 rows (${r.rowCount} total). Use a more specific query to see all data.`);
+      }
       // Format as a simple table for readability
       const columns = Object.keys(r.data[0]);
       parts.push(`| ${columns.join(" | ")} |`);
@@ -537,8 +542,21 @@ server.tool(
       ])
       .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),
+    cluster: z
+      .string()
+      .optional()
+      .describe(
+        "Optional cluster ARM resource ID. When provided, _cluster in the KQL will be replaced with this value."
+      ),
+    timeRange: z
+      .string()
+      .optional()
+      .default("24h")
+      .describe(
+        "Time range for App Insights queries, e.g. 1h, 6h, 24h, 7d. Default: 24h"
+      ),
   },
-  async ({ datasource, kql }) => {
+  async ({ datasource, kql, cluster, timeRange }) => {
     const ds = DATA_SOURCES[datasource];
     if (!ds) {
       return {
@@ -546,20 +564,28 @@ server.tool(
       };
     }
 
+    // Replace _cluster placeholder if cluster is provided
+    let resolvedKql = kql;
+    if (cluster) {
+      resolvedKql = resolvedKql.replace(/_cluster/g, `"${cluster}"`);
+    }
+
     try {
       let data: Record<string, unknown>[];
       if (datasource === "PrometheusAppInsights") {
-        data = await runAppInsightsQuery(kql, "24h");
+        data = await runAppInsightsQuery(resolvedKql, timeRange || "24h");
       } else {
-        data = await runKustoQuery(ds.clusterUri, ds.database, kql);
+        data = await runKustoQuery(ds.clusterUri, ds.database, resolvedKql);
       }
 
+      const truncated = data.length > 100;
       const result: QueryResult = {
         name: "Custom Query",
         datasource,
         status: "success",
         data: data.slice(0, 100),
         rowCount: data.length,
+        truncated,
       };
 
       return {

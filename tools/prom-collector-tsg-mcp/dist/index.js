@@ -180,8 +180,9 @@ async function executeQuery(queryDef, params) {
             name: queryDef.name,
             datasource: queryDef.datasource,
             status: "success",
-            data: data.slice(0, 100), // Limit rows to avoid huge responses
+            data: data.slice(0, 100),
             rowCount: data.length,
+            truncated: data.length > 100,
         };
     }
     catch (err) {
@@ -242,8 +243,8 @@ async function resolveCcpClusterId(cluster, timeRange, startTime, endTime) {
                 return id;
         }
     }
-    catch {
-        // Silently fail — queries that need CCP ID will get errors individually
+    catch (err) {
+        console.error(`[tsg] CCP cluster ID resolution failed: ${err instanceof Error ? err.message : String(err)}`);
     }
     return undefined;
 }
@@ -257,6 +258,9 @@ function formatResults(results) {
         }
         else if (r.data && r.data.length > 0) {
             parts.push(`✅ ${r.rowCount} row(s) returned`);
+            if (r.truncated) {
+                parts.push(`⚠️ Results truncated to 100 rows (${r.rowCount} total). Use a more specific query to see all data.`);
+            }
             // Format as a simple table for readability
             const columns = Object.keys(r.data[0]);
             parts.push(`| ${columns.join(" | ")} |`);
@@ -414,27 +418,43 @@ server.tool("tsg_query", "Run an arbitrary KQL query against any of the configur
     ])
         .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),
-}, async ({ datasource, kql }) => {
+    cluster: z
+        .string()
+        .optional()
+        .describe("Optional cluster ARM resource ID. When provided, _cluster in the KQL will be replaced with this value."),
+    timeRange: z
+        .string()
+        .optional()
+        .default("24h")
+        .describe("Time range for App Insights queries, e.g. 1h, 6h, 24h, 7d. Default: 24h"),
+}, async ({ datasource, kql, cluster, timeRange }) => {
     const ds = DATA_SOURCES[datasource];
     if (!ds) {
         return {
             content: [{ type: "text", text: `Unknown data source: ${datasource}` }],
         };
     }
+    // Replace _cluster placeholder if cluster is provided
+    let resolvedKql = kql;
+    if (cluster) {
+        resolvedKql = resolvedKql.replace(/_cluster/g, `"${cluster}"`);
+    }
     try {
         let data;
         if (datasource === "PrometheusAppInsights") {
-            data = await runAppInsightsQuery(kql, "24h");
+            data = await runAppInsightsQuery(resolvedKql, timeRange || "24h");
         }
         else {
-            data = await runKustoQuery(ds.clusterUri, ds.database, kql);
+            data = await runKustoQuery(ds.clusterUri, ds.database, resolvedKql);
         }
+        const truncated = data.length > 100;
         const result = {
             name: "Custom Query",
             datasource,
             status: "success",
             data: data.slice(0, 100),
             rowCount: data.length,
+            truncated,
         };
         return {
             content: [{ type: "text", text: formatResults([result]) }],

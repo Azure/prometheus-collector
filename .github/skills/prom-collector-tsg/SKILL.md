@@ -139,7 +139,7 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 | `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, and cluster autoscaler events.** |
 | `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
 | `tsg_control_plane` | Control plane metrics config and health |
-| `tsg_query` | Run arbitrary KQL against any data source |
+| `tsg_query` | Run arbitrary KQL against any data source. Accepts optional `cluster` (ARM ID) and `timeRange` params — when `cluster` is provided, `_cluster` in KQL is auto-replaced |
 | `tsg_dashboard_link` | Get a link to the ADX dashboard pre-filtered for the cluster |
 | `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
 | `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
@@ -152,6 +152,37 @@ All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 - **Start narrow, widen if needed.** Use `"1h"` or `"6h"` first. Queries on busy clusters with `"7d"` frequently timeout
 - **If a query times out**, retry with a shorter `timeRange` (e.g. `"1h"` instead of `"7d"`)
 - **Past incidents** (>30 days old): App Insights data is gone. Only AKS/CCP Kusto queries may have data. Focus diagnosis on ICM metadata (`howFixed`, `mitigateData`, `customFields`)
+
+**⚠️ ARM Resource ID pitfalls:**
+- **Use the cluster resource group, NOT the node resource group.** ICMs often mention both. The cluster RG (e.g. `AT51756_CPP_DEV_NEU_RUNNER_GF01`) is what the addon telemetry uses. The node/MC RG (e.g. `MC_rg_cluster_region` or `GF-KD4E8051756GF01-NODES`) will return **all queries empty** with no error
+- **Symptom of wrong ARM ID**: every `PrometheusAppInsights` query returns "No data returned" but `AKS` queries still work (or vice versa). If you see this, check the ICM authored summary for a different ARM ID
+- **Multiple ARM IDs in ICM**: ICMs often list multiple clusters or both the cluster RG and node RG. Always use the one with `Microsoft.ContainerService/managedClusters` in the path — NOT `Microsoft.Compute` or node resource groups
+
+#### Using `tsg_query` for Ad-Hoc Investigation
+
+Use `tsg_query` when the built-in tools don't cover your specific symptom. It now accepts optional `cluster` and `timeRange` parameters:
+
+```
+tsg_query(datasource: "PrometheusAppInsights", kql: "traces | where ...", cluster: "/subscriptions/.../managedClusters/name", timeRange: "7d")
+```
+
+When `cluster` is provided, any `_cluster` placeholder in the KQL is auto-replaced with the cluster ARM ID.
+
+**Common KQL patterns:**
+- **Find config errors**: `traces | where tostring(customDimensions.cluster) =~ _cluster | where message has "unmarshal" | ...`
+- **Check pod memory over time**: `customMetrics | where tostring(customDimensions.cluster) =~ _cluster | where name == "otelcollector_memory_rss" | ...`
+- **Search logs by keyword**: `traces | where tostring(customDimensions.cluster) =~ _cluster | where message has "YOUR_KEYWORD" | take 20`
+
+**Data sources available:**
+| Data Source | Tables | Use For |
+|---|---|---|
+| PrometheusAppInsights | `traces`, `customMetrics` | Collector logs, configs, telemetry metrics |
+| MetricInsights | `GetPreaggUsageSummary*` | Time series counts, ingestion rates |
+| AMWInfo | `AzureMonitorMetricsDCRDaily`, `AzureMonitorWorkspaceStatsDaily` | AMW/DCR/MDM account mapping |
+| AKS | `ManagedClusterSnapshot`, `AKSprod` tables | Cluster state, settings, addon config |
+| AKS CCP | `AKSccplogs` tables | Control plane logs, AMA metrics status |
+| AKS Infra | `AKSinfra` tables | Control plane pod CPU, container restarts |
+| Vulnerabilities | `ShaVulnMgmt` tables | Image CVE scanning |
 
 #### Checking Scrape Target Health via Geneva MDM
 
