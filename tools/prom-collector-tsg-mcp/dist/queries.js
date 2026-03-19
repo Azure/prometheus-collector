@@ -1,22 +1,11 @@
 // Auto-generated from Azure Managed Prometheus TSGs ADX dashboard
 // Dashboard ID: 94da59c1-df12-4134-96bb-82c6b32e6199
-
-export interface Query {
-  name: string;
-  datasource: string;
-  kql: string;
-}
-
-export type QueryCategory = 
-  | "triage" | "errors" | "config" | "workload"
-  | "pods" | "logs" | "controlPlane" | "metricInsights";
-
-export const QUERIES: Record<QueryCategory, Query[]> = {
-  triage: [
-    {
-      name: "Version",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+export const QUERIES = {
+    triage: [
+        {
+            name: "Version",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "ClusterCoreCapacity"
@@ -24,11 +13,11 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | summarize dcount(tostring(customDimensions.cluster)) by addonversion, bin(timestamp, totimespan(Interval))
 | order by timestamp desc 
 | top 1 by timestamp`,
-    },
-    {
-      name: "Component Versions (ME, OtelCollector, Golang, Prometheus)",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Component Versions (ME, OtelCollector, Golang, Prometheus)",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "ME_VERSION" or message has "OTEL_VERSION" or message has "GOLANG_VERSION" or message has "PROMETHEUS_VERSION"
@@ -41,11 +30,11 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | where isnotempty(meVersion) or isnotempty(otelVersion) or isnotempty(golangVersion) or isnotempty(promVersion)
 | summarize LastSeen=max(timestamp) by meVersion, otelVersion, golangVersion, promVersion, controllertype
 | order by LastSeen desc`,
-    },
-    {
-      name: "Cluster Region",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Cluster Region",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "ClusterCoreCapacity"
@@ -55,16 +44,16 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 //| extend interval=(_endTime - _startTime) / 4
 //| summarize dcount(tostring(customDimensions.cluster)) by region, bin(timestamp, interval)
 //| order by timestamp`,
-    },
-    {
-      name: "AKS Cluster ID",
-      datasource: "PrometheusAppInsights",
-      kql: `print AKSClusterID`,
-    },
-    {
-      name: "Azure Monitor Workspace",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "AKS Cluster ID",
+            datasource: "PrometheusAppInsights",
+            kql: `print AKSClusterID`,
+        },
+        {
+            name: "Azure Monitor Workspace",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
@@ -72,11 +61,11 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId
 | extend AzureMonitorWorkspaceName=tostring(split(AzureMonitorWorkspace, '/')[8])`,
-    },
-    {
-      name: "MDM Account ID",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "MDM Account ID",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
@@ -84,33 +73,33 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId
 | extend AzureMonitorWorkspaceName=tostring(split(AzureMonitorWorkspace, '/')[8])`,
-    },
-    {
-      name: "MDM Stamp",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "MDM Stamp",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
 | distinct AMWAccountResourceId, Location, DCRId
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId, MDMStampName`,
-    },
-    {
-      name: "Azure Monitor Workspace Region",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "Azure Monitor Workspace Region",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
 | distinct AMWAccountResourceId, Location, DCRId
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct Location`,
-    },
-    {
-      name: "Internal DCE and DCR Ids",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Internal DCE and DCR Ids",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "ClusterCoreCapacity"
@@ -120,11 +109,11 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 //| extend interval=(_endTime - _startTime) / 4
 //| summarize dcount(tostring(customDimensions.cluster)) by addonversion, bin(timestamp, interval)
 //| order by timestamp`,
-    },
-    {
-      name: "Token Adapter Health",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Token Adapter Health",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -139,31 +128,31 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=toint(Values[1])`,
-    },
-    {
-      name: "Data Collection Rules Associated with Cluster",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "Data Collection Rules Associated with Cluster",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
 | distinct AMWAccountResourceId, Location, DCRId`,
-    },
-    {
-      name: "Azure Monitor Workspace(s) from Scrape Config Routing",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Azure Monitor Workspace(s) from Scrape Config Routing",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 | where name == "meMetricsProcessedCount"
 | extend metricsAccountName=tostring(customDimensions.metricsAccountName)
 | distinct metricsAccountName`,
-    },
-    {
-      name: "Azure Monitor Workspace(s)",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "Azure Monitor Workspace(s)",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
@@ -171,11 +160,11 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId
 `,
-    },
-    {
-      name: "AKS Cluster Network Settings",
-      datasource: "AKS",
-      kql: `// let globalFrom = _startTime;
+        },
+        {
+            name: "AKS Cluster Network Settings",
+            datasource: "AKS",
+            kql: `// let globalFrom = _startTime;
 // let globalTo = _endTime;
 // let mcs = ManagedClusterSnapshot
 // | where PreciseTimeStamp between (globalFrom .. globalTo)
@@ -337,11 +326,11 @@ let bbm = BlackboxMonitoringActivity
 union mcm, clusterSnapshot
 | extend State = coalesce(State, "false")
 | order by FeatureName asc`,
-    },
-    {
-      name: "AKS Cluster Addons Enabled",
-      datasource: "AKS",
-      kql: `// let globalFrom = _startTime;
+        },
+        {
+            name: "AKS Cluster Addons Enabled",
+            datasource: "AKS",
+            kql: `// let globalFrom = _startTime;
 // let globalTo = _endTime;
 // let mcs = ManagedClusterSnapshot
 // | where PreciseTimeStamp between (globalFrom .. globalTo)
@@ -504,11 +493,11 @@ let clusterSnapshot = ManagedClusterSnapshot
 union clusterSnapshot
 | extend State = coalesce(State, "false")
 | order by FeatureName asc`,
-    },
-    {
-      name: "AKS Cluster Settings",
-      datasource: "AKS",
-      kql: `// let globalFrom = _startTime;
+        },
+        {
+            name: "AKS Cluster Settings",
+            datasource: "AKS",
+            kql: `// let globalFrom = _startTime;
 // let globalTo = _endTime;
 // let mcs = ManagedClusterSnapshot
 // | where PreciseTimeStamp between (globalFrom .. globalTo)
@@ -670,11 +659,11 @@ let bbm = BlackboxMonitoringActivity
 union bbm, clusterSnapshot
 | extend State = coalesce(State, "false")
 | order by FeatureName asc`,
-    },
-    {
-      name: "AKS Cluster State",
-      datasource: "AKS",
-      kql: `let local_clusterVersion = AKSClusterID;
+        },
+        {
+            name: "AKS Cluster State",
+            datasource: "AKS",
+            kql: `let local_clusterVersion = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 BlackboxMonitoringActivity
@@ -682,11 +671,11 @@ BlackboxMonitoringActivity
 | where ccpNamespace == local_clusterVersion
 | top 1 by PreciseTimeStamp desc
 | project state`,
-    },
-    {
-      name: "CCP Cluster ID",
-      datasource: "AKS",
-      kql: `let resourceid = split(_cluster, "/");
+        },
+        {
+            name: "CCP Cluster ID",
+            datasource: "AKS",
+            kql: `let resourceid = split(_cluster, "/");
 let subscription = tostring(resourceid[2]);
 let resourceGroup = tostring(resourceid[4]);
 ManagedClusterMonitoring
@@ -701,22 +690,22 @@ ManagedClusterMonitoring
     | where clusterid =~ _cluster
     | extend cluster_id = hcpControlPlaneID
     | project cluster_id, subscription, resourceGroup`,
-    },
-    {
-      name: "Node Pool Capacity",
-      datasource: "AKS",
-      kql: `AgentPoolSnapshot
+        },
+        {
+            name: "Node Pool Capacity",
+            datasource: "AKS",
+            kql: `AgentPoolSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
 | summarize arg_max(PreciseTimeStamp, *) by name
 | project name, mode, currentNodes=size, vmSize, osType, orchestratorVersion,
     enableAutoScaling, maxCount=toint(maxCount), minCount=toint(minCount), provisioningState,
     isFull=iff(enableAutoScaling == true, size >= toint(maxCount), false)`,
-    },
-    {
-      name: "Node Conditions (Memory/Disk/PID Pressure)",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Node Conditions (Memory/Disk/PID Pressure)",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -734,11 +723,11 @@ KubeAudit
 | extend hasIssue = (conditionType == "Ready" and conditionStatus != "True") or (conditionType != "Ready" and conditionStatus == "True")
 | project PreciseTimeStamp, node, nodepool, conditionType, conditionStatus, reason, message, lastTransition, hasIssue
 | order by hasIssue desc, node asc, conditionType asc`,
-    },
-    {
-      name: "Node Allocatable Resources",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Node Allocatable Resources",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -756,11 +745,11 @@ KubeAudit
 | extend allocatable_pods = tostring(responseObject.status.allocatable.pods)
 | extend capacity_pods = tostring(responseObject.status.capacity.pods)
 | project PreciseTimeStamp, node, nodepool, allocatable_memory, capacity_memory, allocatable_cpu, capacity_cpu, allocatable_pods, capacity_pods`,
-    },
-    {
-      name: "AgentPool Autoscaling History",
-      datasource: "AKS",
-      kql: `AgentPoolSnapshot
+        },
+        {
+            name: "AgentPool Autoscaling History",
+            datasource: "AKS",
+            kql: `AgentPoolSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
 | extend enableAutoScaling = coalesce(enableAutoScaling, false)
@@ -769,13 +758,13 @@ KubeAudit
     enableAutoScaling, minCount=toint(minCount), maxCount=toint(maxCount), provisioningState,
     isFull=iff(enableAutoScaling == true, size >= toint(maxCount), false)
 | order by name asc, PreciseTimeStamp asc`,
-    },
-  ],
-  errors: [
-    {
-      name: "DCR/DCE/AMCS Configuration Errors Found",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+    ],
+    errors: [
+        {
+            name: "DCR/DCE/AMCS Configuration Errors Found",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | mv-expand message = split(message, "\\n") to typeof(string)
@@ -784,11 +773,11 @@ KubeAudit
 | make-series count_=count() default=0 on timestamp in range(_startTime, _endTime, totimespan(Interval)) by controllertype
 | mvexpand timestamp, count_
 | extend timestamp=todatetime(timestamp), count_=toint(count_)`,
-    },
-    {
-      name: "ContainerLog Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "ContainerLog Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend os = tostring(customDimensions.osType)
@@ -797,11 +786,11 @@ KubeAudit
 | where (message contains 'error' or message contains 'E!' or message contains 'warning::Custom prometheus config does not exist') and message !contains "\\"filepath\\":\\"/"
 | project timestamp, controllertype=tostring(customDimensions.controllertype), os, message
 | order by timestamp`,
-    },
-    {
-      name: "OtelCollector Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "OtelCollector Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message contains '/opt/microsoft/otelcollector/collector-log.txt'
@@ -811,11 +800,11 @@ KubeAudit
 | project timestamp, controllertype=tostring(customDimensions.controllertype), msg=tostring(json.msg), err=tostring(json.err), component=strcat(json.name, " ", json.kind), caller=tostring(json.caller), stacktrace=tostring(json.stacktrace)
 | summarize count() by timestamp, controllertype, msg, err, component, caller, stacktrace
 | order by timestamp`,
-    },
-    {
-      name: "MetricsExtension Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "MetricsExtension Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime and timestamp < _endTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message contains '\\"filepath\\":\\"/MetricsExtensionConsoleDebugLog.log\\"'
@@ -824,11 +813,11 @@ KubeAudit
 | where isnotempty(json.message)
 | project timestamp, controllertype=tostring(customDimensions.controllertype), level=json.level, message=json.message
 | order by timestamp`,
-    },
-    {
-      name: "MDSD Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "MDSD Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message contains '"filepath":"/opt/microsoft/linuxmonagent/mdsd.err"'
@@ -837,51 +826,51 @@ KubeAudit
 | where isnotnull(json.log)
 | project timestamp, controllertype=tostring(customDimensions.controllertype), log=json.log
 | order by timestamp`,
-    },
-    {
-      name: "AddonTokenAdapter Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "AddonTokenAdapter Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where customDimensions.tag == 'prometheus.log.addontokenadapter'
 | order by timestamp`,
-    },
-    {
-      name: "TargetAllocator Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "TargetAllocator Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where customDimensions.tag contains "prometheus.log.targetallocator.tacontainer"
 | where message contains "error"
 | order by timestamp`,
-    },
-    {
-      name: "ConfigReader errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "ConfigReader errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where customDimensions.tag == "prometheus.log.targetallocator.configreader"
 | mv-expand message = split(message, "\\n") to typeof(string) 
 | where message has "error" or message has "Exception"`,
-    },
-    {
-      name: "DNS Resolution Issues",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "DNS Resolution Issues",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend controllertype=tostring(customDimensions.controllertype)
 | where message contains 'Temporary failure in name resolution' or message contains 'Error resolving address' or message contains 'Error resolving address'
 | project timestamp, controllertype, message
 | order by timestamp`,
-    },
-    {
-      name: "Private Link Issues",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Private Link Issues",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend os = tostring(customDimensions.osType)
@@ -890,11 +879,11 @@ KubeAudit
 | where message contains 'Data collection endpoint must be used to access configuration over private link.'
 | project timestamp, controllertype, os, message
 | order by timestamp`,
-    },
-    {
-      name: "Private Link Issues by Nodepool, Node, and Pod",
-      datasource: "PrometheusAppInsights",
-      kql: `let restartingPods = traces
+        },
+        {
+            name: "Private Link Issues by Nodepool, Node, and Pod",
+            datasource: "PrometheusAppInsights",
+            kql: `let restartingPods = traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend os = tostring(customDimensions.osType)
@@ -921,11 +910,11 @@ customMetrics
 //| where issue == 0
 //| where nodepool contains 'system'
 //| summarize count() by issue, nodepool, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Liveness Probe Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Liveness Probe Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend controllertype=tostring(customDimensions.controllertype)
@@ -935,13 +924,13 @@ customMetrics
 | project timestamp, controllertype, podname, message
 | summarize count() by timestamp, controllertype, podname, message
 | order by timestamp`,
-    },
-  ],
-  config: [
-    {
-      name: "Invalid Custom Prometheus Config",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+    ],
+    config: [
+        {
+            name: "Invalid Custom Prometheus Config",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -953,11 +942,11 @@ customMetrics
 | extend kappie=tostring(customDimensions.KappieBasicKeepListRegex)
 | extend kubeproxy=tostring(customDimensions.KappieBasicKeepListRegex)
 | project invalidPromConfig`,
-    },
-    {
-      name: "ReplicaSet Scrape Configs Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet Scrape Configs Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -980,11 +969,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "Linux DaemonSet Scrape Configs Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Linux DaemonSet Scrape Configs Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1021,11 +1010,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "Windows DaemonSet Scrape Configs Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Windows DaemonSet Scrape Configs Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1040,11 +1029,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "Horizontal Pod Auto-Scaling (HPA) Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Horizontal Pod Auto-Scaling (HPA) Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1057,11 +1046,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "Debug Mode Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Debug Mode Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1073,11 +1062,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "HTTP Proxy Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "HTTP Proxy Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1090,11 +1079,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "ReplicaSet ConfigMap Jobs",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet ConfigMap Jobs",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_targets"
@@ -1102,11 +1091,11 @@ customMetrics
 | extend type = iff(job_name startswith "serviceMonitor", '"ServiceMonitor"', iff(job_name startswith "podMonitor", '"PodMonitor"', '"Configmap"'))
 | where type == '"Configmap"'
 | distinct job_name`,
-    },
-    {
-      name: "Custom Config Validation Status",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Custom Config Validation Status",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "prom-config-validator"
@@ -1125,11 +1114,11 @@ customMetrics
     "UNKNOWN")
 | summarize LastSeen=max(timestamp), Count=count() by status, controllertype, podname
 | order by controllertype asc, status asc`,
-    },
-    {
-      name: "Custom Config Validation Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Custom Config Validation Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "prom-config-validator" and message has "validation failed"
@@ -1143,11 +1132,11 @@ customMetrics
 | where isnotempty(errorDetail)
 | summarize LastSeen=max(timestamp), Count=count() by errorDetail=substring(errorDetail, 0, 300), controllertype
 | order by Count desc`,
-    },
-    {
-      name: "Custom Config YAML Error Lines",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Custom Config YAML Error Lines",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "prom-config-validator" and message has "validation failed"
@@ -1159,11 +1148,11 @@ customMetrics
 | project timestamp, controllertype, lineNum = tostring(errorLines[0]), errorMsg = tostring(errorLines[1])
 | distinct lineNum, errorMsg, controllertype
 | order by toint(lineNum) asc`,
-    },
-    {
-      name: "Custom Config OTel Loading Errors",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Custom Config OTel Loading Errors",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "Cannot load configuration"
@@ -1174,11 +1163,11 @@ customMetrics
 | extend errorBlock = substring(cleaned, idx, 500)
 | summarize LastSeen=max(timestamp), Count=count() by errorBlock=substring(errorBlock, 0, 500), controllertype
 | order by Count desc`,
-    },
-    {
-      name: "Custom Scrape Jobs from Startup Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Custom Scrape Jobs from Startup Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > _startTime
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message has "label limits in custom scrape config for job"
@@ -1189,11 +1178,11 @@ customMetrics
 | extend podname=tostring(customDimensions.podname)
 | summarize LastSeen=max(timestamp), PodCount=dcount(podname) by job, controllertype
 | order by controllertype asc, job asc`,
-    },
-    {
-      name: "ReplicaSet PodMonitors",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet PodMonitors",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_targets"
@@ -1201,11 +1190,11 @@ customMetrics
 | extend type = iff(job_name startswith "serviceMonitor", '"ServiceMonitor"', iff(job_name startswith "podMonitor", '"PodMonitor"', '"Configmap"'))
 | where type == '"PodMonitor"'
 | distinct job_name`,
-    },
-    {
-      name: "ReplicaSet ServiceMonitors",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet ServiceMonitors",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_targets"
@@ -1213,11 +1202,11 @@ customMetrics
 | extend type = iff(job_name startswith "serviceMonitor", '"ServiceMonitor"', iff(job_name startswith "podMonitor", '"PodMonitor"', '"Configmap"'))
 | where type == '"ServiceMonitor"'
 | distinct job_name`,
-    },
-    {
-      name: "Default Targets KeepListRegex",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Default Targets KeepListRegex",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | order by timestamp
 | where tostring(customDimensions.cluster) =~ _cluster
@@ -1261,11 +1250,11 @@ customMetrics
 
 // | project kubestate
 // | take 1`,
-    },
-    {
-      name: "Default Targets Scrape Interval",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Default Targets Scrape Interval",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | order by timestamp
 | where tostring(customDimensions.cluster) =~ _cluster
@@ -1308,11 +1297,11 @@ customMetrics
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tostring(Values[1])`,
-    },
-    {
-      name: "Minimal Ingestion Profile Enabled",
-      datasource: "AKS CCP",
-      kql: `AMAMetricsConfigmapWatcher
+        },
+        {
+            name: "Minimal Ingestion Profile Enabled",
+            datasource: "AKS CCP",
+            kql: `AMAMetricsConfigmapWatcher
 | where PreciseTimeStamp > _startTime and PreciseTimeStamp < _endTime
 | where ccpNamespace == AKSClusterID
 | where configmap != "na"
@@ -1326,11 +1315,11 @@ on (
     | where name == "minimalingestionprofile"
     | extend value = tostring(e[1])
 )`,
-    },
-    {
-      name: "OTLP Metrics Enabled",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "OTLP Metrics Enabled",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1343,11 +1332,11 @@ on (
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tobool(Values[1])`,
-    },
-    {
-      name: "Cluster Alias",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Cluster Alias",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1360,11 +1349,11 @@ on (
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tostring(Values[1])`,
-    },
-    {
-      name: "Cluster Label",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Cluster Label",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1377,11 +1366,11 @@ on (
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tostring(Values[1])`,
-    },
-    {
-      name: "ConfigMap Version",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ConfigMap Version",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1394,11 +1383,11 @@ on (
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tostring(Values[1])`,
-    },
-    {
-      name: "Pod Annotations Namespace Regex",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Pod Annotations Namespace Regex",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1411,11 +1400,11 @@ on (
                     )
 | mv-expand kind=array Values
 | project Name=tostring(Values[0]), Value=tostring(Values[1])`,
-    },
-    {
-      name: "ReplicaSet Targets Discovered (Pre-Filtering) per Job",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet Targets Discovered (Pre-Filtering) per Job",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_targets"
@@ -1423,33 +1412,33 @@ on (
 | extend type = iff(job_name startswith "serviceMonitor", '"ServiceMonitor"', iff(job_name startswith "podMonitor", '"PodMonitor"', '"Configmap"'))
 //| where type == '"Configmap"'
 | summarize value=avg(value) by bin(timestamp, totimespan(Interval)), job_name`,
-    },
-    {
-      name: "Kube-State-Metrics Labels Allow List",
-      datasource: "AKS",
-      kql: `ManagedClusterSnapshot
+        },
+        {
+            name: "Kube-State-Metrics Labels Allow List",
+            datasource: "AKS",
+            kql: `ManagedClusterSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
 | top 1 by PreciseTimeStamp desc 
 | project azureMonitorProfile
 | project tostring(azureMonitorProfile.metrics.kubeStateMetrics.metricLabelsAllowlist)
 //| project tostring(azureMonitorProfile.metrics.kubeStateMetrics.metricAnnotationsAllowList)`,
-    },
-    {
-      name: "Kube-State-Metrics Annotations Allow List",
-      datasource: "AKS",
-      kql: `ManagedClusterSnapshot
+        },
+        {
+            name: "Kube-State-Metrics Annotations Allow List",
+            datasource: "AKS",
+            kql: `ManagedClusterSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
 | top 1 by PreciseTimeStamp desc 
 | project azureMonitorProfile
 //| project tostring(azureMonitorProfile.metrics.kubeStateMetrics.metricLabelsAllowlist)
 | project tostring(azureMonitorProfile.metrics.kubeStateMetrics.metricAnnotationsAllowList)`,
-    },
-    {
-      name: "Recording Rules Configured",
-      datasource: "AMWInfo",
-      kql: `AzureMonitorMetricsDCRDaily
+        },
+        {
+            name: "Recording Rules Configured",
+            datasource: "AMWInfo",
+            kql: `AzureMonitorMetricsDCRDaily
 | where (Timestamp > ago(7d)) or (Timestamp >= _startTime and Timestamp <= _endTime)
 | where ParentResourceId =~ _cluster
 | extend AMWAccountResourceId=AzureMonitorWorkspaceResourceId
@@ -1458,24 +1447,24 @@ on (
 | project AMWAccountResourceId, MDMAccountName
 | extend hasRecordingRules = "Check Azure Portal → AMW → Prometheus Rule Groups"
 | project AMWAccountResourceId, MDMAccountName, hasRecordingRules`,
-    },
-    {
-      name: "Addon Enabled in AKS Profile",
-      datasource: "AKS",
-      kql: `ManagedClusterSnapshot
+        },
+        {
+            name: "Addon Enabled in AKS Profile",
+            datasource: "AKS",
+            kql: `ManagedClusterSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
 | top 1 by PreciseTimeStamp desc
 | extend metricsEnabled = isnotempty(azureMonitorProfile) and tobool(azureMonitorProfile.metrics.enabled)
 | extend containerInsightsEnabled = isnotempty(addonProfiles.omsagent) and tobool(addonProfiles.omsagent.enabled)
 | project metricsEnabled, containerInsightsEnabled, azureMonitorProfile`,
-    },
-  ],
-  workload: [
-    {
-      name: "Replica count",
-      datasource: "PrometheusAppInsights",
-      kql: `let query=customMetrics
+        },
+    ],
+    workload: [
+        {
+            name: "Replica count",
+            datasource: "PrometheusAppInsights",
+            kql: `let query=customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "metricsextension_cpu_usage_095" or name == "otelcollector_cpu_usage_095"
@@ -1485,11 +1474,11 @@ on (
 query
 | summarize max(replica_pod_count) by bin(timestamp, totimespan(Interval))
 | union (query | summarize min(replica_pod_count) by bin(timestamp, totimespan(Interval)))`,
-    },
-    {
-      name: "Max Replica Count",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Max Replica Count",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "metricsextension_cpu_usage_095" or name == "otelcollector_cpu_usage_095"
@@ -1497,22 +1486,22 @@ query
 | extend podname=tostring(customDimensions.podname)
 | summarize replica_pod_count=dcount(podname) by bin(timestamp, totimespan(5m))
 | summarize max(replica_pod_count)`,
-    },
-    {
-      name: "DaemonSet Pods Count",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Pods Count",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "metricsextension_cpu_usage_095" or name == "otelcollector_cpu_usage_095"
 | where tostring(customDimensions.controllertype) == "DaemonSet"
 |extend podname=tostring(customDimensions.podname)
 | summarize pod_count=dcount(podname) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Samples per Minute",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Samples per Minute",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 //| where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1521,11 +1510,11 @@ query
 | where podname contains 'win'
 | where name == "meMetricsProcessedCount" or name == "meMetricsReceivedCount"
 | summarize value=sum(value) by bin(timestamp, totimespan(Interval)), name, podname`,
-    },
-    {
-      name: "Total ReplicaSet Samples per Minute",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Total ReplicaSet Samples per Minute",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1533,11 +1522,11 @@ query
 | extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by name, pod, bin(timestamp, totimespan(Interval))
 | summarize value=sum(value) by name, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Max Replica Samples Dropped",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Max Replica Samples Dropped",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1547,11 +1536,11 @@ query
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
 | summarize max(samplesDropped) by pod`,
-    },
-    {
-      name: "Replicaset Samples Dropped by ME",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Replicaset Samples Dropped by ME",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1561,11 +1550,11 @@ query
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
 | summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "DaemonSet Samples Dropped",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Samples Dropped",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1576,22 +1565,22 @@ query
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
 | summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "P95 CPU (millicores)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 CPU (millicores)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "ksmUsage"
 | extend value = value / 1000000000 * 1000
 | extend pod=tostring(customDimensions.PodRefName)
 | summarize value=round(percentile(value, 95), 2) by pod, name, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "P95 Memory (MB)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 Memory (MB)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "ksmUsage"
@@ -1599,11 +1588,11 @@ query
 | extend value = memory / 1000000
 | extend pod=tostring(customDimensions.PodRefName)
 | summarize value=round(percentile(value, 95), 2) by bin(timestamp, totimespan(Interval)), pod`,
-    },
-    {
-      name: "Replicaset ME Queue Size",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Replicaset ME Queue Size",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1613,22 +1602,22 @@ query
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, currentQueueSize
 | summarize max(currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "ReplicaSet OtelCollector Queue Size",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet OtelCollector Queue Size",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 //| distinct name
 | where name == "prometheus_otelcol_exporter_queue_size"
 | summarize round(sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "DaemonSet OtelCollector Queue Size",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet OtelCollector Queue Size",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1636,22 +1625,22 @@ query
 //| distinct name
 | where name == "prometheus_otelcol_exporter_queue_size"
 | summarize round(sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "ReplicaSet OtelCollector Export to ME Failed",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet OtelCollector Export to ME Failed",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 //| distinct name
 | where name == "prometheus_otelcol_exporter_send_failed_metric_points"
 | summarize round(sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "DaemonSet OtelCollector Export to ME Failed",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet OtelCollector Export to ME Failed",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1659,22 +1648,22 @@ query
 //| distinct name
 | where name == "prometheus_otelcol_exporter_send_failed_metric_points"
 | summarize round(sum=sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "ReplicaSet OtelCollector Receiver Metrics Refused",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet OtelCollector Receiver Metrics Refused",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 //| distinct name
 | where name == "prometheus_otelcol_receiver_refused_metric_points"
 | summarize round(sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "DaemonSet OtelCollector Receiver Metrics Refused",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet OtelCollector Receiver Metrics Refused",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1682,20 +1671,20 @@ query
 //| distinct name
 | where name == "prometheus_otelcol_receiver_refused_metric_points"
 | summarize round(sum=sum(value)) by bin(timestamp, totimespan(Interval)), pod=tostring(customDimensions.podname)`,
-    },
-    {
-      name: "Number of Collectors Discovered",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Number of Collectors Discovered",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_collectors_discovered"
 | summarize round(number_of_collectors=avg(value)) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Number of Scrape Jobs",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Number of Scrape Jobs",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "target_allocator_opentelemetry_allocator_targets"
@@ -1703,40 +1692,40 @@ query
 | extend podname=tostring(customDimensions.podname)
 | extend type = iff(job_name startswith "serviceMonitor", '"ServiceMonitor"', iff(job_name startswith "podMonitor", '"PodMonitor"', '"Configmap"'))
 | summarize count=dcount(job_name) by  bin(timestamp, totimespan(Interval)), type`,
-    },
-    {
-      name: "Targets Per Replica Pod",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Targets Per Replica Pod",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 //| distinct name
 | where name == "target_allocator_opentelemetry_allocator_targets_per_collector"
 | summarize round(targets=avg(value)) by bin(timestamp, totimespan(Interval)), collector=tostring(customDimensions.collector_name)`,
-    },
-    {
-      name: "Unassigned Targets",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Unassigned Targets",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 // distinct name
 | where name == "target_allocator_opentelemetry_allocator_targets_unassigned"
 | summarize round(targets=avg(value)) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Total prometheus_sd_http_failures",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Total prometheus_sd_http_failures",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "prometheus_prometheus_sd_http_failures_total"
 | summarize total_sd_http_failures=sum(value) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Prometheus Receiver ---> Target Allocator Error Count",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "Prometheus Receiver ---> Target Allocator Error Count",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where message contains '/opt/microsoft/otelcollector/collector-log.txt'
@@ -1750,11 +1739,11 @@ query
 //| mvexpand timestamp, ErrorCount
 //| extend timestamp=todatetime(timestamp), ErrorCount=toint(ErrorCount)
 //| summarize ErrorCount=count() by Reason, controllertype, bin(timestamp, 5m)`,
-    },
-    {
-      name: "Kube-state-metrics Version",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Kube-state-metrics Version",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1762,11 +1751,11 @@ query
 | extend kubestateversion=tostring(customDimensions.kubestateversion)
 | order by timestamp
 | take 1`,
-    },
-    {
-      name: "ReplicaSet Samples per Account per Replica",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet Samples per Account per Replica",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1774,11 +1763,11 @@ query
 | extend mdmAccount = tostring(customDimensions.metricsAccountName)
 | extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by mdmAccount, pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "ReplicaSet Samples per Account",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet Samples per Account",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
@@ -1786,11 +1775,11 @@ query
 | extend mdmAccount = tostring(customDimensions.metricsAccountName)
 //| extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by mdmAccount, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "DaemonSet Samples per Account per Pod",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Samples per Account per Pod",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1799,22 +1788,22 @@ query
 | extend mdmAccount = tostring(customDimensions.metricsAccountName)
 | extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by mdmAccount, pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "ReplicaSet Samples per Minute per Replica",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ReplicaSet Samples per Minute per Replica",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 | where name == "meMetricsReceivedCount"
 | extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by pod`,
-    },
-    {
-      name: "OpenTelemetryCollector P95 CPU % cores",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "OpenTelemetryCollector P95 CPU % cores",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095"
@@ -1834,11 +1823,11 @@ query
 // | summarize x=percentile(value,100) by bin(timestamp, 1h), AKSregion, name,cluster
 // |summarize y=sum(x) by bin(timestamp,1h), AKSregion, cluster
 // |summarize CPU=percentile(y,95) by bin(timestamp,1h), AKSregion`,
-    },
-    {
-      name: "OpenTelemetryCollector P95 Memory GB",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "OpenTelemetryCollector P95 Memory GB",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_memory_rss_095"
@@ -1847,22 +1836,22 @@ query
 | extend pod=tostring(customDimensions.podname)
 | summarize value=round(percentile(value, 100), 2) by pod, bin(timestamp, totimespan(Interval))
 `,
-    },
-    {
-      name: "MetricsExtension P95 CPU % cores",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "MetricsExtension P95 CPU % cores",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "metricsextension_cpu_usage_095"
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 | extend pod=tostring(customDimensions.podname)
 | summarize value=round(percentile(value, 100), 2) by pod, name, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "MetricsExtension P95 Memory GB",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "MetricsExtension P95 Memory GB",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "metricsextension_memory_rss_095"
@@ -1871,11 +1860,11 @@ query
 | extend pod=tostring(customDimensions.podname)
 | summarize value=round(percentile(value, 100), 2) by pod, bin(timestamp, totimespan(Interval))
 `,
-    },
-    {
-      name: "OpenTelemetryCollector P95 CPU mc",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "OpenTelemetryCollector P95 CPU mc",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "win_proc_Percent_Processor_Time_095"
@@ -1897,11 +1886,11 @@ customMetrics
 | extend timestamp = iff(timestamp != "", timestamp, timestamp1)
 | extend podname = iff(podname != "", podname, pod)
 | extend value = iff(isnotnull(value), value, value1)`,
-    },
-    {
-      name: "MetricsExtension P95 CPU mc",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "MetricsExtension P95 CPU mc",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "win_proc_Percent_Processor_Time_095"
@@ -1923,11 +1912,11 @@ customMetrics
 | extend timestamp = iff(timestamp != "", timestamp, timestamp1)
 | extend podname = iff(podname != "", podname, pod)
 | extend value = iff(isnotnull(value), value, value1)`,
-    },
-    {
-      name: "P95 CPU Config Reloader (millicores)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 CPU Config Reloader (millicores)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "cnfgRdrCPUUsage"
@@ -1936,11 +1925,11 @@ customMetrics
 | project timestamp, value, name
 | extend interval=(_endTime - _startTime) / 4
 | summarize value=round(percentile(value, 95), 2) by bin(timestamp, totimespan(Interval)), name`,
-    },
-    {
-      name: "P95 CPU Target Allocator (millicores)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 CPU Target Allocator (millicores)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "taCPUUsage"
@@ -1949,11 +1938,11 @@ customMetrics
 | project timestamp, value, name
 | extend interval=(_endTime - _startTime) / 4
 | summarize value=round(percentile(value, 95), 2) by bin(timestamp, totimespan(Interval)), name`,
-    },
-    {
-      name: "P95 Mem Config Reloader (MB)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 Mem Config Reloader (MB)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "cnfgRdrCPUUsage"
@@ -1963,11 +1952,11 @@ customMetrics
 | project timestamp, value
 | extend interval=(_endTime - _startTime) / 4
 | summarize value=round(percentile(value, 95), 2) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "P95 Mem Target Allocator (MB)",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "P95 Mem Target Allocator (MB)",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "taCPUUsage"
@@ -1977,11 +1966,11 @@ customMetrics
 | project timestamp, value
 | extend interval=(_endTime - _startTime) / 4
 | summarize value=round(percentile(value, 95), 2) by bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "DaemonSet Samples per Minute per Pod",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Samples per Minute per Pod",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where tostring(customDimensions.controllertype) == "DaemonSet"
@@ -1989,11 +1978,11 @@ customMetrics
 | where name == "meMetricsProcessedCount" or name == "meMetricsReceivedCount"
 | extend pod=tostring(customDimensions.podname)
 | summarize value=max(value) by name, pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Total P95 CPU per Replica",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Total P95 CPU per Replica",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_cpu_usage_095" or name == "metricsextension_cpu_usage_095"
@@ -2001,11 +1990,11 @@ customMetrics
 | extend pod=tostring(customDimensions.podname)
 | summarize value=round(percentile(value, 100), 2) by pod, name, bin(timestamp, totimespan(Interval))
 | summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))`,
-    },
-    {
-      name: "Total P95 Memory GB per Replica",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Total P95 Memory GB per Replica",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name == "otelcollector_memory_rss_095" or name == "metricsextension_memory_rss_095"
@@ -2015,11 +2004,11 @@ customMetrics
 | summarize value=round(percentile(value, 100), 2) by pod, bin(timestamp, totimespan(Interval))
 | summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))
 `,
-    },
-    {
-      name: "Node Pools",
-      datasource: "AKS",
-      kql: `set best_effort=true;
+        },
+        {
+            name: "Node Pools",
+            datasource: "AKS",
+            kql: `set best_effort=true;
 AgentPoolSnapshot
 | where PreciseTimeStamp between (_startTime .. _endTime)
 | where cluster_id == AKSClusterID
@@ -2050,11 +2039,11 @@ AgentPoolSnapshot
 | extend scaleSetPriority = iff(scaleSetPriority == 'na', '', scaleSetPriority)
 | order by mode asc
 | project name, vmssName, mode, osType, vmSize, size, distro, provisioningState, createdTime`,
-    },
-    {
-      name: "System Nodepool Nodes Status",
-      datasource: "AKS CCP",
-      kql: `let InjectBase10_Temp = (T:(*)) {
+        },
+        {
+            name: "System Nodepool Nodes Status",
+            datasource: "AKS CCP",
+            kql: `let InjectBase10_Temp = (T:(*)) {
     let hextra_length = 6;
     let charList = "0123456789abcdefghijklmnopqrstuvwxyz";
     T
@@ -2146,11 +2135,11 @@ KubeAudit
     Nodepool = instance
     //VMId = vm_id
 `,
-    },
-    {
-      name: "HPA Status",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "HPA Status",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2167,11 +2156,11 @@ KubeAudit
 | summarize arg_max(PreciseTimeStamp, *) by hpaName
 | extend atLimit = currentReplicas >= maxReplicas
 | project PreciseTimeStamp, hpaName, minReplicas, maxReplicas, currentReplicas, desiredReplicas, atLimit`,
-    },
-    {
-      name: "Pod Resource Limits",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Pod Resource Limits",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2190,22 +2179,22 @@ KubeAudit
 | extend controllertype = iff(podname contains "node", "DaemonSet", "ReplicaSet")
 | summarize arg_max(PreciseTimeStamp, *) by controllertype
 | project controllertype, cpuReq, cpuLimit, memReq, memLimit`,
-    },
-    {
-      name: "Target Allocator Distribution",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Target Allocator Distribution",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name in ("target_allocator_opentelemetry_allocator_targets_per_collector", "target_allocator_opentelemetry_allocator_targets", "target_allocator_opentelemetry_allocator_collectors_allocatable")
 | summarize avgVal=round(avg(value),1), maxVal=round(max(value),1), lastVal=round(arg_max(timestamp, value),1) by name, bin(timestamp, totimespan(Interval))
 | project timestamp, metric=name, avgVal, maxVal
 | order by timestamp desc, metric asc`,
-    },
-    {
-      name: "Exporter Send Failures",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "Exporter Send Failures",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name in ("prometheus_otelcol_exporter_send_failed_metric_points", "prometheus_otelcol_receiver_refused_metric_points")
@@ -2214,11 +2203,11 @@ KubeAudit
 | where totalFailed > 0
 | project timestamp, metric=name, controllertype, totalFailed
 | order by timestamp desc`,
-    },
-    {
-      name: "ME Ingestion Success Rate",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "ME Ingestion Success Rate",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where name in ("meMetricsProcessedCount", "meMetricsSentToBlobCount", "meMetricsDroppedCount")
@@ -2231,11 +2220,11 @@ KubeAudit
 | extend successRate = iff(processed > 0, round(100.0 * (processed - dropped) / processed, 2), 100.0)
 | project timestamp, controllertype, processed, dropped, sentToBlob, successRate
 | order by timestamp desc`,
-    },
-    {
-      name: "Event Timeline (Config, Restarts, Errors)",
-      datasource: "PrometheusAppInsights",
-      kql: `let configChanges = traces
+        },
+        {
+            name: "Event Timeline (Config, Restarts, Errors)",
+            datasource: "PrometheusAppInsights",
+            kql: `let configChanges = traces
 | where timestamp > ago(_endTime - _startTime)
 | where customDimensions.cluster =~ _cluster
 | where message has "configmap" or message has "Config file provided" or message has "custom config" or message has "Settings configmap"
@@ -2261,11 +2250,11 @@ let errorSpikes = traces
 configChanges | union restartEvents | union errorSpikes
 | project timestamp, eventType, detail
 | order by timestamp asc`,
-    },
-    {
-      name: "DaemonSet Per-Pod Sample Rate Variance",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Per-Pod Sample Rate Variance",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where customDimensions.cluster =~ _cluster
 | where customDimensions.controllerType == "DaemonSet"
@@ -2274,11 +2263,11 @@ configChanges | union restartEvents | union errorSpikes
 | summarize avgSamplesPerMin = avg(value) by pod
 | summarize minRate = min(avgSamplesPerMin), maxRate = max(avgSamplesPerMin), avgRate = avg(avgSamplesPerMin), podCount = count(), variance = round((max(avgSamplesPerMin) - min(avgSamplesPerMin)) / avg(avgSamplesPerMin) * 100, 1)
 | extend highVariance = variance > 100`,
-    },
-    {
-      name: "DaemonSet Per-Pod Sample Rate Distribution",
-      datasource: "PrometheusAppInsights",
-      kql: `customMetrics
+        },
+        {
+            name: "DaemonSet Per-Pod Sample Rate Distribution",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
 | where customDimensions.cluster =~ _cluster
 | where customDimensions.controllerType == "DaemonSet"
@@ -2287,13 +2276,13 @@ configChanges | union restartEvents | union errorSpikes
 | summarize avgSamplesPerMin = round(avg(value), 0) by pod
 | order by avgSamplesPerMin desc
 | take 20`,
-    },
-  ],
-  pods: [
-    {
-      name: "Latest Pod Restarts",
-      datasource: "AKS",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+    ],
+    pods: [
+        {
+            name: "Latest Pod Restarts",
+            datasource: "AKS",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
@@ -2331,11 +2320,11 @@ cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
     finishedAt,
     exitCode,
     state`,
-    },
-    {
-      name: "Pod Restarts During Interval",
-      datasource: "AKS",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Pod Restarts During Interval",
+            datasource: "AKS",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
@@ -2374,11 +2363,11 @@ cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
     exitCode,
     state
 | summarize count() by pod, container, finishedAt, reason, message, bin(PreciseTimeStamp, totimespan(Interval))`,
-    },
-    {
-      name: "AKS Addon Pod Restart Count and Reason",
-      datasource: "AKS",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "AKS Addon Pod Restart Count and Reason",
+            datasource: "AKS",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
@@ -2424,11 +2413,11 @@ cluster('akshuba.centralus').database('AKSccplogs').KubeAudit
     exitCode,
     state
 | summarize count() by podName, container, reason, message, bin(finishedAt, totimespan(Interval))`,
-    },
-    {
-      name: "Pod Restart Detail by Pod",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Pod Restart Detail by Pod",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2448,11 +2437,11 @@ KubeAudit
 | summarize arg_max(PreciseTimeStamp, *) by podName
 | project PreciseTimeStamp, podName, controllertype, restartCount, ready, reason, exitCode
 | order by controllertype asc, restartCount desc`,
-    },
-    {
-      name: "DaemonSet Pod Count by Status",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "DaemonSet Pod Count by Status",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2465,11 +2454,11 @@ KubeAudit
 | extend phase = tostring(ro.status.phase)
 | summarize arg_max(PreciseTimeStamp, *) by podName
 | summarize Running=countif(phase == "Running"), Pending=countif(phase == "Pending"), Failed=countif(phase == "Failed"), Succeeded=countif(phase == "Succeeded"), Unknown=countif(phase != "Running" and phase != "Pending" and phase != "Failed" and phase != "Succeeded"), Total=count()`,
-    },
-    {
-      name: "Pod to Node Mapping",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Pod to Node Mapping",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2488,11 +2477,11 @@ KubeAudit
 | project PreciseTimeStamp, podName, controllertype, nodeName, phase
 | summarize podCount=count(), pods=make_list(podName) by controllertype, nodeName
 | order by controllertype asc, podCount desc`,
-    },
-    {
-      name: "System Pool Node Resources",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "System Pool Node Resources",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2513,11 +2502,11 @@ KubeAudit
 | extend capacity_memory = tostring(responseObject.status.capacity.memory)
 | extend allocatable_pods = tostring(responseObject.status.allocatable.pods)
 | project PreciseTimeStamp, node, nodepool, conditionType, conditionStatus, allocatable_memory, capacity_memory, allocatable_pods`,
-    },
-    {
-      name: "Node Status Timeline",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Node Status Timeline",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2533,11 +2522,11 @@ KubeAudit
 )
 | project PreciseTimeStamp, node, nodepool, readyStatus, reason, lastTransition
 | order by node asc, PreciseTimeStamp asc`,
-    },
-    {
-      name: "Pod Schedule Events",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Pod Schedule Events",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2555,11 +2544,11 @@ KubeAudit
 | extend phase = tostring(ro.status.phase)
 | project PreciseTimeStamp, verb, podName, nodeName, nodepool, phase
 | order by PreciseTimeStamp asc`,
-    },
-    {
-      name: "Cluster Autoscaler Events",
-      datasource: "AKS CCP",
-      kql: `let queryCcpNamespace = AKSClusterID;
+        },
+        {
+            name: "Cluster Autoscaler Events",
+            datasource: "AKS CCP",
+            kql: `let queryCcpNamespace = AKSClusterID;
 let queryFrom = _startTime;
 let queryTo = _endTime;
 KubeAudit
@@ -2576,13 +2565,13 @@ KubeAudit
 | extend involvedObject = tostring(parse_json(requestObject).involvedObject.name)
 | project PreciseTimeStamp, verb, eventReason, eventType, involvedObject, eventMessage
 | order by PreciseTimeStamp desc`,
-    },
-  ],
-  logs: [
-    {
-      name: "All ReplicaSet Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+    ],
+    logs: [
+        {
+            name: "All ReplicaSet Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend controllertype=tostring(customDimensions.controllertype)
@@ -2590,11 +2579,11 @@ KubeAudit
 | extend podname=tostring(customDimensions.podname)
 | project timestamp, podname, message
 | order by timestamp`,
-    },
-    {
-      name: "All Linux DaemonSet Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "All Linux DaemonSet Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend controllertype=tostring(customDimensions.controllertype)
@@ -2605,11 +2594,11 @@ KubeAudit
 | extend podname=tostring(customDimensions.podname)
 | project timestamp, podname, message
 | order by timestamp`,
-    },
-    {
-      name: "All Windows DaemonSet Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "All Windows DaemonSet Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | extend controllertype=tostring(customDimensions.controllertype)
@@ -2619,22 +2608,22 @@ KubeAudit
 | extend podname=tostring(customDimensions.podname)
 | project timestamp, podname, message
 | order by timestamp`,
-    },
-    {
-      name: "All ConfigReader Logs",
-      datasource: "PrometheusAppInsights",
-      kql: `traces
+        },
+        {
+            name: "All ConfigReader Logs",
+            datasource: "PrometheusAppInsights",
+            kql: `traces
 | where timestamp > ago(_endTime - _startTime)
 | where tostring(customDimensions.cluster) =~ _cluster
 | where customDimensions.tag == "prometheus.log.targetallocator.configreader"
 | project timestamp, message`,
-    },
-  ],
-  controlPlane: [
-    {
-      name: "Enabled",
-      datasource: "AKS",
-      kql: `let queryComponentFrom = _startTime;
+        },
+    ],
+    controlPlane: [
+        {
+            name: "Enabled",
+            datasource: "AKS",
+            kql: `let queryComponentFrom = _startTime;
 let queryComponentTo = _endTime;
 let queryClusterVersion = AKSClusterID;
 ControlPlaneWrapperSnapshot
@@ -2644,11 +2633,11 @@ ControlPlaneWrapperSnapshot
 | extend featureEnabledForCluster = featureProfile.subscriptionRegisteredFeatures contains "AzureMonitorMetricsControlPlanePreview"
 //| extend featureEnabledForCluster = iff(featureEnabledForCluster == "true", 1, 0)
 | summarize arg_max(PreciseTimeStamp, featureEnabledForCluster) by subscription`,
-    },
-    {
-      name: "Jobs Enabled",
-      datasource: "AKS CCP",
-      kql: `AMAMetricsConfigmapWatcher
+        },
+        {
+            name: "Jobs Enabled",
+            datasource: "AKS CCP",
+            kql: `AMAMetricsConfigmapWatcher
 | where PreciseTimeStamp > _startTime and PreciseTimeStamp < _endTime
 | where ccpNamespace == AKSClusterID
 | where configmap != "na"
@@ -2663,11 +2652,11 @@ on (
     | extend value = tostring(e[1])
 )
 | where name startswith "controlplane"`,
-    },
-    {
-      name: "Metrics KeepList",
-      datasource: "AKS CCP",
-      kql: `AMAMetricsConfigmapWatcher
+        },
+        {
+            name: "Metrics KeepList",
+            datasource: "AKS CCP",
+            kql: `AMAMetricsConfigmapWatcher
 | where PreciseTimeStamp > _startTime and PreciseTimeStamp < _endTime
 | where ccpNamespace == AKSClusterID
 | where configmap != "na"
@@ -2681,11 +2670,11 @@ on (
     | extend value = tostring(e[1])
 )
 | where name startswith "controlplane"`,
-    },
-    {
-      name: "Minimal Ingestion Profile Enabled",
-      datasource: "AKS CCP",
-      kql: `AMAMetricsConfigmapWatcher
+        },
+        {
+            name: "Minimal Ingestion Profile Enabled",
+            datasource: "AKS CCP",
+            kql: `AMAMetricsConfigmapWatcher
 | where PreciseTimeStamp > _startTime and PreciseTimeStamp < _endTime
 | where ccpNamespace == AKSClusterID
 | where configmap != "na"
@@ -2699,21 +2688,21 @@ on (
     | where name == "minimalingestionprofile"
     | extend value = tostring(e[1])
 )`,
-    },
-    {
-      name: "Configmap Watcher Logs",
-      datasource: "AKS CCP",
-      kql: `AMAMetricsConfigmapWatcher
+        },
+        {
+            name: "Configmap Watcher Logs",
+            datasource: "AKS CCP",
+            kql: `AMAMetricsConfigmapWatcher
 | where PreciseTimeStamp > _startTime and PreciseTimeStamp < _endTime
 | where ccpNamespace == AKSClusterID
 | where configmap != "na"
 | project PreciseTimeStamp, file, msg, configmap
 | order by PreciseTimeStamp`,
-    },
-    {
-      name: "Prometheus-Collector Stdout Logs",
-      datasource: "AKS CCP",
-      kql: `let queryComponentFrom = _startTime;
+        },
+        {
+            name: "Prometheus-Collector Stdout Logs",
+            datasource: "AKS CCP",
+            kql: `let queryComponentFrom = _startTime;
 let queryComponentTo = _endTime;
 let queryClusterVersion = AKSClusterID;
 let amametrics = union isfuzzy=true cluster('akshuba.centralus').database('AKSccplogs').AMAMetrics,
@@ -2732,22 +2721,22 @@ amametrics
 // union amametrics, configmap_watcher
 // | sort by PreciseTimeStamp desc
 // | take 100`,
-    },
-    {
-      name: "Container Restarts",
-      datasource: "AKS Infra",
-      kql: `let queryNamespace = AKSClusterID;
+        },
+        {
+            name: "Container Restarts",
+            datasource: "AKS Infra",
+            kql: `let queryNamespace = AKSClusterID;
 ProcessInfo
 | where PreciseTimeStamp between(_startTime.._endTime)
 | where PodNamespace == queryNamespace
 | where PodContainerName in ("configmap-watcher", "prometheus-collector")
 | where PodContainerRestartCount > 0
 | distinct PodName, PodContainerName, PodContainerStartedAt, PodContainerRestartCount, ImageRepoTags`,
-    },
-    {
-      name: "Max CPU Usage by Container",
-      datasource: "AKS Infra",
-      kql: `let queryNamespace = AKSClusterID;
+        },
+        {
+            name: "Max CPU Usage by Container",
+            datasource: "AKS Infra",
+            kql: `let queryNamespace = AKSClusterID;
 ProcessInfo
 | where PreciseTimeStamp between(_startTime.._endTime)
 | where PodNamespace == queryNamespace
@@ -2756,14 +2745,13 @@ ProcessInfo
 | summarize cpu=max(CPUUtil) by bin(TIMESTAMP, totimespan(Interval)), PodName, PodContainerName
 //| where PodContainerRestartCount > 0
 //| distinct PodName, PodContainerName, PodContainerStartedAt, PodContainerRestartCount, ImageRepoTags`,
-    },
-  ],
-
-  metricInsights: [
-    {
-      name: "Top Metrics by Time Series Count",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+    ],
+    metricInsights: [
+        {
+            name: "Top Metrics by Time Series Count",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2774,11 +2762,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     ['Dimensions']=Dimensions,
     ['Daily Time Series Count']=DailyTSAcrossAccounts
 | order by ['Daily Time Series Count'] desc`,
-    },
-    {
-      name: "Top Metrics by Sample Rate",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Top Metrics by Sample Rate",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2789,11 +2777,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     ['Dimensions']=Dimensions,
     ['Avg Sample Rate']=round(AvgEventRate, 0)
 | order by ['Avg Sample Rate'] desc`,
-    },
-    {
-      name: "Full Metric Volume Summary",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Full Metric Volume Summary",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2805,11 +2793,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     ['Daily Time Series Count']=DailyTSAcrossAccounts,
     ['Avg Sample Rate']=round(AvgEventRate, 0)
 | order by ['Daily Time Series Count'] desc`,
-    },
-    {
-      name: "Total Time Series and Events Summary",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Total Time Series and Events Summary",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2819,11 +2807,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     ['Total Metrics']=dcount(MetricName),
     ['Total Daily Time Series']=sum(DailyTSAcrossAccounts),
     ['Total Avg Sample Rate']=round(sum(AvgEventRate), 0)`,
-    },
-    {
-      name: "Top 20 Highest Cardinality Metrics",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Top 20 Highest Cardinality Metrics",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2836,11 +2824,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     by MetricName
 | order by ['Daily Time Series'] desc
 | take 20`,
-    },
-    {
-      name: "Metrics with High Dimension Cardinality",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Metrics with High Dimension Cardinality",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2853,11 +2841,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     by MetricName
 | where ['Unique Dimension Combos'] > 100
 | order by ['Unique Dimension Combos'] desc`,
-    },
-    {
-      name: "Volume by Metric Category",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "Volume by Metric Category",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2879,11 +2867,11 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
     ['Avg Sample Rate']=round(sum(AvgEventRate), 0)
     by category
 | order by ['Daily Time Series'] desc`,
-    },
-    {
-      name: "View All Metric Names",
-      datasource: "MetricInsights",
-      kql: `let _mdmAccount = mdmAccountID;
+        },
+        {
+            name: "View All Metric Names",
+            datasource: "MetricInsights",
+            kql: `let _mdmAccount = mdmAccountID;
 let _metric = dynamic(null);
 let _namespace = dynamic(['customdefault']);
 let _preaggDimensions = dynamic(null);
@@ -2891,57 +2879,41 @@ let _numOfDaysQueryLookBack = 180;
 GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
 | distinct MetricName
 | order by MetricName asc`,
-    },
-  ],
+        },
+    ],
 };
-
 /**
  * Replace dashboard parameters in a KQL query with actual values.
  */
-export function parameterizeQuery(
-  kql: string,
-  params: {
-    cluster: string;
-    timeRange?: string;
-    interval?: string;
-    mdmAccountId?: string;
-    aksClusterId?: string;
-    startTime?: string;
-    endTime?: string;
-  },
-): string {
-  const timeRange = params.timeRange || "24h";
-  const interval = params.interval || "6h";
-  let q = kql;
-
-  // Replace time parameters — use absolute datetimes when provided, else relative ago()
-  if (params.startTime && params.endTime) {
-    const start = `datetime("${params.startTime}")`;
-    const end = `datetime("${params.endTime}")`;
-    q = q.replace(/ago\(_endTime\s*-\s*_startTime\)/g, start);
-    q = q.replace(/_startTime/g, start);
-    q = q.replace(/_endTime/g, end);
-  } else {
-    q = q.replace(/ago\(_endTime\s*-\s*_startTime\)/g, `ago(${timeRange})`);
-    q = q.replace(/_startTime/g, `ago(${timeRange})`);
-    q = q.replace(/_endTime/g, "now()");
-  }
-
-  q = q.replace(/totimespan\(Interval\)/g, `totimespan(${interval})`);
-  q = q.replace(/\bInterval\b/g, `"${interval}"`);
-
-  // Replace cluster parameter
-  q = q.replace(/_cluster/g, `"${params.cluster}"`);
-
-  // Replace MDM account if provided
-  if (params.mdmAccountId) {
-    q = q.replace(/mdmAccountID/g, `"${params.mdmAccountId}"`);
-  }
-
-  // Replace AKS cluster ID if provided
-  if (params.aksClusterId) {
-    q = q.replace(/AKSClusterID/g, `"${params.aksClusterId}"`);
-  }
-
-  return q;
+export function parameterizeQuery(kql, params) {
+    const timeRange = params.timeRange || "24h";
+    const interval = params.interval || "6h";
+    let q = kql;
+    // Replace time parameters — use absolute datetimes when provided, else relative ago()
+    if (params.startTime && params.endTime) {
+        const start = `datetime("${params.startTime}")`;
+        const end = `datetime("${params.endTime}")`;
+        q = q.replace(/ago\(_endTime\s*-\s*_startTime\)/g, start);
+        q = q.replace(/_startTime/g, start);
+        q = q.replace(/_endTime/g, end);
+    }
+    else {
+        q = q.replace(/ago\(_endTime\s*-\s*_startTime\)/g, `ago(${timeRange})`);
+        q = q.replace(/_startTime/g, `ago(${timeRange})`);
+        q = q.replace(/_endTime/g, "now()");
+    }
+    q = q.replace(/totimespan\(Interval\)/g, `totimespan(${interval})`);
+    q = q.replace(/\bInterval\b/g, `"${interval}"`);
+    // Replace cluster parameter
+    q = q.replace(/_cluster/g, `"${params.cluster}"`);
+    // Replace MDM account if provided
+    if (params.mdmAccountId) {
+        q = q.replace(/mdmAccountID/g, `"${params.mdmAccountId}"`);
+    }
+    // Replace AKS cluster ID if provided
+    if (params.aksClusterId) {
+        q = q.replace(/AKSClusterID/g, `"${params.aksClusterId}"`);
+    }
+    return q;
 }
+//# sourceMappingURL=queries.js.map
