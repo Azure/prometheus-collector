@@ -275,6 +275,38 @@ When investigating an ICM, **always check the addon and component versions** as 
 - **Old addon version**: If the customer is running an old version (e.g. `6.20.x`), check if the issue was already fixed in a newer release before deep-diving
 - **ME version mismatch**: If `ME_VERSION` shows an unexpected version, it may indicate the container image wasn't properly rebuilt
 
+#### Deep-Diving into MetricsExtension (ME) Issues
+
+MetricsExtension is a closed-source C++ binary (owned by the Geneva Metrics team) that handles metric aggregation, batching, and ingestion into Geneva/MDM. It runs as a sidecar process inside the prometheus-collector container. When ME-specific issues arise (crashes, ingestion failures, throttling, queue backup, token errors), the TSG tools above may not be enough.
+
+**When to deep-dive into ME:**
+- `tsg_errors` → "MetricsExtension Errors" shows persistent `MetricsExtensionConsoleDebugLog` errors
+- `tsg_workload` → ME CPU/Memory is abnormally high but OtelCollector is fine
+- `tsg_errors` → "MDSD Errors" shows `AmcsTokenStore` or `MetricsExtensionService` failures
+- Liveness probe shows `MetricsExtension not running` or HTTP 503
+- `tsg_mdm_throttling` shows throttled/dropped events originating from ME pipeline
+- Customer sees metric gaps but OtelCollector is scraping successfully (ME ingestion failure)
+
+**Tools for ME investigation:**
+1. **`enghub-search`** — Search Engineering Hub for ME TSGs, onboarding guides, and known issues. Example queries:
+   - `enghub-search(query: "MetricsExtension crash")` — find ME crash TSGs
+   - `enghub-search(query: "MetricsExtension token adapter")` — find token/auth debugging
+   - `enghub-search(query: "Geneva Metrics ingestion failure")` — find ingestion pipeline docs
+   - `enghub-search(query: "MDSD MetricsExtension configuration")` — find config/setup docs
+2. **`enghub-fetch`** — Read full content of any Engineering Hub page found via search
+3. **`es-chat-es_ask`** / **`es-chat-es_search`** — Ask Engineering Systems chat for ME-specific questions or search across internal knowledge bases. Examples:
+   - `es_ask(question: "How does MetricsExtension handle token refresh failures?")` 
+   - `es_search(keywords: "MetricsExtension OOM memory leak", question: "What causes MetricsExtension memory leaks?")`
+4. **ME source code** — For detailed code-level investigation, the MetricsExtension ADO repository is at:
+   **https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension?version=GBmaster**
+   Use `ado-tracing-search_code` or browse the repo directly to understand ME behavior, error handling, config parsing, and ingestion pipeline internals
+
+**Key ME components to understand:**
+- **AmcsTokenStore** — manages authentication tokens from AMCS. Failures here mean ME can't authenticate to Geneva/MDM
+- **MetricsExtensionService** — main service entry point. If this fails to start, no metrics are ingested
+- **MStore** — the metric store/queue inside ME. `MStoreDroppedSamplesCount` and `MStoreActiveTimeSeriesCount` in MDM QoS indicate ME-side issues
+- **TokenConfig.json** — configuration file downloaded by MDSD from AMCS endpoints. If blocked by firewall, ME never initializes
+
 ---
 
 #### TSG: Pod Restarts and OOMKills
