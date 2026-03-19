@@ -1128,6 +1128,37 @@ customMetrics
 | order by Count desc`,
     },
     {
+      name: "Custom Config YAML Error Lines",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > _startTime
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "prom-config-validator" and message has "validation failed"
+| where message has "unmarshal"
+| extend controllertype=tostring(customDimensions.controllertype)
+| extend cleaned = replace_regex(message, @"\\x1b\\[[0-9;]*m", "")
+| extend errorLines = extract_all(@"line (\\d+): (field \\S+ not found in type \\S+)", cleaned)
+| mv-expand errorLines
+| project timestamp, controllertype, lineNum = tostring(errorLines[0]), errorMsg = tostring(errorLines[1])
+| distinct lineNum, errorMsg, controllertype
+| order by toint(lineNum) asc`,
+    },
+    {
+      name: "Custom Config OTel Loading Errors",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > _startTime
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "Cannot load configuration"
+| extend controllertype=tostring(customDimensions.controllertype)
+| extend podname=tostring(customDimensions.podname)
+| extend cleaned = replace_regex(message, @"\\x1b\\[[0-9;]*m", "")
+| extend idx = indexof(cleaned, "Cannot load configuration")
+| extend errorBlock = substring(cleaned, idx, 500)
+| summarize LastSeen=max(timestamp), Count=count() by errorBlock=substring(errorBlock, 0, 500), controllertype
+| order by Count desc`,
+    },
+    {
       name: "Custom Scrape Jobs from Startup Logs",
       datasource: "PrometheusAppInsights",
       kql: `traces

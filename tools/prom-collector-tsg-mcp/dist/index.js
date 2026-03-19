@@ -6,7 +6,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
 import { QUERIES, parameterizeQuery } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
-import { queryMdmThrottling } from "./mdm.js";
+import { queryMdmThrottling, queryScrapeTargetHealth } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
 const credential = new DefaultAzureCredential();
 const logsClient = new LogsQueryClient(credential);
@@ -497,7 +497,29 @@ server.tool("tsg_mdm_throttling", "Check Geneva MDM QoS metrics for account thro
         content: [{ type: "text", text }],
     };
 });
-server.tool("tsg_icm_page", "Scrape an ICM incident page via Edge browser CDP connection. Opens the incident in Edge (or finds an already-open tab) and extracts the page content including authored summary and discussion entries. Requires Edge running with --remote-debugging-port=9222 and Windows netsh port proxy on 9223. Use this to get ICM details not available via the ICM API (authored summary text, discussion content, ARM resource IDs mentioned in descriptions).", {
+// Tool: tsg_scrape_health
+server.tool("tsg_scrape_health", "Check scrape target health by querying the `up`, `scrape_samples_scraped`, and `scrape_samples_post_metric_relabeling` metrics from Geneva MDM. When called with a specific job, shows detailed per-bucket success/failure analysis and relabeling drop rate. When called without a job, probes all common scrape targets and returns a per-job summary table. Always requires a cluster name to filter to a specific cluster. Requires the Geneva MDM MCP server running on localhost:5050. Use the MDMAccountName from tsg_triage results.", {
+    monitoringAccount: z
+        .string()
+        .describe("Geneva MDM monitoring account name (from tsg_triage 'MDM Account ID' result), e.g. 'mac_0d8947c8-888e-497d-b762-3296a8cf265a'"),
+    job: z
+        .string()
+        .default("")
+        .describe("Scrape job name to check, e.g. 'kube-state-metrics', 'kubelet', 'node', 'cadvisor'. If omitted, probes all common jobs and shows a per-job summary."),
+    cluster: z
+        .string()
+        .describe("Cluster name (the 'cluster' label in MDM, typically the AKS cluster short name). Required because MDM accounts serve multiple clusters."),
+    timeRangeHours: z
+        .number()
+        .default(24)
+        .describe("Number of hours to look back (default: 24)"),
+}, async ({ monitoringAccount, job, cluster, timeRangeHours }) => {
+    const text = await queryScrapeTargetHealth(monitoringAccount, job, cluster, timeRangeHours);
+    return {
+        content: [{ type: "text", text }],
+    };
+});
+server.tool("tsg_icm_page", "Scrape an ICM incident page via Edge browser CDP connection. Works on both Windows (native) and WSL2. Opens the incident in Edge (or finds an already-open tab) and extracts the authored summary, discussion entries, and ARM resource IDs. On Windows, connects to localhost:9222. On WSL2, connects via port proxy on 9223. Requires Edge running with --remote-debugging-port=9222. Use this to get ICM details not available via the ICM API (authored summary text, discussion content, ARM resource IDs mentioned in descriptions).", {
     incidentId: z
         .number()
         .describe("The ICM incident ID to scrape, e.g. 749876123"),
