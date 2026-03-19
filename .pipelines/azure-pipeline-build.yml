@@ -2057,13 +2057,13 @@ extends:
         - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
-          #HELM_SEMVER: 6.26.0-ext-main-03-05-2026-701eb75f
-          HELM_SEMVER: 6.26.0-ext-t-shirt-sizing
+          HELM_SEMVER: 6.26.0-ext-main-03-05-2026-701eb75f-1
+          #HELM_SEMVER: 6.26.0-ext-t-shirt-sizing
           IMAGE_TAG: 6.26.0-main-03-05-2026-701eb75f
           IMAGE_TAG_WINDOWS: 6.26.0-main-03-05-2026-701eb75f-win
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          # AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-main-03-05-2026-701eb75f
-          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-t-shirt-sizing
+          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-main-03-05-2026-701eb75f-1
+          # AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-t-shirt-sizing
           #ARC_EXTENSION: false
           INCLUDE_DEPENDENT_CHARTS: true
           skipComponentGovernanceDetection: true
