@@ -16,7 +16,7 @@ variables:
 - name: HELM_CHART_NAME
   value: 'prometheus-collector'
 - name: ARC_HELM_CHART_NAME
-  value: 'ama-metrics'
+  value: 'ama-metrics-arc'
 - name: ACR_REGISTRY
   value: 'containerinsightsprod.azurecr.io'
 - name: ACR_REPOSITORY
@@ -148,7 +148,7 @@ extends:
         - bash: |
             cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics -r
+            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
             export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
             export HELM_SEMVER=$SETUP_SEMVER
@@ -159,8 +159,8 @@ extends:
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
             export ARC_EXTENSION=true
             export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-            envsubst < ama-metrics/Chart-template.yaml > ama-metrics/Chart.yaml && envsubst < ama-metrics/values-template.yaml > ama-metrics/values.yaml
-            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics
+            envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
+            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
 
             cd $(Build.ArtifactStagingDirectory)
             cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
@@ -1011,7 +1011,7 @@ extends:
                         "Releasetrains": [
                             "pipeline"
                         ],
-                        "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics",
+                        "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
                         "ExtensionUpdateFrequencyInMinutes": 5,
                         "IsCustomerHidden": true,
                         "ReadyforRollout": true,
