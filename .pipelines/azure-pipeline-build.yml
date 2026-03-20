@@ -4,6 +4,7 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
+    - rashmi/fix-build-endpoints
 pr:
   autoCancel: true
   branches:
@@ -873,6 +874,7 @@ extends:
           LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
           LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
+          ob_git_networkisolation_endpoints: 'ghcr.io,public.ecr.aws'
         templateContext:
           outputs:
           - output: pipelineArtifact
@@ -1090,6 +1092,7 @@ extends:
         variables:
           LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
+          ob_git_networkisolation_endpoints: 'ghcr.io,public.ecr.aws'
         templateContext:
           outputs:
           - output: pipelineArtifact
@@ -1370,6 +1373,7 @@ extends:
           TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
+          ob_git_networkisolation_endpoints: 'ghcr.io,public.ecr.aws'
         steps:
         - checkout: self
           persistCredentials: true
@@ -1536,6 +1540,7 @@ extends:
           LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
+          ob_git_networkisolation_endpoints: 'ghcr.io,public.ecr.aws'
         steps:
         - bash: |
             set -e
