@@ -9,6 +9,7 @@ import { QUERIES, parameterizeQuery, type QueryCategory } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
 import { queryMdmThrottling, queryScrapeTargetHealth } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
+import { writeFileSync } from "node:fs";
 import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
@@ -395,6 +396,39 @@ function formatResults(results: QueryResult[]): string {
   return parts.join("\n");
 }
 
+/**
+ * Write query result rows to a file as CSV or JSON.
+ * Returns the file path and row count written.
+ */
+function writeResultsToFile(
+  data: Record<string, unknown>[],
+  filePath: string,
+  format: "csv" | "json" = "csv"
+): { path: string; rows: number } {
+  if (format === "json") {
+    writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } else {
+    if (data.length === 0) {
+      writeFileSync(filePath, "", "utf-8");
+      return { path: filePath, rows: 0 };
+    }
+    const columns = Object.keys(data[0]);
+    const header = columns.map((c) => `"${c}"`).join(",");
+    const rows = data.map((row) =>
+      columns
+        .map((c) => {
+          const v = row[c];
+          if (v === null || v === undefined) return "";
+          const s = String(v).replace(/"/g, '""');
+          return `"${s}"`;
+        })
+        .join(",")
+    );
+    writeFileSync(filePath, [header, ...rows].join("\n"), "utf-8");
+  }
+  return { path: filePath, rows: data.length };
+}
+
 // Create the MCP server
 const server = new McpServer({
   name: "prom-collector-tsg",
@@ -565,7 +599,7 @@ server.tool(
 // Tool: tsg_query
 server.tool(
   "tsg_query",
-  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities.",
+  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.",
   {
     datasource: z
       .enum([
@@ -592,8 +626,25 @@ server.tool(
       .describe(
         "Time range for App Insights queries, e.g. 1h, 6h, 24h, 7d. Default: 24h"
       ),
+    outputFile: z
+      .string()
+      .optional()
+      .describe(
+        "Optional file path to write ALL results (no truncation). Supports .csv and .json extensions. Example: /tmp/results.csv"
+      ),
+    outputFormat: z
+      .enum(["csv", "json"])
+      .optional()
+      .default("csv")
+      .describe("Output format when outputFile is specified. Default: csv"),
+    maxRows: z
+      .number()
+      .optional()
+      .describe(
+        "Maximum rows to return inline (default: 100). Use outputFile for unlimited results."
+      ),
   },
-  async ({ datasource, kql, cluster, timeRange }) => {
+  async ({ datasource, kql, cluster, timeRange, outputFile, outputFormat, maxRows }) => {
     const ds = DATA_SOURCES[datasource];
     if (!ds) {
       return {
@@ -615,18 +666,44 @@ server.tool(
         data = await runKustoQuery(ds.clusterUri, ds.database, resolvedKql);
       }
 
-      const truncated = data.length > 100;
+      // Write to file if requested (all rows, no truncation)
+      if (outputFile) {
+        const fmt = outputFormat || (outputFile.endsWith(".json") ? "json" : "csv");
+        const written = writeResultsToFile(data, outputFile, fmt);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ ${written.rows} rows written to \`${written.path}\` (${fmt} format)\n\nPreview (first 5 rows):\n\n${formatResults([{
+                name: "Custom Query",
+                datasource,
+                status: "success",
+                data: data.slice(0, 5),
+                rowCount: data.length,
+              }])}`,
+            },
+          ],
+        };
+      }
+
+      const limit = maxRows || 100;
+      const truncated = data.length > limit;
       const result: QueryResult = {
         name: "Custom Query",
         datasource,
         status: "success",
-        data: data.slice(0, 100),
+        data: data.slice(0, limit),
         rowCount: data.length,
         truncated,
       };
 
+      let text = formatResults([result]);
+      if (truncated) {
+        text += `\n💡 **Tip:** To get all ${data.length} rows, re-run with \`outputFile: "/tmp/results.csv"\``;
+      }
+
       return {
-        content: [{ type: "text", text: formatResults([result]) }],
+        content: [{ type: "text", text }],
       };
     } catch (err) {
       return {
@@ -761,6 +838,82 @@ server.tool(
     return {
       content: [{ type: "text", text }],
     };
+  }
+);
+
+// Tool: tsg_auth_check
+server.tool(
+  "tsg_auth_check",
+  "Validate credentials and connectivity to all data sources before running queries. Tests Azure credential acquisition and a lightweight query against each data source. Run this first if you suspect auth or VPN issues.",
+  {},
+  async () => {
+    const results: string[] = ["## Auth & Connectivity Check\n"];
+
+    // 1. Test Azure credential
+    try {
+      const token = await credential.getToken("https://api.loganalytics.io/.default");
+      if (token) {
+        results.push("✅ **Azure credential**: Token acquired successfully");
+        results.push(`   Expires: ${new Date(token.expiresOnTimestamp).toISOString()}`);
+      }
+    } catch (err) {
+      results.push(`❌ **Azure credential**: Failed — ${err instanceof Error ? err.message : String(err)}`);
+      results.push("   → Run `az login` or check DefaultAzureCredential configuration");
+      return { content: [{ type: "text", text: results.join("\n") }] };
+    }
+
+    // 2. Test App Insights
+    try {
+      await runAppInsightsQuery("traces | take 1", "1h");
+      results.push("✅ **PrometheusAppInsights**: Connected");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push(`❌ **PrometheusAppInsights**: ${msg.slice(0, 200)}`);
+      if (msg.includes("403")) {
+        results.push("   → Check JIT access or App Insights RBAC permissions");
+      } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED")) {
+        results.push("   → Check VPN connection (need corpnet access)");
+      }
+    }
+
+    // 3. Test each Kusto data source with a lightweight query
+    const kustoSources = ["AKS", "MetricInsights", "AMWInfo"] as const;
+    for (const dsName of kustoSources) {
+      const ds = DATA_SOURCES[dsName];
+      if (!ds) continue;
+      try {
+        await runKustoQuery(ds.clusterUri, ds.database, ".show database schema | take 1");
+        results.push(`✅ **${dsName}** (${ds.clusterUri}): Connected`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push(`❌ **${dsName}** (${ds.clusterUri}): ${msg.slice(0, 200)}`);
+        if (msg.includes("403")) {
+          results.push(`   → Need Reader access to ${ds.database} on ${ds.clusterUri}`);
+        } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED")) {
+          results.push("   → Check VPN connection (need corpnet access)");
+        }
+      }
+    }
+
+    // 4. Test MDM MCP server
+    try {
+      const mdmResp = await fetch("http://localhost:5050/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1.0" } } }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (mdmResp.ok) {
+        results.push("✅ **Geneva MDM MCP** (localhost:5050): Running");
+      } else {
+        results.push(`⚠️ **Geneva MDM MCP** (localhost:5050): HTTP ${mdmResp.status}`);
+      }
+    } catch {
+      results.push("⚠️ **Geneva MDM MCP** (localhost:5050): Not running (optional — needed for tsg_mdm_throttling)");
+    }
+
+    results.push("\n---\nIf any data source shows ❌, fix those issues before running tsg_triage.");
+    return { content: [{ type: "text", text: results.join("\n") }] };
   }
 );
 

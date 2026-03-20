@@ -7,13 +7,21 @@ version checking, MetricsExtension deep-dives, and escalation procedures.
 
 #### Using `tsg_query` for Ad-Hoc Investigation
 
-Use `tsg_query` when the built-in tools don't cover your specific symptom. It now accepts optional `cluster` and `timeRange` parameters:
+Use `tsg_query` when the built-in tools don't cover your specific symptom. It accepts optional `cluster`, `timeRange`, `outputFile`, `outputFormat`, and `maxRows` parameters:
 
 ```
 tsg_query(datasource: "PrometheusAppInsights", kql: "traces | where ...", cluster: "/subscriptions/.../managedClusters/name", timeRange: "7d")
 ```
 
 When `cluster` is provided, any `_cluster` placeholder in the KQL is auto-replaced with the cluster ARM ID.
+
+**Writing full results to a file** (bypasses the default 100-row truncation):
+```
+tsg_query(datasource: "PrometheusAppInsights", kql: "traces | where ...", outputFile: "/tmp/results.csv")
+tsg_query(datasource: "AKS", kql: "...", outputFile: "/tmp/data.json", outputFormat: "json")
+```
+- `outputFile`: absolute path to write results. Extension determines format (`.csv` or `.json`), or use `outputFormat` to override
+- `maxRows`: override inline truncation limit (default 100) without writing to file
 
 **Common KQL patterns:**
 - **Find config errors**: `traces | where tostring(customDimensions.cluster) =~ _cluster | where message has "unmarshal" | ...`

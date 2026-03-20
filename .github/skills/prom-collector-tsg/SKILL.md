@@ -139,10 +139,11 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 | `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, and cluster autoscaler events.** |
 | `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
 | `tsg_control_plane` | Control plane metrics config and health |
-| `tsg_query` | Run arbitrary KQL against any data source. Accepts optional `cluster` (ARM ID) and `timeRange` params — when `cluster` is provided, `_cluster` in KQL is auto-replaced |
+| `tsg_query` | Run arbitrary KQL against any data source. Accepts optional `cluster`, `timeRange`, `outputFile` (write ALL rows to CSV/JSON), `outputFormat`, and `maxRows` params |
 | `tsg_dashboard_link` | Get a link to the ADX dashboard pre-filtered for the cluster |
 | `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
 | `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_auth_check` | Validate credentials and connectivity to all data sources before running queries. Tests Azure credential, App Insights, Kusto clusters, and MDM MCP server. **Run this first if queries fail with 403 or connection errors.** |
 | `tsg_icm_page` | Scrape ICM incident page via Edge CDP. Works on both **Windows** (localhost:9222) and **WSL2** (port proxy on 9223). Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222`. On WSL2, also needs Windows port proxy on 9223. |
 
 All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
