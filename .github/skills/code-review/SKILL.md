@@ -137,6 +137,34 @@ security, operational risk. Do NOT comment on style, formatting, or trivial nami
 | `RELEASENOTES.md` | Image tag, changes documented |
 | `tools/prom-collector-tsg-mcp/` | `dist/` rebuilt if `src/` changed |
 
+## PR Template Checklist Verification
+
+Every PR should be checked against the [PR template](/.github/pull_request_template.md). When reviewing, verify:
+
+### New Feature Checklist (for feature PRs)
+- [ ] **Telemetry listed** — PR description should list what telemetry was added (env vars, AppInsights events, process_stats dimensions)
+- [ ] **One-pager linked** — significant features should link to a design one-pager or spec
+- [ ] **Release tasks listed** — 3P docs updates, AKS RP chart changes, extension team coordination, customer-facing docs
+- [ ] **Scale/perf results attached** — performance testing results (ingestion volume, resource usage) should be in the PR description or linked
+
+### Tests Checklist (for code changes)
+- [ ] **Ginkgo E2E tests run** — author should confirm which labels were tested:
+  - `operator`, `windows`, `arm64`, `arc-extension`, `fips`
+  - Not all labels apply to every PR — but the relevant ones should be checked
+- [ ] **New tests added** — features need feature tests, fixes need regression tests
+- [ ] **New scrape job** → added to `otelcollector/test/test-cluster-yamls/` in correct configmap or as CR
+- [ ] **New test label** → all four places updated:
+  1. String constant in `otelcollector/test/utils/constants.go`
+  2. Label + description in `otelcollector/test/README.md`
+  3. Added to the PR checklist template itself (`.github/pull_request_template.md`)
+  4. Added to `otelcollector/test/testkube/testkube-test-crs.yaml`
+- [ ] **API permissions** — new tests needing API server access must update `otelcollector/test/testkube/api-server-permissions.yaml`
+- [ ] **New test suite** (new folder under `/tests`) → included in `testkube-test-crs.yaml`
+
+### PR Metadata
+- [ ] **Title follows conventional commits** — `feat:`, `fix:`, `docs:`, `chore:`, `build:`, `ci:`, `refactor:`, `test:`
+- [ ] **Description is substantive** — not just the template with empty checkboxes. For new default targets, the description should include collected metrics, labels, and ingestion volume screenshots
+
 ## Review Output Format
 
 Present findings as:
