@@ -1,0 +1,18 @@
+basePath: "."
+
+extensions:
+  ama-metrics:
+    name: "ama-metrics"
+    chartPath: "../azure-monitor-metrics-addon"
+    fixturesPath: "./fixtures/ama-metrics"
+    templatesPath: "./fixtures/ama-metrics/templates"
+    snapshotsPath: "./snapshots/ama-metrics"
+    variableSetsPath: "./fixtures/ama-metrics/variables"
+
+globalSettings:
+  defaultHelmVersion: "3.9.0"
+  snapshotSettings:
+    stripTimestamps: true
+    normalizeAPIVersions: false
+    stripComments: true
+    sortManifests: true

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: azure-monitor-metrics-addon
+description: A Helm chart for collecting Prometheus metrics in Kubernetes clusters and ingesting to Azure Metrics Account(s)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,9 @@
+name: automatic-cluster
+description: Automatic cluster kind - enables DaemonSet t-shirt sizing with multiple DaemonSets per node size
+variables:
+  clusterKind: "automatic"
+  enableDaemonSetSizing: true
+  dsCPULimitLinux: "200m"
+  dsMemoryLimitLinux: "1Gi"
+  dsCPURequestLinux: "50m"
+  dsMemoryRequestLinux: "150Mi"

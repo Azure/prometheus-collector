@@ -1,0 +1,12 @@
+name: daemonset-sizing-template
+description: Template for testing DaemonSet t-shirt sizing behavior based on cluster kind
+template:
+  Azure:
+    Cluster:
+      Kind: "{{.clusterKind}}"
+  AzureMonitorMetrics:
+    enableDaemonSetSizing: "{{.enableDaemonSetSizing}}"
+    DsCPULimitLinux: "{{.dsCPULimitLinux}}"
+    DsMemoryLimitLinux: "{{.dsMemoryLimitLinux}}"
+    DsCPURequestLinux: "{{.dsCPURequestLinux}}"
+    DsMemoryRequestLinux: "{{.dsMemoryRequestLinux}}"

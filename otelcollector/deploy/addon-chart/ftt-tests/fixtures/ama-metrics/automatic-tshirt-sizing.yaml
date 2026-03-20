@@ -1,0 +1,12 @@
+name: automatic-cluster
+description: Automatic cluster kind - enables DaemonSet t-shirt sizing with multiple DaemonSets per node size
+values:
+    Azure:
+        Cluster:
+            Kind: automatic
+    AzureMonitorMetrics:
+        DsCPULimitLinux: 200m
+        DsCPURequestLinux: 50m
+        DsMemoryLimitLinux: 1Gi
+        DsMemoryRequestLinux: 150Mi
+        enableDaemonSetSizing: "true"
