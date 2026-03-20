@@ -195,21 +195,45 @@ Based on triage results, identify the primary symptom category and follow the co
 
 ### Step 4: Summarize Findings
 
-See `reference.md` → "Summarize Findings" for the full template. Key points:
+Present findings as:
 1. **Cluster Info** — version, region, state
-2. **Root Cause** — linked to TSG category
-3. **Errors Found** — categories with counts
-4. **Recommended Actions** — from relevant TSG
-5. **Escalation Path** — see `reference.md` → "Escalation Contacts"
-6. **Dashboard Link** — `https://dataexplorer.azure.com/dashboards/94da59c1-df12-4134-96bb-82c6b32e6199?p-_cluster=v-{CLUSTER_ARM_ID_URL_ENCODED}`
-7. **Reference Docs** — search learn.microsoft.com for the specific page (not just overview)
+2. **Root Cause** — what the queries revealed, linked to TSG category
+3. **Errors Found** — list of error categories with counts
+4. **Configuration Issues** — any misconfigurations detected
+5. **Resource Health** — CPU/memory/queue status
+6. **Recommended Actions** — specific steps from the relevant TSG
+7. **Escalation Path** — if issue requires another team (see Escalation Contacts below)
+8. **Dashboard Link** — provide the direct link:
+   `https://dataexplorer.azure.com/dashboards/94da59c1-df12-4134-96bb-82c6b32e6199?p-_cluster=v-{CLUSTER_ARM_ID_URL_ENCODED}`
+9. **Reference Documentation** — search the learn.microsoft.com doc trees below for the most relevant page based on the customer's specific issue. Use `web_search` or `web_fetch` to find the right sub-page (e.g., custom scrape config, remote write, troubleshooting). Do NOT just link the overview — find and link the specific doc page that addresses the customer's problem:
+   - TOC root: [Azure Managed Prometheus](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/prometheus-metrics-overview) — covers configuration, collection, scrape configs, remote write
+   - TOC root: [Kubernetes monitoring](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-overview) — covers AKS addon setup, troubleshooting, managed Grafana
 
 ### Step 5: Improve the Tooling
 
-After each investigation, add useful ad-hoc KQL queries to the MCP server:
-1. Add query to `tools/prom-collector-tsg-mcp/src/queries.ts`
-2. Wire into tool in `tools/prom-collector-tsg-mcp/src/index.ts`
-3. Rebuild: `cd tools/prom-collector-tsg-mcp && npx tsc`
+After each investigation, if you wrote any **ad-hoc KQL queries via `tsg_query`** that were useful for diagnosis, **add them to the MCP server** so future investigations benefit:
+
+1. Identify which ad-hoc queries produced actionable results during the investigation
+2. Add the query to the appropriate category in `tools/prom-collector-tsg-mcp/src/queries.ts`
+3. Wire it into the relevant tool in `tools/prom-collector-tsg-mcp/src/index.ts`
+4. Rebuild: `cd tools/prom-collector-tsg-mcp && npx tsc`
+
+This ensures the tooling continuously improves — every investigation makes the next one faster.
+
+## Escalation Contacts
+
+| Issue/Area | ICM Team |
+|------------|----------|
+| AMW Quota increases | Geneva Monitoring/MDM-Support-Manageability-Tier2 |
+| Query throttling (429 in Grafana) | Azure Monitor Essentials/Sev3 and 4 CRI – Metrics |
+| Remote-write errors (500, 4xx) | Geneva Monitoring/Ingestion Gateway Support - Tier 2 |
+| ARC Kubernetes ingestion | Container Insights/AzureManagedPrometheusAgent |
+| Prometheus Recording rules & alerts | Azure Log Search Alerts/Prometheus Alerts |
+| Grafana service issues | Azure Managed Grafana/Triage |
+| AMW RP issues | Azure Monitor Control Service/Triage |
+| AMCS (DCR/DCE/DCRA) | Azure Monitor Control Service/Triage |
+| MDM Store | Geneva Monitoring/MDM-Support-Core-IngestionAndStorage-Tier2 |
+| AKS addon/ARM/Policy/Bicep/Terraform | Container Insights/AzureManagedPrometheusAgent |
 
 ---
 
@@ -263,4 +287,4 @@ After each investigation, add useful ad-hoc KQL queries to the MCP server:
 | File | Contents |
 |------|----------|
 | `tsgs.md` | 15 symptom-specific TSGs + Known Issues & FAQ |
-| `reference.md` | tsg_query guide, data sources, MDM/CCP resolution, versions, ME deep-dive, escalation contacts, customer docs |
+| `reference.md` | tsg_query guide, data sources, MDM/CCP resolution, versions, ME deep-dive, customer docs |
