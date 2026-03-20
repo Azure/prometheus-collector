@@ -5,8 +5,9 @@
 
 version: 2
 updates:
+  # ─── Core collector modules ───────────────────────────────────────────
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/prom-config-validator-builder" # prom-config tool package manifests
+    directory: "/otelcollector/opentelemetry-collector-builder"
     schedule:
       interval: "daily"
       time: "10:00"
@@ -16,8 +17,12 @@ updates:
     - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/opentelemetry-collector-builder" # otel collector package manifests
+    directory: "/otelcollector/prom-config-validator-builder"
     schedule:
       interval: "daily"
       time: "10:00"
@@ -27,16 +32,176 @@ updates:
     - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/fluent-bit/src" # out_appinsights package manifests
+    directory: "/otelcollector/prometheusreceiver"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector*"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/otel-allocator"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector*"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/prometheus-ui"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector*"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── Shared libraries ─────────────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/shared"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector*"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/shared/configmap/ccp"
     schedule:
       interval: "daily"
       time: "10:00"
       timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
   - package-ecosystem: "gomod"
-    directory: "/mixins/kubernetes/scripts" # ignore all here as this is promtool that we use to validate rules, and we don't ship the tool.
+    directory: "/otelcollector/shared/configmap/mp"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── Configuration reader / cert modules ───────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/configuration-reader-builder"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/configuration-reader-builder/certcreator"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/configuration-reader-builder/certgenerator"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/configuration-reader-builder/certoperator"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── Root otelcollector module ─────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector*"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── Fluent-bit plugin ─────────────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/fluent-bit/src"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── Non-shipped tools (ignore all deps) ───────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/mixins/kubernetes/scripts" # promtool - not shipped
     schedule:
       interval: "daily"
       time: "10:00"
@@ -45,16 +210,22 @@ updates:
       - dependency-name: "*"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
-  - package-ecosystem: "github-actions"
-    directory: "/"
+
+  - package-ecosystem: "gomod"
+    directory: "/internal/referenceapp/golang" # reference app - not shipped
     schedule:
       interval: "daily"
       time: "10:00"
       timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
-  - package-ecosystem: "gomod"
-    directory: "/internal/referenceapp/golang" # reference app package manifests
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+
+  # ─── GitHub Actions ────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "daily"
       time: "10:00"

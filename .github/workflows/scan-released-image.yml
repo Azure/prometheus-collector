@@ -3,16 +3,42 @@ on:
   schedule:
   # At the end of every day
   - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Optional: specific image tag to scan (e.g. 6.22.0-main-09-26-2025-179fc750). If empty, the latest tag is fetched from MCR.'
+        required: false
+        default: ''
 jobs:
   scan-image:
     runs-on: ubuntu-latest
     steps:
-      - name: Run-trivy-scanner-on-last-released-docker-image
+      - uses: actions/checkout@v5
+
+      - name: Get latest released image tag
+        id: get-tag
+        run: |
+          INPUT_TAG="${{ github.event.inputs.image_tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            echo "Using provided image tag: $INPUT_TAG"
+            echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "Fetching latest image tag from MCR..."
+            TAGS=$(curl -s "https://mcr.microsoft.com/v2/azuremonitor/containerinsights/ciprod/prometheus-collector/images/tags/list" | jq -r '.tags[]' | sort -V | tail -1)
+            if [ -z "$TAGS" ]; then
+              echo "::error::Failed to fetch latest image tag from MCR"
+              exit 1
+            fi
+            echo "Latest image tag: $TAGS"
+            echo "tag=$TAGS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Trivy scanner on released image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.0.0-main-09-15-2022-c5d54419"
+          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:${{ steps.get-tag.outputs.tag }}"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
           exit-code: '1'
-          timeout: '5m0s'
+          timeout: '10m0s'
