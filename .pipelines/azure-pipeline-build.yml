@@ -178,7 +178,7 @@ extends:
         - bash: |
             cd .pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-extension -r
+            cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
             export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
             export HELM_SEMVER=$SETUP_SEMVER
@@ -191,8 +191,8 @@ extends:
             export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
             export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
             export ARC_REGION="westcentralus"
-            envsubst < ama-metrics-extension/Chart-template.yaml > ama-metrics-extension/Chart.yaml && envsubst < ama-metrics-extension/values-template.yaml > ama-metrics-extension/values.yaml
-            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-extension
+            envsubst < ama-metrics/Chart-template.yaml > ama-metrics/Chart.yaml && envsubst < ama-metrics/values-template.yaml > ama-metrics/values.yaml
+            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics
             cd $(Build.ArtifactStagingDirectory)
             cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
             export HELM_CHART_NAME="ama-metrics"
@@ -211,11 +211,11 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            # Lint ama-metrics-extension chart (AKS ARC extension)
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics-extension
+            # Lint ama-metrics chart (AKS ARC extension)
+            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts/ama-metrics
             helm lint .
             if [ $? -ne 0 ]; then
-              echo "Error: Helm lint failed for ama-metrics-extension chart"
+              echo "Error: Helm lint failed for ama-metrics chart"
               exit 1
             fi
             
@@ -2057,12 +2057,12 @@ extends:
         - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
-          HELM_SEMVER: 6.26.0-ext-main-03-05-2026-701eb75f-1
+          HELM_SEMVER: 6.26.0-ext-main-03-05-2026-701eb75f-2
           #HELM_SEMVER: 6.26.0-ext-t-shirt-sizing
           IMAGE_TAG: 6.26.0-main-03-05-2026-701eb75f
           IMAGE_TAG_WINDOWS: 6.26.0-main-03-05-2026-701eb75f-win
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-main-03-05-2026-701eb75f-1
+          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-main-03-05-2026-701eb75f-2
           # AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-t-shirt-sizing
           #ARC_EXTENSION: false
           INCLUDE_DEPENDENT_CHARTS: true
