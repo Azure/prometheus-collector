@@ -199,6 +199,10 @@ spec:
             - name: MOUNT_UBUNTU_CERTS
               value: "{{ $arcExtensionSettings.mountUbuntuCerts }}"
             {{- end }}
+            - name: AMCS_CLIENT_INSTALL_ID_OVERRIDE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           securityContext:
             privileged: false
             capabilities:

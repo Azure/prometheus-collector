@@ -7,7 +7,7 @@ metadata:
     component: ama-metrics-operator-targets
     kubernetes.azure.com/managedby: aks
     app.kubernetes.io/name: ama-metrics-operator-targets
-    app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}
+    #app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}
     app.kubernetes.io/part-of: azure-monitor-metrics-addon
     app.kubernetes.io/component: ama-metrics-operator-targets-deployment
   name: ama-metrics-operator-targets
