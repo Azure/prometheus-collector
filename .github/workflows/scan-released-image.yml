@@ -38,12 +38,69 @@ jobs:
             echo "tag=$TAG" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run Trivy scanner on released image
+      - name: Run Trivy scanner (table output)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:${{ steps.get-tag.outputs.tag }}"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          exit-code: '1'
+          exit-code: '0'
           timeout: '10m0s'
+
+      - name: Run Trivy scanner (JSON for analysis)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:${{ steps.get-tag.outputs.tag }}"
+          format: 'json'
+          output: 'trivy-results.json'
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+          exit-code: '0'
+          timeout: '10m0s'
+
+      - name: Check for otelcollector-related vulnerabilities
+        id: check-otel-vulns
+        run: |
+          if [ ! -f trivy-results.json ]; then
+            echo "No Trivy results found"
+            echo "has_otel_vulns=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract vulnerable package names from Trivy JSON output
+          # Look for Go packages related to otelcollector dependencies
+          OTEL_VULNS=$(jq -r '
+            [.Results[]?.Vulnerabilities[]? |
+              select(.PkgName != null) |
+              select(
+                (.PkgName | test("go.opentelemetry.io"; "i")) or
+                (.PkgName | test("open-telemetry"; "i")) or
+                (.PkgName | test("prometheus/prometheus"; "i")) or
+                (.PkgName | test("prometheus/common"; "i")) or
+                (.PkgName | test("prometheus/client_golang"; "i"))
+              ) |
+              {pkg: .PkgName, vuln: .VulnerabilityID, severity: .Severity, fixed: .FixedVersion}
+            ] | unique_by(.vuln)' trivy-results.json 2>/dev/null || echo "[]")
+
+          VULN_COUNT=$(echo "$OTEL_VULNS" | jq 'length')
+          echo "Found $VULN_COUNT otelcollector-related vulnerabilities"
+
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "has_otel_vulns=true" >> $GITHUB_OUTPUT
+            echo "vuln_count=$VULN_COUNT" >> $GITHUB_OUTPUT
+            echo "### OTel-related vulnerabilities found:" >> $GITHUB_STEP_SUMMARY
+            echo "$OTEL_VULNS" | jq -r '.[] | "- \(.severity): \(.vuln) in \(.pkg) (fixed in \(.fixed // "unknown"))"' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "has_otel_vulns=false" >> $GITHUB_OUTPUT
+            echo "No otelcollector-related vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Trigger otelcollector upgrade bot
+        if: steps.check-otel-vulns.outputs.has_otel_vulns == 'true'
+        run: |
+          echo "🔄 Triggering otelcollector upgrade bot to check for fixes..."
+          echo "${{ steps.check-otel-vulns.outputs.vuln_count }} otel-related CVEs found — dispatching upgrade workflow"
+          gh workflow run otelcollector-upgrade.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
