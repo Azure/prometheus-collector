@@ -187,16 +187,15 @@ Present findings as:
 
 Only include sections that have items. If everything looks good, just say ✅ with a brief summary.
 
+**Important: Do NOT attribute conventions to specific people** (e.g. "per Rashmi's feedback" or "rashmichandrashekar always asks for…"). Present findings as team conventions or repo standards. Reference PR numbers for traceability if needed, but never names.
+
 ## Team Context
 
-- **Primary reviewers**: rashmichandrashekar (Rashmi, team lead), vishiy (Sunil), bragi92 (Kaveesh), gracewehner (Grace)
-- **Regular contributors**: surajssd (Suraj), suyadav1 (Sunil Y.), zanejohnson-azure (Zane), joby-thomas, rakechill, shlokshah-dev
-- **External teams**: GreyCat / ME team (MetricsExtension), AKS RP / extension team (Pradeep/Rutvij), davidkydd / sgeannina (CCP team)
-- **Review style**: The team asks "why?" questions to understand intent, requests test evidence, asks for telemetry additions, and flags coordination needs with other teams. Non-blocking suggestions are often prefixed with "nit:" or "Non-blocking, but…"
+- **Review style**: The team asks "why?" questions to understand intent, requests test evidence, asks for telemetry additions, and flags coordination needs with other teams (extension, ME, AKS RP, CCP). Non-blocking suggestions are often prefixed with "nit:" or "Non-blocking, but…"
 - **Common review patterns**:
-  - "Can you add telemetry for this?" — nearly every new feature gets a telemetry request
-  - "Please revert this file" — files changed accidentally (Chart.yaml, values.yaml, pipeline files)
-  - "Does this need CCP parity?" — addon changes are checked for CCP equivalents
-  - "Please clean up comments/debug code" — no commented-out code in merge
-  - "Can you test this in a real cluster?" — manual testing evidence is expected for significant changes
-  - Reviewers link to existing code patterns as examples of how to implement (e.g. "similar to ztunnel PR #1320")
+  - Nearly every new feature gets a telemetry request
+  - Files changed accidentally (Chart.yaml, values.yaml, pipeline files) should be reverted
+  - Addon changes are checked for CCP equivalents
+  - No commented-out code in merge — "we have git history"
+  - Manual testing evidence is expected for significant changes
+  - Reviewers link to existing code patterns as examples (e.g. "similar to ztunnel target")
