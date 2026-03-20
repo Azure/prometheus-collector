@@ -1,5 +1,3 @@
-{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
-{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if .Values.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -26,5 +24,4 @@ spec:
   podSelector:
     matchLabels:
       {{- include "prometheus-node-exporter.selectorLabels" . | nindent 6 }}
-{{- end }}
 {{- end }}

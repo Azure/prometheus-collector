@@ -1,11 +1,8 @@
-{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
-{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if .Values.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  #name: {{ include "prometheus-node-exporter.fullname" . }}
-  name: ama-metrics-rashmi
+  name: {{ include "prometheus-node-exporter.fullname" . }}
   namespace: {{ include "prometheus-node-exporter.namespace" . }}
   labels:
     {{- include "prometheus-node-exporter.labels" $ | nindent 4 }}
@@ -38,5 +35,4 @@ spec:
       name: {{ .Values.service.portName }}
   selector:
     {{- include "prometheus-node-exporter.selectorLabels" . | nindent 4 }}
-{{- end }}
 {{- end }}

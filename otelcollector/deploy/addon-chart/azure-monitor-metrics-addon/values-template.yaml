@@ -40,7 +40,7 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRegistry: mcr.microsoft.com
-  ImageRepository: /azuremonitor/containerinsights/ciprod/prometheus-collector/images
+  ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
   RsCPULimit: 7
@@ -156,8 +156,7 @@ AzureMonitorMetrics:
     ImageTag: "master.260209.2"
     ImageRepositoryWin: "/aks/msi/addon-token-adapter"
     ImageTagWin: "master.260209.2"
-  #ArcExtension: ${ARC_EXTENSION}
-  IncludeDependentCharts: ${INCLUDE_DEPENDENT_CHARTS}
+  ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
