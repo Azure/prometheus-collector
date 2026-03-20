@@ -23,14 +23,19 @@ jobs:
             echo "Using provided image tag: $INPUT_TAG"
             echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
           else
-            echo "Fetching latest image tag from MCR..."
-            TAGS=$(curl -s "https://mcr.microsoft.com/v2/azuremonitor/containerinsights/ciprod/prometheus-collector/images/tags/list" | jq -r '.tags[]' | sort -V | tail -1)
-            if [ -z "$TAGS" ]; then
-              echo "::error::Failed to fetch latest image tag from MCR"
+            echo "Fetching latest ciprod Linux image tag from MCR..."
+            # Filter to Linux-only ciprod tags: {semver}-main-{MM}-{DD}-{YYYY}-{commit} with no suffix
+            TAG=$(curl -s "https://mcr.microsoft.com/v2/azuremonitor/containerinsights/ciprod/prometheus-collector/images/tags/list" \
+              | jq -r '.tags[]' \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-main-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-f0-9]+$' \
+              | sort -t'-' -k5,5n -k3,3n -k4,4n \
+              | tail -1)
+            if [ -z "$TAG" ]; then
+              echo "::error::Failed to fetch latest ciprod image tag from MCR"
               exit 1
             fi
-            echo "Latest image tag: $TAGS"
-            echo "tag=$TAGS" >> $GITHUB_OUTPUT
+            echo "Latest ciprod image tag: $TAG"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
           fi
 
       - name: Run Trivy scanner on released image
