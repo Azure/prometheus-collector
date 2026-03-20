@@ -154,41 +154,6 @@ MetricsExtension is a closed-source C++ binary (owned by the Geneva Metrics team
 
 ---
 
-## Quick Reference
-
-| Symptom | MCP Tool | TSG Category |
-|---------|----------|--------------|
-| No metrics flowing | `tsg_triage` + `tsg_errors` + `tsg_mdm_throttling` | Missing Metrics |
-| Account throttling / drops | `tsg_mdm_throttling` | Missing Metrics (MDM quota) |
-| Pod CrashLoopBackOff / OOM | `tsg_errors` + `tsg_workload` | Pod Restarts and OOMKills |
-| High CPU/Memory | `tsg_workload` | Pod Restarts / Resource Consumption |
-| Partial metrics / drops | `tsg_workload` + `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM throttle) |
-| Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
-| Config validation failed | `tsg_config` | Missing Metrics (check "Custom Config Validation Errors") |
-| Private link errors | `tsg_errors` | Firewall / Network / Private Link |
-| TokenConfig.json missing / ME won't start | `tsg_errors` + `tsg_logs` | Firewall / Network (AMCS blocked) |
-| ARC cluster pod restarts | `tsg_errors` + `tsg_logs` | Firewall / Network (ARC/Azure Local) |
-| Proxy / auth proxy issues | `tsg_errors` + `tsg_config` | Proxy / Authenticated Proxy |
-| Target allocator errors | `tsg_errors` | Pod Restarts (operator-targets) |
-| Token/auth errors | `tsg_errors` | Missing Metrics (auth issues) |
-| Liveness probe 503 | `tsg_errors` | Liveness Probe Failures |
-| Control plane metrics missing | `tsg_control_plane` | Control Plane Metrics |
-| Spike in ingestion | `tsg_workload` + `tsg_config` + `tsg_metric_insights` + `tsg_mdm_throttling` | Spike in Metrics Ingested |
-| High cardinality / volume | `tsg_metric_insights` | Spike in Metrics (cardinality) |
-| AMW cost optimization | `tsg_metric_insights` + `tsg_config` | AMW Usage Optimization |
-| Pods not created | `tsg_triage` | Pods Not Created / Addon Not Deploying |
-| Duplicate label errors | `tsg_config` | Duplicate Labels (kube-state-metrics) |
-| DCR/DCE wrong region | `tsg_triage` | DCR/DCE Region Mismatch |
-| Windows pod restarts | `tsg_errors` + `tsg_logs` | Windows Pod Restart |
-| Remote write failures | `tsg_errors` | Remote Write |
-| Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
-| CVE reported | N/A | Vulnerabilities |
-| ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |
-| HPA scaled down | `tsg_workload` | Known Issues (expected behavior) |
-| Inconsistent scrape intervals | `tsg_config` + `tsg_workload` | Known Issues (cAdvisor timeout) |
-| Regression after addon update | `tsg_triage` + `tsg_config` | Known Issues (post-rollout) |
-| Node drain blocked | N/A | Known Issues (tolerations — fixed) |
-
 ## Querying Historical Time Ranges
 
 All tools support optional `startTime` and `endTime` parameters (ISO 8601 format) for querying specific past time windows instead of relative ranges:

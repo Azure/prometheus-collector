@@ -158,6 +158,14 @@ All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 - **Symptom of wrong ARM ID**: every `PrometheusAppInsights` query returns "No data returned" but `AKS` queries still work (or vice versa). If you see this, check the ICM authored summary for a different ARM ID
 - **Multiple ARM IDs in ICM**: ICMs often list multiple clusters or both the cluster RG and node RG. Always use the one with `Microsoft.ContainerService/managedClusters` in the path — NOT `Microsoft.Compute` or node resource groups
 
+**⚠️ When ALL queries return empty or "No data":**
+This is almost always one of these causes (check in order):
+1. **Wrong ARM resource ID** — verify you're using the cluster RG, not the node RG (see above)
+2. **Wrong timeframe** — incident was days/weeks ago but you're querying last 24h. Use `startTime`/`endTime` to target the incident window
+3. **Addon not installed** — the cluster may not have the monitoring addon enabled (no telemetry sent at all). Check with `tsg_config` → "Addon Enabled in AKS Profile"
+4. **App Insights data expired** — data older than ~30 days is purged. Only Kusto-backed data sources (AKS, AKS CCP) retain longer history
+5. **VPN/auth issue** — if ALL queries across ALL data sources fail, you're likely not connected to corpnet or credentials expired
+
 
 > **Detailed reference** for tsg_query, MDM account resolution, CCP cluster ID, node pool capacity, historical time ranges, versions, MetricsExtension deep-dives, and escalation contacts: see **`reference.md`** in this directory.
 
@@ -264,14 +272,6 @@ This ensures the tooling continuously improves — every investigation makes the
 | DCR/DCE wrong region | `tsg_triage` | DCR/DCE Region Mismatch |
 | Windows pod restarts | `tsg_errors` + `tsg_logs` | Windows Pod Restart |
 | Remote write failures | `tsg_errors` | Remote Write |
-| Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
-| CVE reported | N/A | Vulnerabilities |
-| ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |
-| HPA scaled down | `tsg_workload` | Known Issues (expected behavior) |
-| Inconsistent scrape intervals | `tsg_config` + `tsg_workload` | Known Issues (cAdvisor timeout) |
-| Regression after addon update | `tsg_triage` + `tsg_config` | Known Issues (post-rollout) |
-| Node drain blocked | N/A | Known Issues (tolerations — fixed) |
-
 | Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
 | CVE reported | N/A | Vulnerabilities |
 | ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |

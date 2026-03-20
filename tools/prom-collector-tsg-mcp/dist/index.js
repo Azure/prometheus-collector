@@ -30,6 +30,8 @@ const endTimeParam = z
     .describe("Absolute end time in ISO 8601 format, e.g. '2026-03-11T00:00:00Z'. When provided with startTime, overrides timeRange for precise historical queries.");
 // Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
 const QUERY_TIMEOUT_MS = parseInt(process.env.KQL_TIMEOUT_MS || "180000", 10); // 3 minutes
+const CONCURRENCY = parseInt(process.env.QUERY_CONCURRENCY || "5", 10);
+const MAX_RETRIES = parseInt(process.env.QUERY_MAX_RETRIES || "2", 10); // 0 = no retries
 /**
  * Send a progress notification to reset the client's timeout counter.
  * Only sends if the client provided a progressToken in the request.
@@ -47,6 +49,36 @@ async function sendProgress(extra, progress, total, message) {
     catch {
         // Best-effort — don't let notification failures break the tool
     }
+}
+/**
+ * Retry a function with exponential backoff for transient failures.
+ * Retries on network errors, 429 (rate limit), and 5xx server errors.
+ */
+async function withRetry(fn, maxRetries = MAX_RETRIES) {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        }
+        catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            const msg = lastError.message.toLowerCase();
+            const isRetryable = msg.includes("timeout") ||
+                msg.includes("econnreset") ||
+                msg.includes("econnrefused") ||
+                msg.includes("socket hang up") ||
+                msg.includes("429") ||
+                msg.includes("503") ||
+                msg.includes("502") ||
+                msg.includes("504") ||
+                msg.includes("throttl");
+            if (!isRetryable || attempt >= maxRetries)
+                throw lastError;
+            const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+            await new Promise((r) => setTimeout(r, delay));
+        }
+    }
+    throw lastError;
 }
 /**
  * Execute a KQL query against App Insights via the LogsQueryClient.
@@ -74,7 +106,7 @@ async function runAppInsightsQuery(kql, timeRange, startTime, endTime) {
         };
         timespan = { duration: durationMap[timeRange] || "PT24H" };
     }
-    const result = await logsClient.queryResource(APP_INSIGHTS.resourceId, kql, timespan, { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) });
+    const result = await withRetry(() => logsClient.queryResource(APP_INSIGHTS.resourceId, kql, timespan, { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }));
     const rows = [];
     if (result.status === "Success") {
         for (const table of result.tables) {
@@ -115,7 +147,7 @@ async function runKustoQuery(clusterUri, database, kql) {
         scope = `${url.protocol}//${url.host}/.default`;
     }
     const token = await credential.getToken(scope);
-    const response = await fetch(`${clusterUri}/v1/rest/query`, {
+    const response = await withRetry(() => fetch(`${clusterUri}/v1/rest/query`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token.token}`,
@@ -126,7 +158,7 @@ async function runKustoQuery(clusterUri, database, kql) {
             csl: kql,
         }),
         signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
-    });
+    }));
     if (!response.ok) {
         const text = await response.text();
         throw new Error(`Kusto query failed (${response.status}): ${text.slice(0, 500)}`);
@@ -203,8 +235,7 @@ async function runCategory(category, params, extra) {
     if (!queries || queries.length === 0) {
         return [];
     }
-    // Run queries in parallel with concurrency limit
-    const CONCURRENCY = 5;
+    // Run queries in parallel with configurable concurrency limit
     const results = [];
     const totalQueries = queries.length;
     for (let i = 0; i < queries.length; i += CONCURRENCY) {

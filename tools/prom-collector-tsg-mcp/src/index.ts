@@ -2,7 +2,6 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ProgressNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
@@ -49,6 +48,8 @@ interface QueryResult {
 
 // Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
 const QUERY_TIMEOUT_MS = parseInt(process.env.KQL_TIMEOUT_MS || "180000", 10); // 3 minutes
+const CONCURRENCY = parseInt(process.env.QUERY_CONCURRENCY || "5", 10);
+const MAX_RETRIES = parseInt(process.env.QUERY_MAX_RETRIES || "2", 10); // 0 = no retries
 
 type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
@@ -72,6 +73,39 @@ async function sendProgress(
   } catch {
     // Best-effort — don't let notification failures break the tool
   }
+}
+
+/**
+ * Retry a function with exponential backoff for transient failures.
+ * Retries on network errors, 429 (rate limit), and 5xx server errors.
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES
+): Promise<T> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const msg = lastError.message.toLowerCase();
+      const isRetryable =
+        msg.includes("timeout") ||
+        msg.includes("econnreset") ||
+        msg.includes("econnrefused") ||
+        msg.includes("socket hang up") ||
+        msg.includes("429") ||
+        msg.includes("503") ||
+        msg.includes("502") ||
+        msg.includes("504") ||
+        msg.includes("throttl");
+      if (!isRetryable || attempt >= maxRetries) throw lastError;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError!;
 }
 
 /**
@@ -106,11 +140,13 @@ async function runAppInsightsQuery(
     timespan = { duration: durationMap[timeRange] || "PT24H" };
   }
 
-  const result = await logsClient.queryResource(
-    APP_INSIGHTS.resourceId,
-    kql,
-    timespan,
-    { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }
+  const result = await withRetry(() =>
+    logsClient.queryResource(
+      APP_INSIGHTS.resourceId,
+      kql,
+      timespan,
+      { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }
+    )
   );
 
   const rows: Record<string, unknown>[] = [];
@@ -160,18 +196,20 @@ async function runKustoQuery(
 
   const token = await credential.getToken(scope);
 
-  const response = await fetch(`${clusterUri}/v1/rest/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      db: database,
-      csl: kql,
-    }),
-    signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
-  });
+  const response = await withRetry(() =>
+    fetch(`${clusterUri}/v1/rest/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        db: database,
+        csl: kql,
+      }),
+      signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+    })
+  );
 
   if (!response.ok) {
     const text = await response.text();
@@ -264,8 +302,7 @@ async function runCategory(
     return [];
   }
 
-  // Run queries in parallel with concurrency limit
-  const CONCURRENCY = 5;
+  // Run queries in parallel with configurable concurrency limit
   const results: QueryResult[] = [];
   const totalQueries = queries.length;
 
