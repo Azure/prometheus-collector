@@ -67,8 +67,85 @@ AzureMonitorMetrics:
   TargetAllocatorMemoryLimit: 8Gi
   TargetAllocatorCPURequest: 10m
   TargetAllocatorMemoryRequest: 50Mi
-  enableDaemonSetSizing: false
-  daemonSetSizingValues: {}
+  enableDaemonSetSizing: true
+  daemonSetSizingValues:
+    singleSize:
+      containers:
+        prometheus-collector:
+          # cpuLimit Will be overridden by toggle
+          # memoryLimit Will be overridden by toggle
+          cpuRequest: "50m"
+          memoryRequest: "150Mi"
+        addon-token-adapter:
+          cpuLimit: "500m"
+          memoryLimit: "500Mi"
+          cpuRequest: "20m"
+          memoryRequest: "30Mi"
+    tShirtSizes:
+      - name: "xs"
+        maxCPU: 2
+        containers:
+          prometheus-collector:
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
+            cpuRequest: "20m"
+            memoryRequest: "336Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "s"
+        maxCPU: 4
+        containers:
+          prometheus-collector:
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
+            cpuRequest: "28m"
+            memoryRequest: "401Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "m"
+        maxCPU: 8
+        containers:
+          prometheus-collector:
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
+            cpuRequest: "43m"
+            memoryRequest: "513Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "l"
+        maxCPU: 16
+        containers:
+          prometheus-collector:
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
+            cpuRequest: "51m"
+            memoryRequest: "562Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
+      - name: "xl"
+        containers:
+          prometheus-collector:
+            # cpuLimit Will be overridden by toggle
+            # memoryLimit Will be overridden by toggle
+            cpuRequest: "51m"
+            memoryRequest: "634Mi"
+          addon-token-adapter:
+            cpuLimit: "500m"
+            memoryLimit: "500Mi"
+            cpuRequest: "20m"
+            memoryRequest: "30Mi"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -98,7 +175,6 @@ global:
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
-    isAutomaticSKU: false
 
 # For ARC backdoor testing
 Azure:
@@ -109,6 +185,7 @@ Azure:
     Region: "${ARC_REGION}"
     Cloud: "azurepubliccloud"
     Distribution: ""
+    Kind: "base"
   proxySettings:
     isProxyEnabled: "false"
     httpProxy: ""
