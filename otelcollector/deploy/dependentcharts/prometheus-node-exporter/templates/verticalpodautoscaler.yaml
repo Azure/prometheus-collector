@@ -1,3 +1,5 @@
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if and (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1") (.Values.verticalPodAutoscaler.enabled) }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -37,4 +39,5 @@ spec:
   updatePolicy:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}

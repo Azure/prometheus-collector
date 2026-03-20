@@ -54,23 +54,23 @@ spec:
           {{-  end  }}
         {{-  end  }}
         {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist | join "," }}
+          {{- if .Values.kubeStateMetrics }}
+            {{- if .Values.kubeStateMetrics.metricLabelsAllowlist }}
+        - --metric-labels-allowlist={{ .Values.kubeStateMetrics.metricLabelsAllowlist | join "," }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.AzureMonitorMetrics }}
+          {{- if .Values.kubeStateMetrics }}
+            {{- if .Values.kubeStateMetrics.metricAnnotationsAllowList }}
+        - --metric-annotations-allowlist={{ .Values.kubeStateMetrics.metricAnnotationsAllowList | join "," }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
-        - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList | join "," }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-        {{- if .Values.AzureMonitorMetrics }}
-          {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList }}
-        - --metric-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList | join "," }}
+            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowlist }}
+        - --metric-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowlist | join "," }}
             {{- end }}
           {{- end }}
         {{- end }}
@@ -113,8 +113,6 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
-      nodeSelector:
-        kubernetes.io/os: linux
       {{- if not $arcExtensionSettings.isArcExtension }}
       affinity:
         nodeAffinity:
@@ -145,8 +143,6 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        - operator: "Exists"
-          effect: NoExecute
       {{- end }}
       volumes:
         - name: settings-vol-config

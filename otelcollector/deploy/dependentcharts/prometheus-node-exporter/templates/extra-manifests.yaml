@@ -1,4 +1,7 @@
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{ range .Values.extraManifests }}
 ---
 {{ tpl . $ }}
 {{ end }}
+{{- end }}
