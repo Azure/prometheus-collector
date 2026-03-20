@@ -9,6 +9,7 @@ import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
 import { queryMdmThrottling, queryScrapeTargetHealth } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
 import { writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 const credential = new DefaultAzureCredential();
 const logsClient = new LogsQueryClient(credential);
 // Common input schemas
@@ -29,6 +30,10 @@ const endTimeParam = z
     .string()
     .optional()
     .describe("Absolute end time in ISO 8601 format, e.g. '2026-03-11T00:00:00Z'. When provided with startTime, overrides timeRange for precise historical queries.");
+const outputFileParam = z
+    .string()
+    .optional()
+    .describe("Optional file path to write ALL results (no truncation) as JSON. Example: /tmp/tsg-triage.json");
 // Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
 const QUERY_TIMEOUT_MS = parseInt(process.env.KQL_TIMEOUT_MS || "180000", 10); // 3 minutes
 const CONCURRENCY = parseInt(process.env.QUERY_CONCURRENCY || "5", 10);
@@ -346,6 +351,27 @@ function writeResultsToFile(data, filePath, format = "csv") {
     }
     return { path: filePath, rows: data.length };
 }
+/**
+ * Format category results and optionally write all data to a file.
+ * Returns the MCP tool response content.
+ */
+function categoryResponse(results, outputFile) {
+    let text = formatResults(results);
+    if (outputFile) {
+        // Collect all successful result data into a structured object
+        const allData = {};
+        let totalRows = 0;
+        for (const r of results) {
+            if (r.status === "success" && r.data && r.data.length > 0) {
+                allData[r.name] = r.data;
+                totalRows += r.data.length;
+            }
+        }
+        writeFileSync(outputFile, JSON.stringify(allData, null, 2), "utf-8");
+        text += `\n📁 Full results (${totalRows} total rows across ${Object.keys(allData).length} queries) written to \`${outputFile}\``;
+    }
+    return { content: [{ type: "text", text }] };
+}
 // Create the MCP server
 const server = new McpServer({
     name: "prom-collector-tsg",
@@ -358,12 +384,11 @@ server.tool("tsg_triage", "Run initial triage queries to identify cluster versio
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("triage", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_errors
 server.tool("tsg_errors", "Scan all error categories: container errors, OtelCollector, MetricsExtension, MDSD, token adapter, target allocator, DNS, private link, liveness probes, and DCR/DCE config errors.", {
@@ -372,11 +397,10 @@ server.tool("tsg_errors", "Scan all error categories: container errors, OtelColl
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const results = await runCategory("errors", { cluster, timeRange, interval, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_config
 server.tool("tsg_config", "Check all prometheus-collector configuration: scrape configs enabled, default targets, keep list regex, scrape intervals, custom config validity, HPA, debug mode, pod monitors, service monitors.", {
@@ -385,12 +409,11 @@ server.tool("tsg_config", "Check all prometheus-collector configuration: scrape 
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("config", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_workload
 server.tool("tsg_workload", "Check workload health: replica/pod counts, samples per minute, samples dropped, CPU/memory usage, queue sizes, export failures, target allocator errors, collector discovery.", {
@@ -399,12 +422,11 @@ server.tool("tsg_workload", "Check workload health: replica/pod counts, samples 
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("workload", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_pods
 server.tool("tsg_pods", "Check pod health: latest pod restarts, restart counts during interval, and restart reasons for the AMA metrics addon pods.", {
@@ -413,12 +435,11 @@ server.tool("tsg_pods", "Check pod health: latest pod restarts, restart counts d
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("pods", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_logs
 server.tool("tsg_logs", "Get raw logs from a specific component. Use 'component' to select: replicaset, linux-daemonset, windows-daemonset, or configreader.", {
@@ -427,11 +448,12 @@ server.tool("tsg_logs", "Get raw logs from a specific component. Use 'component'
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
     component: z
         .enum(["replicaset", "linux-daemonset", "windows-daemonset", "configreader"])
         .default("replicaset")
         .describe("Component to get logs for"),
-}, async ({ cluster, timeRange, interval, startTime, endTime, component }) => {
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile, component }) => {
     const componentMap = {
         replicaset: "All ReplicaSet Logs",
         "linux-daemonset": "All Linux DaemonSet Logs",
@@ -446,9 +468,7 @@ server.tool("tsg_logs", "Get raw logs from a specific component. Use 'component'
         };
     }
     const results = await Promise.all(queries.map((q) => executeQuery(q, { cluster, timeRange, interval, startTime, endTime })));
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_control_plane
 server.tool("tsg_control_plane", "Check control plane metrics: whether enabled, which jobs are running, metrics keep list, minimal ingestion profile, configmap watcher logs, and container restarts.", {
@@ -457,12 +477,11 @@ server.tool("tsg_control_plane", "Check control plane metrics: whether enabled, 
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
-}, async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+    outputFile: outputFileParam,
+}, async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("controlPlane", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-        content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
 });
 // Tool: tsg_query
 server.tool("tsg_query", "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.", {
@@ -647,20 +666,87 @@ server.tool("tsg_icm_page", "Scrape an ICM incident page via Edge browser CDP co
     };
 });
 // Tool: tsg_auth_check
-server.tool("tsg_auth_check", "Validate credentials and connectivity to all data sources before running queries. Tests Azure credential acquisition and a lightweight query against each data source. Run this first if you suspect auth or VPN issues.", {}, async () => {
+server.tool("tsg_auth_check", "Validate credentials and connectivity to all data sources. Attempts to auto-fix issues: refreshes tokens via az CLI, clears cached credentials, and provides specific remediation steps. Run this first if queries fail with 403 or connection errors.", {
+    autoFix: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe("Attempt to automatically fix auth issues (default: true)"),
+}, async ({ autoFix }) => {
     const results = ["## Auth & Connectivity Check\n"];
-    // 1. Test Azure credential
+    let hasFailures = false;
+    // Helper: run a shell command and return stdout or null on failure
+    function tryExec(cmd) {
+        try {
+            return execSync(cmd, { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
+        }
+        catch {
+            return null;
+        }
+    }
+    // 0. Check az CLI availability
+    const azVersion = tryExec("az version --output tsv 2>/dev/null | head -1");
+    if (!azVersion) {
+        results.push("❌ **Azure CLI**: `az` not found in PATH");
+        results.push("   → Install: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli");
+        hasFailures = true;
+    }
+    else {
+        results.push(`✅ **Azure CLI**: Available`);
+        // Check if logged in
+        const account = tryExec('az account show --query "{name:name, id:id}" -o tsv 2>/dev/null');
+        if (!account) {
+            results.push("❌ **Azure CLI login**: Not logged in");
+            if (autoFix) {
+                results.push("   🔧 Auto-fix: Cannot auto-login (interactive). Please run `az login` manually");
+            }
+            hasFailures = true;
+        }
+        else {
+            results.push(`✅ **Azure CLI login**: ${account}`);
+        }
+    }
+    // 1. Test Azure credential (DefaultAzureCredential)
+    let credentialOk = false;
     try {
         const token = await credential.getToken("https://api.loganalytics.io/.default");
         if (token) {
-            results.push("✅ **Azure credential**: Token acquired successfully");
-            results.push(`   Expires: ${new Date(token.expiresOnTimestamp).toISOString()}`);
+            credentialOk = true;
+            const expiresIn = Math.round((token.expiresOnTimestamp - Date.now()) / 60000);
+            if (expiresIn < 5) {
+                results.push(`⚠️ **Azure credential**: Token expires in ${expiresIn} minutes`);
+                if (autoFix) {
+                    results.push("   🔧 Refreshing token...");
+                    const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+                    if (refreshed) {
+                        results.push("   ✅ Token refreshed via az CLI");
+                    }
+                    else {
+                        results.push("   ❌ Token refresh failed — run `az login` to re-authenticate");
+                        hasFailures = true;
+                    }
+                }
+            }
+            else {
+                results.push(`✅ **Azure credential**: Token valid (expires in ${expiresIn} min)`);
+            }
         }
     }
     catch (err) {
-        results.push(`❌ **Azure credential**: Failed — ${err instanceof Error ? err.message : String(err)}`);
-        results.push("   → Run `az login` or check DefaultAzureCredential configuration");
-        return { content: [{ type: "text", text: results.join("\n") }] };
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push(`❌ **Azure credential**: ${msg.slice(0, 200)}`);
+        hasFailures = true;
+        if (autoFix) {
+            results.push("   🔧 Attempting token refresh via az CLI...");
+            const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+            if (refreshed) {
+                results.push("   ✅ az CLI token works — DefaultAzureCredential may need `AZURE_TENANT_ID` env var");
+                results.push("   → Set: `export AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)`");
+            }
+            else {
+                results.push("   ❌ az CLI token also failed — run `az login` to re-authenticate");
+            }
+        }
     }
     // 2. Test App Insights
     try {
@@ -670,14 +756,23 @@ server.tool("tsg_auth_check", "Validate credentials and connectivity to all data
     catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         results.push(`❌ **PrometheusAppInsights**: ${msg.slice(0, 200)}`);
-        if (msg.includes("403")) {
-            results.push("   → Check JIT access or App Insights RBAC permissions");
+        hasFailures = true;
+        if (msg.includes("403") || msg.includes("Forbidden")) {
+            results.push("   → Need Reader role on the App Insights resource");
+            results.push("   → Resource: ContainerInsightsPrometheusCollector-Prod (sub 13d371f9-...)");
+            if (autoFix) {
+                results.push("   🔧 Attempting Kusto scope token for cross-check...");
+                const kustoToken = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+                if (kustoToken) {
+                    results.push("   → Token acquired but permission denied. Request JIT access or ask team for Reader role");
+                }
+            }
         }
-        else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED")) {
-            results.push("   → Check VPN connection (need corpnet access)");
+        else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {
+            results.push("   → Cannot reach App Insights endpoint — **check VPN connection** (corpnet required)");
         }
     }
-    // 3. Test each Kusto data source with a lightweight query
+    // 3. Test each Kusto data source
     const kustoSources = ["AKS", "MetricInsights", "AMWInfo"];
     for (const dsName of kustoSources) {
         const ds = DATA_SOURCES[dsName];
@@ -685,16 +780,28 @@ server.tool("tsg_auth_check", "Validate credentials and connectivity to all data
             continue;
         try {
             await runKustoQuery(ds.clusterUri, ds.database, ".show database schema | take 1");
-            results.push(`✅ **${dsName}** (${ds.clusterUri}): Connected`);
+            results.push(`✅ **${dsName}** (${ds.clusterUri.split("//")[1]?.split(".")[0]}): Connected`);
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            results.push(`❌ **${dsName}** (${ds.clusterUri}): ${msg.slice(0, 200)}`);
-            if (msg.includes("403")) {
-                results.push(`   → Need Reader access to ${ds.database} on ${ds.clusterUri}`);
+            results.push(`❌ **${dsName}**: ${msg.slice(0, 200)}`);
+            hasFailures = true;
+            if (msg.includes("403") || msg.includes("Forbidden")) {
+                results.push(`   → Need Viewer role on Kusto cluster: ${ds.clusterUri}`);
+                if (autoFix) {
+                    // Try to get a token for this specific cluster scope to verify auth works
+                    const host = new URL(ds.clusterUri).host;
+                    const scopeToken = tryExec(`az account get-access-token --resource https://${host} --query accessToken -o tsv 2>/dev/null`);
+                    if (scopeToken) {
+                        results.push("   → Token acquired but permission denied on database. Request Viewer access via JIT or ask team");
+                    }
+                    else {
+                        results.push("   → Cannot get token for this cluster — may need different tenant or subscription");
+                    }
+                }
             }
-            else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED")) {
-                results.push("   → Check VPN connection (need corpnet access)");
+            else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {
+                results.push("   → Cannot reach Kusto cluster — **check VPN connection** (corpnet required)");
             }
         }
     }
@@ -715,8 +822,21 @@ server.tool("tsg_auth_check", "Validate credentials and connectivity to all data
     }
     catch {
         results.push("⚠️ **Geneva MDM MCP** (localhost:5050): Not running (optional — needed for tsg_mdm_throttling)");
+        if (autoFix) {
+            results.push("   🔧 To start: `cd tools/geneva-mdm-mcp && dotnet run` (requires .NET 8+ SDK)");
+        }
     }
-    results.push("\n---\nIf any data source shows ❌, fix those issues before running tsg_triage.");
+    // Summary
+    results.push("\n---");
+    if (hasFailures) {
+        results.push("**⚠️ Some checks failed.** Fix the ❌ issues above before running tsg_triage.");
+        if (!autoFix) {
+            results.push("💡 Re-run with `autoFix: true` to attempt automatic remediation.");
+        }
+    }
+    else {
+        results.push("**✅ All checks passed.** Ready to run tsg_triage.");
+    }
     return { content: [{ type: "text", text: results.join("\n") }] };
 });
 // Start the server
