@@ -33,7 +33,6 @@
       "targetType": "ServiceResourceDefinition",
       "targetName": "ShellExtension",
       "actions": [
-        "shell/PushNodeExporterChart",
         "shell/PushArcHelmChart"
       ],
       "dependsOn": []

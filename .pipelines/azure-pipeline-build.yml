@@ -181,9 +181,13 @@ extends:
             cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
             export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
-            export HELM_SEMVER=$SETUP_SEMVER
-            export IMAGE_TAG=$SETUP_SEMVER
-            export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+            # export HELM_SEMVER=$SETUP_SEMVER
+            # export IMAGE_TAG=$SETUP_SEMVER
+            # export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+            export HELM_SEMVER=6.26.0-ext-main-03-05-2026-701eb75f-2
+            export IMAGE_TAG=6.26.0-main-03-05-2026-701eb75f
+            export IMAGE_TAG_WINDOWS=6.26.0-main-03-05-2026-701eb75f-win
+            export INCLUDE_DEPENDENT_CHARTS=true
             env
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
             # export ARC_EXTENSION=true
