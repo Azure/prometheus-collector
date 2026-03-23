@@ -8,7 +8,7 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
     app.kubernetes.io/name: ama-metrics
-    app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTag }}
+    app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTag | trunc 63 | trimSuffix "-" }}
     app.kubernetes.io/part-of: azure-monitor-metrics-addon
     app.kubernetes.io/component: ama-metrics-deployment
 spec:
