@@ -519,6 +519,41 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	return caErr, serErr, cliErr, serverSecretErr, clientSecretErr
 }
 
+// certRetryLoop retries a certificate creation function with exponential backoff.
+// Returns true if certificates were created successfully, false if all retries failed.
+func certRetryLoop(maxRetries int, initialDelay time.Duration, createFn func() (error, error, error, error, error)) bool {
+	delay := initialDelay
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createFn()
+		if caErr == nil && serErr == nil && cliErr == nil && serverSecretErr == nil && clientSecretErr == nil {
+			return true
+		}
+		if attempt == maxRetries {
+			log.Printf("Error creating TLS certificates and secret after %d attempts, disabling HTTPS\n", maxRetries)
+			if caErr != nil {
+				log.Printf("Error during ca cert creation: %v\n", caErr)
+			}
+			if serErr != nil {
+				log.Printf("Error during server cert creation: %v\n", serErr)
+			}
+			if cliErr != nil {
+				log.Printf("Error during client cert creation: %v\n", cliErr)
+			}
+			if serverSecretErr != nil {
+				log.Printf("Error generating secret for targetallocator: %v\n", serverSecretErr)
+			}
+			if clientSecretErr != nil {
+				log.Printf("Error generating secret for replicaset: %v\n", clientSecretErr)
+			}
+			return false
+		}
+		log.Printf("Error creating TLS certificates and secret (attempt %d/%d), retrying in %v\n", attempt, maxRetries, delay)
+		time.Sleep(delay)
+		delay *= 2
+	}
+	return false
+}
+
 func main() {
 	cfgReaderContainerStartTime = time.Now()
 	_, err := os.Create("/opt/inotifyoutput.txt")
@@ -550,37 +585,7 @@ func main() {
 	configmapsettings.Configmapparser()
 	// test
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		const maxCertRetries = 3
-		certRetryDelay := 5 * time.Second
-		for attempt := 1; attempt <= maxCertRetries; attempt++ {
-			caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
-			if caErr == nil && serErr == nil && cliErr == nil && serverSecretErr == nil && clientSecretErr == nil {
-				break
-			}
-			if attempt == maxCertRetries {
-				log.Printf("Error creating TLS certificates and secret after %d attempts, disabling HTTPS\n", maxCertRetries)
-				if caErr != nil {
-					log.Printf("Error during ca cert creation: %v\n", caErr)
-				}
-				if serErr != nil {
-					log.Printf("Error during server cert creation: %v\n", serErr)
-				}
-				if cliErr != nil {
-					log.Printf("Error during client cert creation: %v\n", cliErr)
-				}
-				if serverSecretErr != nil {
-					log.Printf("Error generating secret for targetallocator: %v\n", serverSecretErr)
-				}
-				if clientSecretErr != nil {
-					log.Printf("Error generating secret for replicaset: %v\n", clientSecretErr)
-				}
-				httpsEnabled = false
-				break
-			}
-			log.Printf("Error creating TLS certificates and secret (attempt %d/%d), retrying in %v\n", attempt, maxCertRetries, certRetryDelay)
-			time.Sleep(certRetryDelay)
-			certRetryDelay *= 2 // exponential backoff
-		}
+		httpsEnabled = certRetryLoop(3, 5*time.Second, createTLSCertificatesAndSecret)
 	}
 
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {

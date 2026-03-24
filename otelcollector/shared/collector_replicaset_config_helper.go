@@ -48,51 +48,69 @@ func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	return nil
 }
 
-func CollectorTAHttpsCheck(collectorConfig string) error {
-	caCertPath := "/etc/operator-targets/client/certs/ca.crt"
-	removeHttps := false
-	// Checking for file existence with exponential backoff before proceeding.
-	maxRetries := 3
-	var resp *http.Response
-	certRetryDelay := 10 * time.Second
+// httpsCheckConfig holds configurable parameters for the HTTPS connectivity check.
+type httpsCheckConfig struct {
+	caCertPath      string
+	clientCertPath  string
+	clientKeyPath   string
+	taEndpoint      string
+	maxRetries      int
+	certRetryDelay  time.Duration
+	httpsRetryDelay time.Duration
+}
 
-	for i := 0; i < maxRetries; i++ {
-		if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
-			if i == maxRetries-1 {
-				log.Printf("ca.crt file does not exist at path: %s after %d retries, exiting\n", caCertPath, maxRetries)
+func CollectorTAHttpsCheck(collectorConfig string) error {
+	return collectorTAHttpsCheckWithConfig(httpsCheckConfig{
+		caCertPath:      "/etc/operator-targets/client/certs/ca.crt",
+		clientCertPath:  "/etc/operator-targets/client/certs/client.crt",
+		clientKeyPath:   "/etc/operator-targets/client/certs/client.key",
+		taEndpoint:      "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs",
+		maxRetries:      3,
+		certRetryDelay:  10 * time.Second,
+		httpsRetryDelay: 10 * time.Second,
+	}, collectorConfig)
+}
+
+func collectorTAHttpsCheckWithConfig(cfg httpsCheckConfig, collectorConfig string) error {
+	removeHttps := false
+	var resp *http.Response
+	certRetryDelay := cfg.certRetryDelay
+
+	for i := 0; i < cfg.maxRetries; i++ {
+		if _, err := os.Stat(cfg.caCertPath); os.IsNotExist(err) {
+			if i == cfg.maxRetries-1 {
+				log.Printf("ca.crt file does not exist at path: %s after %d retries, exiting\n", cfg.caCertPath, cfg.maxRetries)
 				removeHttps = true
 				break
 			}
-			log.Printf("ca.crt file does not exist at path: %s, retrying in %v (%d/%d)\n", caCertPath, certRetryDelay, i+1, maxRetries)
+			log.Printf("ca.crt file does not exist at path: %s, retrying in %v (%d/%d)\n", cfg.caCertPath, certRetryDelay, i+1, cfg.maxRetries)
 			time.Sleep(certRetryDelay)
 			certRetryDelay *= 2
 		} else {
-			log.Printf("ca.crt file exists at path: %s\n", caCertPath)
+			log.Printf("ca.crt file exists at path: %s\n", cfg.caCertPath)
 			break
 		}
 	}
 
 	// Checking for HTTPS connection with exponential backoff
 	if !removeHttps {
-		httpsRetryDelay := 10 * time.Second
+		httpsRetryDelay := cfg.httpsRetryDelay
 		log.Printf("HTTPS connection check between Collector and TargetAllocator\n")
-		for i := 0; i < maxRetries; i++ {
-			certPEM, err := os.ReadFile(caCertPath)
+		for i := 0; i < cfg.maxRetries; i++ {
+			certPEM, err := os.ReadFile(cfg.caCertPath)
 			if err != nil {
-				log.Printf("Failed to read CA cert file from path: %s - (%d/%d): %v\n", caCertPath, i+1, maxRetries, err)
+				log.Printf("Failed to read CA cert file from path: %s - (%d/%d): %v\n", cfg.caCertPath, i+1, cfg.maxRetries, err)
 				removeHttps = true
 			} else {
 				rootCAs := x509.NewCertPool()
 				if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
-					log.Printf("Failed to append %s to RootCAs- (%d/%d): %v\n", caCertPath, i+1, maxRetries, err)
+					log.Printf("Failed to append %s to RootCAs- (%d/%d): %v\n", cfg.caCertPath, i+1, cfg.maxRetries, err)
 					removeHttps = true
 				} else {
 					log.Printf("[%s] Pinging Target Allocator endpoint with HTTPS\n", time.Now().Format(time.RFC3339))
-					certPath := "/etc/operator-targets/client/certs/client.crt"
-					keyPath := "/etc/operator-targets/client/certs/client.key"
-					clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+					clientCert, err := tls.LoadX509KeyPair(cfg.clientCertPath, cfg.clientKeyPath)
 					if err != nil {
-						log.Printf("Unable to load client certs - %s\n", certPath)
+						log.Printf("Unable to load client certs - %s\n", cfg.clientCertPath)
 						removeHttps = true
 						break
 					}
@@ -105,14 +123,14 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 							},
 						},
 					}
-					resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+					resp, err = client.Get(cfg.taEndpoint)
 					if err != nil || resp.StatusCode != http.StatusOK {
-						if i == maxRetries-1 {
-							log.Printf("Failed to reach Target Allocator endpoint with HTTPS after %d retries, exiting - %v\n", maxRetries, err)
+						if i == cfg.maxRetries-1 {
+							log.Printf("Failed to reach Target Allocator endpoint with HTTPS after %d retries, exiting - %v\n", cfg.maxRetries, err)
 							removeHttps = true
 							break
 						}
-						log.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying in %v (%d/%d) - %v\n", httpsRetryDelay, i+1, maxRetries, err)
+						log.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying in %v (%d/%d) - %v\n", httpsRetryDelay, i+1, cfg.maxRetries, err)
 						time.Sleep(httpsRetryDelay)
 						httpsRetryDelay *= 2
 					} else {
