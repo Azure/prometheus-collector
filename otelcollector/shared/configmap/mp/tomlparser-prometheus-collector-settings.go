@@ -56,8 +56,12 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 					}
 				}
 				cp.SecretsAccessNamespaces = namespaces
-				log.Printf("Using configmap setting for secrets_access_namespaces: %v\n", cp.SecretsAccessNamespaces)
+				log.Printf("Using configmap setting for secrets_access_namespaces in targetallocator: %v\n", cp.SecretsAccessNamespaces)
+			} else {
+				log.Printf("configmap setting secrets_access_namespaces is empty\n")
 			}
+		} else {
+			log.Printf("configmap setting secrets_access_namespaces is not set\n")
 		}
 	}
 

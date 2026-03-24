@@ -100,6 +100,7 @@ data:
     cluster_alias = ""
     debug-mode = false
     https_config = true
+    secrets_access_namespaces = ""
   # Note that below section (ksm-config) is a yaml configuration, the settings override the configuration provided by optional parameters during 
   # onboarding for kube-state-metrics, only uncomment and use them if the collection needs to be customized.
   # Default settings - https://github.com/Azure/prometheus-collector/blob/e40947f3eaee8843021c90bd8645ce7875ad1fcf/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml#L2
