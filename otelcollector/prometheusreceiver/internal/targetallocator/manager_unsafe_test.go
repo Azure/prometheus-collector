@@ -736,7 +736,7 @@ func TestTargetAllocatorJobRetrieval(t *testing.T) {
 
 			baseCfg, err := promconfig.Load("", nil)
 			require.NoError(t, err)
-			manager := NewManager(receivertest.NewNopSettings(metadata.Type), tc.cfg, baseCfg)
+			manager := NewManager(receivertest.NewNopSettings(metadata.Type), tc.cfg, baseCfg, nil)
 			require.NoError(t, manager.Start(ctx, componenttest.NewNopHost(), scrapeManager, discoveryManager))
 
 			allocator.wg.Wait()
@@ -777,14 +777,11 @@ func TestTargetAllocatorJobRetrieval(t *testing.T) {
 
 						// Wait for the manager to finish processing all config updates.
 						expected := int64(len(tc.responses.responses["/scrape_configs"]))
-						for manager.configUpdateCount.Load() < expected {
-							select {
-							case <-manager.configUpdated:
-							case <-time.After(5 * time.Second):
-								require.FailNowf(t, "timed out", "waiting for config update count to reach %d, got %d",
-									expected, manager.configUpdateCount.Load())
-							}
-						}
+						require.Eventually(t, func() bool {
+							return manager.configUpdateCount.Load() >= expected
+						}, 5*time.Second, 100*time.Millisecond,
+							"waiting for config update count to reach %d, got %d",
+							expected, manager.configUpdateCount.Load())
 
 						if s.MetricRelabelConfig != nil {
 							for _, sc := range manager.promCfg.ScrapeConfigs {
@@ -942,7 +939,7 @@ func TestManagerSyncWithInitialScrapeConfigs(t *testing.T) {
 	baseCfg, err := promconfig.Load("", nil)
 	require.NoError(t, err)
 	baseCfg.ScrapeConfigs = initialScrapeConfigs
-	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, baseCfg)
+	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, baseCfg, nil)
 	require.NoError(t, manager.Start(ctx, componenttest.NewNopHost(), scrapeManager, discoveryManager))
 
 	allocator.wg.Wait()
