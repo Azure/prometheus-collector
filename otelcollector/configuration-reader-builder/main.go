@@ -550,35 +550,36 @@ func main() {
 	configmapsettings.Configmapparser()
 	// test
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
-		if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
-			log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
-			time.Sleep(5 * time.Second)
-			caErr1, serErr1, cliErr1, serverSecretErr1, clientSecretErr1 := createTLSCertificatesAndSecret()
-			if caErr1 != nil || serErr1 != nil || cliErr1 != nil || serverSecretErr1 != nil || clientSecretErr1 != nil {
-				log.Println("Error creating TLS certificates and secret, during retry, not trying again")
-				if caErr1 != nil {
-					log.Println("Error during ca cert creation: %v\n", caErr1)
-					httpsEnabled = false
-				}
-				if serErr1 != nil {
-					log.Println("Error during server cert creation: %v\n", serErr1)
-					httpsEnabled = false
-				}
-
-				if cliErr1 != nil {
-					log.Println("Error during client cert creation: %v\n", serErr1)
-					httpsEnabled = false
-				}
-				if serverSecretErr1 != nil {
-					log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
-					httpsEnabled = false
-				}
-				if clientSecretErr1 != nil {
-					log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
-					httpsEnabled = false
-				}
+		const maxCertRetries = 3
+		certRetryDelay := 5 * time.Second
+		for attempt := 1; attempt <= maxCertRetries; attempt++ {
+			caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
+			if caErr == nil && serErr == nil && cliErr == nil && serverSecretErr == nil && clientSecretErr == nil {
+				break
 			}
+			if attempt == maxCertRetries {
+				log.Printf("Error creating TLS certificates and secret after %d attempts, disabling HTTPS\n", maxCertRetries)
+				if caErr != nil {
+					log.Printf("Error during ca cert creation: %v\n", caErr)
+				}
+				if serErr != nil {
+					log.Printf("Error during server cert creation: %v\n", serErr)
+				}
+				if cliErr != nil {
+					log.Printf("Error during client cert creation: %v\n", cliErr)
+				}
+				if serverSecretErr != nil {
+					log.Printf("Error generating secret for targetallocator: %v\n", serverSecretErr)
+				}
+				if clientSecretErr != nil {
+					log.Printf("Error generating secret for replicaset: %v\n", clientSecretErr)
+				}
+				httpsEnabled = false
+				break
+			}
+			log.Printf("Error creating TLS certificates and secret (attempt %d/%d), retrying in %v\n", attempt, maxCertRetries, certRetryDelay)
+			time.Sleep(certRetryDelay)
+			certRetryDelay *= 2 // exponential backoff
 		}
 	}
 

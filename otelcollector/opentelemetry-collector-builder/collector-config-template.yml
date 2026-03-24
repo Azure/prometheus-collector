@@ -11,7 +11,14 @@ exporters:
       insecure: true
     compression: "gzip"
     retry_on_failure:
-      enabled: false
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 1000
     timeout: 12s
 processors:
   batch:
