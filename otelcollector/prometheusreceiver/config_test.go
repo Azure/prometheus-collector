@@ -379,9 +379,9 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 
 	r0 := cfg.(*Config)
 	assert.NotNil(t, r0.PrometheusConfig)
-	assert.True(t, r0.APIServer.Enabled)
-	assert.NotNil(t, r0.APIServer.ServerConfig)
-	assert.Equal(t, "localhost:9090", r0.APIServer.ServerConfig.NetAddr.Endpoint)
+	assert.True(t, r0.APIServer.HasValue())
+	assert.NotNil(t, r0.APIServer.Get())
+	assert.Equal(t, "localhost:9090", r0.APIServer.Get().ServerConfig.NetAddr.Endpoint)
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withAPIDisabled").String())
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 	require.NoError(t, xconfmap.Validate(cfg))
 
 	r1 := cfg.(*Config)
-	assert.False(t, r1.APIServer.Enabled)
+	assert.False(t, r1.APIServer.HasValue())
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withoutAPI").String())
 	require.NoError(t, err)
@@ -400,7 +400,7 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 
 	r2 := cfg.(*Config)
 	assert.NotNil(t, r2.PrometheusConfig)
-	assert.False(t, r2.APIServer.Enabled)
+	assert.False(t, r2.APIServer.HasValue())
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withInvalidAPIConfig").String())
 	require.NoError(t, err)

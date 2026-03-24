@@ -37,7 +37,7 @@ func TestNewManager(t *testing.T) {
 		},
 	}
 
-	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg)
+	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg, nil)
 
 	assert.NotNil(t, manager)
 	assert.Equal(t, cfg, manager.cfg)
@@ -71,7 +71,7 @@ func TestManagerShutdown(t *testing.T) {
 	settings := receivertest.NewNopSettings(metadata.Type)
 	settings.Logger = logger
 
-	manager := NewManager(settings, cfg, promCfg)
+	manager := NewManager(settings, cfg, promCfg, nil)
 
 	// Start the manager so the goroutine is running
 	ctx := t.Context()
