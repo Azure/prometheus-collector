@@ -4,8 +4,6 @@
 package watcher
 
 import (
-	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
-	"k8s.io/client-go/metadata"
 	"context"
 	"errors"
 	"fmt"
@@ -13,9 +11,11 @@ import (
 	"os"
 	"time"
 
+	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	"k8s.io/client-go/metadata"
+
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
@@ -63,19 +62,19 @@ func NewPrometheusCRWatcher(
 		return nil, err
 	}
 
-	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
-	if err != nil {
-		return nil, err
-	}
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 
-	// Scope the metadata informer factory to the collector namespace only.
+	// Scope the metadata informer factory to the collector namespace only - after restriction
 	// This is used for the secrets informer so that it only needs namespace-scoped RBAC
 	// (a Role in kube-system) rather than cluster-wide secrets list/watch access.
-	secretsAllowList := map[string]struct{}{cfg.CollectorNamespace: {}}
-	metaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+	//secretsAllowList := map[string]struct{}{cfg.CollectorNamespace: {}}
+	//metaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+
+	// Use the allowList (same as monitoring informers) so the metadata informer
+	// for secrets watches all allowed namespaces instead of only the collector namespace.
+	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
 
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
 	if err != nil {
@@ -266,7 +265,7 @@ func createInformerIfAvailable(
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.Config, logger *slog.Logger, metaDataInformerFactory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.Config, logger *slog.Logger, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	informersMap := make(map[string]*informers.ForResource)
 
 	// Get the discovery client
@@ -337,13 +336,6 @@ func getInformers(factory informers.FactoriesForNamespaces, clusterConfig *rest.
 		informersMap[string(v1.ResourceSecrets)] = secretInformers
 	}
 
-	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
-	if err != nil {
-		return nil, err
-	}
-	if secretInformers != nil {
-		informersMap[string(v1.ResourceSecrets)] = secretInformers
-	}
 	return informersMap, nil
 }
 
