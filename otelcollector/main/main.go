@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
+	metricsreport "prometheus-collector/metricsreport/controller"
 
 	"strconv"
 	"strings"
@@ -230,6 +232,15 @@ func main() {
 	if ccpMetricsEnabled != "true" {
 		log.Println("startCommand prometheusui")
 		shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+	}
+
+	// Start the HealthSignal controller to watch HealthCheckRequests and respond with HealthSignals
+	if osType == "linux" {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		if err := metricsreport.StartHealthSignalController(ctx); err != nil {
+			log.Printf("Warning: Failed to start HealthSignal controller: %v\n", err)
+		}
 	}
 
 	if osType == "linux" {
