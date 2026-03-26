@@ -54,8 +54,8 @@ var (
 	LocalCSIDriverDefaultFile                    = "localCSIDriverDefaultFile.yml"
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
-	waypointProxyDefaultFile                     = "waypointProxyDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
+	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
 
 type RegexValues struct {
@@ -79,8 +79,8 @@ type RegexValues struct {
 	localcsidriver             string
 	ztunnel                    string
 	istiocni                   string
-	waypoint                   string
 	dcgmexporter               string
+	controlplaneistio          string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -101,6 +101,7 @@ type ConfigProcessor struct {
 	ControlplaneClusterAutoscaler           string
 	ControlplaneNodeAutoProvisioning        string
 	ControlplaneEtcd                        string
+	ControlplaneIstio                       string
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
@@ -125,7 +126,6 @@ type ConfigProcessor struct {
 	LocalCSIDriver             string
 	Ztunnel                    string
 	IstioCni                   string
-	WaypointProxy              string
 	DcgmExporter               string
 }
 

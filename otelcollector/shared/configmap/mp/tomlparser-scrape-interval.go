@@ -61,8 +61,8 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "local-csi-driver")
 		intervalHash["ZTUNNEL_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "ztunnel")
 		intervalHash["ISTIOCNI_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "istio-cni")
-		intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "waypoint-proxy")
 		intervalHash["DCGMEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "dcgmexporter")
+		intervalHash["CONTROLPLANE_ISTIO_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "controlplane-istio")
 
 		return intervalHash
 	}
@@ -78,8 +78,8 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
 		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL", "ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL",
 		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL", "LOCALCSIDRIVER_SCRAPE_INTERVAL",
-		"ZTUNNEL_SCRAPE_INTERVAL", "ISTIOCNI_SCRAPE_INTERVAL", "WAYPOINT_PROXY_SCRAPE_INTERVAL",
-		"DCGMEXPORTER_SCRAPE_INTERVAL",
+		"ZTUNNEL_SCRAPE_INTERVAL", "ISTIOCNI_SCRAPE_INTERVAL",
+		"DCGMEXPORTER_SCRAPE_INTERVAL", "CONTROLPLANE_ISTIO_SCRAPE_INTERVAL",
 	}
 
 	for _, key := range keys {

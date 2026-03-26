@@ -27,8 +27,8 @@ variables:
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.25.7'
-  FLUENTBIT_GOLANG_VERSION: '1.25.7'
+  GOLANG_VERSION: '1.25.8'
+  FLUENTBIT_GOLANG_VERSION: '1.25.8'
   TESTKUBE_GOLANG_VERSION: '1.24.0'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
@@ -42,6 +42,8 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    featureFlags:
+      disableNetworkIsolation: true
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
