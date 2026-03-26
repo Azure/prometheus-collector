@@ -186,6 +186,51 @@ MetricsExtension is a closed-source C++ binary (owned by the Geneva Metrics team
 
 ---
 
+## Investigating AKS Upgrades and Node Exporter Version Changes
+
+AKS cluster upgrades change the node image, which bundles a specific `node_exporter` version. A new node exporter version can:
+- Expose **new metrics** (increasing cardinality and TS count)
+- **Remove or rename metrics** (breaking dashboards/alerts)
+- **Break scraping entirely** (up=0 for the `node` job)
+
+### How to detect an AKS upgrade from telemetry
+
+1. **`tsg_triage` → "AKS Upgrade History"** — queries `AgentPoolSnapshot` by `resource_id` (works even when CCP cluster ID resolution fails). Shows `min_ts` and `max_ts` per version per pool — the version transition timestamps reveal exactly when the upgrade happened
+
+2. **`tsg_triage` → "Node Pool Versions"** — shows current `orchestratorVersion`, `osSku`, `distroVersion`, `imageRef` per pool
+
+3. **`tsg_scrape_health`** with `job="node"` — shows `up` metric success rate. If the new node exporter broke, success rate drops (e.g. 43% → 0%)
+
+4. **`tsg_workload` → "Node Exporter Sample Count Trend"** — tracks `max_samples` for the `node` job over time. A version change shows as a step change:
+   - `max_samples` 2028 → 2065 = new version exposing 37 additional metrics passing the keep-list
+   - `max_samples` drops to 0 = new version broke scraping entirely
+
+5. **`tsg_workload` → "Scrape Samples Per Job Over Time"** — shows all jobs trending. If total samples are flat but TS is growing, it's label churn, not new metrics
+
+### Example: AKS 1.32.5 → 1.34.2 upgrade pattern
+
+```
+AgentPoolSnapshot timeline:
+  1.32.5: Mar 24 20:15 → Mar 26 03:09 (stable)
+  1.33.6: Mar 26 03:14 → Mar 26 04:09 (transitional, ~1 hour)
+  1.34.2: Mar 26 04:14 → present
+
+Node exporter impact:
+  max_samples changed 2028 → 2065 (new NE version in 1.34 node image)
+  Success rate degraded from ~100% to 43%, then to 0%
+  TS count exploded as quota auto-scaled to accommodate new cardinality
+```
+
+### AKS Kusto column reference
+
+The `AgentPoolSnapshot` table in the AKS data source has two cluster identifier columns:
+- `cluster_id` — CCP hex ID (e.g. `69c58df659d077000103a651`). Used by most existing queries via `AKSClusterID` token resolution. **May fail** if the CCP cluster ID cannot be resolved (returns empty results with no error)
+- `resource_id` — ARM resource ID path. **Always works** as a fallback: `where resource_id =~ _cluster`
+
+If all AKS/CCP queries return empty or 400 errors but auth checks pass, try `tsg_query` with `resource_id =~ _cluster` instead of `cluster_id == AKSClusterID`.
+
+---
+
 ## Querying Historical Time Ranges
 
 All tools support optional `startTime` and `endTime` parameters (ISO 8601 format) for querying specific past time windows instead of relative ranges:

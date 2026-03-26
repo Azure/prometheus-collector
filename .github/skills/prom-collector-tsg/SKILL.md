@@ -132,10 +132,10 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 
 | Tool | Description |
 |------|-------------|
-| `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Also resolves CCP cluster_id, node pool capacity, and autoscaling history.** |
+| `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback).** |
 | `tsg_errors` | Scan all error categories: container, OtelCollector, ME, MDSD, token adapter, TA, DNS, private link |
 | `tsg_config` | Configuration: scrape configs, keep lists, intervals, custom config validation status/errors, custom job names from startup logs, HPA, pod/service monitors, **addon enabled check, recording rules** |
-| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, and event timeline correlation.** |
+| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, and node exporter sample count trend.** |
 | `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, and cluster autoscaler events.** |
 | `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
 | `tsg_control_plane` | Control plane metrics config and health |
@@ -280,6 +280,9 @@ This ensures the tooling continuously improves — every investigation makes the
 | Inconsistent scrape intervals | `tsg_config` + `tsg_workload` | Known Issues (cAdvisor timeout) |
 | Regression after addon update | `tsg_triage` + `tsg_config` | Known Issues (post-rollout) |
 | Node drain blocked | N/A | Known Issues (tolerations — fixed) |
+| Metrics missing after AKS upgrade | `tsg_triage` + `tsg_scrape_health` + `tsg_workload` | Missing Metrics (AKS upgrade / node exporter) |
+| TS explosion / cardinality spike | `tsg_workload` + `tsg_mdm_throttling` + `tsg_metric_insights` | Spike in Metrics (label churn / floodgate) |
+| Node exporter down (up=0) | `tsg_scrape_health` + `tsg_triage` | Missing Metrics (node image / NE version) |
 
 ---
 

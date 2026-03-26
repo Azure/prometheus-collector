@@ -759,6 +759,25 @@ KubeAudit
     isFull=iff(enableAutoScaling == true, size >= toint(maxCount), false)
 | order by name asc, PreciseTimeStamp asc`,
         },
+        {
+            name: "AKS Upgrade History",
+            datasource: "AKS",
+            kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(48h)
+| summarize min_ts=min(TIMESTAMP), max_ts=max(TIMESTAMP), latest_size=arg_max(TIMESTAMP, size).size by name, orchestratorVersion
+| order by name asc, min_ts asc`,
+        },
+        {
+            name: "Node Pool Versions (resource_id fallback)",
+            datasource: "AKS",
+            kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(48h)
+| summarize arg_max(TIMESTAMP, *) by name
+| project TIMESTAMP, name, orchestratorVersion, osSku, currentNodes=size, distroVersion, imageRef
+| order by name asc`,
+        },
     ],
     errors: [
         {
@@ -2276,6 +2295,45 @@ configChanges | union restartEvents | union errorSpikes
 | summarize avgSamplesPerMin = round(avg(value), 0) by pod
 | order by avgSamplesPerMin desc
 | take 20`,
+        },
+        {
+            name: "Scrape Samples Per Job Over Time",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "prometheus_scrape_samples_post_metric_relabeling"
+| extend job = tostring(customDimensions.job)
+| summarize avg_samples=round(avg(value), 0), max_samples=max(value) by bin(timestamp, totimespan(Interval)), job
+| order by timestamp asc, job asc`,
+        },
+        {
+            name: "ME Throughput by Pod Type Over Time",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "meMetricsProcessedCount"
+| extend podname = tostring(customDimensions.podname)
+| extend podtype = case(
+    podname startswith "ama-metrics-win", "windows-ds",
+    podname startswith "ama-metrics-node", "linux-ds",
+    "replicaset")
+| summarize total=sum(value) by bin(timestamp, totimespan(Interval)), podtype
+| order by timestamp asc, podtype asc`,
+        },
+        {
+            name: "Node Exporter Sample Count Trend",
+            datasource: "PrometheusAppInsights",
+            kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "prometheus_scrape_samples_post_metric_relabeling"
+| extend job = tostring(customDimensions.job)
+| where job == "node"
+| where value > 0
+| summarize count_nonzero=count(), avg_samples=round(avg(value), 0), max_samples=max(value), p50=round(percentile(value, 50), 0), p95=round(percentile(value, 95), 0) by bin(timestamp, totimespan(Interval))
+| order by timestamp asc`,
         },
     ],
     pods: [

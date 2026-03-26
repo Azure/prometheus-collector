@@ -81,6 +81,8 @@ Run `tsg_triage`, `tsg_config`, `tsg_workload`. Then:
     - Example PodMonitor annotation: `prometheus.io/metricsAccountName: <amw-name>`
     - Example scrape config: add `metricsAccountName: <amw-name>` under the job definition
 14. **Pod restarts causing gaps** — see Pod Restarts TSG above
+15. **Check AKS upgrade / node image change** — run `tsg_triage`, check "AKS Upgrade History" to see if the cluster was recently upgraded (version changes with timestamps). An AKS version upgrade changes the node image, which includes a new `node_exporter` version. A new node exporter can expose different/additional metrics causing TS explosion, or break scraping entirely (up=0). Signs: `tsg_scrape_health` shows `node` job degraded/down, `tsg_workload` → "Node Exporter Sample Count Trend" shows `max_samples` changing (e.g. 2028→2065 = new version exposing 37 new metrics passing the keep-list). Also check "Scrape Samples Per Job Over Time" — if total scrape samples are flat but TS is growing, label churn (pod/container name turnover) is the cause. If `node` job has 0% success rate after upgrade, the new node exporter version broke scraping — escalate to AKS team
+16. **Time series explosion after quota increase** — if MDM auto-quota increased and TS count is growing exponentially, this is the "floodgate effect": the quota was throttling events, masking the true TS count. When the throttle lifts, MStore discovers all previously-dropped label combinations as new time series. Check `tsg_workload` → "ME Throughput by Pod Type Over Time" — if ME throughput is flat but TS is growing, the growth is from MDM catching up, not from new data. The TS count will plateau once MStore has registered all unique label combos. Watch that it stays under the TS limit
 
 **Ask customer to check Prometheus UI:**
 - `kubectl port-forward <ama-metrics-pod> 9090` then check `/config` (scrape config present?), `/targets` (targets up?)
@@ -94,9 +96,11 @@ Run `tsg_workload`, `tsg_config`, `tsg_mdm_throttling`, and `tsg_metric_insights
 
 1. **Check MDM throttling first** — extract `MDMAccountName` from `tsg_triage`, then run `tsg_mdm_throttling`. If event volume or time series utilization is > 80%, the spike may be causing throttling and metric loss
 2. **Identify top offending metrics** — run `tsg_metric_insights` with the same `MDMAccountName`. Check "Top 20 Highest Cardinality Metrics" and "Metrics with High Dimension Cardinality" to find which metrics/jobs are causing the spike
-3. Customer can run PromQL: `sum_over_time(scrape_samples_post_metric_relabeling) by (job)` to see if new jobs were added or existing jobs increased
-4. Most common cause: **Network Observability** metrics increase with cluster traffic
-5. **Reduction options:**
+3. **Check scrape samples per job over time** — run `tsg_workload`, check "Scrape Samples Per Job Over Time". If a specific job's `max_samples` changed, that job is the source. Common causes: AKS upgrade shipped a new node exporter version (check "AKS Upgrade History" in triage), new PodMonitor/ServiceMonitor added, pod annotation scraping enabled for a high-churn namespace
+4. **Check ME throughput by pod type** — run `tsg_workload`, check "ME Throughput by Pod Type Over Time". If throughput is flat but TS is growing, the spike is from **label churn** (new pod/container names creating new TS in MDM) or the "floodgate effect" after a quota increase (see Missing Metrics TSG step 16)
+5. Customer can run PromQL: `sum_over_time(scrape_samples_post_metric_relabeling) by (job)` to see if new jobs were added or existing jobs increased
+6. Most common cause: **Network Observability** metrics increase with cluster traffic
+7. **Reduction options:**
    - Default metrics: use `ama-metrics-settings-configmap` to change targets, metrics, scrape frequency
    - Custom metrics: use `relabel_configs`/`metric_relabel_configs` to filter, increase `scrape_interval`
    - Reducing labels reduces time series count; reducing scrape interval reduces sample count
