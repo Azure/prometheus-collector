@@ -68,16 +68,20 @@ async function withRetry(fn, maxRetries = MAX_RETRIES) {
         }
         catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
+            // Check both message and cause (Node fetch wraps errors as "fetch failed" with cause)
             const msg = lastError.message.toLowerCase();
-            const isRetryable = msg.includes("timeout") ||
-                msg.includes("econnreset") ||
-                msg.includes("econnrefused") ||
-                msg.includes("socket hang up") ||
-                msg.includes("429") ||
-                msg.includes("503") ||
-                msg.includes("502") ||
-                msg.includes("504") ||
-                msg.includes("throttl");
+            const causeMsg = (lastError.cause?.message || "").toLowerCase();
+            const fullMsg = `${msg} ${causeMsg}`;
+            const isRetryable = fullMsg.includes("fetch failed") ||
+                fullMsg.includes("timeout") ||
+                fullMsg.includes("econnreset") ||
+                fullMsg.includes("econnrefused") ||
+                fullMsg.includes("socket hang up") ||
+                fullMsg.includes("429") ||
+                fullMsg.includes("503") ||
+                fullMsg.includes("502") ||
+                fullMsg.includes("504") ||
+                fullMsg.includes("throttl");
             if (!isRetryable || attempt >= maxRetries)
                 throw lastError;
             const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
@@ -484,7 +488,7 @@ server.tool("tsg_control_plane", "Check control plane metrics: whether enabled, 
     return categoryResponse(results, outputFile);
 });
 // Tool: tsg_query
-server.tool("tsg_query", "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.", {
+server.tool("tsg_query", "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities, ARMProd. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.", {
     datasource: z
         .enum([
         "PrometheusAppInsights",
@@ -494,6 +498,7 @@ server.tool("tsg_query", "Run an arbitrary KQL query against any of the configur
         "AKS CCP",
         "AKS Infra",
         "Vulnerabilities",
+        "ARMProd",
     ])
         .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),

@@ -95,17 +95,21 @@ async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      // Check both message and cause (Node fetch wraps errors as "fetch failed" with cause)
       const msg = lastError.message.toLowerCase();
+      const causeMsg = ((lastError as any).cause?.message || "").toLowerCase();
+      const fullMsg = `${msg} ${causeMsg}`;
       const isRetryable =
-        msg.includes("timeout") ||
-        msg.includes("econnreset") ||
-        msg.includes("econnrefused") ||
-        msg.includes("socket hang up") ||
-        msg.includes("429") ||
-        msg.includes("503") ||
-        msg.includes("502") ||
-        msg.includes("504") ||
-        msg.includes("throttl");
+        fullMsg.includes("fetch failed") ||
+        fullMsg.includes("timeout") ||
+        fullMsg.includes("econnreset") ||
+        fullMsg.includes("econnrefused") ||
+        fullMsg.includes("socket hang up") ||
+        fullMsg.includes("429") ||
+        fullMsg.includes("503") ||
+        fullMsg.includes("502") ||
+        fullMsg.includes("504") ||
+        fullMsg.includes("throttl");
       if (!isRetryable || attempt >= maxRetries) throw lastError;
       const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
       await new Promise((r) => setTimeout(r, delay));
@@ -624,7 +628,7 @@ server.tool(
 // Tool: tsg_query
 server.tool(
   "tsg_query",
-  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.",
+  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities, ARMProd. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.",
   {
     datasource: z
       .enum([
@@ -635,6 +639,7 @@ server.tool(
         "AKS CCP",
         "AKS Infra",
         "Vulnerabilities",
+        "ARMProd",
       ])
       .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),

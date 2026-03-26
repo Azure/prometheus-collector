@@ -42,6 +42,12 @@ export const DATA_SOURCES = {
         database: "ShaVulnMgmt",
         description: "Image CVE vulnerability scanning",
     },
+    ARMProd: {
+        name: "ARMProd",
+        clusterUri: "https://armprodgbl.eastus.kusto.windows.net",
+        database: "ARMProd",
+        description: "ARM deployment logs and operations",
+    },
 };
 // App Insights REST API config (for PrometheusAppInsights queries)
 export const APP_INSIGHTS = {

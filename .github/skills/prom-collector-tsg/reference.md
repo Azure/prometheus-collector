@@ -38,6 +38,7 @@ tsg_query(datasource: "AKS", kql: "...", outputFile: "/tmp/data.json", outputFor
 | AKS CCP | `AKSccplogs` tables | Control plane logs, AMA metrics status |
 | AKS Infra | `AKSinfra` tables | Control plane pod CPU, container restarts |
 | Vulnerabilities | `ShaVulnMgmt` tables | Image CVE scanning |
+| ARMProd | `HttpIncomingRequests` | ARM deployment logs — what was deployed/enabled and when |
 
 #### Checking Scrape Target Health via Geneva MDM
 
@@ -108,6 +109,29 @@ The `tsg_triage` tool includes these node health queries:
 11. If system pool is at max node count (`isFull == true`) → customer needs to increase maxCount on the system pool or use bigger VMs
 12. **Most common root cause:** Customer has high Istio/Envoy metric volume (millions of time series) but system pool uses small VMs (32GB). The HPA scales out replicas to handle volume, but each replica needs up to 14Gi memory. Small system pool nodes cannot fit enough replicas → constant OOMKill cycle. **Solution: reduce metric volume via metric_relabel_configs (drop histogram _bucket metrics) AND/OR upgrade system pool VM size**
 
+
+---
+
+#### Querying ARM Deployment Logs
+
+Use the `ARMProd` data source (`armprodgbl.eastus.kusto.windows.net`) to investigate **what was deployed to a cluster and when**. This is useful for:
+- Determining when managed prometheus was enabled
+- Checking if DCR/DCE/DCRA creation succeeded or failed during addon enablement
+- Finding what ARM operations were performed on the cluster
+
+**⚠️ Connectivity note:** The ARM Kusto cluster has intermittent connectivity from some environments. The MCP server retries on `fetch failed` / `ECONNRESET` errors automatically, but queries may still fail. If persistent, try from a SAW or local machine.
+
+**Example queries:**
+
+Find all ARM operations around addon enablement time:
+```kql
+tsg_query(datasource: "ARMProd", kql: "HttpIncomingRequests | where PreciseTimeStamp between (datetime(2026-03-25T15:00:00Z) .. datetime(2026-03-25T18:00:00Z)) | where subscriptionId == \"<SUB_ID>\" | where resourceUri has \"<CLUSTER_NAME>\" or resourceUri has \"datacollectionrule\" or resourceUri has \"microsoft.monitor\" or resourceUri has \"datacollectionendpoint\" | project PreciseTimeStamp, httpMethod, resourceUri, httpStatusCode | order by PreciseTimeStamp asc | take 30")
+```
+
+Check for failed DCR/DCE/DCRA creation (non-200 status codes indicate failures):
+```kql
+tsg_query(datasource: "ARMProd", kql: "HttpIncomingRequests | where PreciseTimeStamp > ago(7d) | where subscriptionId == \"<SUB_ID>\" | where resourceUri has \"datacollectionrule\" or resourceUri has \"datacollectionendpoint\" or resourceUri has \"microsoft.monitor\" | where httpStatusCode != 200 and httpStatusCode != 201 | project PreciseTimeStamp, httpMethod, resourceUri, httpStatusCode | order by PreciseTimeStamp desc | take 20")
+```
 
 ---
 
