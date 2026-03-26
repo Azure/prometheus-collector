@@ -703,6 +703,16 @@ ManagedClusterMonitoring
     | project cluster_id, subscription, resourceGroup`,
     },
     {
+      name: "CCP Cluster ID (AgentPoolSnapshot fallback)",
+      datasource: "AKS",
+      kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(7d)
+| where isnotempty(cluster_id)
+| top 1 by TIMESTAMP desc
+| project cluster_id`,
+    },
+    {
       name: "Node Pool Capacity",
       datasource: "AKS",
       kql: `AgentPoolSnapshot
@@ -2988,17 +2998,18 @@ export function parameterizeQuery(
   q = q.replace(/totimespan\(Interval\)/g, `totimespan(${interval})`);
   q = q.replace(/\bInterval\b/g, `"${interval}"`);
 
-  // Replace cluster parameter
-  q = q.replace(/_cluster/g, `"${params.cluster}"`);
+  // Replace cluster parameter — use word boundary to avoid corrupting variables
+  // like local_clusterVersion that contain "_cluster" as a substring
+  q = q.replace(/(?<![a-zA-Z0-9])_cluster(?![a-zA-Z0-9_])/g, `"${params.cluster}"`);
 
   // Replace MDM account if provided
   if (params.mdmAccountId) {
-    q = q.replace(/mdmAccountID/g, `"${params.mdmAccountId}"`);
+    q = q.replace(/(?<![a-zA-Z0-9])mdmAccountID(?![a-zA-Z0-9_])/g, `"${params.mdmAccountId}"`);
   }
 
   // Replace AKS cluster ID if provided
   if (params.aksClusterId) {
-    q = q.replace(/AKSClusterID/g, `"${params.aksClusterId}"`);
+    q = q.replace(/(?<![a-zA-Z0-9])AKSClusterID(?![a-zA-Z0-9_])/g, `"${params.aksClusterId}"`);
   }
 
   return q;

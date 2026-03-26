@@ -348,21 +348,48 @@ async function resolveCcpClusterId(
   const ccpQuery = QUERIES.triage.find((q) => q.name === "CCP Cluster ID");
   if (!ccpQuery) return undefined;
 
+  // ManagedClusterMonitoring entries are sparse (~6h apart), so always use a
+  // wide lookback for the resolver regardless of the user's timeRange.
+  // Try the user's range first, then widen to 7d if needed.
+  const rangesToTry = [timeRange, "7d"];
+
+  for (const range of rangesToTry) {
+    try {
+      const result = await executeQuery(ccpQuery, {
+        cluster,
+        // Only override time range on retry — keep user's startTime/endTime on first attempt
+        timeRange: range,
+        interval: "6h",
+        startTime: range === timeRange ? startTime : undefined,
+        endTime: range === timeRange ? endTime : undefined,
+      });
+      if (result.status === "success" && result.data && result.data.length > 0) {
+        const id = String(result.data[0].cluster_id);
+        if (id && id !== "undefined" && id !== "null") return id;
+      }
+    } catch (err) {
+      console.error(`[tsg] CCP cluster ID resolution failed (${range}): ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // Final fallback: resolve via AgentPoolSnapshot which has both cluster_id and resource_id
   try {
-    const result = await executeQuery(ccpQuery, {
-      cluster,
-      timeRange,
-      interval: "6h",
-      startTime,
-      endTime,
-    });
-    if (result.status === "success" && result.data && result.data.length > 0) {
-      const id = String(result.data[0].cluster_id);
-      if (id && id !== "undefined" && id !== "null") return id;
+    const fallbackQuery = QUERIES.triage.find((q) => q.name === "CCP Cluster ID (AgentPoolSnapshot fallback)");
+    if (fallbackQuery) {
+      const result = await executeQuery(fallbackQuery, {
+        cluster,
+        timeRange: "7d",
+        interval: "6h",
+      });
+      if (result.status === "success" && result.data && result.data.length > 0) {
+        const id = String(result.data[0].cluster_id);
+        if (id && id !== "undefined" && id !== "null") return id;
+      }
     }
   } catch (err) {
-    console.error(`[tsg] CCP cluster ID resolution failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`[tsg] CCP cluster ID AgentPoolSnapshot fallback failed: ${err instanceof Error ? err.message : String(err)}`);
   }
+
   return undefined;
 }
 
@@ -685,7 +712,7 @@ server.tool(
     // Replace _cluster placeholder if cluster is provided
     let resolvedKql = kql;
     if (cluster) {
-      resolvedKql = resolvedKql.replace(/_cluster/g, `"${cluster}"`);
+      resolvedKql = resolvedKql.replace(/(?<![a-zA-Z0-9])_cluster(?![a-zA-Z0-9_])/g, `"${cluster}"`);
     }
 
     try {
