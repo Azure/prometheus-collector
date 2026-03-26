@@ -155,7 +155,7 @@ All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 - **Past incidents** (>30 days old): App Insights data is gone. Only AKS/CCP Kusto queries may have data. Focus diagnosis on ICM metadata (`howFixed`, `mitigateData`, `customFields`)
 
 **⚠️ ARM Resource ID pitfalls:**
-- **Use the cluster resource group, NOT the node resource group.** ICMs often mention both. The cluster RG (e.g. `AT51756_CPP_DEV_NEU_RUNNER_GF01`) is what the addon telemetry uses. The node/MC RG (e.g. `MC_rg_cluster_region` or `GF-KD4E8051756GF01-NODES`) will return **all queries empty** with no error
+- **Use the cluster resource group, NOT the node resource group.** ICMs often mention both. The cluster RG (e.g. `rg-myteam-prod-eus`) is what the addon telemetry uses. The node/MC RG (e.g. `MC_rg-myteam-prod-eus_mycluster_eastus`) will return **all queries empty** with no error
 - **Symptom of wrong ARM ID**: every `PrometheusAppInsights` query returns "No data returned" but `AKS` queries still work (or vice versa). If you see this, check the ICM authored summary for a different ARM ID
 - **Multiple ARM IDs in ICM**: ICMs often list multiple clusters or both the cluster RG and node RG. Always use the one with `Microsoft.ContainerService/managedClusters` in the path — NOT `Microsoft.Compute` or node resource groups
 
