@@ -86,7 +86,7 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
 ARG TARGETARCH
-FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 as fluent-bit-binary-builder
 WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
