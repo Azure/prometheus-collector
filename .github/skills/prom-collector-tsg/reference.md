@@ -114,12 +114,12 @@ The `tsg_triage` tool includes these node health queries:
 
 #### Querying ARM Deployment Logs
 
-Use the `ARMProd` data source (`armprodgbl.eastus.kusto.windows.net`) to investigate **what was deployed to a cluster and when**. This is useful for:
+Use the `ARMProd` data source (`armprod.kusto.windows.net`) to investigate **what was deployed to a cluster and when**. This is useful for:
 - Determining when managed prometheus was enabled
 - Checking if DCR/DCE/DCRA creation succeeded or failed during addon enablement
 - Finding what ARM operations were performed on the cluster
 
-**⚠️ Connectivity note:** The ARM Kusto cluster has intermittent connectivity from some environments. The MCP server retries on `fetch failed` / `ECONNRESET` errors automatically, but queries may still fail. If persistent, try from a SAW or local machine.
+**⚠️ Connectivity note:** The ARMProd Kusto cluster (`armprod.kusto.windows.net`) has a **Conditional Access Policy** that blocks device-code flow and non-compliant device auth. `az login --use-device-code` will fail with "does not meet the criteria to access this resource". The MCP server's `DefaultAzureCredential` may also fail for the same reason. **Workaround:** Use `azureauth --scope https://kusto.kusto.windows.net/.default --output token` which uses the Windows WAM broker through WSL interop and satisfies CAP requirements. If the MCP server can't reach ARMProd, provide the user with KQL queries to run manually in [Kusto Web Explorer](https://dataexplorer.azure.com) connected to `armprod.kusto.windows.net` / `ARMProd`.
 
 **Example queries:**
 

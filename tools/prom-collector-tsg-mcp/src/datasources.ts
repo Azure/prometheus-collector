@@ -53,9 +53,9 @@ export const DATA_SOURCES: Record<string, DataSource> = {
   },
   ARMProd: {
     name: "ARMProd",
-    clusterUri: "https://armprodgbl.eastus.kusto.windows.net",
+    clusterUri: "https://armprod.kusto.windows.net",
     database: "ARMProd",
-    description: "ARM deployment logs and operations",
+    description: "ARM deployment logs — HttpIncomingRequests, HttpOutgoingRequests, deployments",
   },
 };
 

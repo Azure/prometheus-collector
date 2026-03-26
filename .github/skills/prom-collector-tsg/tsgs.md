@@ -27,6 +27,11 @@ Run `tsg_errors` and `tsg_workload`. Then:
     - **If metric volume is very high (>5M daily TS)** → reduce volume via `metric_relabel_configs` (drop `_bucket` histograms, reduce label cardinality)
     - **If HPA is at limit** → increase `minshards` in settings configmap (up to 30), but ONLY if system pool can accommodate more pods
     - **If system pool is at max nodes** → increase `maxCount` for the system pool autoscaler
+13. **Detect HPA/OOMKill feedback loop** — run `tsg_workload`, check "HPA Scaling Metric and Oscillation". If replica count oscillates (e.g. 5↔15 repeatedly) rather than climbing steadily to max, this is the OOMKill feedback loop:
+    - OOMKills reset pod memory to near-zero → HPA sees low average memory → HPA scales DOWN → fewer pods → higher per-pod load → more OOMKills → repeat
+    - **Symptom:** HPA uses `ContainerResource` memory with `AverageValue` target (e.g. 5Gi). Check "HPA Metric Configuration" for the metric type
+    - **Evidence:** Cluster autoscaler logs show "No unschedulable pods" (check "Cluster Autoscaler No Unschedulable Count"). Autoscaler never triggers because HPA never requests enough replicas to make pods unschedulable
+    - **Fix:** Set `minshards` in `ama-metrics-settings-configmap` to force a higher minimum replica count (e.g. 15-20), bypassing HPA's broken scaling signal. Also reduce scrape targets to lower per-pod load
 
 **ama-metrics-node DaemonSet (OOM is uncommon but has a specific root cause pattern):**
 1. Check for aggressive scrape interval in `ama-metrics-prometheus-config-node`

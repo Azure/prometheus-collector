@@ -2198,6 +2198,69 @@ KubeAudit
 | project PreciseTimeStamp, hpaName, minReplicas, maxReplicas, currentReplicas, desiredReplicas, atLimit`,
     },
     {
+      name: "HPA Scaling Metric and Oscillation",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeAudit
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where tostring(objectRef) has 'ama-metrics-hpa'
+| where verb == 'update'
+| extend reqObj = todynamic(requestObject)
+| extend desiredReplicas = toint(reqObj.status.desiredReplicas), currentReplicas = toint(reqObj.status.currentReplicas)
+| extend specMetrics = tostring(reqObj.spec.metrics), currentMetrics = tostring(reqObj.status.currentMetrics)
+| where isnotempty(currentReplicas)
+| summarize min_replicas=min(currentReplicas), max_replicas=max(currentReplicas), avg_replicas=round(avg(currentReplicas),1), samples=count() by bin(PreciseTimeStamp, 15m)
+| order by PreciseTimeStamp asc`,
+    },
+    {
+      name: "HPA Metric Configuration",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeAudit
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where tostring(objectRef) has 'ama-metrics-hpa'
+| where verb == 'update'
+| extend reqObj = todynamic(requestObject)
+| extend specMetrics = tostring(reqObj.spec.metrics)
+| where isnotempty(specMetrics)
+| summarize arg_max(PreciseTimeStamp, specMetrics)
+| project PreciseTimeStamp, specMetrics`,
+    },
+    {
+      name: "Cluster Autoscaler Scale Decisions",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+ClusterAutoscaler
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where log has 'ScaleUp' or log has 'ScaleDown' or log has 'scale_up' or log has 'scale_down' or log has 'unschedulable' or log has 'Unschedulable' or log has 'removing node'
+| where not(log has 'No unschedulable')
+| where not(log has 'deletion timestamp')
+| project PreciseTimeStamp, logSnippet=substring(log, 0, 300)
+| order by PreciseTimeStamp desc
+| take 50`,
+    },
+    {
+      name: "Cluster Autoscaler No Unschedulable Count",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+ClusterAutoscaler
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where log has 'No unschedulable pods'
+| summarize count_no_unschedulable=count(), first_seen=min(PreciseTimeStamp), last_seen=max(PreciseTimeStamp)`,
+    },
+    {
       name: "Pod Resource Limits",
       datasource: "AKS CCP",
       kql: `let queryCcpNamespace = AKSClusterID;

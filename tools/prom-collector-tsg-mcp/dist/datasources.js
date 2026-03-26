@@ -44,9 +44,9 @@ export const DATA_SOURCES = {
     },
     ARMProd: {
         name: "ARMProd",
-        clusterUri: "https://armprodgbl.eastus.kusto.windows.net",
+        clusterUri: "https://armprod.kusto.windows.net",
         database: "ARMProd",
-        description: "ARM deployment logs and operations",
+        description: "ARM deployment logs — HttpIncomingRequests, HttpOutgoingRequests, deployments",
     },
 };
 // App Insights REST API config (for PrometheusAppInsights queries)

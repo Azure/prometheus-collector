@@ -135,8 +135,8 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 | `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback).** |
 | `tsg_errors` | Scan all error categories: container, OtelCollector, ME, MDSD, token adapter, TA, DNS, private link |
 | `tsg_config` | Configuration: scrape configs, keep lists, intervals, custom config validation status/errors, custom job names from startup logs, HPA, pod/service monitors, **addon enabled check, recording rules** |
-| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, and node exporter sample count trend.** |
-| `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, and cluster autoscaler events.** |
+| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, HPA scaling metric and oscillation analysis, HPA metric configuration, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, and node exporter sample count trend.** |
+| `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, cluster autoscaler events, and cluster autoscaler scale decisions (scale-up/down with unschedulable pod detection).** |
 | `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
 | `tsg_control_plane` | Control plane metrics config and health |
 | `tsg_query` | Run arbitrary KQL against any data source (including `ARMProd` for ARM deployment logs). Accepts optional `cluster`, `timeRange`, `outputFile` (write ALL rows to CSV/JSON), `outputFormat`, and `maxRows` params |
@@ -277,6 +277,7 @@ This ensures the tooling continuously improves — every investigation makes the
 | CVE reported | N/A | Vulnerabilities |
 | ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |
 | HPA scaled down | `tsg_workload` | Known Issues (expected behavior) |
+| HPA oscillating / OOMKill feedback loop | `tsg_workload` + `tsg_errors` + `tsg_pods` | Pod Restarts and OOMKills (HPA can't scale when OOM resets memory signal) |
 | Inconsistent scrape intervals | `tsg_config` + `tsg_workload` | Known Issues (cAdvisor timeout) |
 | Regression after addon update | `tsg_triage` + `tsg_config` | Known Issues (post-rollout) |
 | Node drain blocked | N/A | Known Issues (tolerations — fixed) |
