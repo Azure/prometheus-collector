@@ -174,27 +174,30 @@ This is almost always one of these causes (check in order):
 
 ### Step 3: Identify Symptom Category and Follow TSG
 
-Based on triage results, identify the primary symptom category and follow the corresponding TSG in **`tsgs.md`** (same directory).
+Based on triage results, identify the primary symptom category and follow the corresponding TSG file in the `tsgs/` directory.
 
 **Always check versions first** — run `tsg_triage` → "Version" (addon image tag) and "Component Versions" (ME, OTel, Golang, Prometheus). See `reference.md` → "Checking Versions and Release Notes" for details.
 
-**TSG categories available** (detailed workflows in `tsgs.md`):
-- Pod Restarts and OOMKills
-- Missing Metrics
-- Spike in Metrics Ingested
-- Firewall / Network / Private Link / AMPLS
-- Control Plane Metrics
-- Windows Pod Restarts
-- Remote Write Issues
-- Vulnerabilities / CVEs
-- Node Exporter Missing Labels on ARM64
-- Pods Not Created / Addon Not Deploying
-- Proxy / Authenticated Proxy
-- Liveness Probe Failures (503)
-- Duplicate Label Errors (kube-state-metrics)
-- DCR/DCE Region Mismatch
-- AMW Usage Optimization
-- Known Issues & FAQ
+**TSG categories available** (each is a separate file in `tsgs/`):
+
+| TSG Category | File |
+|-------------|------|
+| Pod Restarts and OOMKills | `tsgs/pod-restarts-oom.md` |
+| Missing Metrics | `tsgs/missing-metrics.md` |
+| Spike in Metrics Ingested | `tsgs/spike-in-metrics.md` |
+| Firewall / Network / Private Link / AMPLS | `tsgs/firewall-network-private-link.md` |
+| Control Plane Metrics | `tsgs/control-plane-metrics.md` |
+| Windows Pod Restarts | `tsgs/windows-pod-restarts.md` |
+| Remote Write Issues | `tsgs/remote-write.md` |
+| Vulnerabilities / CVEs | `tsgs/vulnerabilities.md` |
+| Node Exporter Missing Labels on ARM64 | `tsgs/node-exporter-arm64.md` |
+| Pods Not Created / Addon Not Deploying | `tsgs/pods-not-created.md` |
+| Proxy / Authenticated Proxy | `tsgs/proxy-authenticated.md` |
+| Liveness Probe Failures (503) | `tsgs/liveness-probe-503.md` |
+| Duplicate Label Errors (kube-state-metrics) | `tsgs/duplicate-labels-ksm.md` |
+| DCR/DCE Region Mismatch or Missing | `tsgs/dcr-dce-region-mismatch.md` |
+| AMW Usage Optimization | `tsgs/amw-usage-optimization.md` |
+| Known Issues & FAQ | `tsgs/known-issues-faq.md` |
 
 **For MetricsExtension (ME) deep-dives** — see `reference.md` → "Deep-Diving into MetricsExtension (ME) Issues".
 
@@ -291,5 +294,5 @@ This ensures the tooling continuously improves — every investigation makes the
 
 | File | Contents |
 |------|----------|
-| `tsgs.md` | 15 symptom-specific TSGs + Known Issues & FAQ |
+| `tsgs/` | 16 individual TSG files — one per symptom category + Known Issues & FAQ |
 | `reference.md` | tsg_query guide, data sources, MDM/CCP resolution, versions, ME deep-dive, customer docs |
