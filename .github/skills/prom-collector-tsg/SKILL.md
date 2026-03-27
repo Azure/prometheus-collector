@@ -270,7 +270,7 @@ This ensures the tooling continuously improves — every investigation makes the
 | AMW cost optimization | `tsg_metric_insights` + `tsg_config` | AMW Usage Optimization |
 | Pods not created | `tsg_triage` | Pods Not Created / Addon Not Deploying |
 | Duplicate label errors | `tsg_config` | Duplicate Labels (kube-state-metrics) |
-| DCR/DCE wrong region | `tsg_triage` | DCR/DCE Region Mismatch |
+| DCR/DCE wrong region or missing | `tsg_triage` + `tsg_query` (ARM) | DCR/DCE Region Mismatch or Missing (**check private link first!**) |
 | Windows pod restarts | `tsg_errors` + `tsg_logs` | Windows Pod Restart |
 | Remote write failures | `tsg_errors` | Remote Write |
 | Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
