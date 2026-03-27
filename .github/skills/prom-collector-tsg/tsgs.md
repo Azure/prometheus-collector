@@ -146,6 +146,10 @@ Run `tsg_errors`, look for the error chain above, private link errors, and DNS e
    - `<cluster-region>.handler.control.monitor.azure.com`
 6. **Validate connectivity** from a pod: `curl -sv https://global.handler.control.monitor.azure.com`
 7. **After fixing** — delete the ama-metrics pods to force fresh config download. TokenConfig.json should appear within 2-3 minutes if endpoints are reachable
+8. **Customer documentation for private link setups** — always share these docs:
+   - [Configure Azure Private Link for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-configure?tabs=portal)
+   - [Connect VMs and Kubernetes to Azure Monitor Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-vm-kubernetes?tabs=portal)
+   - [Connect Azure Monitor Workspace to a Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-azure-monitor-workspace)
 
 ---
 
@@ -275,6 +279,10 @@ Run `tsg_triage`, check DCR and DCE configuration. Then:
     - If **private link + DCR/DCE never created**: ensure private endpoints exist for AMCS, re-enable monitoring via `az aks enable-addons --addon monitoring`, verify DCR/DCE/DCRA creation succeeded
     - If **DCR/DCE never created (non-private)**: re-enable monitoring via Azure portal or `az aks enable-addons --addon monitoring`
     - If **DCR/DCE deleted**: recreate the DCR/DCE/DCRA manually or re-enable the addon
+13. **Customer documentation for private link clusters** — always share these docs when the cluster is private link:
+    - [Configure Azure Private Link for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-configure?tabs=portal)
+    - [Connect VMs and Kubernetes to Azure Monitor Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-vm-kubernetes?tabs=portal)
+    - [Connect Azure Monitor Workspace to a Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-azure-monitor-workspace)
 
 ---
 
