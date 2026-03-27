@@ -3094,6 +3094,48 @@ HttpIncomingRequests
 | project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
 | order by TIMESTAMP desc`,
         },
+        {
+            name: "All Subscription DELETEs on Microsoft.Insights (DCR/DCE/DCRA)",
+            datasource: "ARMPRODSEA",
+            kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod == 'DELETE'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| extend parentResource = extract(@'/providers/([^/]+/[^/]+/[^/]+)/providers/microsoft\\.insights', 1, tolower(targetUri))
+| project TIMESTAMP, httpStatusCode, resourceGroup, resourceType, resourceName, parentResource, targetUri, userAgent
+| order by TIMESTAMP desc`,
+        },
+        {
+            name: "AMW (Microsoft.Monitor) All Operations",
+            datasource: "ARMPRODSEA",
+            kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.MONITOR'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.monitor/([^/]+)', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.monitor/[^/]+/([^?/]+)', 1, tolower(targetUri))
+| summarize count(), methods=make_set(httpMethod), statuses=make_set(httpStatusCode), firstSeen=min(TIMESTAMP), lastSeen=max(TIMESTAMP) by resourceGroup, resourceType, resourceName
+| order by count_ desc`,
+        },
+        {
+            name: "AMW (Microsoft.Monitor) PUT/DELETE Operations",
+            datasource: "ARMPRODSEA",
+            kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.MONITOR'
+| where httpMethod in ('PUT', 'DELETE')
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.monitor/([^/]+)', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.monitor/[^/]+/([^?/]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, resourceType, resourceName, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+        },
     ],
 };
 /**
