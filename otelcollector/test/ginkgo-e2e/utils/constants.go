@@ -5,6 +5,7 @@ var (
 	LogLineErrorsToExclude = [...]string{
 		// Metrics Extension
 		"\"filepath\":\"/MetricsExtensionConsoleDebugLog.log\"",
+		"\"filepath\":\"C:\\\\MetricsExtensionConsoleDebugLog.log\"",
 		// Arc token adapter
 		"create or renew cluster identity error",
 		"get token from status error",
@@ -12,9 +13,22 @@ var (
 		"Failed to open directory, disabling udev device properties",
 		// KSM
 		"ended with: an error on the server",
+		"Warning: watch ended with error",
 		"Objects listed",
+		"stat /etc/config/settings/ksm-config: no such file or directory",
 		// Target allocator
 		"client connection lost",
+		"remote error: tls: bad certificate",
+		"local error: tls: bad record",
+		"client sent an HTTP request to an HTTPS server",
+		"http: TLS handshake error",
+		"failed to encode data for http response",
+		"connection reset by peer",
+		// Config reader
+		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
+		// ReplicaSet
+		"Failed to reach Target Allocator endpoint with HTTPS",
+		"tls: failed to verify certificate: x509",
 	}
 )
 
@@ -25,9 +39,12 @@ const (
 	ARM64Label                                        = "arm64"
 	FIPSLabel                                         = "fips"
 	RetinaLabel                                       = "retina"
+	MDSDLabel                                         = "mdsd"
+	OTLPLabel                                         = "otlp"
 	LinuxDaemonsetCustomConfig                        = "linux-daemonset-custom-config"
 	ConfigProcessingCommonNoConfigMaps                = "config-processing-common-no-config-maps"
 	ConfigProcessingCommonWithConfigMap               = "config-processing-common-with-config-maps"
+	ConfigProcessingCommonWithConfigMapV2             = "config-processing-common-with-config-maps-v2"
 	ConfigProcessingCommonWithErrorConfigMap          = "config-processing-common-with-error-config-maps"
 	ConfigProcessingCommon                            = "config-processing-common"
 	ConfigProcessingNoConfigMaps                      = "config-processing-no-config-maps"
@@ -39,8 +56,10 @@ const (
 	ConfigProcessingOnlyCustomConfigMapWithAllActions = "config-processing-only-config-map-all-actions"
 	ConfigProcessingGlobalSettings                    = "config-processing-global-settings"
 	// ConfigProcessingSettingsCustomAndGlobal           = "config-processing-settings-custom-global"
-	ConfigProcessingSettingsNodeConfigMap = "config-processing-settings-node-config-map"
-	ConfigProcessingSettingsError         = "config-processing-settings-error"
-	ConfigProcessingCustomConfigMapError  = "config-processing-custom-config-map-error"
-	ConfigProcessingGlobalSettingsError   = "config-processing-global-settings-error"
+	ConfigProcessingSettingsNodeConfigMap    = "config-processing-settings-node-config-map"
+	ConfigProcessingSettingsError            = "config-processing-settings-error"
+	ConfigProcessingCustomConfigMapError     = "config-processing-custom-config-map-error"
+	ConfigProcessingGlobalSettingsError      = "config-processing-global-settings-error"
+	ConfigProcessingDcgmExporterEnabled      = "config-processing-dcgm-exporter-enabled"
+	ConfigProcessingControlplaneIstioEnabled = "config-processing-controlplane-istio-enabled"
 )
