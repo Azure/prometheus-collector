@@ -278,3 +278,35 @@ When summarizing findings for ICM or customer communication, **search** these do
 - **Kubernetes monitoring** (TOC root): https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-overview
   - Sub-pages cover: AKS addon install, managed Grafana, cost optimization, data collection rules, troubleshooting
 - **TSG wiki (internal)**: https://dev.azure.com/msazure/InfrastructureInsights/_wiki/wikis/InfrastructureInsights.wiki?pagePath=/ManagedPrometheus/OnCall/TSGs
+
+---
+
+## Public Documentation Gaps
+
+The following are known gaps in the [public troubleshooting doc](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot) and related learn.microsoft.com pages, based on recurring ICM patterns. These should be contributed upstream when the team has bandwidth.
+
+### Critical Gaps (high ICM recurrence, customers cannot self-serve)
+
+1. **TokenConfig.json error chain** — The public doc mentions "No configuration present" but does not explain the full 7-step error chain that results: `TokenConfig.json missing → AmcsTokenStore failure → MetricsExtension fails to start → liveness probe returns 503 → pod restarts → OtelCollector logs "connection refused" → massive error volume in telemetry`. Customers see OtelCollector "connection refused" errors and think that is the root cause, when in reality the root cause is a firewall blocking the AMCS endpoint. The doc should trace the full chain so customers know to check firewall rules first when they see these downstream errors.
+
+2. **Private link as #1 cause of missing DCR/DCE/DCRA** — The doc has one sentence saying "verify that you don't have a private AKS cluster." In practice, private link misconfiguration is the single most common root cause of the addon failing to collect metrics. The failure mode is *silent*: `az aks update --enable-azure-monitor-metrics` succeeds (addon installs), but DCR/DCE/DCRA creation fails because ARM calls from the addon cannot reach the AMCS control plane through the private network. The cluster logs show `No configuration present` indefinitely with no obvious error pointing to private link. The doc should explain why this happens and link to the private link configuration guides.
+
+3. **Wrong configmap (`-node` vs replicaset)** — Not documented at all. Putting cluster-wide scrape jobs in `ama-metrics-prometheus-config-node` instead of `ama-metrics-prometheus-config` causes every DaemonSet pod on every node to scrape those targets (N× duplication). This creates massive metric volume and frequently causes DaemonSet OOMKills. The doc explains the two configmaps exist but does not warn about this footgun.
+
+4. **System pool VM sizing and OOMKill remediation** — The doc says "the pod can't keep up with the volume of metrics" when OOMKilled, but provides no guidance on system pool VM sizing. The replicaset pods run exclusively on system pools with a 14Gi memory limit. Clusters with small system pool VMs (≤32GB) cannot fit enough HPA replicas. The doc should include VM size recommendations relative to metric volume.
+
+5. **HPA / OOMKill feedback loop** — Not documented. When replicaset pods OOMKill, their memory usage resets to near-zero. The HPA interprets this as low utilization and *scales down*, creating fewer pods. Fewer pods must handle the same volume → more OOMs → cycle repeats. The fix is increasing `minshards` in the settings configmap to prevent the HPA from scaling below a safe floor. The doc should describe this loop and the `minshards` remedy.
+
+6. **DCR/DCE/DCRA resource group location** — The doc does not mention that DCR/DCE/DCRA can be in *any* resource group, not just the AKS cluster's resource group. Common locations include `MA_<workspace>_<region>_managed`, `defaultresourcegroup-<region>`, or customer-specified RGs. When customers search for these resources in their cluster's RG and don't find them, they believe the resources were never created.
+
+### Medium Gaps
+
+7. **cAdvisor scrape timeout behavior** — Customers see inconsistent cAdvisor metrics and open ICMs thinking it's a bug. The actual cause is kubelet latency exceeding the default 10s scrape timeout on loaded nodes. The `scrape_timeout` can be tuned but this is not mentioned in the troubleshooting doc.
+
+8. **Double-scraping via pod annotations + custom jobs** — When `podannotationnamespaceregex` is enabled AND a custom scrape job targets the same endpoints, metrics are scraped twice, leading to duplicate time series and unexpected volume. The doc does not warn about this interaction.
+
+9. **Multi-AMW routing with `metricsAccountName`** — Customers who set up multiple Azure Monitor Workspaces expect metrics to route to specific AMWs, but the `metricsAccountName` annotation needed for routing is not mentioned in the troubleshooting doc. Metrics default to the primary AMW.
+
+10. **Network Observability metric volume spike** — Enabling Advanced Network Observability adds significant metric volume that is not part of the Prometheus addon's default targets. Customers are surprised by the cost/volume increase. Neither the Prometheus troubleshooting doc nor the Network Observability doc mentions this.
+
+11. **DCE region must match AKS cluster region** — Mentioned in a single sentence in the DCR docs but not in the troubleshooting doc. When AMW is in a different region from the AKS cluster, customers sometimes create the DCE in the AMW's region instead of the cluster's region, causing ingestion failures.
