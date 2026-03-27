@@ -280,8 +280,11 @@ extends:
             # Get all releases and filter for proper semver versions (no pre-release tags)
             RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION 
-            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            echo $RETINA_VERSION
+            # Clone retina repo at the release tag to avoid pulling from ghcr.io (blocked by pipeline policy)
+            git clone --depth 1 --branch v$RETINA_VERSION https://github.com/microsoft/retina.git $(Build.SourcesDirectory)/retina-repo
+            mkdir -p $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            cp -r $(Build.SourcesDirectory)/retina-repo/deploy/standard/manifests/controller/helm/retina $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
           displayName: "CI/CD: Download Retina Chart"
