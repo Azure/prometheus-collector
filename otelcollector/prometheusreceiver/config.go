@@ -13,8 +13,6 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -22,6 +20,9 @@ import (
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
@@ -43,6 +44,7 @@ type Config struct {
 
 	// For testing only.
 	ignoreMetadata bool
+	skipOffsetting bool
 }
 
 // Validate checks the receiver configuration is valid.
@@ -51,8 +53,10 @@ func (cfg *Config) Validate() error {
 		return errors.New("no Prometheus scrape_configs or target_allocator set")
 	}
 
-	if err := cfg.APIServer.Validate(); err != nil {
-		return fmt.Errorf("invalid API server configuration settings: %w", err)
+	if cfg.APIServer.HasValue() {
+		if err := cfg.APIServer.Validate(); err != nil {
+			return fmt.Errorf("invalid API server configuration settings: %w", err)
+		}
 	}
 
 	return nil
@@ -227,3 +231,5 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 	}
 	return nil
 }
+
+
