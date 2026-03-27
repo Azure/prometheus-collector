@@ -15,6 +15,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
+	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
@@ -25,8 +26,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
@@ -51,18 +53,10 @@ type pReceiver struct {
 	registry               *prometheus.Registry
 	registerer             prometheus.Registerer
 	unregisterMetrics      func()
-	skipOffsetting         bool // for testing only
 }
 
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) (*pReceiver, error) {
-	// This serves as the default for all ScrapeConfigs that don't have it explicitly set.
-	// TODO: Remove this once feature-gates and configuration options are removed.
-	extraMetrics := enableReportExtraScrapeMetricsGate.IsEnabled() || (cfg.ReportExtraScrapeMetrics && !removeReportExtraScrapeMetricsConfigGate.IsEnabled())
-	if extraMetrics {
-		cfg.PrometheusConfig.GlobalConfig.ExtraScrapeMetrics = &extraMetrics
-	}
-
 	if err := cfg.PrometheusConfig.Reload(); err != nil {
 		return nil, fmt.Errorf("failed to reload Prometheus config: %w", err)
 	}
@@ -72,11 +66,15 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 	registerer := prometheus.WrapRegistererWith(
 		prometheus.Labels{"receiver": set.ID.String()},
 		registry)
-	apiServerManager := (*apiserver.Manager)(nil)
-	apiServerCfg := cfg.APIServer.Get()
-	if apiServerCfg != nil {
-		apiServerManager = apiserver.NewManager(set, apiServerCfg, &baseCfg, registry, registerer)
+
+	promCfgLock := &sync.RWMutex{}
+
+	var apiCfg *apiserver.Config
+	if cfg.APIServer.HasValue() {
+		c := cfg.APIServer.Get()
+		apiCfg = c
 	}
+
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
@@ -88,8 +86,16 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 			set,
 			cfg.TargetAllocator.Get(),
 			&baseCfg,
+			promCfgLock,
 		),
-		apiServerManager: apiServerManager,
+		apiServerManager: apiserver.NewManager(
+			set,
+			apiCfg,
+			&baseCfg,
+			registry,
+			registerer,
+			promCfgLock,
+		),
 	}
 	return pr, nil
 }
@@ -97,12 +103,16 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 // Start is the method that starts Prometheus scraping. It
 // is controlled by having previously defined a Configuration using perhaps New.
 func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
+	return r.start(ctx, host, prometheusComponentTestOptions{})
+}
+
+func (r *pReceiver) start(ctx context.Context, host component.Host, opts prometheusComponentTestOptions) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
 	logger := slog.New(zapslog.NewHandler(r.settings.Logger.Core()))
 
-	err := r.initPrometheusComponents(discoveryCtx, logger, host)
+	err := r.initPrometheusComponents(discoveryCtx, logger, host, opts)
 	if err != nil {
 		r.settings.Logger.Error("Failed to initPrometheusComponents Prometheus components", zap.Error(err))
 		return err
@@ -113,6 +123,13 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
+	if r.apiServerManager != nil {
+		err = r.apiServerManager.Start(discoveryCtx, host, r.scrapeManager)
+		if err != nil {
+			r.settings.Logger.Error("Failed to start API server", zap.Error(err))
+		}
+	}
+
 	r.loadConfigOnce.Do(func() {
 		close(r.configLoaded)
 	})
@@ -120,7 +137,10 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.Logger, host component.Host) error {
+func (r *pReceiver) initPrometheusComponents(
+	ctx context.Context, logger *slog.Logger, host component.Host,
+	opts prometheusComponentTestOptions,
+) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
 	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
@@ -129,7 +149,12 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	if err != nil {
 		return fmt.Errorf("failed to register service discovery metrics: %w", err)
 	}
-	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
+
+	var discoveryManagerTestOptions []func(*discovery.Manager)
+	if opts.discovery.updatert > 0 {
+		discoveryManagerTestOptions = append(discoveryManagerTestOptions, discovery.Updatert(opts.discovery.updatert))
+	}
+	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics, discoveryManagerTestOptions...)
 	if r.discoveryManager == nil {
 		// NewManager can sometimes return nil if it encountered an error, but
 		// the error message is logged separately.
@@ -155,18 +180,18 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		return err
 	}
 
-	opts := r.initScrapeOptions()
+	scrapeOpts := r.initScrapeOptions(opts.scrape)
 
 	// for testing only
-	if r.skipOffsetting {
-		optsValue := reflect.ValueOf(opts).Elem()
+	if r.cfg.skipOffsetting {
+		optsValue := reflect.ValueOf(scrapeOpts).Elem()
 		field := optsValue.FieldByName("skipOffsetting")
 		reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
 			Elem().
 			Set(reflect.ValueOf(true))
 	}
 
-	scrapeManager, err := scrape.NewManager(opts, logger, nil, store, r.registerer)
+	scrapeManager, err := scrape.NewManager(scrapeOpts, logger, nil, store, nil, r.registerer)
 	if err != nil {
 		return err
 	}
@@ -191,24 +216,17 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		}
 	}()
 
-	apiServerCfg := r.cfg.APIServer.Get()
-	if apiServerCfg != nil {
-		err = r.apiServerManager.Start(ctx, host, r.scrapeManager)
-		if err != nil {
-			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
-		}
-	}
-
 	return nil
 }
 
-func (r *pReceiver) initScrapeOptions() *scrape.Options {
+func (r *pReceiver) initScrapeOptions(o prometheusScrapeTestOptions) *scrape.Options {
 	opts := &scrape.Options{
-		PassMetadataInContext: true,
+		DiscoveryReloadInterval: model.Duration(o.discoveryReloadInterval),
+		PassMetadataInContext:   true,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
-		EnableStartTimestampZeroIngestion: enableCreatedTimestampZeroIngestionGate.IsEnabled(),
+		EnableStartTimestampZeroIngestion: metadata.ReceiverPrometheusreceiverEnableCreatedTimestampZeroIngestionFeatureGate.IsEnabled(),
 	}
 
 	return opts
@@ -248,4 +266,26 @@ func (r *pReceiver) Shutdown(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+type prometheusComponentTestOptions struct {
+	discovery prometheusDiscoveryTestOptions
+	scrape    prometheusScrapeTestOptions
+}
+
+type prometheusDiscoveryTestOptions struct {
+	// updatert is the interval for updating targets.
+	//
+	// If zero, the default (5s) from Prometheus is used.
+	// This option is primarily for testing.
+	updatert time.Duration
+}
+
+type prometheusScrapeTestOptions struct {
+	// discoveryReloadInterval is the interval for reloading
+	// scrape configurations.
+	//
+	// If zero, the default (5s) from Prometheus is used.
+	// This option is primarily for testing.
+	discoveryReloadInterval time.Duration
 }
