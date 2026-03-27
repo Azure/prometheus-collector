@@ -278,7 +278,7 @@ extends:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
+            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ltrimstr("v") | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | select(.name | contains("-") | not)][0].name | ltrimstr("v")')
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
             echo $RETINA_VERSION
             # Clone retina repo at the release tag to avoid pulling from ghcr.io (blocked by pipeline policy)
