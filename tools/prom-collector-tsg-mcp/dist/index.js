@@ -514,7 +514,7 @@ server.tool("tsg_control_plane", "Check control plane metrics: whether enabled, 
     return categoryResponse(results, outputFile);
 });
 // Tool: tsg_query
-server.tool("tsg_query", "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities, ARMProd. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.", {
+server.tool("tsg_query", "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities, ARMProd, ARMPRODSEA, ARMPRODEUS, ARMPRODWEU. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.", {
     datasource: z
         .enum([
         "PrometheusAppInsights",
@@ -525,6 +525,9 @@ server.tool("tsg_query", "Run an arbitrary KQL query against any of the configur
         "AKS Infra",
         "Vulnerabilities",
         "ARMProd",
+        "ARMPRODSEA",
+        "ARMPRODEUS",
+        "ARMPRODWEU",
     ])
         .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),

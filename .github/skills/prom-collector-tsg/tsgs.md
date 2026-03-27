@@ -243,13 +243,23 @@ When `kube-state-metrics` scraping produces duplicate label errors:
 
 ---
 
-#### TSG: DCR/DCE Region Mismatch
+#### TSG: DCR/DCE Region Mismatch or Missing
 
 Run `tsg_triage`, check DCR and DCE configuration. Then:
 
-1. **Random region name in DCR/DCE** — when AKS and AMW are in different regions, the system may create DCR/DCE resources in an unexpected region. The DCE MUST be in the same region as the AKS cluster
-2. **Fix** — customer should create a new DCE in the AKS cluster's region and update the DCRA to point to it
-3. **Validation** — check `tsg_triage` → "Internal DCE and DCR Ids" to see which DCE region is being used
+1. **No DCR/DCE found in triage** — the monitoring addon is running but no DCR/DCE/DCRA exists. This means either they were never created or they were deleted
+2. **Random region name in DCR/DCE** — when AKS and AMW are in different regions, the system may create DCR/DCE resources in an unexpected region. The DCE MUST be in the same region as the AKS cluster if it's a private link cluster
+3. **Fix for region mismatch** — customer should create a new DCE in the AKS cluster's region and update the DCRA to point to it
+4. **Validation** — check `tsg_triage` → "Internal DCE and DCR Ids" to see which DCE region is being used
+
+**When DCR/DCE is missing, investigate with ARM logs:**
+
+5. **Determine the correct ARM regional cluster** based on the AKS cluster's region (see `reference.md` → "Querying ARM Deployment Logs" for region mapping). Use `ARMPRODSEA` for Asia/Pacific, `ARMPRODEUS` for Americas, `ARMPRODWEU` for Europe
+6. **Check if addon was ever enabled** — query `tsg_query` with the "Managed Clusters PUT Operations" query from `armInvestigation` category. If no `managedClusters` PUT exists in 30 days, the addon was enabled >30 days ago (beyond ARM retention)
+7. **Check if DCR/DCE/DCRA were created** — query `tsg_query` with "Microsoft.Insights PUT/DELETE Operations". If zero PUT results, DCR/DCE/DCRA were never created for this subscription
+8. **Check if DCR/DCE/DCRA were deleted** — query the "Microsoft.Insights DELETE Details" query. Note: DCR/DCE/DCRA can be in **any resource group** in the subscription, not necessarily the AKS cluster's RG. Check `targetUri` to see exactly which resources were deleted
+9. **Check ARM outgoing requests** — query "ARM Outgoing Requests to Insights RP" to see if the AKS RP ever tried to call the Monitor RP to create DCR/DCE
+10. **Resolution** — if DCR/DCE were never created: re-enable monitoring via Azure portal or `az aks enable-addons --addon monitoring`. If deleted: recreate the DCR/DCE/DCRA manually or re-enable the addon
 
 ---
 

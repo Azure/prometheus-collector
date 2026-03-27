@@ -38,7 +38,10 @@ tsg_query(datasource: "AKS", kql: "...", outputFile: "/tmp/data.json", outputFor
 | AKS CCP | `AKSccplogs` tables | Control plane logs, AMA metrics status |
 | AKS Infra | `AKSinfra` tables | Control plane pod CPU, container restarts |
 | Vulnerabilities | `ShaVulnMgmt` tables | Image CVE scanning |
-| ARMProd | `HttpIncomingRequests` | ARM deployment logs — what was deployed/enabled and when |
+| ARMProd | `HttpIncomingRequests` | ARM global proxy — prefer regional clusters below |
+| ARMPRODSEA | `HttpIncomingRequests`, `HttpOutgoingRequests` | ARM regional: Asia/Pacific/UK/Africa |
+| ARMPRODEUS | `HttpIncomingRequests`, `HttpOutgoingRequests` | ARM regional: Americas |
+| ARMPRODWEU | `HttpIncomingRequests`, `HttpOutgoingRequests` | ARM regional: Europe |
 
 #### Checking Scrape Target Health via Geneva MDM
 
@@ -114,24 +117,49 @@ The `tsg_triage` tool includes these node health queries:
 
 #### Querying ARM Deployment Logs
 
-Use the `ARMProd` data source (`armprod.kusto.windows.net`) to investigate **what was deployed to a cluster and when**. This is useful for:
-- Determining when managed prometheus was enabled
-- Checking if DCR/DCE/DCRA creation succeeded or failed during addon enablement
-- Finding what ARM operations were performed on the cluster
+ARM has **3 regional Kusto v2 clusters** in Public Cloud — you must query the correct one based on the AKS cluster's region:
 
-**⚠️ Connectivity note:** The ARMProd Kusto cluster (`armprod.kusto.windows.net`) has a **Conditional Access Policy** that blocks device-code flow and non-compliant device auth. `az login --use-device-code` will fail with "does not meet the criteria to access this resource". The MCP server's `DefaultAzureCredential` may also fail for the same reason. **Workaround:** Use `azureauth --scope https://kusto.kusto.windows.net/.default --output token` which uses the Windows WAM broker through WSL interop and satisfies CAP requirements. If the MCP server can't reach ARMProd, provide the user with KQL queries to run manually in [Kusto Web Explorer](https://dataexplorer.azure.com) connected to `armprod.kusto.windows.net` / `ARMProd`.
+| Data Source | Kusto Cluster | Database | Regions Covered |
+|---|---|---|---|
+| `ARMPRODSEA` | `armprodsea.southeastasia.kusto.windows.net` | `Requests` | East Asia, Southeast Asia, Australia, Japan, Korea, India, Israel, UAE, UK, South Africa |
+| `ARMPRODEUS` | `armprodeus.eastus.kusto.windows.net` | `Requests` | East US, West US, Central US, Canada, Brazil, all Americas |
+| `ARMPRODWEU` | `armprodweu.westeurope.kusto.windows.net` | `Requests` | West Europe, North Europe, Germany, France, Switzerland, Norway, Sweden |
 
-**Example queries:**
+The global endpoint (`armprod.kusto.windows.net` / `ARMProd`) is a query proxy only — it often fails with CAP or empty results. **Always use the regional cluster.**
 
-Find all ARM operations around addon enablement time:
+**Tables:** `HttpIncomingRequests`, `HttpOutgoingRequests`
+
+**⚠️ Key gotchas:**
+- **Column name:** Use `targetUri` (NOT `resourceUri`) for filtering ARM request paths
+- **Provider names are UPPERCASE:** Use `toupper()` for case-insensitive matching (e.g., `toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'`)
+- **30-day retention only:** Queries MUST include `TIMESTAMP > ago(30d)` — omitting the time filter returns HTTP 400
+- **DCR/DCE/DCRA can be in any resource group** — don't filter by the AKS cluster's resource group when searching for Insights resources; search subscription-wide
+
+**⚠️ Connectivity note:** The ARM Kusto clusters have a **Conditional Access Policy** that blocks device-code flow. `az login --use-device-code` will fail. **Workaround:** Use `azureauth --scope https://kusto.kusto.windows.net/.default --output token` which uses the Windows WAM broker through WSL interop and satisfies CAP requirements.
+
+**Built-in ARM investigation queries:** The MCP server has an `armInvestigation` query category with pre-built queries for:
+- PUT operations by resource provider (subscription health check)
+- managedClusters PUT operations (addon enablement)
+- Microsoft.Insights PUT/DELETE operations (DCR/DCE/DCRA creation/deletion)
+- DELETE details with resource group and resource name extraction
+- ContainerService operations breakdown by method and type
+- ARM outgoing requests to Insights RP (AKS RP → Monitor RP calls)
+
+**Ad-hoc query examples:**
+
+Find all ARM operations on a specific cluster (last 30d):
 ```kql
-tsg_query(datasource: "ARMProd", kql: "HttpIncomingRequests | where PreciseTimeStamp between (datetime(2026-03-25T15:00:00Z) .. datetime(2026-03-25T18:00:00Z)) | where subscriptionId == \"<SUB_ID>\" | where resourceUri has \"<CLUSTER_NAME>\" or resourceUri has \"datacollectionrule\" or resourceUri has \"microsoft.monitor\" or resourceUri has \"datacollectionendpoint\" | project PreciseTimeStamp, httpMethod, resourceUri, httpStatusCode | order by PreciseTimeStamp asc | take 30")
+tsg_query(datasource: "ARMPRODSEA", cluster: "/subscriptions/.../managedClusters/mycluster",
+  kql: "HttpIncomingRequests | where TIMESTAMP > ago(30d) | where subscriptionId == '_subscriptionId' | where targetUri has '_clusterName' | project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent | order by TIMESTAMP desc")
 ```
 
-Check for failed DCR/DCE/DCRA creation (non-200 status codes indicate failures):
+Check if DCR/DCE/DCRA were ever created or deleted (subscription-wide):
 ```kql
-tsg_query(datasource: "ARMProd", kql: "HttpIncomingRequests | where PreciseTimeStamp > ago(7d) | where subscriptionId == \"<SUB_ID>\" | where resourceUri has \"datacollectionrule\" or resourceUri has \"datacollectionendpoint\" or resourceUri has \"microsoft.monitor\" | where httpStatusCode != 200 and httpStatusCode != 201 | project PreciseTimeStamp, httpMethod, resourceUri, httpStatusCode | order by PreciseTimeStamp desc | take 20")
+tsg_query(datasource: "ARMPRODEUS", cluster: "/subscriptions/.../managedClusters/mycluster",
+  kql: "HttpIncomingRequests | where TIMESTAMP > ago(30d) | where subscriptionId == '_subscriptionId' | where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS' | where httpMethod in ('PUT', 'DELETE') | project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent | order by TIMESTAMP desc")
 ```
+
+Source: [ARM Data Consumer Onboarding — Kusto v2 Overview](https://eng.ms/docs/cloud-ai-platform/azure-core/azure-cloud-native-and-management-platform/control-plane-bburns/azure-resource-reporting/azure-resource-reporting/dataconsumeronboarding/armdata/kustov2/overview_prod)
 
 ---
 

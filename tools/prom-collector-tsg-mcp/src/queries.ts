@@ -9,7 +9,8 @@ export interface Query {
 
 export type QueryCategory = 
   | "triage" | "errors" | "config" | "workload"
-  | "pods" | "logs" | "controlPlane" | "metricInsights";
+  | "pods" | "logs" | "controlPlane" | "metricInsights"
+  | "armInvestigation";
 
 export const QUERIES: Record<QueryCategory, Query[]> = {
   triage: [
@@ -3024,6 +3025,89 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
 | order by MetricName asc`,
     },
   ],
+  armInvestigation: [
+    {
+      name: "ARM PUT Operations by Resource Provider (Subscription Health)",
+      datasource: "ARMPRODSEA",
+      kql: `// Switch datasource to ARMPRODSEA/ARMPRODEUS/ARMPRODWEU based on cluster region
+// Asia/Pacific/UK/Africa → ARMPRODSEA, Americas → ARMPRODEUS, Europe → ARMPRODWEU
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where httpMethod == 'PUT'
+| summarize count() by toupper(targetResourceProvider)
+| order by count_ desc
+| take 30`,
+    },
+    {
+      name: "Managed Clusters PUT Operations (Addon Enablement Check)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.CONTAINERSERVICE'
+| where toupper(targetResourceType) has 'MANAGEDCLUSTERS'
+| where httpMethod == 'PUT'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "Microsoft.Insights PUT/DELETE Operations (DCR/DCE/DCRA)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod in ('PUT', 'DELETE')
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "Microsoft.Insights DELETE Details (DCR/DCE/DCRA Deletion)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod == 'DELETE'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, resourceType, resourceName, targetUri, userAgent
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "ContainerService Operations Breakdown",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.CONTAINERSERVICE'
+| summarize count() by httpMethod, toupper(targetResourceType)
+| order by count_ desc`,
+    },
+    {
+      name: "ARM Outgoing Requests to Insights RP (AKS RP → Monitor RP)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpOutgoingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, correlationId
+| order by TIMESTAMP desc
+| take 50`,
+    },
+    {
+      name: "All Operations on Specific Cluster (Last 30d)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where targetUri has '_clusterName'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+  ],
 };
 
 /**
@@ -3065,6 +3149,16 @@ export function parameterizeQuery(
   // like local_clusterVersion that contain "_cluster" as a substring
   q = q.replace(/(?<![a-zA-Z0-9])_cluster(?![a-zA-Z0-9_])/g, `"${params.cluster}"`);
 
+  // Replace ARM investigation tokens derived from the cluster ARM resource ID
+  // Extract subscriptionId and cluster name from: /subscriptions/{sub}/resourceGroups/{rg}/providers/.../managedClusters/{name}
+  const subMatch = params.cluster.match(/\/subscriptions\/([^/]+)\//i);
+  const nameMatch = params.cluster.match(/\/managedClusters\/([^/]+)$/i);
+  if (subMatch) {
+    q = q.replace(/'_subscriptionId'/g, `'${subMatch[1]}'`);
+  }
+  if (nameMatch) {
+    q = q.replace(/'_clusterName'/g, `'${nameMatch[1]}'`);
+  }
   // Replace MDM account if provided
   if (params.mdmAccountId) {
     q = q.replace(/(?<![a-zA-Z0-9])mdmAccountID(?![a-zA-Z0-9_])/g, `"${params.mdmAccountId}"`);

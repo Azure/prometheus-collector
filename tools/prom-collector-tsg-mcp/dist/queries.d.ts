@@ -3,7 +3,7 @@ export interface Query {
     datasource: string;
     kql: string;
 }
-export type QueryCategory = "triage" | "errors" | "config" | "workload" | "pods" | "logs" | "controlPlane" | "metricInsights";
+export type QueryCategory = "triage" | "errors" | "config" | "workload" | "pods" | "logs" | "controlPlane" | "metricInsights" | "armInvestigation";
 export declare const QUERIES: Record<QueryCategory, Query[]>;
 /**
  * Replace dashboard parameters in a KQL query with actual values.
