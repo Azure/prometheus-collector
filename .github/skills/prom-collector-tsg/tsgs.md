@@ -27,7 +27,11 @@ Run `tsg_errors` and `tsg_workload`. Then:
     - **If metric volume is very high (>5M daily TS)** → reduce volume via `metric_relabel_configs` (drop `_bucket` histograms, reduce label cardinality)
     - **If HPA is at limit** → increase `minshards` in settings configmap (up to 30), but ONLY if system pool can accommodate more pods
     - **If system pool is at max nodes** → increase `maxCount` for the system pool autoscaler
-13. **Detect HPA/OOMKill feedback loop** — run `tsg_workload`, check "HPA Scaling Metric and Oscillation". If replica count oscillates (e.g. 5↔15 repeatedly) rather than climbing steadily to max, this is the OOMKill feedback loop:
+13. **Customer documentation:**
+    - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
+    - [Customize scraping of Prometheus metrics](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration)
+    - [Default Prometheus metrics configuration](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default)
+14. **Detect HPA/OOMKill feedback loop** — run `tsg_workload`, check "HPA Scaling Metric and Oscillation". If replica count oscillates (e.g. 5↔15 repeatedly) rather than climbing steadily to max, this is the OOMKill feedback loop:
     - OOMKills reset pod memory to near-zero → HPA sees low average memory → HPA scales DOWN → fewer pods → higher per-pod load → more OOMKills → repeat
     - **Symptom:** HPA uses `ContainerResource` memory with `AverageValue` target (e.g. 5Gi). Check "HPA Metric Configuration" for the metric type
     - **Evidence:** Cluster autoscaler logs show "No unschedulable pods" (check "Cluster Autoscaler No Unschedulable Count"). Autoscaler never triggers because HPA never requests enough replicas to make pods unschedulable
@@ -92,6 +96,11 @@ Run `tsg_triage`, `tsg_config`, `tsg_workload`. Then:
 **Ask customer to check Prometheus UI:**
 - `kubectl port-forward <ama-metrics-pod> 9090` then check `/config` (scrape config present?), `/targets` (targets up?)
 - If target is down: error message has details. If `node-exporter` down → transfer to AKS team. If `kube-state-metrics` down → check `ama-metrics-ksm` pod logs
+15. **Customer documentation:**
+    - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
+    - [Customize scraping of Prometheus metrics](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration)
+    - [Default Prometheus metrics configuration](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default)
+    - [Enable monitoring for AKS clusters](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable)
 
 ---
 
@@ -109,6 +118,11 @@ Run `tsg_workload`, `tsg_config`, `tsg_mdm_throttling`, and `tsg_metric_insights
    - Default metrics: use `ama-metrics-settings-configmap` to change targets, metrics, scrape frequency
    - Custom metrics: use `relabel_configs`/`metric_relabel_configs` to filter, increase `scrape_interval`
    - Reducing labels reduces time series count; reducing scrape interval reduces sample count
+8. **Customer documentation:**
+   - [Customize scraping of Prometheus metrics](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration)
+   - [Default Prometheus metrics configuration](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default)
+   - [Azure Monitor workspace scaling best practices](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/azure-monitor-workspace-scaling-best-practice)
+   - [Azure Monitor service limits](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/service-limits)
 
 ---
 
@@ -150,6 +164,10 @@ Run `tsg_errors`, look for the error chain above, private link errors, and DNS e
    - [Configure Azure Private Link for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-configure?tabs=portal)
    - [Connect VMs and Kubernetes to Azure Monitor Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-vm-kubernetes?tabs=portal)
    - [Connect Azure Monitor Workspace to a Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-azure-monitor-workspace)
+9. **Customer documentation for firewall / network** — always share these docs:
+   - [Network firewall requirements for monitoring Kubernetes](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-firewall)
+   - [AKS outbound network and FQDN rules](https://learn.microsoft.com/en-us/azure/aks/outbound-rules-control-egress)
+   - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
 
 ---
 
@@ -162,6 +180,9 @@ Run `tsg_control_plane`. Then:
 3. Verify ConfigMap formatting: `default-targets-metrics-keep-list`, `minimal-ingestion-profile`, `default-scrape-settings-enabled`
 4. Isolate: set some node metrics to `true` and confirm they flow — determines if issue is control-plane-specific
 5. Check Metrics Explorer for ingestion rate changes after config changes
+6. **Customer documentation:**
+   - [Monitor AKS control plane metrics](https://learn.microsoft.com/en-us/azure/aks/control-plane-metrics-monitor)
+   - [Enable monitoring for AKS clusters](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable)
 
 ---
 
@@ -170,6 +191,9 @@ Run `tsg_control_plane`. Then:
 1. Check pod logs for `TokenConfig.json not found`
 2. If liveness probe shows `MetricsExtension not running (configuration exists)` — MA/MDSD was slow downloading TokenConfig.json from AMCS
 3. **Resolution:** escalate to AMCS team with the DCR ID (get from `tsg_triage` → `Internal DCE and DCR Ids`)
+4. **Customer documentation:**
+   - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
+   - [Network firewall requirements for monitoring Kubernetes](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-firewall)
 
 ---
 
@@ -180,6 +204,10 @@ Run `tsg_control_plane`. Then:
 3. No data flowing → `kubectl describe pod <prometheus-pod>`, check MSI assignment
 4. Container restart loop → verify `AZURE_CLIENT_ID` and `IDENTITY_TYPE` env vars
 5. If MDM ingestion issue → transfer to `Geneva Monitoring/Observability T1 Support (Not Live Site)`
+6. **Customer documentation:**
+   - [Remote write to Azure Monitor (overview)](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/prometheus-remote-write)
+   - [Remote write using managed identity](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-remote-write-managed-identity)
+   - [Remote write using Microsoft Entra authentication](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-remote-write-active-directory)
 
 ---
 
@@ -207,7 +235,10 @@ When `ama-metrics` pods don't exist at all:
 
 1. **Check if monitoring addon is enabled** — run `tsg_config`, check "Addon Enabled in AKS Profile". If `metricsEnabled == false`, the addon isn't enabled. Customer needs to enable via `az aks update --enable-azure-monitor-metrics`
 2. **Check cluster PUT failures** — if addon is enabled but pods don't exist, cluster PUT calls may be timing out. Transfer to `Azure Kubernetes Service/RP Triage` for cluster provisioning issues
-3. **Check for DCRA (Data Collection Rule Association)** — the DCRA links the DCR to the cluster. If missing, metrics won't flow. Check via Azure Portal → AKS cluster → Monitoring → Data Collection Rules
+3. **Customer documentation:**
+   - [Enable monitoring for AKS clusters](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable)
+   - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
+4. **Check for DCRA (Data Collection Rule Association)** — the DCRA links the DCR to the cluster. If missing, metrics won't flow. Check via Azure Portal → AKS cluster → Monitoring → Data Collection Rules
 4. **Check webhook/admission controller** — if the cluster has restrictive admission policies (OPA Gatekeeper, Kyverno), they may block ama-metrics pod creation. Check for denied admission events
 
 ---
@@ -220,6 +251,9 @@ Run `tsg_errors`, look for HTTP proxy and AMCS connection errors. Then:
 2. **Authenticated proxy (NOT supported)** — ama-metrics does NOT currently support proxies that require authentication (username/password). If customer reports `ama-metrics cannot connect to AMCS when proxy has authentication`, confirm this is a known unsupported scenario
 3. **Proxy bypass** — customer can configure `NO_PROXY` to bypass proxy for specific endpoints. AMCS and MDM endpoints should be in the bypass list if possible
 4. **Escalation** — if this is a hard requirement for the customer, file a feature request on the prometheus-collector GitHub repo
+5. **Customer documentation:**
+   - [Network firewall requirements for monitoring Kubernetes](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-firewall)
+   - [AKS outbound network and FQDN rules](https://learn.microsoft.com/en-us/azure/aks/outbound-rules-control-egress)
 
 ---
 
@@ -234,6 +268,9 @@ Run `tsg_errors`, check "Liveness Probe Logs". Then:
 2. **Check auth errors** — run `tsg_errors`, look for `DCR/DCE/AMCS Configuration Errors`. If "Configuration not found", the DCR may be deleted or DCE endpoint is wrong
 3. **Transient vs persistent** — if liveness probes fail only during pod startup (first 30-60s) then succeed, this is normal cold-start behavior. If persistent, there's a config or network issue
 4. **Gov cloud / sovereign** — gov cloud clusters (`*.cx.aks.containerservice.azure.us`) have different AMCS endpoints. Verify the DCE region matches the cluster region
+5. **Customer documentation:**
+   - [Troubleshoot Prometheus metrics collection](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-troubleshoot)
+   - [Network firewall requirements for monitoring Kubernetes](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-firewall)
 
 ---
 
@@ -244,6 +281,8 @@ When `kube-state-metrics` scraping produces duplicate label errors:
 1. **Check `Kube-State-Metrics Labels Allow List`** — run `tsg_config`. If customer set `metricLabelsAllowlist` to `[*]` (all labels), Kubernetes labels may conflict with Prometheus labels (e.g., `pod`, `namespace` exist as both KSM metric labels and Kubernetes object labels)
 2. **Check for double-scraping** — customer may have both default KSM scraping enabled AND a custom job scraping the same KSM endpoint with different label handling
 3. **Resolution** — either narrow the `metricLabelsAllowlist` to specific needed labels, or use `metric_relabel_configs` to rename/drop conflicting labels
+4. **Customer documentation:**
+   - [Customize scraping of Prometheus metrics](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration)
 
 ---
 
@@ -283,6 +322,10 @@ Run `tsg_triage`, check DCR and DCE configuration. Then:
     - [Configure Azure Private Link for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-configure?tabs=portal)
     - [Connect VMs and Kubernetes to Azure Monitor Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-vm-kubernetes?tabs=portal)
     - [Connect Azure Monitor Workspace to a Private Link](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/private-link-azure-monitor-workspace)
+14. **Customer documentation for DCR/DCE configuration** — always share these docs:
+    - [Data collection rules overview](https://learn.microsoft.com/en-us/azure/azure-monitor/data-collection/data-collection-rule-overview)
+    - [Data collection endpoints overview](https://learn.microsoft.com/en-us/azure/azure-monitor/data-collection/data-collection-endpoint-overview)
+    - [Enable monitoring for AKS clusters](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable)
 
 ---
 
@@ -296,7 +339,13 @@ When customer asks about reducing Azure Monitor Workspace costs:
 4. **Increase scrape intervals** — change from default 15s/30s to 60s for non-critical targets via `default-scrape-settings-enabled`
 5. **Reduce cardinality** — use `metric_relabel_configs` to drop high-cardinality labels. Check `tsg_metric_insights` → "Metrics with High Dimension Cardinality"
 6. **Enable minimal ingestion profile** — set `minimal-ingestion-profile: true` in settings configmap to only ingest a curated set of metrics
-7. **Reference** — search the [Prometheus cost optimization docs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-overview) for the latest guidance
+7. **Customer documentation:**
+   - [Azure Monitor workspace overview](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/azure-monitor-workspace-overview)
+   - [Azure Monitor workspace scaling best practices](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/azure-monitor-workspace-scaling-best-practice)
+   - [Azure Monitor service limits](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/service-limits)
+   - [Customize scraping of Prometheus metrics](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration)
+   - [Default Prometheus metrics configuration](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default)
+   - [Azure Monitor Prometheus overview](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/prometheus-metrics-overview)
 
 ---
 
