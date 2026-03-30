@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package apiserver
+package apiserver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
 
 import (
 	"context"
@@ -15,26 +15,25 @@ import (
 	"sync"
 	"time"
 
+	grafanaRegexp "github.com/grafana/regexp"
 	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
+	toolkit_web "github.com/prometheus/exporter-toolkit/web"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/httputil"
 	"github.com/prometheus/prometheus/web"
+	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/net/netutil"
-
-	grafanaRegexp "github.com/grafana/regexp"
-	toolkit_web "github.com/prometheus/exporter-toolkit/web"
-	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
 // Use same settings as Prometheus web server
@@ -52,10 +51,16 @@ type Manager struct {
 	registry      *prometheus.Registry
 	registerer    prometheus.Registerer
 	server        *http.Server
-	mtx           sync.RWMutex
+	cfgLock       *sync.RWMutex
 }
 
-func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, registry *prometheus.Registry, registerer prometheus.Registerer) *Manager {
+func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, registry *prometheus.Registry, registerer prometheus.Registerer, cfgLock *sync.RWMutex) *Manager {
+	if cfg == nil {
+		return nil
+	}
+	if cfgLock == nil {
+		cfgLock = &sync.RWMutex{}
+	}
 	return &Manager{
 		shutdown:   make(chan struct{}),
 		settings:   set,
@@ -63,10 +68,15 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 		promCfg:    promCfg,
 		registry:   registry,
 		registerer: registerer,
+		cfgLock:    cfgLock,
 	}
 }
 
 func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager *scrape.Manager) error {
+	if m.cfg == nil {
+		return nil
+	}
+
 	m.settings.Logger.Info("Starting Prometheus API server")
 	m.scrapeManager = scrapeManager
 
@@ -121,14 +131,22 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	factoryAr := func(_ context.Context) api_v1.AlertmanagerRetriever { return nil }
 	factoryRr := func(_ context.Context) api_v1.RulesRetriever { return nil }
 	var app storage.Appendable
+	var appV2 storage.AppendableV2
 	logger := promslog.NewNopLogger()
 
-	apiV1 := api_v1.NewAPI(o.QueryEngine, o.Storage, app, o.ExemplarStorage, factorySPr, factoryTr, factoryAr,
-
+	apiV1 := api_v1.NewAPI(
+		o.QueryEngine,
+		o.Storage,
+		app,
+		appV2,
+		o.ExemplarStorage,
+		factorySPr,
+		factoryTr,
+		factoryAr,
 		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
 		func() promconfig.Config {
-			m.mtx.RLock()
-			defer m.mtx.RUnlock()
+			m.cfgLock.RLock()
+			defer m.cfgLock.RUnlock()
 			return *m.promCfg
 		},
 		o.Flags, // nil
@@ -163,7 +181,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 			return status, nil
 		},
-		&web.PrometheusVersion{
+		&api_v1.PrometheusVersion{
 			Version:   version.Version,
 			Revision:  version.Revision,
 			Branch:    version.Branch,
@@ -187,6 +205,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		false, // appendMetadata from remote write
 		nil,   // OverrideErrorCode
 		nil,   // FeatureRegistry
+		api_v1.OpenAPIOptions{},
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
@@ -235,8 +254,8 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 // ApplyConfig updates the config field of the Manager struct.
 func (m *Manager) ApplyConfig(cfg *promconfig.Config) error {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
+	m.cfgLock.Lock()
+	defer m.cfgLock.Unlock()
 
 	m.promCfg = cfg
 
@@ -244,8 +263,8 @@ func (m *Manager) ApplyConfig(cfg *promconfig.Config) error {
 }
 
 func (m *Manager) GetConfig() *promconfig.Config {
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
+	m.cfgLock.RLock()
+	defer m.cfgLock.RUnlock()
 
 	return m.promCfg
 }
