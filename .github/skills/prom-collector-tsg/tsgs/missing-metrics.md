@@ -32,12 +32,27 @@ Run `tsg_triage`, `tsg_config`, `tsg_workload`. Then:
 11. **Target distribution imbalance** — run `tsg_workload`, check "Target Allocator Distribution". If `targets_per_collector` is uneven or very high, some collectors may be overloaded. Check "Exporter Send Failures" for `send_failed_metric_points > 0` — indicates ME/MDM ingestion failures
 12. **Check event timeline** — run `tsg_workload`, check "Event Timeline" to correlate config changes, restarts, and error spikes. Look for patterns like "config change → error spike → restart"
 13. **Multi-AMW routing** — if the cluster has multiple AMWs associated (check `tsg_triage` → "AMW Configuration"):
-    - All scrape jobs route to the **default AMW** unless explicitly configured otherwise
-    - To send metrics to a non-default AMW, the customer must set `metricsAccountName` on the scrape job config or PodMonitor/ServiceMonitor
+    - All scrape jobs route to the **default AMW** unless explicitly configured otherwise via the `microsoft_metrics_account` label
+    - **DCR-level routing vs label routing**: DCR associations route default scrape targets (kubelet, cadvisor, node-exporter, KSM) to the AMW linked in the DCR. The `microsoft_metrics_account` label on PodMonitor/ServiceMonitor relabeling routes those specific metrics to a named AMW
     - Cross-subscription ingestion IS supported without additional RBAC configuration — the DCRA handles auth automatically
-    - If customer says metrics are missing, first ask **which AMW** they are querying. If they're checking a non-default AMW but haven't configured `metricsAccountName` routing, that is the root cause
-    - Example PodMonitor annotation: `prometheus.io/metricsAccountName: <amw-name>`
-    - Example scrape config: add `metricsAccountName: <amw-name>` under the job definition
+    - If customer says metrics are missing, first ask **which AMW** they are querying and **which metrics** are missing (default targets vs pod monitor custom metrics)
+    - **Correct PodMonitor relabeling** (per [MS docs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-send-to-multiple-azure-monitor-workspaces)):
+      ```yaml
+      relabelings:
+        - action: replace
+          replacement: <amw-name>  # must match an AMW associated with THIS cluster
+          targetLabel: microsoft_metrics_account
+      ```
+    - **Common misconfiguration: wrong AMW name** — if `microsoft_metrics_account` points to an AMW not associated with the cluster (e.g. using a prod AMW name on a dev cluster), ME will try to publish to that endpoint and **fail** with HTTP 500 / connection timeouts. Metrics are silently dropped. Diagnose with:
+      ```
+      tsg_query(datasource: "PrometheusAppInsights", kql: "traces | where message has 'AggregatedMetricsPublisher' and message has 'publication failed' | project timestamp, message | order by timestamp desc | take 10", cluster: "...", timeRange: "24h", outputFile: "/tmp/me-routing-errors.json", outputFormat: "json")
+      ```
+      The ME error pattern is: `AggregatedMetricsPublisher _Default[wrong-account.region.metrics.ingest.monitor.azure.com]` — the bracketed endpoint reveals which AMW ME is trying to reach
+    - **Cross-cluster AMW lookup** — to find which cluster an AMW is actually associated with:
+      ```
+      tsg_query(datasource: "AMWInfo", kql: "search '<amw-name>' | where $table == 'AzureMonitorMetricsDCRDaily' | project ParentResourceId | distinct ParentResourceId", outputFile: "/tmp/amw-cluster.json", outputFormat: "json")
+      ```
+      Use `outputFile` to avoid ARM ID truncation in tabular output
 14. **Pod restarts causing gaps** — see Pod Restarts TSG above
 15. **Check AKS upgrade / node image change** — run `tsg_triage`, check "AKS Upgrade History" to see if the cluster was recently upgraded (version changes with timestamps). An AKS version upgrade changes the node image, which includes a new `node_exporter` version. A new node exporter can expose different/additional metrics causing TS explosion, or break scraping entirely (up=0). Signs: `tsg_scrape_health` shows `node` job degraded/down, `tsg_workload` → "Node Exporter Sample Count Trend" shows `max_samples` changing (e.g. 2028→2065 = new version exposing 37 new metrics passing the keep-list). Also check "Scrape Samples Per Job Over Time" — if total scrape samples are flat but TS is growing, label churn (pod/container name turnover) is the cause. If `node` job has 0% success rate after upgrade, the new node exporter version broke scraping — escalate to AKS team
 16. **Time series explosion after quota increase** — if MDM auto-quota increased and TS count is growing exponentially, this is the "floodgate effect": the quota was throttling events, masking the true TS count. When the throttle lifts, MStore discovers all previously-dropped label combinations as new time series. Check `tsg_workload` → "ME Throughput by Pod Type Over Time" — if ME throughput is flat but TS is growing, the growth is from MDM catching up, not from new data. The TS count will plateau once MStore has registered all unique label combos. Watch that it stays under the TS limit

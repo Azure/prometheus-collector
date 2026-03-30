@@ -27,6 +27,13 @@ tsg_query(datasource: "AKS", kql: "...", outputFile: "/tmp/data.json", outputFor
 - **Find config errors**: `traces | where tostring(customDimensions.cluster) =~ _cluster | where message has "unmarshal" | ...`
 - **Check pod memory over time**: `customMetrics | where tostring(customDimensions.cluster) =~ _cluster | where name == "otelcollector_memory_rss" | ...`
 - **Search logs by keyword**: `traces | where tostring(customDimensions.cluster) =~ _cluster | where message has "YOUR_KEYWORD" | take 20`
+- **ME account routing errors** (multi-AMW): `traces | where message has "AggregatedMetricsPublisher" and message has "publication failed" | project timestamp, message | order by timestamp desc | take 10` — look for `_Default[wrong-endpoint]` to identify which AMW endpoint ME is trying to reach
+- **Cross-cluster AMW lookup** (AMWInfo): `search '<amw-name>' | where $table == 'AzureMonitorMetricsDCRDaily' | project ParentResourceId | distinct ParentResourceId` — finds which cluster an AMW is associated with globally
+- **All AMWs for a subscription** (AMWInfo): `search '<subscription-id>' | where $table == 'AzureMonitorWorkspaceStatsDaily' | distinct AMWAccountResourceId, MDMAccountName`
+
+**Tips:**
+- Use `outputFile` parameter to write full results to JSON/CSV — avoids truncation of long ARM resource IDs in tabular output
+- AMWInfo tables are not directly queryable by name; use `search 'keyword'` with `$table` filters for ad-hoc exploration
 
 **Data sources available:**
 | Data Source | Tables | Use For |
