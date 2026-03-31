@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - rashmi/march-2026-release
 pr:
   autoCancel: true
   branches:
