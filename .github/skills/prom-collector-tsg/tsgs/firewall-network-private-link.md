@@ -16,6 +16,17 @@ This is one of the most common patterns. When AMCS endpoints are unreachable (fi
 
 **Key insight:** The OtelCollector "connection refused" errors look like an OtelCollector bug but are actually a SYMPTOM of ME not running. Always check the ME and MDSD errors first — they reveal the true root cause (missing TokenConfig.json → blocked endpoints).
 
+**⚠️ Primary indicator for private clusters — MDSD 403 "Data collection endpoint must be used to access configuration over private link":**
+
+This specific MDSD error means the cluster is private and AMCS **requires** a DCE (Data Collection Endpoint) to serve configuration, but no DCE is configured. This is now surfaced in `tsg_triage` as "⚠️ Missing DCE for Private Cluster (AMCS 403)". When you see this error:
+
+1. **Confirm the cluster is private** — `tsg_triage` → "AKS Cluster Network Settings" shows "Is Private Cluster: true"
+2. **Check if a DCE exists** — `tsg_triage` → "Internal DCE and DCR Ids" will be empty
+3. **Check if a DCR exists** — `tsg_triage` → "Data Collection Rules Associated with Cluster" will be empty
+4. **Check if an AMW exists in the subscription** — `tsg_triage` → "Azure Monitor Workspace(s) in Subscription (fallback)" may show an AMW was created but never linked
+5. **Root cause:** The addon was enabled but DCE + DCR + DCRA were never provisioned. This is an incomplete onboarding — typically the ARM template / Bicep / Terraform that creates these resources was never run, or only the AMW was created
+6. **Fix:** Create DCE (in same region as cluster) + DCR + DCRA linking the cluster to the AMW. For private clusters, the DCE must also be linked to an Azure Monitor Private Link Scope (AMPLS)
+
 **Investigation steps:**
 
 Run `tsg_errors`, look for the error chain above, private link errors, and DNS errors. Then:

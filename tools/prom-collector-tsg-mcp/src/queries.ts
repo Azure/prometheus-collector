@@ -123,6 +123,17 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 //| order by timestamp`,
     },
     {
+      name: "⚠️ Missing DCE for Private Cluster (AMCS 403)",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| mv-expand message = split(message, "\\n") to typeof(string)
+| where message contains 'Data collection endpoint must be used to access configuration over private link.'
+| summarize HitCount=count(), FirstSeen=min(timestamp), LastSeen=max(timestamp) by controllertype=tostring(customDimensions.controllertype)
+| extend Status="❌ MISSING DCE — private cluster requires a Data Collection Endpoint for AMCS access. Create a DCE and link it via DCRA."`,
+    },
+    {
       name: "Token Adapter Health",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
@@ -172,6 +183,15 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId
 `,
+    },
+    {
+      name: "Azure Monitor Workspace(s) in Subscription (fallback)",
+      datasource: "AMWInfo",
+      kql: `// Falls back to subscription-level search when no DCR is linked to the cluster
+AzureMonitorWorkspaceStatsDaily
+| where Timestamp > ago(30d)
+| where SubscriptionGuid == extract("/subscriptions/([^/]+)", 1, _cluster)
+| distinct AMWAccountResourceId, AMWAccountUniqueName, MDMAccountName, Location, AMWCreationTime`,
     },
     {
       name: "AKS Cluster Network Settings",
