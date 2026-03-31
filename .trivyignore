@@ -3,5 +3,10 @@
 # CRITICAL
 CVE-2026-33186 #google.golang.org/grpc
 # HIGH
-
+# gobinary - otelcollector, promconfigvalidator
+GHSA-6g7g-w4f8-9c9x #github.com/buger/jsonparser - Denial of service (v1.1.1 -> 1.1.2)
+# gobinary - otelcollector, promconfigvalidator, configuration-reader (root/main)
+CVE-2026-34040 #github.com/docker/docker - Moby AuthZ plugin bypass with oversized request bodies (v28.5.2 -> 29.3.1)
 # MEDIUM
+# gobinary - otelcollector, promconfigvalidator, configuration-reader (root/main)
+CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privilege validation (v28.5.2 -> 29.3.1)
