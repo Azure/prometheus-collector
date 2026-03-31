@@ -45,6 +45,63 @@ The prometheus-collector addon runs as a container on the customer's AKS cluster
 
 ---
 
+## What We Had Before: The ADX Dashboard
+
+We built a **TSG ADX Dashboard** to consolidate our most common queries. You paste in the cluster ARM resource ID and it runs everything:
+
+```
+ARM Resource ID ──► ADX Dashboard
+                        │
+                        ├─► Resolves AKS internal CCP cluster ID
+                        ├─► Finds the AMW associated with that cluster
+                        ├─► Looks up the internal MDM account ID for that AMW
+                        ├─► Runs 50+ diagnostic queries across data sources
+                        └─► Displays results in panels
+```
+
+**The key insight:** every data source uses a **different identifier** for the same cluster:
+
+| Data Source | Key It Needs | How We Get It |
+|-------------|-------------|---------------|
+| App Insights | ARM resource ID | Given by the customer / ICM |
+| AKS Kusto (CCP) | Internal hex cluster ID | Resolved from `ManagedClusterMonitoring` (sparse — ~6h apart) |
+| AKS Kusto (Infra) | ARM resource ID or subscription + cluster name | Extracted from ARM ID |
+| AMWInfo | Subscription GUID | Extracted from ARM ID |
+| MetricInsights | MDM account name (e.g. `mac_0d8947c8...`) | Looked up from AMW association |
+| ARM Kusto | Subscription GUID + target URI patterns | Extracted from ARM ID, queries 3 regional clusters |
+| Geneva MDM | MDM monitoring account name | Same as MetricInsights account |
+
+The dashboard helped — it handles the ID resolution chain automatically. **But it still has significant gaps:**
+
+### Dashboard Limitations
+
+| Problem | Impact |
+|---------|--------|
+| **ADX dashboards can't query Geneva MDM** | For throttling, drops, and cardinality — you have to open **Jarvis** (Geneva portal) separately and paste in the MDM account name |
+| **ADX dashboards can't query ARM deployment history** | For DCR/DCE/DCRA creation and deletion — you have to open **ARMProd Kusto** in a separate ADX tab across 3 regional clusters |
+| **No access to AKS Service Insights** | AKS uses the **Azure Service Insights** portal for deep cluster diagnostics (node health, upgrade status, control plane events) — completely separate from ADX |
+| **No ICM context integration** | You still have to read the ICM, extract ARM IDs, understand the symptom — then switch to the dashboard |
+| **Static panels, no intelligence** | The dashboard shows data but doesn't interpret it — you still have to visually scan every panel, correlate timestamps yourself, and know which TSG to follow |
+| **No custom query support** | When the pre-built panels don't answer your question, you have to open yet another ADX tab for ad-hoc queries |
+
+**Result: you're juggling 3-4 web pages during every investigation:**
+
+```
+┌──────────┐  ┌──────────────┐  ┌─────────────┐  ┌───────────────────┐
+│   ICM    │  │ ADX Dashboard│  │   Jarvis    │  │ Service Insights  │
+│  Portal  │  │  (our KQL)   │  │  (MDM QoS)  │  │   (AKS portal)    │
+└────┬─────┘  └──────┬───────┘  └──────┬──────┘  └────────┬──────────┘
+     │               │                 │                   │
+     └───────────────┴─────────────────┴───────────────────┘
+                    Manual context switching
+              Copy-paste IDs between every page
+           No correlation — you build the timeline in your head
+```
+
+**The MCP server eliminates all of this** — every data source, every ID resolution, every TSG, in one terminal.
+
+---
+
 ## The Solution
 
 **An MCP server that gives Copilot CLI direct access to all our diagnostic data sources.**
