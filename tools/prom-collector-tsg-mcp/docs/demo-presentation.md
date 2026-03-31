@@ -43,7 +43,7 @@ That's the core idea behind this skill + MCP server approach:
 
 | What SMEs Know | How We Capture It |
 |---------------|-------------------|
-| "If it's a private cluster, check DCE first" | **Skill routing**: Private link symptom → `tsg_triage` runs ⚠️ Private Cluster Check (definitive) → Missing DCE check — automatically, in the right order |
+| "If it's a private cluster, check DCE first" | **Skill routing**: Private link symptom → `tsg_triage` runs Private Cluster Check (definitive) → Missing DCE check — automatically, in the right order |
 | "OOMKills create an HPA feedback loop — check minshards" | **TSG document**: `tsgs/pod-restarts-oomkills.md` has the exact diagnostic workflow + fix |
 | "That MDSD error means AMCS can't serve config over private link" | **Error pattern matching**: `tsg_errors` detects the specific MDSD error string → skill routes to private link TSG |
 | "Check ARM for whether the DCR was recently deleted" | **Built-in queries**: `tsg_triage` runs DCRA Operations, DCE Operations, Failed Operations against 3 regional ARM clusters automatically |
@@ -209,7 +209,7 @@ The dashboard helped — it handles the ID resolution chain automatically. **But
 
 | Tool | What it does |
 |------|-------------|
-| **`tsg_triage`** | Initial triage: addon version, region, AMW/DCR/DCE config, token adapter health, CCP cluster ID, node pool capacity & autoscaling, AKS upgrade history, ⚠️ Missing DCE check for private clusters |
+| **`tsg_triage`** | Initial triage: addon version, region, AMW/DCR/DCE config, token adapter health, CCP cluster ID, node pool capacity & autoscaling, AKS upgrade history, Missing DCE check for private clusters |
 | **`tsg_errors`** | Scans ALL error categories: ContainerLog, OtelCollector, MetricsExtension, MDSD, AddonTokenAdapter, TargetAllocator, ConfigReader, DNS resolution, Private Link, DCR/AMCS config, Liveness Probe |
 | **`tsg_config`** | Scrape configs (RS/DS/Win), custom config validation + errors, keep lists, scrape intervals, HPA, pod/service monitors, recording rules, addon enabled check, OTLP metrics, cluster alias/label, KSM allow lists |
 | **`tsg_workload`** | Replica count, samples/min, drops (OTel & ME), P95 CPU/memory per container, queue sizes, export failures, HPA oscillation analysis, pod resource limits, TA distribution, ME ingestion success rate, event timeline, per-job scrape samples, node exporter trends |
@@ -241,7 +241,7 @@ The dashboard helped — it handles the ID resolution chain automatically. **But
 ## All 165 Queries Across 9 Categories
 
 ### Triage (27 queries)
-Version • Component Versions (ME, OTel, Golang, Prometheus) • Cluster Region • AKS Cluster ID • Azure Monitor Workspace • MDM Account ID • MDM Stamp • AMW Region • Internal DCE/DCR Ids • ⚠️ Missing DCE for Private Cluster (AMCS 403) • Token Adapter Health • DCRs Associated with Cluster • AMW(s) from Scrape Config Routing • AMW(s) • AMW(s) in Subscription (fallback) • AKS Network Settings • AKS Addons Enabled • AKS Cluster Settings • AKS Cluster State • CCP Cluster ID • CCP Cluster ID (AgentPoolSnapshot fallback) • Node Pool Capacity • Node Conditions (Memory/Disk/PID Pressure) • Node Allocatable Resources • AgentPool Autoscaling History • AKS Upgrade History • Node Pool Versions (resource_id fallback)
+Version • Component Versions (ME, OTel, Golang, Prometheus) • Cluster Region • AKS Cluster ID • Azure Monitor Workspace • MDM Account ID • MDM Stamp • AMW Region • Internal DCE/DCR Ids • Missing DCE for Private Cluster (AMCS 403) • Token Adapter Health • DCRs Associated with Cluster • AMW(s) from Scrape Config Routing • AMW(s) • AMW(s) in Subscription (fallback) • AKS Network Settings • AKS Addons Enabled • AKS Cluster Settings • AKS Cluster State • CCP Cluster ID • CCP Cluster ID (AgentPoolSnapshot fallback) • Node Pool Capacity • Node Conditions (Memory/Disk/PID Pressure) • Node Allocatable Resources • AgentPool Autoscaling History • AKS Upgrade History • Node Pool Versions (resource_id fallback)
 
 ### Errors (12 queries)
 DCR/DCE/AMCS Configuration Errors • ContainerLog Errors • OtelCollector Errors • MetricsExtension Errors • MDSD Errors • AddonTokenAdapter Errors • TargetAllocator Errors • ConfigReader Errors • DNS Resolution Issues • Private Link Issues • Private Link Issues by Nodepool/Node/Pod • Liveness Probe Logs
@@ -293,7 +293,7 @@ The **TSG Skill** (`.github/skills/prom-collector-tsg/`) teaches Copilot *how* t
 
 ### 5-Step Workflow
 1. **Gather Context** — Scrape ICM page + call ICM API in parallel, extract cluster ARM ID and incident time range
-2. **Run Triage** — `tsg_triage` → version, region, DCR/AMW, node pools, private cluster check, ⚠️ Missing DCE
+2. **Run Triage** — `tsg_triage` → version, region, DCR/AMW, node pools, private cluster check, Missing DCE
 3. **Identify Symptoms** — Match error patterns to one of 16 TSGs using symptom→tool routing table
 4. **Deep Dive** — Follow TSG-specific tool sequence (errors → workload → logs → config → ARM)
 5. **Summarize** — Root cause, error counts, fix steps, escalation path, dashboard link, customer doc link
@@ -330,7 +330,7 @@ The **TSG Skill** (`.github/skills/prom-collector-tsg/`) teaches Copilot *how* t
 | Partial metrics / drops | `tsg_workload` → `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM) |
 | Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
 | Config validation failed | `tsg_config` | Missing Metrics (validation errors) |
-| Private link errors | `tsg_triage` (⚠️ DCE check) → `tsg_errors` | Firewall / Private Link |
+| Private link errors | `tsg_triage` (DCE check) → `tsg_errors` | Firewall / Private Link |
 | TokenConfig.json missing / ME won't start | `tsg_errors` → `tsg_logs` | Firewall (AMCS blocked) |
 | ARC cluster pod restarts | `tsg_errors` → `tsg_logs` | Firewall (ARC/Azure Local) |
 | Proxy / auth proxy issues | `tsg_errors` → `tsg_config` | Proxy |
@@ -383,7 +383,7 @@ The **TSG Skill** (`.github/skills/prom-collector-tsg/`) teaches Copilot *how* t
 - ✅ Addon v6.26.0, switzerlandnorth, K8s 1.33.7
 - ❌ Internal DCE/DCR Ids: **empty**
 - ❌ `defaultmetricaccountname: ""` — no AMW linked
-- ⚠️ **Private cluster** = requires DCE
+- **Private cluster** = requires DCE
 
 **Step 2 — Errors:**
 - 281,461 DCR/AMCS config errors
@@ -500,7 +500,7 @@ The skill includes a **Step 5: Improve the Tooling** — after every investigati
 ```
 Investigation #1: "Is this a private cluster?"
   └─► Agent writes ad-hoc KQL against ManagedClusterSnapshot
-  └─► Adds "⚠️ Private Cluster Check (definitive)" to queries.ts
+  └─► Adds "Private Cluster Check (definitive)" to queries.ts
   └─► Rebuilds MCP server, commits, pushes
 
 Investigation #2: Same question on a different cluster
