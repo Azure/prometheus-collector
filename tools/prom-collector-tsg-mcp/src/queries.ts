@@ -3313,6 +3313,46 @@ HttpIncomingRequests
 | project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, dceName, targetUri, userAgent
 | order by TIMESTAMP desc`,
     },
+    {
+      name: "DCRA History Timeline (datacollectionruleassociations on cluster)",
+      datasource: "ARMPRODSEA",
+      kql: `// Full timeline of DCRA create/delete/get operations on the cluster
+// Reveals: setup attempts, teardown cycles, 403 permission failures, naming conventions tried
+// Critical for multi-AMW routing issues — shows if partner DCRA was deleted or never created
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| where tolower(targetUri) has '_clusterName'
+| where httpStatusCode != -1
+| extend assocName = extract(@'(?i)datacollectionruleassociations/([^?/]+)', 1, targetUri)
+| summarize
+    FirstSeen = min(TIMESTAMP),
+    LastSeen = max(TIMESTAMP),
+    PutSuccess = countif(httpMethod == 'PUT' and httpStatusCode >= 200 and httpStatusCode < 300),
+    PutFailed = countif(httpMethod == 'PUT' and httpStatusCode >= 400),
+    DeleteSuccess = countif(httpMethod == 'DELETE' and httpStatusCode >= 200 and httpStatusCode < 300),
+    DeleteFailed = countif(httpMethod == 'DELETE' and httpStatusCode >= 400),
+    GetCount = countif(httpMethod == 'GET')
+    by assocName
+| order by LastSeen desc`,
+    },
+    {
+      name: "DCRA Detailed Timeline for Specific Partner",
+      datasource: "ARMPRODSEA",
+      kql: `// Detailed chronological timeline of ALL DCRA operations on the cluster
+// Use to trace exact sequence of create/delete cycles and identify permission issues
+// Filter further by adding: | where assocName has '<partner-keyword>'
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| where tolower(targetUri) has '_clusterName'
+| where httpStatusCode != -1
+| extend assocName = extract(@'(?i)datacollectionruleassociations/([^?/]+)', 1, targetUri)
+| project TIMESTAMP, httpMethod, httpStatusCode, assocName
+| order by TIMESTAMP asc`,
+    },
   ],
 };
 
