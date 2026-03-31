@@ -374,6 +374,29 @@ Private cluster + No DCE/DCR/DCRA provisioned
 - Auto-detects ARMProd Conditional Access Policy issues
 - Suggests `azureauth` CLI for WAM-based auth
 
+### Self-Improving: Every Investigation Makes the Next One Faster
+
+The skill includes a **Step 5: Improve the Tooling** — after every investigation, the agent automatically adds any ad-hoc KQL queries it wrote back into the MCP server and skill:
+
+```
+Investigation #1: "Is this a private cluster?"
+  └─► Agent writes ad-hoc KQL against ManagedClusterSnapshot
+  └─► Adds "⚠️ Private Cluster Check (definitive)" to queries.ts
+  └─► Rebuilds MCP server, commits, pushes
+
+Investigation #2: Same question on a different cluster
+  └─► Query already exists in tsg_triage — runs automatically
+  └─► No ad-hoc work needed
+```
+
+**This means:**
+- The **175+ queries** in the MCP server today were built up investigation by investigation
+- Every new ICM pattern that requires a custom query gets **permanently captured**
+- The skill's TSG routing and symptom mappings grow with each new case
+- The team benefits from every investigation — not just the person who ran it
+
+This is fundamentally different from a static dashboard — **the tooling learns from usage**.
+
 ---
 
 ## How to Set Up
