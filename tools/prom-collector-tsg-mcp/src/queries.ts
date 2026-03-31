@@ -3044,6 +3044,69 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
 | distinct MetricName
 | order by MetricName asc`,
     },
+    {
+      name: "Per-Dimension Cardinality Breakdown (Top 10 Metrics)",
+      datasource: "MetricInsights",
+      kql: `// Shows which dimensions cause cardinality explosion for the top 10 highest-cardinality metrics
+let _mdmAccount = mdmAccountID;
+let _metric = dynamic(null);
+let _namespace = dynamic(['customdefault']);
+let _preaggDimensions = dynamic(null);
+let _numOfDaysQueryLookBack = 180;
+let topMetrics = GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| summarize ['Daily TS']=sum(DailyTSAcrossAccounts) by MetricName
+| top 10 by ['Daily TS'];
+GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| where MetricName in ((topMetrics | project MetricName))
+| project MetricName, Dimensions, DailyTSAcrossAccounts
+| mv-expand Dimensions
+| extend DimName = tostring(Dimensions)
+| summarize ['Unique Values']=dcount(DimName), ['Total TS']=sum(DailyTSAcrossAccounts) by MetricName, DimName
+| order by MetricName asc, ['Unique Values'] desc`,
+    },
+    {
+      name: "Cardinality Trend Over Time (Top 5 Metrics, Last 30d)",
+      datasource: "MetricInsights",
+      kql: `// Tracks daily time series growth for top 5 metrics to detect cardinality spikes
+let _mdmAccount = mdmAccountID;
+let _namespace = dynamic(['customdefault']);
+EventStatsInsightsV2
+| where MonitoringAccount == _mdmAccount
+| where MetricNamespace in~ (_namespace)
+| where PreciseTimeStamp > ago(30d)
+| summarize ['Daily TS']=max(DailyTimeSeriesCount) by MetricName, bin(PreciseTimeStamp, 1d)
+| partition hint.strategy=native by MetricName (top 1 by ['Daily TS'])
+| top 5 by ['Daily TS']
+| project TopMetric=MetricName;
+EventStatsInsightsV2
+| where MonitoringAccount == _mdmAccount
+| where MetricNamespace in~ (_namespace)
+| where PreciseTimeStamp > ago(30d)
+| where MetricName in ((TopMetric))
+| summarize ['Daily TS']=max(DailyTimeSeriesCount) by MetricName, Day=bin(PreciseTimeStamp, 1d)
+| order by MetricName asc, Day asc`,
+    },
+    {
+      name: "Metric Dimension Names and Value Counts",
+      datasource: "MetricInsights",
+      kql: `// For a specific high-cardinality metric, shows each dimension and how many unique values it has
+// Useful to identify which label (e.g. pod, container_id, instance) is causing cardinality explosion
+let _mdmAccount = mdmAccountID;
+let _metric = dynamic(null);
+let _namespace = dynamic(['customdefault']);
+let _preaggDimensions = dynamic(null);
+let _numOfDaysQueryLookBack = 180;
+GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| summarize ['Unique Dimension Combos']=count(), ['Total Daily TS']=sum(DailyTSAcrossAccounts), ['Avg Sample Rate']=round(sum(AvgEventRate), 0) by MetricName
+| where ['Unique Dimension Combos'] > 50
+| extend ['Cardinality Risk'] = case(
+    ['Unique Dimension Combos'] > 1000, "🔴 Critical",
+    ['Unique Dimension Combos'] > 500, "🟠 High",
+    ['Unique Dimension Combos'] > 100, "🟡 Medium",
+    "🟢 Low")
+| order by ['Unique Dimension Combos'] desc
+| take 20`,
+    },
   ],
   armInvestigation: [
     {
@@ -3167,6 +3230,49 @@ HttpIncomingRequests
 | extend resourceType = extract(@'/providers/microsoft\\.monitor/([^/]+)', 1, tolower(targetUri))
 | extend resourceName = extract(@'/providers/microsoft\\.monitor/[^/]+/([^?/]+)', 1, tolower(targetUri))
 | project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, resourceType, resourceName, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCRA Operations for Cluster (dataCollectionRuleAssociations)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows all DCRA operations (PUT/GET/DELETE) targeting this specific cluster
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has tolower('_clusterName')
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| extend dcraName = extract(@'/providers/microsoft\.insights/datacollectionruleassociations/([^?/]+)', 1, tolower(targetUri))
+| extend httpMethodAndStatus = strcat(httpMethod, ' → ', httpStatusCode)
+| project TIMESTAMP, httpMethodAndStatus, dcraName, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCRA Failed Operations (4xx/5xx errors)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows failed DCRA/DCR/DCE operations — creation failures, permission errors, region mismatches
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpStatusCode >= 400
+| extend resourceType = extract(@'/providers/microsoft\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| extend parentResource = extract(@'/providers/([^/]+/[^/]+/[^/]+)/providers/microsoft\.insights', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceType, resourceName, parentResource, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCE Operations in Subscription (dataCollectionEndpoints)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows all DCE create/delete operations — critical for private link clusters
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionendpoints'
+| where httpMethod in ('PUT', 'DELETE')
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend dceName = extract(@'/datacollectionendpoints/([^?/]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, dceName, targetUri, userAgent
 | order by TIMESTAMP desc`,
     },
   ],
