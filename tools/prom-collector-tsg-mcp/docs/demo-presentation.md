@@ -520,6 +520,25 @@ This is fundamentally different from a static dashboard — **the tooling learns
 
 ## How to Set Up
 
+### There's a Skill for That Too
+
+You don't even need to follow the manual steps below. We built a **`troubleshooting-setup` skill** that walks Copilot through the entire setup process:
+
+```
+> @troubleshooting-setup Set up the prometheus-collector troubleshooting environment
+```
+
+Copilot will:
+1. Check if Node.js is installed (and tell you how to get it if not)
+2. Build the MCP server (`npm install` + `npx tsc`)
+3. Configure `mcp.json` with the right paths
+4. Run `tsg_auth_check` to validate credentials to all data sources
+5. **If auth fails** — diagnose why (expired token? missing `az login`? ARMProd CAP issue? VPN not connected?) and walk you through the fix
+
+This means nobody on the team has to spend time figuring out setup. They ask Copilot, and Copilot handles it — including troubleshooting auth issues that would otherwise be a Slack message to the person who built the tooling.
+
+### Manual Setup (if you prefer)
+
 ### Prerequisites
 - Copilot CLI installed
 - Azure CLI logged in (`az login`)
