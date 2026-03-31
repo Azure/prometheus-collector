@@ -510,11 +510,65 @@ copilot
 
 ---
 
-## What's Next
+## What's Next: The SRE Agent
 
-- [ ] Merge `grwehner/tsg-tooling-and-devbox` → main
-- [ ] Integrate with SRE Agent for automated ICM triage
-- [ ] Auto-generate ICM summary from investigation results
+### "Isn't this what the SRE Agent should be doing?"
+
+**Yes — and that's exactly the plan.** Everything we've built here is preparation for the SRE Agent.
+
+The [Azure SRE Agent](https://eng.ms/docs/coreai/devdiv/serverless-paas-balam/serverless-paas-vikr/sre-agent/sre-agent-documentation) accepts:
+- **Custom skills** — our `SKILL.md` + 16 TSGs + `reference.md`
+- **Your code repo** — `Azure/prometheus-collector` for context on the addon
+- **Data sources to query** — Kusto clusters, App Insights
+- **Extra MCP servers** — our `prom-collector-tsg-mcp` with 175+ queries
+
+All of this plugs directly into the SRE Agent's sub-agent framework. The skill, MCP server, and TSGs we're building locally today become the SRE Agent's brain for prometheus-collector incidents tomorrow.
+
+### Why Not Just Use the SRE Agent Today?
+
+**The identity and access problem.** The SRE Agent operates off a **managed identity** — and our investigation requires read access to data sources we don't own:
+
+| Data Source | Owner | Access Problem |
+|-------------|-------|---------------|
+| **AKS Kusto** (5 clusters) | AKS team | We'd need to grant the SRE Agent's managed identity reader access to clusters owned by another team |
+| **AKS CCP Kusto** | AKS Control Plane team | Same — different team's cluster, separate access request |
+| **ARMProd** (3 regional clusters) | ARM team | Has a **Conditional Access Policy** that blocks non-compliant auth — managed identities may not satisfy CAP |
+| **AMCS / AMWInfo** | Azure Monitor Control Service | Yet another team's Kusto cluster to onboard |
+| **Geneva MDM** (per-account) | Customer's AMW | Read access for throttling/metric names/drops must be assigned **per MDM account individually** — there's no blanket "read all accounts" role |
+| **App Insights** | Our team (we own this one) | ✅ This one we can grant easily |
+
+**With our own identity** (logged in via `az login`), we already have:
+- Reader access to all these Kusto clusters (granted to our team/alias)
+- MDM read access for customer accounts (inherited from our team's on-call permissions)
+- CAP-compliant auth via `azureauth` WAM tokens
+
+**With the SRE Agent's managed identity**, we'd need to:
+1. File access requests with 5+ different teams for their Kusto clusters
+2. Get each team to add the managed identity to their cluster's reader role
+3. Figure out ARMProd CAP compliance for a managed identity
+4. Assign MDM read access for every individual customer AMW account (not scalable)
+
+### The Path Forward
+
+```
+Today (Local Copilot CLI)          Tomorrow (SRE Agent)
+─────────────────────────          ─────────────────────
+Your identity (az login)    →→→    SRE Agent managed identity
+  ✅ All access already              ⬜ Access requests needed
+                                     ⬜ Per-team Kusto onboarding
+Skill + MCP server          →→→    Same skill + MCP server
+  ✅ Built and tested                ✅ Plugs in directly
+
+Manual trigger              →→→    Auto-trigger on ICM
+  "investigate ICM 123"              SRE Agent picks up ICM
+                                     runs skill automatically
+```
+
+**We're building the skill and MCP server now** because:
+1. They work locally today — immediate value for on-call
+2. They're the same artifacts the SRE Agent will use — no throwaway work
+3. Every investigation improves them — by the time we onboard the SRE Agent, the tooling will be battle-tested with dozens of real ICMs
+4. The identity/access problem is solvable — it's just logistics, not architecture
 
 ---
 
