@@ -39,8 +39,8 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.24.9'
-  TESTKUBE_GOLANG_VERSION: '1.24.0'
+  GOLANG_VERSION: '1.25.8'
+  TESTKUBE_GOLANG_VERSION: '1.25.8'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
