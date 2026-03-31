@@ -63,32 +63,81 @@
 
 | Tool | What it does |
 |------|-------------|
-| **`tsg_triage`** | Version, region, AMW config, DCR/DCE, token adapter, node pools, AKS upgrade history |
-| **`tsg_errors`** | Scans ALL error categories: container, OTel, ME, MDSD, token adapter, TA, DNS, private link, liveness, DCR/AMCS |
-| **`tsg_config`** | Scrape configs, custom config validation, keep lists, HPA, pod/service monitors |
-| **`tsg_workload`** | CPU, memory, samples/min, drops, queue sizes, export failures, HPA status |
-| **`tsg_pods`** | Pod restarts, restart reasons (OOM, liveness), per-pod detail |
-| **`tsg_logs`** | Raw logs from replicaset, daemonset, windows, configreader |
-| **`tsg_control_plane`** | Control plane metrics config and health |
-| **`tsg_query`** | Ad-hoc KQL against any of 11 data sources — write results to CSV/JSON |
-| **`tsg_metric_insights`** | Top metrics by time series count, sample rate, cardinality |
-| **`tsg_mdm_throttling`** | Geneva MDM QoS: throttling, drops, time series limits |
-| **`tsg_scrape_health`** | Per-job scrape target health from MDM (`up` metric analysis) |
-| **`tsg_icm_page`** | Browser-scrape ICM for authored summary + discussion (not in API) |
+| **`tsg_triage`** | Initial triage: addon version, region, AMW/DCR/DCE config, token adapter health, CCP cluster ID, node pool capacity & autoscaling, AKS upgrade history, ⚠️ Missing DCE check for private clusters |
+| **`tsg_errors`** | Scans ALL error categories: ContainerLog, OtelCollector, MetricsExtension, MDSD, AddonTokenAdapter, TargetAllocator, ConfigReader, DNS resolution, Private Link, DCR/AMCS config, Liveness Probe |
+| **`tsg_config`** | Scrape configs (RS/DS/Win), custom config validation + errors, keep lists, scrape intervals, HPA, pod/service monitors, recording rules, addon enabled check, OTLP metrics, cluster alias/label, KSM allow lists |
+| **`tsg_workload`** | Replica count, samples/min, drops (OTel & ME), P95 CPU/memory per container, queue sizes, export failures, HPA oscillation analysis, pod resource limits, TA distribution, ME ingestion success rate, event timeline, per-job scrape samples, node exporter trends |
+| **`tsg_pods`** | Pod restarts & reasons (OOM, liveness), per-pod detail, DaemonSet pod status, pod-to-node mapping, system pool node resources, node status timeline, pod scheduling events, cluster autoscaler events |
+| **`tsg_logs`** | Raw logs from replicaset, linux-daemonset, windows-daemonset, configreader |
+| **`tsg_control_plane`** | Control plane metrics enabled status, jobs config, metrics keep list, configmap watcher logs, container restarts, max CPU by container |
+| **`tsg_query`** | Ad-hoc KQL against any of 11 data sources (including 3 regional ARM clusters) — supports token replacement, write results to CSV/JSON |
+| **`tsg_metric_insights`** | Top metrics by TS count & sample rate, full volume summary, top 20 cardinality, high-dimension detection, volume by category (Istio/Envoy/Container/NodeExporter/KSM), all metric names (180-day lookback) |
+| **`tsg_mdm_throttling`** | Geneva MDM QoS: ThrottledClientMetricCount, DroppedClientMetricCount, ThrottledTimeSeriesCount, MStoreDroppedSamplesCount, active TS vs limits, throttled queries |
+| **`tsg_scrape_health`** | Per-job scrape target health from MDM — `up` metric success/failure by bucket, relabeling drop rate, all common jobs probe |
+| **`tsg_icm_page`** | CDP browser scrape of ICM page — extracts authored summary, discussion entries, ARM resource IDs (works Windows + WSL2) |
 | **`tsg_dashboard_link`** | Direct link to ADX dashboard pre-filtered for cluster |
-| **`tsg_auth_check`** | Validate credentials + connectivity to all data sources |
+| **`tsg_auth_check`** | Validates credentials + connectivity to all data sources, auto-fixes token issues, detects ARMProd CAP blocks |
 
 ### By the Numbers
 
 | Metric | Count |
 |--------|-------|
 | MCP tools | 14 |
-| KQL queries | 175 |
+| KQL queries | 165+ |
 | Query categories | 9 |
-| Kusto clusters | 12 |
+| Data sources | 11 Kusto clusters + App Insights + Geneva MDM |
 | TSG documents | 16 |
-| Symptom→Tool mappings | 21 |
+| Symptom→Tool mappings | 30+ |
 | Lines of TypeScript | ~5,500 |
+
+---
+
+## All 165 Queries Across 9 Categories
+
+### Triage (27 queries)
+Version • Component Versions (ME, OTel, Golang, Prometheus) • Cluster Region • AKS Cluster ID • Azure Monitor Workspace • MDM Account ID • MDM Stamp • AMW Region • Internal DCE/DCR Ids • ⚠️ Missing DCE for Private Cluster (AMCS 403) • Token Adapter Health • DCRs Associated with Cluster • AMW(s) from Scrape Config Routing • AMW(s) • AMW(s) in Subscription (fallback) • AKS Network Settings • AKS Addons Enabled • AKS Cluster Settings • AKS Cluster State • CCP Cluster ID • CCP Cluster ID (AgentPoolSnapshot fallback) • Node Pool Capacity • Node Conditions (Memory/Disk/PID Pressure) • Node Allocatable Resources • AgentPool Autoscaling History • AKS Upgrade History • Node Pool Versions (resource_id fallback)
+
+### Errors (12 queries)
+DCR/DCE/AMCS Configuration Errors • ContainerLog Errors • OtelCollector Errors • MetricsExtension Errors • MDSD Errors • AddonTokenAdapter Errors • TargetAllocator Errors • ConfigReader Errors • DNS Resolution Issues • Private Link Issues • Private Link Issues by Nodepool/Node/Pod • Liveness Probe Logs
+
+### Config (28 queries)
+Invalid Custom Prometheus Config • RS/DS/Win Scrape Configs Enabled • HPA Enabled • Debug Mode • HTTP Proxy • RS ConfigMap Jobs • Custom Config Validation Status/Errors/YAML Error Lines/OTel Loading Errors • Custom Scrape Jobs from Startup Logs • RS PodMonitors/ServiceMonitors • Default Targets KeepList/Scrape Interval • Minimal Ingestion Profile • OTLP Metrics Enabled • Cluster Alias/Label • ConfigMap Version • Pod Annotations Namespace Regex • RS Targets Discovered per Job • KSM Labels/Annotations Allow Lists • Recording Rules • Addon Enabled in AKS Profile
+
+### Workload (58 queries)
+Replica/DaemonSet Count • Samples/Min (total, per-replica, per-pod, per-account) • Samples Dropped (RS ME, DS) • P95 CPU/Memory per Container (OTel, ME, ConfigReloader, TargetAllocator) • ME Queue Size • OTel Queue Size (RS/DS) • OTel Export Failures (RS/DS) • OTel Receiver Metrics Refused (RS/DS) • Collectors Discovered • Scrape Jobs • Targets Per Replica • Unassigned Targets • SD HTTP Failures • TA Error Count • KSM Version • HPA Status/Scaling Metric/Oscillation/Metric Config • Cluster Autoscaler Scale Decisions/Unschedulable Count • Pod Resource Limits • TA Distribution • Exporter Send Failures • ME Ingestion Success Rate • Event Timeline (Config/Restarts/Errors) • DaemonSet Per-Pod Sample Variance/Distribution • Scrape Samples Per Job Over Time • ME Throughput by Pod Type • Node Exporter Sample Count Trend • Node Pools • System Nodepool Nodes Status • Total P95 CPU/Memory per Replica
+
+### Pods (10 queries)
+Latest Pod Restarts • Pod Restarts During Interval • AKS Addon Pod Restart Count/Reason • Pod Restart Detail by Pod • DaemonSet Pod Count by Status • Pod to Node Mapping • System Pool Node Resources • Node Status Timeline • Pod Schedule Events • Cluster Autoscaler Events
+
+### Logs (4 queries)
+All ReplicaSet Logs • All Linux DaemonSet Logs • All Windows DaemonSet Logs • All ConfigReader Logs
+
+### Control Plane (8 queries)
+Enabled • Jobs Enabled • Metrics KeepList • Minimal Ingestion Profile • Configmap Watcher Logs • Prometheus-Collector Stdout Logs • Container Restarts • Max CPU by Container
+
+### Metric Insights (8 queries)
+Top Metrics by TS Count • Top Metrics by Sample Rate • Full Metric Volume Summary • Total TS and Events Summary • Top 20 Highest Cardinality Metrics • Metrics with High Dimension Cardinality • Volume by Category (Istio/Envoy/Container/NodeExporter/KSM/ScrapeHealth) • View All Metric Names (180-day lookback)
+
+### ARM Investigation (10 queries)
+ARM PUT Operations by Resource Provider • Managed Clusters PUT Operations (Addon Enablement) • Microsoft.Insights PUT/DELETE (DCR/DCE/DCRA) • Microsoft.Insights DELETE Details • ContainerService Operations Breakdown • ARM Outgoing Requests to Insights RP • All Operations on Specific Cluster • All Subscription DELETEs on Microsoft.Insights • AMW All Operations • AMW PUT/DELETE Operations
+
+---
+
+## 11 Data Sources
+
+| Data Source | What it provides |
+|-------------|-----------------|
+| **PrometheusAppInsights** | Collector telemetry — logs, configs, error messages, scrape validation, version info, samples/min. **Primary source for most queries.** |
+| **AKS** | Cluster state — version, addon status, network settings, node pools, VM sizes, autoscaler config |
+| **AKS CCP** | Control plane — configmap watcher logs, control plane metrics, jobs, keep lists, container restarts |
+| **AKS Infra** | Infrastructure — control plane pod CPU, container restart counts |
+| **AMWInfo** | AMW/DCR mapping — cluster→AMW→DCR→MDM account resolution, subscription-level AMW discovery |
+| **MetricInsights** | Cardinality — time series counts, sample rates, metric names, volume by category (180-day lookback) |
+| **ARMPRODSEA** | ARM ops (Asia/Pacific/UK/Africa) — DCR/DCE/DCRA creation/deletion, addon enablement logs |
+| **ARMPRODEUS** | ARM ops (Americas) — same as above for US regions |
+| **ARMPRODWEU** | ARM ops (Europe) — same as above for EU regions |
+| **Vulnerabilities** | CVE scanning — container image vulnerability information |
+| **Geneva MDM** | QoS metrics — throttling, drops, time series limits, active TS vs account limits |
 
 ---
 
@@ -97,32 +146,84 @@
 The **TSG Skill** (`.github/skills/prom-collector-tsg/`) teaches Copilot *how* to investigate:
 
 ### 5-Step Workflow
-1. **Gather Context** — Scrape ICM page + call ICM API in parallel, extract cluster ARM ID
-2. **Run Triage** — `tsg_triage` → version, region, DCR/AMW, node pools, private cluster check
-3. **Identify Symptoms** — Match error patterns to one of 16 TSGs
-4. **Deep Dive** — Follow TSG-specific tool sequence (errors → workload → logs → config)
-5. **Summarize** — Root cause, error counts, fix steps, escalation path, dashboard link
+1. **Gather Context** — Scrape ICM page + call ICM API in parallel, extract cluster ARM ID and incident time range
+2. **Run Triage** — `tsg_triage` → version, region, DCR/AMW, node pools, private cluster check, ⚠️ Missing DCE
+3. **Identify Symptoms** — Match error patterns to one of 16 TSGs using symptom→tool routing table
+4. **Deep Dive** — Follow TSG-specific tool sequence (errors → workload → logs → config → ARM)
+5. **Summarize** — Root cause, error counts, fix steps, escalation path, dashboard link, customer doc link
 
 ### 16 Troubleshooting Guides
 
-| Category | TSGs |
-|----------|------|
-| **Core** | Missing Metrics, Pod Restarts/OOM, Spike in Metrics |
-| **Network** | Firewall/Private Link/AMPLS, Proxy, DNS |
-| **Config** | Duplicate Labels (KSM), DCR/DCE Region Mismatch, Control Plane Metrics |
-| **Platform** | Windows Pod Restarts, Remote Write, Pods Not Created, Node Exporter ARM64 |
-| **Operations** | AMW Usage Optimization, Vulnerabilities/CVEs, Known Issues & FAQ |
-| **NEW** | Missing DCE for Private Clusters (from ICM 964000 investigation) |
+| # | TSG | What it covers |
+|---|-----|---------------|
+| 1 | **Missing Metrics** | Metrics fail to flow — scrape failures, token/auth errors, config issues, ME ingestion, MDM throttling, multi-AMW routing |
+| 2 | **Pod Restarts / OOMKills** | Crash loops, OOM kills, HPA feedback loops, system node pool capacity, memory pressure |
+| 3 | **Spike in Metrics Ingested** | Sudden volume increase, cardinality explosion, label churn, Istio/Envoy proliferation, cost impact |
+| 4 | **Firewall / Network / Private Link / AMPLS** | AMCS access blocked, DNS failures, private link config, AMPLS, Missing DCE for private clusters |
+| 5 | **Proxy / Authenticated Proxy** | HTTP/HTTPS proxy config, auth proxy errors, bypass rules, env var validation |
+| 6 | **DCR/DCE Region Mismatch** | DCR/DCE region validation, missing DCE, multi-region config, ARM deployment errors |
+| 7 | **Duplicate Labels (KSM)** | kube-state-metrics label conflicts, allow list config, label deduplication |
+| 8 | **Liveness Probe Failures (503)** | ME health check failures, startup delays, service availability |
+| 9 | **Pods Not Created / Addon Not Deploying** | Deployment failures, pod scheduling, quota/capacity, node pool constraints |
+| 10 | **Remote Write Issues** | Endpoint connectivity, auth failures, ingestion gateway errors (500/4xx), batch config |
+| 11 | **Control Plane Metrics** | Control plane collection status, job config (apiserver, etcd, scheduler, controller-manager) |
+| 12 | **Node Exporter ARM64** | ARM64 label scraping, node exporter version compat, metric filtering |
+| 13 | **Windows Pod Restarts** | Windows-specific failures, Windows DaemonSet, OS-specific logging |
+| 14 | **Vulnerabilities / CVEs** | Security scanning, image CVEs, patch availability, remediation |
+| 15 | **AMW Usage Optimization** | Cost optimization, volume reduction, cardinality management, ingestion profile tuning, metric relabeling |
+| 16 | **Known Issues & FAQ** | Post-rollout regressions, expected behaviors (HPA scale-down), AKS upgrade compat, common misconceptions |
 
-### Symptom → Tool Quick Reference (sample)
+### Complete Symptom → Tool Routing Table
 
-| Symptom | Run these tools |
-|---------|----------------|
-| No metrics flowing | `tsg_triage` → `tsg_errors` → `tsg_mdm_throttling` |
-| Pod CrashLoopBackOff | `tsg_errors` → `tsg_workload` → `tsg_pods` |
-| Spike in ingestion | `tsg_workload` → `tsg_metric_insights` → `tsg_mdm_throttling` |
-| Private link errors | `tsg_triage` (⚠️ Missing DCE check) → `tsg_errors` |
-| Config not applied | `tsg_config` (validation errors + custom job names) |
+| Symptom | Tools | TSG |
+|---------|-------|-----|
+| No metrics flowing | `tsg_triage` → `tsg_errors` → `tsg_mdm_throttling` | Missing Metrics |
+| Account throttling / drops | `tsg_mdm_throttling` | Missing Metrics (MDM quota) |
+| Pod CrashLoopBackOff / OOM | `tsg_errors` → `tsg_workload` → `tsg_pods` | Pod Restarts / OOM |
+| High CPU / Memory | `tsg_workload` | Pod Restarts / Resources |
+| Partial metrics / drops | `tsg_workload` → `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM) |
+| Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
+| Config validation failed | `tsg_config` | Missing Metrics (validation errors) |
+| Private link errors | `tsg_triage` (⚠️ DCE check) → `tsg_errors` | Firewall / Private Link |
+| TokenConfig.json missing / ME won't start | `tsg_errors` → `tsg_logs` | Firewall (AMCS blocked) |
+| ARC cluster pod restarts | `tsg_errors` → `tsg_logs` | Firewall (ARC/Azure Local) |
+| Proxy / auth proxy issues | `tsg_errors` → `tsg_config` | Proxy |
+| Target allocator errors | `tsg_errors` | Pod Restarts (operator-targets) |
+| Token / auth errors | `tsg_errors` | Missing Metrics (auth) |
+| Liveness probe 503 | `tsg_errors` | Liveness Probe Failures |
+| Control plane metrics missing | `tsg_control_plane` | Control Plane |
+| Spike in ingestion | `tsg_workload` → `tsg_config` → `tsg_metric_insights` → `tsg_mdm_throttling` | Spike in Metrics |
+| High cardinality / volume | `tsg_metric_insights` | Spike (cardinality) |
+| AMW cost optimization | `tsg_metric_insights` → `tsg_config` | AMW Optimization |
+| Pods not created | `tsg_triage` | Pods Not Created |
+| Duplicate label errors | `tsg_config` | Duplicate Labels (KSM) |
+| DCR/DCE wrong region or missing | `tsg_triage` → `tsg_query` (ARM) | DCR/DCE Mismatch |
+| Windows pod restarts | `tsg_errors` → `tsg_logs` | Windows |
+| Remote write failures | `tsg_errors` | Remote Write |
+| Metrics missing in non-default AMW | `tsg_triage` → `tsg_config` | Missing Metrics (Multi-AMW) |
+| CVE reported | N/A | Vulnerabilities |
+| ARM64 missing labels | `tsg_config` | Node Exporter ARM64 |
+| HPA scaled down unexpectedly | `tsg_workload` | Known Issues |
+| HPA oscillating / OOMKill loop | `tsg_workload` → `tsg_errors` → `tsg_pods` | Pod Restarts / OOM |
+| Inconsistent scrape intervals | `tsg_config` → `tsg_workload` | Known Issues (cAdvisor) |
+| Regression after addon update | `tsg_triage` → `tsg_config` | Known Issues (post-rollout) |
+| Metrics missing after AKS upgrade | `tsg_triage` → `tsg_scrape_health` → `tsg_workload` | Missing Metrics (upgrade) |
+| TS explosion / cardinality spike | `tsg_workload` → `tsg_mdm_throttling` → `tsg_metric_insights` | Spike (label churn) |
+| Node exporter down (up=0) | `tsg_scrape_health` → `tsg_triage` | Missing Metrics (NE version) |
+
+### Escalation Contacts
+
+| Issue | ICM Team |
+|-------|----------|
+| AMW Quota increases | Geneva Monitoring / MDM-Support-Manageability-Tier2 |
+| Query throttling (429 in Grafana) | Azure Monitor Essentials / Sev3 and 4 CRI – Metrics |
+| Remote-write errors (500, 4xx) | Geneva Monitoring / Ingestion Gateway Support - Tier 2 |
+| ARC Kubernetes ingestion | Container Insights / AzureManagedPrometheusAgent |
+| Prometheus Recording rules & alerts | Azure Log Search Alerts / Prometheus Alerts |
+| Grafana service issues | Azure Managed Grafana / Triage |
+| AMW RP / AMCS (DCR/DCE/DCRA) | Azure Monitor Control Service / Triage |
+| MDM Store | Geneva Monitoring / MDM-Support-Core-IngestionAndStorage-Tier2 |
+| AKS addon / ARM / Policy / Bicep / Terraform | Container Insights / AzureManagedPrometheusAgent |
 
 ---
 
