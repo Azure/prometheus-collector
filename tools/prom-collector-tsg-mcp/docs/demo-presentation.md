@@ -413,6 +413,77 @@ Private cluster + No DCE/DCR/DCRA provisioned
 
 ---
 
+## Live Demo: ICM 770972482
+
+**Scenario:** Partner team's pod monitor metrics not flowing to their AMW on a shared multi-tenant dev cluster
+
+**Context:** An infrastructure platform team hosts a shared AKS cluster (`mshapisg2-dev-k8s-westus2-03`) with **18 different AMW associations** — a highly multi-tenant setup. A partner (PAS team) attached a pod monitor with `microsoft_metrics_account` relabeling to route metrics to their own AMW, following the [multi-AMW documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-multiple-workspaces). Metrics aren't flowing.
+
+### What Copilot found:
+
+**Step 1 — Triage:**
+- ✅ Addon v6.26.0, westus2, NOT private
+- ✅ 18 AMWs associated — shared infrastructure cluster
+- ✅ 38 pod monitors discovered, including partner's `pas-drc-1-podmonitor` (10 targets)
+- ✅ 11 different account names in scrape config routing
+
+**Step 2 — The Mismatch:**
+The ICM attached a pod monitor with:
+```yaml
+relabelings:
+  - action: replace
+    replacement: ue2-prod-pas-1-amw      # ← WRONG: prod East US 2
+    targetLabel: microsoft_metrics_account
+```
+But the partner's actual AMW is `wus2-dev-pas-1-amw` (dev West US 2). Different environment entirely.
+
+**Step 3 — Verification via MDM:**
+- `wus2-dev-pas-1-amw` **IS in the routing list** and **IS receiving metrics** — 238 metrics, 246K daily time series ✅
+- `ue2-prod-pas-1-amw` is **NOT in routing**, **no ME logs**, no matching DCRA ❌
+- No MetricsExtension errors for the partner's account — the correctly-configured pod monitor works fine
+
+**Step 4 — ARM Forensics (the deeper investigation):**
+
+Queried ARM telemetry for all DCRA operations on the cluster filtered to the partner. Discovered **extensive DCRA churn** over 30 days:
+
+| DCRA Name | PUT ✅ | PUT 403 | DELETE ✅ | DELETE 403 |
+|-----------|--------|---------|-----------|------------|
+| `wus2-dev-pas-1-amw-association` | — | — | 9 | — |
+| `wus2-dev-pas-1-dcr-association` | — | 2 | 4 | 16 |
+| `pas-dcr-amw-association` | 1 | — | 1 (2 min later!) | — |
+| `pas-dcrTestdcr-association` | 1 | — | — | — |
+| `amw-mshapisg2-dev-uswest2-pas-association` | — | — | 2 | — |
+
+Timeline revealed: partner tried **5 different DCRA naming conventions**, hit **403 permission failures** repeatedly, created associations then **deleted them minutes later**, and may not have a stable DCRA in place at all.
+
+**Step 5 — Root Cause:**
+```
+Two independent issues:
+
+1. Pod monitor account name mismatch:
+   Pod monitor says "ue2-prod-pas-1-amw" (prod/EUS2)
+   but AMW is "wus2-dev-pas-1-amw" (dev/WUS2)
+   → Metrics with wrong label are silently dropped or go to default AMW
+
+2. DCRA instability:
+   Dozens of create/delete cycles over 30 days
+   Multiple 403 permission failures
+   → Partner may not have a stable DCRA currently in place
+```
+
+**Step 6 — Tooling Improvement:**
+
+The ad-hoc ARM DCRA forensics queries were so useful they were immediately added to the MCP server as two new permanent queries:
+- **DCRA History Timeline** — summarized view with success/failure counts per association
+- **DCRA Detailed Timeline** — chronological trace for exact create/delete sequences
+
+### This investigation shows what's hard without the tooling:
+- Correlating across **6 different data sources** (ICM, App Insights, ARM, AMWInfo, MDM, AKS) to build the full picture
+- The ARM forensics query alone required querying `ARMPRODEUS` with a 30-day lookback across 158 operations
+- A human would need to: check the triage dashboard, then open Jarvis to check MDM, then open ARM Kusto to check DCRA history, then cross-reference account names — all while juggling 18 AMW associations on a shared cluster
+
+---
+
 ## How the Process Works: Learning From Every ICM
 
 ### The Investigation Loop
