@@ -19,6 +19,32 @@
 
 ---
 
+## Why Is This So Hard?
+
+**We don't have access to the customer's cluster — we can only see what our telemetry collects.**
+
+The prometheus-collector addon runs as a container on the customer's AKS cluster. When something goes wrong, the issue could be in **any of 6+ independent data sources**, and we have to piece together the story from scattered telemetry:
+
+| Data Source | What It Tells Us | Example Questions |
+|-------------|-----------------|-------------------|
+| **App Insights** (our container telemetry) | Logs, errors, and metrics emitted by our collector containers running on the cluster | Is the OTel collector crashing? Are there MDSD auth errors? Is MetricsExtension dropping samples? |
+| **AKS Kusto** (Kubernetes platform) | Pod CPU/memory, restarts, OOMKills, cluster health, node pool capacity, upgrade history | Is the pod being OOMKilled? Is the node pool out of resources? Did an AKS upgrade break things? |
+| **AMCS / AMWInfo** (control plane config) | Azure Monitor Workspace, DCR, DCE, DCRA associations — the "wiring" between cluster and AMW | Does a DCR exist? Is there a DCE for this private cluster? Was the DCRA deleted? |
+| **ARM** (resource operations) | Creation, deletion, and modification of AMW/DCR/DCE/DCRA resources — the deployment history | Was the DCR recently deleted? Did a DCE creation fail? When was the AMW provisioned? |
+| **Geneva MDM** (metrics pipeline) | AMW account throttling, ingestion rate, time series counts, cardinality, metric names ingested | Is the account being throttled? Which metrics are causing cardinality explosion? Are samples being dropped at ingestion? |
+| **Our Config Telemetry** | Default scrape targets enabled, custom scrape configs, keep lists, scrape intervals, pod/service monitors | What targets are they scraping? Is their custom config valid? Did they enable control plane metrics? |
+
+**A single ICM can require queries across ALL of these** — and the data lives in 11 different Kusto clusters, App Insights, and Geneva MDM. Without tooling, you're manually:
+- Resolving the CCP cluster ID from the ARM resource ID
+- Finding the right MDM account name for the AMW
+- Copy-pasting the subscription GUID into ARM queries across 3 regional clusters
+- Remembering which KQL table has the column you need
+- Cross-referencing timestamps across data sources to build a timeline
+
+**This is the problem the MCP server solves** — one command, all data sources, correlated results.
+
+---
+
 ## The Solution
 
 **An MCP server that gives Copilot CLI direct access to all our diagnostic data sources.**
