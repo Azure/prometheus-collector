@@ -1011,19 +1011,32 @@ server.tool(
     }
 
     // 3. Test each Kusto data source
-    const kustoSources = ["AKS", "MetricInsights", "AMWInfo"] as const;
+    // Use lightweight data queries instead of .show database schema (which requires admin privileges)
+    const kustoAuthQueries: Record<string, string> = {
+      AKS: "ManagedClusterMonitoring | take 1",
+      "AKS CCP": "CcpLogs | take 1",
+      MetricInsights: "MetricInsightsAccounts | take 1",
+      AMWInfo: "AzureMonitorAKSStatsDaily | take 1",
+      ARMProd: "HttpIncomingRequests | take 1",
+    };
+    const kustoSources = ["AKS", "AKS CCP", "MetricInsights", "AMWInfo", "ARMProd"] as const;
     for (const dsName of kustoSources) {
       const ds = DATA_SOURCES[dsName];
       if (!ds) continue;
       try {
-        await runKustoQuery(ds.clusterUri, ds.database, ".show database schema | take 1");
+        await runKustoQuery(ds.clusterUri, ds.database, kustoAuthQueries[dsName] || ".show tables | take 1");
         results.push(`✅ **${dsName}** (${ds.clusterUri.split("//")[1]?.split(".")[0]}): Connected`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         results.push(`❌ **${dsName}**: ${msg.slice(0, 200)}`);
         hasFailures = true;
         if (msg.includes("403") || msg.includes("Forbidden")) {
-          results.push(`   → Need Viewer role on Kusto cluster: ${ds.clusterUri}`);
+          if (dsName === "ARMProd") {
+            results.push(`   → ARMProd often blocks device-code flow due to Conditional Access Policy (CAP)`);
+            results.push(`   → Use \`azureauth\` CLI with WAM broker, or query manually via https://dataexplorer.azure.com`);
+          } else {
+            results.push(`   → Need Viewer role on Kusto cluster: ${ds.clusterUri}`);
+          }
           if (autoFix) {
             // Try to get a token for this specific cluster scope to verify auth works
             const host = new URL(ds.clusterUri).host;
