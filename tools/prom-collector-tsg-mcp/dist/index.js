@@ -143,7 +143,11 @@ async function runAppInsightsQuery(kql, timeRange, startTime, endTime) {
     return rows;
 }
 /**
- * Execute a KQL query against a Kusto cluster via REST API.
+ * Execute a KQL query against a Kusto cluster via curl subprocess.
+ * Uses curl instead of Node.js fetch/https because the undici HTTP stack
+ * has chronic ECONNRESET/UND_ERR_CONNECT_TIMEOUT failures in WSL2 when
+ * connecting to Kusto TLS endpoints. curl uses the system OpenSSL stack
+ * which handles WSL2 networking reliably.
  */
 async function runKustoQuery(clusterUri, database, kql) {
     // Determine the correct scope based on the cluster URI
@@ -152,28 +156,53 @@ async function runKustoQuery(clusterUri, database, kql) {
         scope = "https://api.applicationinsights.io/.default";
     }
     else {
-        // Extract the cluster host for the scope
         const url = new URL(clusterUri);
         scope = `${url.protocol}//${url.host}/.default`;
     }
     const token = await credential.getToken(scope);
-    const response = await withRetry(() => fetch(`${clusterUri}/v1/rest/query`, {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${token.token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            db: database,
-            csl: kql,
-        }),
-        signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
-    }));
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Kusto query failed (${response.status}): ${text.slice(0, 500)}`);
+    const requestBody = JSON.stringify({ db: database, csl: kql });
+    const timeoutSecs = Math.ceil(QUERY_TIMEOUT_MS / 1000);
+    const output = await withRetry(() => {
+        return new Promise((resolve, reject) => {
+            try {
+                const result = execSync(`curl -s -S --max-time ${timeoutSecs} ` +
+                    `-w "\\n__HTTP_STATUS__:%{http_code}" ` +
+                    `-X POST "${clusterUri}/v1/rest/query" ` +
+                    `-H "Authorization: Bearer ${token.token}" ` +
+                    `-H "Content-Type: application/json" ` +
+                    `-d @-`, {
+                    input: requestBody,
+                    encoding: "utf8",
+                    maxBuffer: 100 * 1024 * 1024, // 100 MB
+                    timeout: QUERY_TIMEOUT_MS + 5000,
+                });
+                resolve(result);
+            }
+            catch (err) {
+                // execSync throws on non-zero exit code
+                const stderr = err.stderr?.toString() || "";
+                const stdout = err.stdout?.toString() || "";
+                reject(new Error(`curl failed: ${stderr || stdout || err.message}`.slice(0, 500)));
+            }
+        });
+    });
+    // Split response body from HTTP status trailer
+    const statusMarker = "\n__HTTP_STATUS__:";
+    const markerIdx = output.lastIndexOf(statusMarker);
+    let responseBody;
+    let httpStatus;
+    if (markerIdx !== -1) {
+        responseBody = output.slice(0, markerIdx);
+        httpStatus = parseInt(output.slice(markerIdx + statusMarker.length).trim(), 10);
     }
-    const body = await response.json();
+    else {
+        responseBody = output;
+        httpStatus = 200; // assume success if marker missing
+    }
+    if (httpStatus >= 400) {
+        throw new Error(`Kusto query failed (${httpStatus}): ${responseBody.slice(0, 500)}`);
+    }
+    const body = JSON.parse(responseBody);
     const rows = [];
     if (body.Tables && body.Tables.length > 0) {
         const table = body.Tables[0];
@@ -810,8 +839,8 @@ server.tool("tsg_auth_check", "Validate credentials and connectivity to all data
     // Use lightweight data queries instead of .show database schema (which requires admin privileges)
     const kustoAuthQueries = {
         AKS: "ManagedClusterMonitoring | take 1",
-        "AKS CCP": "CcpLogs | take 1",
-        MetricInsights: "MetricInsightsAccounts | take 1",
+        "AKS CCP": "ControlPlaneEvents | take 1",
+        MetricInsights: "EventStatsInsightsV2 | take 1",
         AMWInfo: "AzureMonitorAKSStatsDaily | take 1",
         ARMProd: "HttpIncomingRequests | take 1",
     };
