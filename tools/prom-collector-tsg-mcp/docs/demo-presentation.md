@@ -660,7 +660,40 @@ For each, note:
 - What auth is needed (your team alias? specific role? CAP?)
 - The key identifier to look up data (ARM ID? subscription? internal ID?)
 
-### Step 2: Build the MCP Server
+### Step 2: Track Your Queries Before You Build Anything
+
+**Before writing any code, start keeping a list.** For the next few ICMs you investigate, write down every KQL query you run, every dashboard you open, every ID you copy-paste. This is your query backlog.
+
+```markdown
+## Query Backlog
+
+### Queries I run on every ICM (triage):
+- [ ] Check addon version (App Insights: `customDimensions.version`)
+- [ ] Check cluster region (App Insights: `customDimensions.region`)
+- [ ] Check if addon is enabled (AKS Kusto: `ManagedClusterSnapshot`)
+- [ ] Check AMW association (AMWInfo: `AzureMonitorMetricsDCRDaily`)
+- [ ] Check pod restart count (AKS Kusto: `ContainerLastStatus`)
+
+### Queries I run for specific symptoms:
+- [ ] OOM investigation: pod memory vs node capacity vs HPA replicas
+- [ ] Missing metrics: ME errors, scrape config, target health
+- [ ] Auth failures: token adapter logs, MDSD errors, DCR status
+
+### Queries I wish I had:
+- [ ] "Was the DCR deleted recently?" (need ARM query)
+- [ ] "What changed between the last working version and now?"
+- [ ] "Compare this cluster to the working cluster the customer gave us"
+
+### Dashboards / portals I open:
+- [ ] ADX dashboard (our KQL) — for what queries?
+- [ ] Jarvis (MDM) — for what metrics?
+- [ ] Service Insights (AKS) — for what views?
+- [ ] Azure Portal — for what resources?
+```
+
+**Why this matters:** This list becomes your MCP server's query backlog. The queries you run on every ICM become `tsg_triage`. The symptom-specific ones become `tsg_errors`, `tsg_workload`, etc. The "queries I wish I had" become your roadmap. You don't need to automate everything on day one — just know what you're aiming for.
+
+### Step 3: Build the MCP Server
 
 Start minimal — you can always add more queries later.
 
@@ -701,7 +734,7 @@ export const queries = {
 };
 ```
 
-### Step 3: Write the Skill
+### Step 4: Write the Skill
 
 Your `SKILL.md` is the investigation playbook. It should have:
 
@@ -727,7 +760,7 @@ Your `SKILL.md` is the investigation playbook. It should have:
 
 **4. Escalation contacts** — who to hand off to when it's not your problem.
 
-### Step 4: Split Your TSGs
+### Step 5: Split Your TSGs
 
 Don't put all your TSGs in one file. Split them so only the relevant one loads:
 
@@ -745,7 +778,7 @@ Don't put all your TSGs in one file. Split them so only the relevant one loads:
 
 This keeps the initial context small while having deep knowledge available when needed.
 
-### Step 5: Iterate With Real ICMs
+### Step 6: Iterate With Real ICMs
 
 **This is the most important step.** The tooling gets good by using it on real incidents:
 
