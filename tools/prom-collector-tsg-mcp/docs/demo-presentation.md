@@ -83,7 +83,7 @@
 | Metric | Count |
 |--------|-------|
 | MCP tools | 14 |
-| KQL queries | 165+ |
+| KQL queries | 171+ |
 | Query categories | 9 |
 | Data sources | 11 Kusto clusters + App Insights + Geneva MDM |
 | TSG documents | 16 |
@@ -115,11 +115,11 @@ All ReplicaSet Logs • All Linux DaemonSet Logs • All Windows DaemonSet Logs 
 ### Control Plane (8 queries)
 Enabled • Jobs Enabled • Metrics KeepList • Minimal Ingestion Profile • Configmap Watcher Logs • Prometheus-Collector Stdout Logs • Container Restarts • Max CPU by Container
 
-### Metric Insights (8 queries)
-Top Metrics by TS Count • Top Metrics by Sample Rate • Full Metric Volume Summary • Total TS and Events Summary • Top 20 Highest Cardinality Metrics • Metrics with High Dimension Cardinality • Volume by Category (Istio/Envoy/Container/NodeExporter/KSM/ScrapeHealth) • View All Metric Names (180-day lookback)
+### Metric Insights (11 queries)
+Top Metrics by TS Count • Top Metrics by Sample Rate • Full Metric Volume Summary • Total TS and Events Summary • Top 20 Highest Cardinality Metrics • Metrics with High Dimension Cardinality • Volume by Category (Istio/Envoy/Container/NodeExporter/KSM/ScrapeHealth) • View All Metric Names (180-day lookback) • **Per-Dimension Cardinality Breakdown (Top 10 Metrics)** • **Cardinality Trend Over Time (Top 5 Metrics, 30d)** • **Metric Dimension Names and Risk-Rated Value Counts**
 
-### ARM Investigation (10 queries)
-ARM PUT Operations by Resource Provider • Managed Clusters PUT Operations (Addon Enablement) • Microsoft.Insights PUT/DELETE (DCR/DCE/DCRA) • Microsoft.Insights DELETE Details • ContainerService Operations Breakdown • ARM Outgoing Requests to Insights RP • All Operations on Specific Cluster • All Subscription DELETEs on Microsoft.Insights • AMW All Operations • AMW PUT/DELETE Operations
+### ARM Investigation (13 queries)
+ARM PUT Operations by Resource Provider • Managed Clusters PUT Operations (Addon Enablement) • Microsoft.Insights PUT/DELETE (DCR/DCE/DCRA) • Microsoft.Insights DELETE Details • ContainerService Operations Breakdown • ARM Outgoing Requests to Insights RP • All Operations on Specific Cluster • All Subscription DELETEs on Microsoft.Insights • AMW All Operations • AMW PUT/DELETE Operations • **DCRA Operations for Cluster (dataCollectionRuleAssociations)** • **DCRA Failed Operations (4xx/5xx errors)** • **DCE Operations in Subscription (dataCollectionEndpoints)**
 
 ---
 
@@ -345,8 +345,6 @@ copilot
 
 - [ ] Merge `grwehner/tsg-tooling-and-devbox` → main
 - [ ] Integrate with SRE Agent for automated ICM triage
-- [ ] Add more ARM investigation queries (DCRA verification)
-- [ ] Improve MetricInsights queries for cardinality root cause
 - [ ] Auto-generate ICM summary from investigation results
 
 ---
