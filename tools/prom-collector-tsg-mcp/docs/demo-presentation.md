@@ -413,6 +413,62 @@ Private cluster + No DCE/DCR/DCRA provisioned
 
 ---
 
+## How the Process Works: Learning From Every ICM
+
+### The Investigation Loop
+
+For every new ICM that comes in, I have the agent investigate and see what it outputs. Then I dig deeper conversationally — asking follow-up questions, pointing it at specific data sources, guiding it toward the root cause. **The conversation IS the investigation.**
+
+```
+ICM comes in
+  └─► "Investigate ICM 12345678"
+        └─► Agent runs triage, errors, workload, config
+        └─► Shows initial findings
+              └─► "Dig deeper into the MDSD errors"
+              └─► "Is this a private cluster?"
+              └─► "Check ARM for whether the DCR was deleted"
+              └─► "Compare this cluster to the working one they gave us"
+                    └─► Root cause identified
+                          └─► Agent adds any new ad-hoc queries to MCP server
+                          └─► Skill gets smarter for next time
+```
+
+### Things It Can Do That the Dashboard Can't
+
+The conversational approach unlocks investigation patterns that are impossible with a static dashboard:
+
+**Cluster comparison** — Customers often give us a working cluster and a non-working cluster. The agent can run triage on both, diff the results, and pinpoint exactly what's different:
+- "Both are private V1, but the broken one has no DCE and the working one does"
+- "Same addon version, but the broken cluster's HPA is oscillating between 5 and 15 replicas"
+- "Working cluster has a DCRA to the AMW, broken one's DCRA was deleted 3 days ago"
+
+**ARM forensics** — It can quickly determine if resources were partially provisioned or deleted after enabling:
+- "AMW exists in the subscription, DCR exists, but there was never a DCRA created — the onboarding was incomplete"
+- "DCRA existed until 2 days ago — someone deleted it. Here's the ARM operation with the caller identity and timestamp"
+- "DCE creation failed with a 409 conflict — region mismatch between the DCE and the AMW"
+
+**Cross-referencing release notes** — When something changed after an addon update, it can look up our version in `RELEASENOTES.md`, find the MetricsExtension version we ship, then search EngHub for the ME release notes to see if a known issue was introduced:
+- "You're on ME 2.2024.517.1714 which introduced a change to the queue overflow behavior — that matches the symptom of dropped samples after the upgrade"
+
+**Arbitrary KQL** — When the built-in queries don't cover an edge case, it writes ad-hoc KQL on the fly against any of the 11 data sources. No context switching, no copy-pasting IDs.
+
+### The SME Training Loop
+
+At first, the agent had misconceptions — it would check the wrong columns, misinterpret error messages, or follow the wrong diagnostic path. But **every ICM has made it better:**
+
+| ICM | What the Agent Learned |
+|-----|----------------------|
+| Early investigations | FQDN `-priv` pattern is NOT authoritative for private cluster detection → added definitive `privateLinkProfile` boolean check |
+| ICM 770972482 | Multi-AMW routing: metrics go to the AMW whose DCR matches the scrape job, not necessarily the "default" AMW → added multi-AMW diagnostic queries and TSG |
+| ICM 964000 | CCP cluster ID resolution is flaky (~6h sparse data) → added CCP-independent queries using `subscription` + `clusterName` directly |
+| ICM 964000 | `ManagedClusterSnapshot` has no `resourceId` column (unlike what you'd expect) → fixed all AKS queries to use correct columns |
+| ARM investigation | DCR/DCE/DCRA can be in any RG in the subscription, not just the cluster's RG → broadened ARM queries to subscription-level |
+| Cardinality spike | Total TS count isn't enough — need per-dimension breakdown to find which label is exploding → added risk-rated cardinality queries |
+
+**The key insight:** I'm the SME guiding the agent through each investigation. Every correction, every "no, check this instead", every "that column doesn't exist" gets permanently encoded into the queries, the TSGs, and the skill routing. The agent is accumulating the team's collective investigation experience — one ICM at a time.
+
+---
+
 ## Technical Highlights
 
 ### WSL2 Reliability Fix
