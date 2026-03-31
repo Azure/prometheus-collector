@@ -20,7 +20,7 @@ This is one of the most common patterns. When AMCS endpoints are unreachable (fi
 
 This specific MDSD error means the cluster is private and AMCS **requires** a DCE (Data Collection Endpoint) to serve configuration, but no DCE is configured. This is now surfaced in `tsg_triage` as "⚠️ Missing DCE for Private Cluster (AMCS 403)". When you see this error:
 
-1. **Confirm the cluster is private** — `tsg_triage` → "AKS Cluster Network Settings" shows "Is Private Cluster: true"
+1. **Confirm the cluster is private** — `tsg_triage` → "⚠️ Private Cluster Check (definitive)" uses `ManagedClusterSnapshot.privateLinkProfile.enablePrivateCluster` (Private V1) or `privateConnectProfile.enabled` (Private V2) — these booleans are the authoritative source, NOT the FQDN
 2. **Check if a DCE exists** — `tsg_triage` → "Internal DCE and DCR Ids" will be empty
 3. **Check if a DCR exists** — `tsg_triage` → "Data Collection Rules Associated with Cluster" will be empty
 4. **Check if an AMW exists in the subscription** — `tsg_triage` → "Azure Monitor Workspace(s) in Subscription (fallback)" may show an AMW was created but never linked

@@ -97,6 +97,26 @@ export const QUERIES = {
 | distinct Location`,
         },
         {
+            name: "⚠️ Private Cluster Check (definitive — from ManagedClusterSnapshot)",
+            datasource: "AKS",
+            kql: `// DEFINITIVE private cluster check — uses subscription+clusterName, no CCP ID required
+// privateLinkProfile.enablePrivateCluster = Private V1 (legacy)
+// privateConnectProfile.enabled + !enablePublicEndpoint = Private V2 (private connect)
+ManagedClusterSnapshot
+| where TIMESTAMP > ago(7d)
+| where subscription == '_subscriptionId'
+| where clusterName has '_clusterName'
+| top 1 by TIMESTAMP desc
+| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
+| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
+| extend isPrivateV2 = isPrivateConnect and not(coalesce(tobool(privateConnectProfile.enablePublicEndpoint), false))
+| extend isPrivateCluster = isPrivateV1 or isPrivateV2
+| extend isNetworkIsolated = outboundType contains "none" or outboundType contains "block"
+| extend hasHttpProxy = isnotempty(httpProxyConfig) and httpProxyConfig != "na"
+| extend privateType = case(isPrivateV1, "Private V1 (privateLinkProfile)", isPrivateV2, "Private V2 (privateConnect)", "Not Private")
+| project clusterName, ['Is Private Cluster']=isPrivateCluster, ['Private Type']=privateType, ['Network Isolated']=isNetworkIsolated, ['Has HTTP Proxy']=hasHttpProxy, privateDNSZone, publicNetworkAcess, azurePortalFQDN`,
+        },
+        {
             name: "Internal DCE and DCR Ids",
             datasource: "PrometheusAppInsights",
             kql: `customMetrics
@@ -807,23 +827,6 @@ KubeAudit
 | summarize arg_max(TIMESTAMP, *) by name
 | project TIMESTAMP, name, orchestratorVersion, osSku, currentNodes=size, distroVersion, imageRef
 | order by name asc`,
-        },
-        {
-            name: "Private Cluster and Network Profile (subscription+name lookup)",
-            datasource: "AKS",
-            kql: `// Direct lookup by subscription+clusterName — does NOT require CCP cluster ID resolution
-ManagedClusterSnapshot
-| where TIMESTAMP > ago(7d)
-| where subscription == '_subscriptionId'
-| where clusterName has '_clusterName'
-| top 1 by TIMESTAMP desc
-| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
-| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
-| extend isPrivateV2 = isPrivateConnect and not(coalesce(tobool(privateConnectProfile.enablePublicEndpoint), false))
-| extend isPrivateCluster = isPrivateV1 or isPrivateV2
-| extend isNetworkIsolated = outboundType contains "none" or outboundType contains "block"
-| extend hasHttpProxy = isnotempty(httpProxyConfig) and httpProxyConfig != "na"
-| project clusterName, isPrivateCluster, isNetworkIsolated, hasHttpProxy, privateDNSZone, publicNetworkAcess, azurePortalFQDN`,
         },
         {
             name: "Cluster Overview (subscription+name lookup, no CCP required)",

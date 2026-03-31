@@ -132,7 +132,7 @@ Do NOT guess, fabricate, or skip this step. Ask the user immediately:
 
 | Tool | Description |
 |------|-------------|
-| `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback).** |
+| `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Includes ⚠️ Private Cluster Check (definitive — from `ManagedClusterSnapshot.privateLinkProfile.enablePrivateCluster` boolean, NOT the FQDN) and ⚠️ Missing DCE check.** Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback). |
 | `tsg_errors` | Scan all error categories: container, OtelCollector, ME, MDSD, token adapter, TA, DNS, private link |
 | `tsg_config` | Configuration: scrape configs, keep lists, intervals, custom config validation status/errors, custom job names from startup logs, HPA, pod/service monitors, **addon enabled check, recording rules** |
 | `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, HPA scaling metric and oscillation analysis, HPA metric configuration, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, and node exporter sample count trend.** |
@@ -260,7 +260,7 @@ This ensures the tooling continuously improves — every investigation makes the
 | Partial metrics / drops | `tsg_workload` + `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM throttle) |
 | Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
 | Config validation failed | `tsg_config` | Missing Metrics (check "Custom Config Validation Errors") |
-| Private link errors | `tsg_errors` | Firewall / Network / Private Link |
+| Private link errors | `tsg_triage` (⚠️ Private Cluster Check + Missing DCE) → `tsg_errors` | Firewall / Network / Private Link |
 | TokenConfig.json missing / ME won't start | `tsg_errors` + `tsg_logs` | Firewall / Network (AMCS blocked) |
 | ARC cluster pod restarts | `tsg_errors` + `tsg_logs` | Firewall / Network (ARC/Azure Local) |
 | Proxy / auth proxy issues | `tsg_errors` + `tsg_config` | Proxy / Authenticated Proxy |
