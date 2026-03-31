@@ -808,6 +808,41 @@ KubeAudit
 | project TIMESTAMP, name, orchestratorVersion, osSku, currentNodes=size, distroVersion, imageRef
 | order by name asc`,
         },
+        {
+            name: "Private Cluster and Network Profile (subscription+name lookup)",
+            datasource: "AKS",
+            kql: `// Direct lookup by subscription+clusterName — does NOT require CCP cluster ID resolution
+ManagedClusterSnapshot
+| where TIMESTAMP > ago(7d)
+| where subscription == '_subscriptionId'
+| where clusterName has '_clusterName'
+| top 1 by TIMESTAMP desc
+| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
+| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
+| extend isPrivateV2 = isPrivateConnect and not(coalesce(tobool(privateConnectProfile.enablePublicEndpoint), false))
+| extend isPrivateCluster = isPrivateV1 or isPrivateV2
+| extend isNetworkIsolated = outboundType contains "none" or outboundType contains "block"
+| extend hasHttpProxy = isnotempty(httpProxyConfig) and httpProxyConfig != "na"
+| project clusterName, isPrivateCluster, isNetworkIsolated, hasHttpProxy, privateDNSZone, publicNetworkAcess, azurePortalFQDN`,
+        },
+        {
+            name: "Cluster Overview (subscription+name lookup, no CCP required)",
+            datasource: "AKS",
+            kql: `// Direct lookup — works even when CCP cluster ID resolution fails
+ManagedClusterSnapshot
+| where TIMESTAMP > ago(7d)
+| where subscription == '_subscriptionId'
+| where clusterName has '_clusterName'
+| top 1 by TIMESTAMP desc
+| extend k8sVersion = tostring(orchestratorProfile.orchestratorVersion)
+| extend skuTier = iff(isempty(sku.tier), "free", tolower(sku.tier))
+| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
+| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
+| extend isPrivateCluster = isPrivateV1 or isPrivateConnect
+| extend upgradeChannel = coalesce(tostring(autoUpgradeProfile.upgradeChannel), "none")
+| extend azureMonitorMetricsEnabled = tobool(azureMonitorProfile.metrics.enabled)
+| project clusterName, location, k8sVersion, skuTier, isPrivateCluster, upgradeChannel, azureMonitorMetricsEnabled, azurePortalFQDN, createdTime`,
+        },
     ],
     errors: [
         {
