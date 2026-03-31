@@ -628,6 +628,161 @@ Manual trigger              →→→    Auto-trigger on ICM
 
 ---
 
+## Adopting This for Your Team: A Step-by-Step Guide
+
+This approach isn't specific to prometheus-collector — **any team with ICM on-call can build the same thing for their service.** Here's how.
+
+### What You Need to Start
+
+| Component | What It Is | Effort |
+|-----------|-----------|--------|
+| **MCP Server** | A Node.js/TypeScript server that wraps your diagnostic KQL queries as callable tools | 1-2 days for a basic version |
+| **Skill** (`SKILL.md`) | A markdown file that teaches the LLM your investigation workflow, symptom routing, and escalation paths | 1 day — start with your existing TSG docs |
+| **TSG docs** | Your existing TSGs, split into individual files so only the relevant one loads into context | Already have these (just restructure) |
+| **Copilot CLI** | The runtime that connects skill + MCP server + LLM | Already available |
+
+### Step 1: Identify Your Data Sources
+
+Map out every place you look during an ICM investigation:
+
+```
+Your Service
+  ├─► Where are your container/service logs?     (App Insights? Kusto? Geneva Logs?)
+  ├─► Where is your platform telemetry?           (AKS Kusto? Service Fabric? VM metrics?)
+  ├─► Where is your control plane config?         (ARM? AMCS? Service-specific RP?)
+  ├─► Where are your customer-facing metrics?     (Geneva MDM? Azure Monitor? Custom?)
+  ├─► Where is your deployment/change history?    (ARM? EV2? Kubernetes?)
+  └─► What external data sources do you query?    (Dependent services' Kusto clusters?)
+```
+
+For each, note:
+- The Kusto cluster URL or App Insights resource
+- What auth is needed (your team alias? specific role? CAP?)
+- The key identifier to look up data (ARM ID? subscription? internal ID?)
+
+### Step 2: Build the MCP Server
+
+Start minimal — you can always add more queries later.
+
+```
+tools/your-service-tsg-mcp/
+├── src/
+│   ├── index.ts          ← Tool definitions + query execution
+│   ├── queries.ts        ← All your KQL queries, organized by category
+│   └── datasources.ts    ← Kusto cluster URLs + App Insights config
+├── package.json
+└── tsconfig.json
+```
+
+**Start with 3-4 tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `tsg_triage` | The queries you run first for every ICM — version, region, config, health |
+| `tsg_errors` | Scan all error categories in your logs |
+| `tsg_query` | Ad-hoc KQL against any of your data sources (the escape hatch) |
+| `tsg_auth_check` | Validate credentials to all data sources before investigation |
+
+**Key design pattern:** Each tool runs a *category* of queries (an array), not a single query. This means you can add new queries to an existing tool just by appending to the array — no tool definition changes needed.
+
+```typescript
+// queries.ts — start with your most common triage queries
+export const queries = {
+  triage: [
+    { name: "Service Version", datasource: "YourAppInsights", kql: `...` },
+    { name: "Region", datasource: "YourAppInsights", kql: `...` },
+    { name: "Health Check", datasource: "YourKusto", kql: `...` },
+    // Add more over time — every investigation adds queries here
+  ],
+  errors: [
+    { name: "Container Errors", datasource: "YourAppInsights", kql: `...` },
+    // ...
+  ]
+};
+```
+
+### Step 3: Write the Skill
+
+Your `SKILL.md` is the investigation playbook. It should have:
+
+**1. A workflow** — what to do step by step:
+```markdown
+### Step 1: Gather Context (extract ARM ID from ICM)
+### Step 2: Run Triage (tsg_triage → identify symptom category)
+### Step 3: Follow the TSG (route to the right diagnostic doc)
+### Step 4: Summarize Findings (structured output)
+### Step 5: Improve the Tooling (add ad-hoc queries back to MCP server)
+```
+
+**2. A symptom → tool routing table:**
+```markdown
+| Symptom | Tool | TSG |
+|---------|------|-----|
+| Pod crashing | tsg_errors + tsg_triage | pod-restarts.md |
+| Metrics missing | tsg_triage + tsg_config | missing-metrics.md |
+| High latency | tsg_workload | performance.md |
+```
+
+**3. Tool descriptions** — so the LLM knows what each tool does and when to use it.
+
+**4. Escalation contacts** — who to hand off to when it's not your problem.
+
+### Step 4: Split Your TSGs
+
+Don't put all your TSGs in one file. Split them so only the relevant one loads:
+
+```
+.github/skills/your-service-tsg/
+├── SKILL.md                      ← Entry point (small, always loaded)
+├── reference.md                  ← Deep technical details (loaded on demand)
+└── tsgs/
+    ├── pod-restarts.md           ← Loaded when symptom matches
+    ├── missing-metrics.md
+    ├── performance.md
+    ├── auth-failures.md
+    └── deployment-issues.md
+```
+
+This keeps the initial context small while having deep knowledge available when needed.
+
+### Step 5: Iterate With Real ICMs
+
+**This is the most important step.** The tooling gets good by using it on real incidents:
+
+```
+Week 1:  Basic MCP server (10 queries) + skeleton skill
+         └─► Run it on your first ICM
+         └─► It will be wrong about some things — that's expected
+         └─► Fix the queries, update the skill
+
+Week 2:  20-30 queries, better routing
+         └─► Run it on 2-3 more ICMs
+         └─► Add the ad-hoc queries you wrote during investigation
+         └─► Add edge cases to TSGs
+
+Week 4:  50+ queries, solid skill
+         └─► Non-SMEs on the team can start using it
+         └─► Most common ICM patterns are covered
+
+Week 8+: 100+ queries, comprehensive coverage
+         └─► Ready for SRE Agent integration
+         └─► Every ICM type has a diagnostic path
+```
+
+**The key insight:** Don't try to build it all upfront. Start with the 5-10 queries you run on every ICM, then let real investigations drive what gets added next. The SME guides the agent through each new case, and the corrections become permanent improvements.
+
+### What You'll Get
+
+| Before | After |
+|--------|-------|
+| 30-60 min manual KQL per ICM | 5-10 min conversational investigation |
+| SME knowledge in people's heads | SME knowledge encoded in skill + queries |
+| New team members struggle on-call | Non-SMEs get the same diagnostic path as experts |
+| Static dashboard, multiple web pages | One terminal, all data sources |
+| Each investigation starts from scratch | Each investigation builds on all previous ones |
+
+---
+
 ## Commits on This Branch
 
 | Commit | Description |
