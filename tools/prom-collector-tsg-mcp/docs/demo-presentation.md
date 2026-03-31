@@ -19,6 +19,69 @@
 
 ---
 
+## The Bigger Problem: Combined On-Call and Knowledge Gaps
+
+We recently moved to **combined on-call across the team** — everyone rotates through all areas, not just their specialty. This means:
+
+- The person on-call for a **private link / DCE issue** might be an expert in **remote write** — they've never debugged a missing DCE before
+- An **OOMKill on the replicaset** might land on someone who primarily works on **control plane metrics** — they don't know that system pool VM size matters, not user pools
+- A **cardinality spike** investigation requires understanding MDM internals that only 1-2 people on the team have ever touched
+
+**The SME knowledge problem:** Every experienced engineer has built up intuition from dozens of investigations — they know what to check first, which errors are red herrings, which queries to run for which symptoms, and what the fix usually is. **That knowledge lives in their heads, not in a system.**
+
+When a non-SME gets an ICM outside their area:
+1. They read the TSG doc, but it's generic — doesn't tell them *which specific queries* to run
+2. They try the ADX dashboard, but don't know how to interpret the results
+3. They Slack the SME (who may be asleep / on vacation / in a different timezone)
+4. **Mean time to resolution goes up. Customer experience suffers.**
+
+### The Vision: Encode SME Knowledge Into the Tooling
+
+**What if we could capture the intuition and investigation patterns of every SME — and make it available to everyone on the team, 24/7?**
+
+That's the core idea behind this skill + MCP server approach:
+
+| What SMEs Know | How We Capture It |
+|---------------|-------------------|
+| "If it's a private cluster, check DCE first" | **Skill routing**: Private link symptom → `tsg_triage` runs ⚠️ Private Cluster Check (definitive) → Missing DCE check — automatically, in the right order |
+| "OOMKills create an HPA feedback loop — check minshards" | **TSG document**: `tsgs/pod-restarts-oomkills.md` has the exact diagnostic workflow + fix |
+| "That MDSD error means AMCS can't serve config over private link" | **Error pattern matching**: `tsg_errors` detects the specific MDSD error string → skill routes to private link TSG |
+| "Check ARM for whether the DCR was recently deleted" | **Built-in queries**: `tsg_triage` runs DCRA Operations, DCE Operations, Failed Operations against 3 regional ARM clusters automatically |
+| "The CCP cluster ID resolution is flaky — use subscription+name instead" | **Fallback queries**: MCP server has CCP-independent queries using `ManagedClusterSnapshot` directly |
+| "For cardinality, look at the per-dimension breakdown, not just total TS count" | **MetricInsights queries**: Per-Dimension Cardinality Breakdown, Risk-Rated Value Counts — built from real investigation patterns |
+
+### How We Avoid Context Overload
+
+The skill is designed in **layers** to avoid overloading the initial context:
+
+```
+┌─────────────────────────────────────────────┐
+│  SKILL.md (loaded first)                    │  ← Workflow + routing table
+│  • 5-step investigation workflow             │     (~300 lines)
+│  • Symptom → Tool → TSG routing table        │
+│  • Tool descriptions + parameters            │
+│  • Escalation contacts                       │
+└──────────────────┬──────────────────────────┘
+                   │ References (loaded on demand)
+         ┌─────────┼──────────┐
+         ▼         ▼          ▼
+   ┌──────────┐ ┌─────┐ ┌──────────┐
+   │ tsgs/    │ │ref  │ │ MCP      │
+   │ 16 files │ │.md  │ │ Server   │
+   │ (on      │ │(on  │ │ (175     │
+   │ demand)  │ │need)│ │ queries) │
+   └──────────┘ └─────┘ └──────────┘
+```
+
+- **SKILL.md** is the entry point — small enough to fit in context, has the routing logic to know *which* TSG to pull in
+- **Individual TSGs** (`tsgs/*.md`) are loaded only when the symptom matches — not all 16 at once
+- **reference.md** has deep technical details (data sources, version checking, ME deep-dive) — loaded only for specific investigation needs
+- **MCP server queries** run server-side — the 175+ KQL queries never need to be in the LLM context at all
+
+**Result:** A non-SME on-call can type `investigate ICM 12345678` and get the same diagnostic path that the most experienced engineer on the team would follow — including the right queries, the right interpretation, and the right TSG, without needing to know any of it upfront.
+
+---
+
 ## Why Is This So Hard?
 
 **We don't have access to the customer's cluster — we can only see what our telemetry collects.**
