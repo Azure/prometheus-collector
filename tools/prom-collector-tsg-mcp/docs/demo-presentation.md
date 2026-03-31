@@ -804,6 +804,15 @@ Week 8+: 100+ queries, comprehensive coverage
 
 **The key insight:** Don't try to build it all upfront. Start with the 5-10 queries you run on every ICM, then let real investigations drive what gets added next. The SME guides the agent through each new case, and the corrections become permanent improvements.
 
+**Pro tip: Test it on past ICMs.** You don't have to wait for new incidents. Pull up a closed ICM where you already know the root cause, give it to the agent, and see if it reaches the same conclusion. This is the fastest way to find gaps:
+
+- If it **gets the same root cause** → your queries and routing are solid for that symptom pattern
+- If it **misses the root cause** → you've found a gap. What query would have caught it? Add it
+- If it **finds the root cause but takes a wrong path first** → your skill routing needs a better symptom→tool mapping
+- If the **data is expired** (>30 days) → you'll discover which data sources have retention limits and can document that in the skill
+
+This is especially useful early on — you probably have dozens of resolved ICMs with known root causes. Run 5-10 of them through the agent in the first week and you'll quickly build coverage for your most common incident patterns.
+
 ### What You'll Get
 
 | Before | After |
