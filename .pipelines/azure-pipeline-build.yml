@@ -29,7 +29,7 @@ variables:
   Codeql.Enabled: true
   GOLANG_VERSION: '1.25.8'
   FLUENTBIT_GOLANG_VERSION: '1.25.8'
-  TESTKUBE_GOLANG_VERSION: '1.24.0'
+  TESTKUBE_GOLANG_VERSION: '1.25.8'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -42,8 +42,6 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
-    featureFlags:
-      disableNetworkIsolation: true
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
@@ -278,10 +276,13 @@ extends:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
+            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ltrimstr("v") | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | select(.name | contains("-") | not)][0].name | ltrimstr("v")')
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION 
-            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            echo $RETINA_VERSION
+            # Clone retina repo at the release tag to avoid pulling from ghcr.io (blocked by pipeline policy)
+            git clone --depth 1 --branch v$RETINA_VERSION https://github.com/microsoft/retina.git $(Build.SourcesDirectory)/retina-repo
+            mkdir -p $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            cp -r $(Build.SourcesDirectory)/retina-repo/deploy/standard/manifests/controller/helm/retina $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
           displayName: "CI/CD: Download Retina Chart"
@@ -2417,6 +2418,18 @@ extends:
                   releaseName: 'ama-metrics'
                   waitForExecution: false
                   arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
+              - task: AzureCLI@2
+                displayName: "Deploy: Import retina images from ghcr.io to ACR"
+                condition: eq(variables.IS_PR, false)
+                inputs:
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    az acr import --name containerinsightsprod --source ghcr.io/microsoft/retina/retina-agent:v$(RETINA_VERSION) --image $(ACR_REPOSITORY)/retina-agent:v$(RETINA_VERSION) --force 2>/dev/null || true
+                    az acr import --name containerinsightsprod --source ghcr.io/microsoft/retina/retina-init:v$(RETINA_VERSION) --image $(ACR_REPOSITORY)/retina-init:v$(RETINA_VERSION) --force 2>/dev/null || true
+                    az acr import --name containerinsightsprod --source ghcr.io/microsoft/retina/retina-operator:v$(RETINA_VERSION) --image $(ACR_REPOSITORY)/retina-operator:v$(RETINA_VERSION) --force 2>/dev/null || true
+                retryCountOnTaskFailure: 3
               - task: HelmDeploy@1
                 displayName: "Deploy/Validate: retina onto ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2430,7 +2443,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set image.tag=v$(RETINA_VERSION) --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2609,7 +2622,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set image.tag=v$(RETINA_VERSION) --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2695,7 +2708,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set image.tag=v$(RETINA_VERSION) --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
