@@ -1,39 +1,21 @@
 # Azure Managed Prometheus — ICM Troubleshooting with AI
 
-## Copilot CLI + MCP Server + TSG Skill
-
-**Grace Wehner** · Container Insights / AzureManagedPrometheusAgent
-
----
-
 ## The Problem
 
-**ICM triage for prometheus-collector is slow and painful:**
+**ICM triage for ama-metrics can involve:**
 
-- 🕐 Manually running KQL queries across 6+ Kusto clusters
+- 🕐 Running KQL queries across 6+ Kusto clusters
 - 🔀 Switching between ADX dashboards, Azure Portal, ICM, Grafana
 - 📋 Copy-pasting cluster ARM IDs, MDM account names, subscription GUIDs
 - 🧠 Remembering which query goes to which data source
 - 📖 Looking up the right TSG for each symptom pattern
-- ⏱️ A typical investigation takes **30-60 minutes** of manual query work
+- ⏱️ A typical investigation can take **30-60 minutes** of manual query work
 
 ---
 
-## The Bigger Problem: Combined On-Call and Knowledge Gaps
+We recently moved to **combined on-call across the team** — everyone rotates through all areas, not just their specialty.
 
-We recently moved to **combined on-call across the team** — everyone rotates through all areas, not just their specialty. This means:
-
-- The person on-call for a **private link / DCE issue** might be an expert in **remote write** — they've never debugged a missing DCE before
-- An **OOMKill on the replicaset** might land on someone who primarily works on **control plane metrics** — they don't know that system pool VM size matters, not user pools
-- A **cardinality spike** investigation requires understanding MDM internals that only 1-2 people on the team have ever touched
-
-**The SME knowledge problem:** Every experienced engineer has built up intuition from dozens of investigations — they know what to check first, which errors are red herrings, which queries to run for which symptoms, and what the fix usually is. **That knowledge lives in their heads, not in a system.**
-
-When a non-SME gets an ICM outside their area:
-1. They read the TSG doc, but it's generic — doesn't tell them *which specific queries* to run
-2. They try the ADX dashboard, but don't know how to interpret the results
-3. They Slack the SME (who may be asleep / on vacation / in a different timezone)
-4. **Mean time to resolution goes up. Customer experience suffers.**
+**The SME knowledge problem:** SMEs built up intuition from dozens of investigations — they know what to check first, which errors are red herrings, which queries to run for which symptoms, and what the fix usually is. **That knowledge lives in their heads, not in a system.**
 
 ### The Vision: Encode SME Knowledge Into the Tooling
 
@@ -43,11 +25,9 @@ That's the core idea behind this skill + MCP server approach:
 
 | What SMEs Know | How We Capture It |
 |---------------|-------------------|
-| "If it's a private cluster, check DCE first" | **Skill routing**: Private link symptom → `tsg_triage` runs Private Cluster Check (definitive) → Missing DCE check — automatically, in the right order |
-| "OOMKills create an HPA feedback loop — check minshards" | **TSG document**: `tsgs/pod-restarts-oomkills.md` has the exact diagnostic workflow + fix |
+| "If it's a private cluster, check if AMPLS setup is needed" | **Skill routing**: Private link symptom → `tsg_triage` runs Private Cluster Check (definitive) → Missing DCE check — automatically, in the right order |
+| "Too many metrics can create OOMKills too quickly for HPA to repsonsd — increase HPA minReplicas" | **TSG document**: `tsgs/pod-restarts-oom.md` has the exact diagnostic workflow + fix |
 | "That MDSD error means AMCS can't serve config over private link" | **Error pattern matching**: `tsg_errors` detects the specific MDSD error string → skill routes to private link TSG |
-| "Check ARM for whether the DCR was recently deleted" | **Built-in queries**: `tsg_triage` runs DCRA Operations, DCE Operations, Failed Operations against 3 regional ARM clusters automatically |
-| "The CCP cluster ID resolution is flaky — use subscription+name instead" | **Fallback queries**: MCP server has CCP-independent queries using `ManagedClusterSnapshot` directly |
 | "For cardinality, look at the per-dimension breakdown, not just total TS count" | **MetricInsights queries**: Per-Dimension Cardinality Breakdown, Risk-Rated Value Counts — built from real investigation patterns |
 
 ### How We Avoid Context Overload
@@ -57,10 +37,10 @@ The skill is designed in **layers** to avoid overloading the initial context:
 ```
 ┌─────────────────────────────────────────────┐
 │  SKILL.md (loaded first)                    │  ← Workflow + routing table
-│  • 5-step investigation workflow             │     (~300 lines)
-│  • Symptom → Tool → TSG routing table        │
-│  • Tool descriptions + parameters            │
-│  • Escalation contacts                       │
+│  • 5-step investigation workflow            │     (~300 lines)
+│  • Symptom → Tool → TSG routing table       │
+│  • Tool descriptions + parameters           │
+│  • Escalation contacts                      │
 └──────────────────┬──────────────────────────┘
                    │ References (loaded on demand)
          ┌─────────┼──────────┐
@@ -78,7 +58,7 @@ The skill is designed in **layers** to avoid overloading the initial context:
 - **reference.md** has deep technical details (data sources, version checking, ME deep-dive) — loaded only for specific investigation needs
 - **MCP server queries** run server-side — the 175+ KQL queries never need to be in the LLM context at all
 
-**Result:** A non-SME on-call can type `investigate ICM 12345678` and get the same diagnostic path that the most experienced engineer on the team would follow — including the right queries, the right interpretation, and the right TSG, without needing to know any of it upfront.
+**Goal:** A non-SME on-call can type `investigate ICM 12345678` and get the same diagnostic path that the SME would follow — including the right queries, the right interpretation, and the right TSG, without needing to know any of it upfront.
 
 ---
 
@@ -108,7 +88,7 @@ The prometheus-collector addon runs as a container on the customer's AKS cluster
 
 ---
 
-## What We Had Before: The ADX Dashboard
+## What We Have: The ADX Dashboard
 
 We built a **TSG ADX Dashboard** to consolidate our most common queries. You paste in the cluster ARM resource ID and it runs everything:
 
@@ -171,7 +151,7 @@ The dashboard helped — it handles the ID resolution chain automatically. **But
 
 ```
 ┌─────────────────────────────────────┐
-│         Copilot CLI (Terminal)       │
+│         Copilot CLI (Terminal)      │
 │                                     │
 │  "Investigate ICM 12345678"         │
 │  "Why are pods restarting on        │
@@ -192,7 +172,7 @@ The dashboard helped — it handles the ID resolution chain automatically. **But
     │  Data Sources                                │
     │                                              │
     │  PrometheusAppInsights  (collector telemetry)│
-    │  AKS / AKS CCP / Infra  (cluster state)     │
+    │  AKS / AKS CCP / Infra  (cluster state)      │
     │  AMWInfo                 (DCR/AMW mapping)   │
     │  MetricInsights          (cardinality/volume)│
     │  ARMProd (3 regions)     (deployment history)│
@@ -223,19 +203,6 @@ The dashboard helped — it handles the ID resolution chain automatically. **But
 | **`tsg_icm_page`** | CDP browser scrape of ICM page — extracts authored summary, discussion entries, ARM resource IDs (works Windows + WSL2) |
 | **`tsg_dashboard_link`** | Direct link to ADX dashboard pre-filtered for cluster |
 | **`tsg_auth_check`** | Validates credentials + connectivity to all data sources, auto-fixes token issues, detects ARMProd CAP blocks |
-
-### By the Numbers
-
-| Metric | Count |
-|--------|-------|
-| MCP tools | 14 |
-| KQL queries | 171+ |
-| Query categories | 9 |
-| Data sources | 11 Kusto clusters + App Insights + Geneva MDM |
-| TSG documents | 16 |
-| Symptom→Tool mappings | 30+ |
-| Lines of TypeScript | ~5,500 |
-
 ---
 
 ## All 165 Queries Across 9 Categories
@@ -266,24 +233,6 @@ Top Metrics by TS Count • Top Metrics by Sample Rate • Full Metric Volume Su
 
 ### ARM Investigation (13 queries)
 ARM PUT Operations by Resource Provider • Managed Clusters PUT Operations (Addon Enablement) • Microsoft.Insights PUT/DELETE (DCR/DCE/DCRA) • Microsoft.Insights DELETE Details • ContainerService Operations Breakdown • ARM Outgoing Requests to Insights RP • All Operations on Specific Cluster • All Subscription DELETEs on Microsoft.Insights • AMW All Operations • AMW PUT/DELETE Operations • **DCRA Operations for Cluster (dataCollectionRuleAssociations)** • **DCRA Failed Operations (4xx/5xx errors)** • **DCE Operations in Subscription (dataCollectionEndpoints)**
-
----
-
-## 11 Data Sources
-
-| Data Source | What it provides |
-|-------------|-----------------|
-| **PrometheusAppInsights** | Collector telemetry — logs, configs, error messages, scrape validation, version info, samples/min. **Primary source for most queries.** |
-| **AKS** | Cluster state — version, addon status, network settings, node pools, VM sizes, autoscaler config |
-| **AKS CCP** | Control plane — configmap watcher logs, control plane metrics, jobs, keep lists, container restarts |
-| **AKS Infra** | Infrastructure — control plane pod CPU, container restart counts |
-| **AMWInfo** | AMW/DCR mapping — cluster→AMW→DCR→MDM account resolution, subscription-level AMW discovery |
-| **MetricInsights** | Cardinality — time series counts, sample rates, metric names, volume by category (180-day lookback) |
-| **ARMPRODSEA** | ARM ops (Asia/Pacific/UK/Africa) — DCR/DCE/DCRA creation/deletion, addon enablement logs |
-| **ARMPRODEUS** | ARM ops (Americas) — same as above for US regions |
-| **ARMPRODWEU** | ARM ops (Europe) — same as above for EU regions |
-| **Vulnerabilities** | CVE scanning — container image vulnerability information |
-| **Geneva MDM** | QoS metrics — throttling, drops, time series limits, active TS vs account limits |
 
 ---
 
@@ -357,20 +306,6 @@ The **TSG Skill** (`.github/skills/prom-collector-tsg/`) teaches Copilot *how* t
 | TS explosion / cardinality spike | `tsg_workload` → `tsg_mdm_throttling` → `tsg_metric_insights` | Spike (label churn) |
 | Node exporter down (up=0) | `tsg_scrape_health` → `tsg_triage` | Missing Metrics (NE version) |
 
-### Escalation Contacts
-
-| Issue | ICM Team |
-|-------|----------|
-| AMW Quota increases | Geneva Monitoring / MDM-Support-Manageability-Tier2 |
-| Query throttling (429 in Grafana) | Azure Monitor Essentials / Sev3 and 4 CRI – Metrics |
-| Remote-write errors (500, 4xx) | Geneva Monitoring / Ingestion Gateway Support - Tier 2 |
-| ARC Kubernetes ingestion | Container Insights / AzureManagedPrometheusAgent |
-| Prometheus Recording rules & alerts | Azure Log Search Alerts / Prometheus Alerts |
-| Grafana service issues | Azure Managed Grafana / Triage |
-| AMW RP / AMCS (DCR/DCE/DCRA) | Azure Monitor Control Service / Triage |
-| MDM Store | Geneva Monitoring / MDM-Support-Core-IngestionAndStorage-Tier2 |
-| AKS addon / ARM / Policy / Bicep / Terraform | Container Insights / AzureManagedPrometheusAgent |
-
 ---
 
 ## Live Demo: ICM 964000
@@ -417,14 +352,14 @@ Private cluster + No DCE/DCR/DCRA provisioned
 
 **Scenario:** Partner team's pod monitor metrics not flowing to their AMW on a shared multi-tenant dev cluster
 
-**Context:** An infrastructure platform team hosts a shared AKS cluster (`mshapisg2-dev-k8s-westus2-03`) with **18 different AMW associations** — a highly multi-tenant setup. A partner (PAS team) attached a pod monitor with `microsoft_metrics_account` relabeling to route metrics to their own AMW, following the [multi-AMW documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-multiple-workspaces). Metrics aren't flowing.
+**Context:** An infrastructure platform team hosts a shared AKS cluster (`shared-dev-cluster-westus2`) with **18 different AMW associations** — a highly multi-tenant setup. A partner team attached a pod monitor with `microsoft_metrics_account` relabeling to route metrics to their own AMW, following the [multi-AMW documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-multiple-workspaces). Metrics aren't flowing.
 
 ### What Copilot found:
 
 **Step 1 — Triage:**
 - ✅ Addon v6.26.0, westus2, NOT private
 - ✅ 18 AMWs associated — shared infrastructure cluster
-- ✅ 38 pod monitors discovered, including partner's `pas-drc-1-podmonitor` (10 targets)
+- ✅ 38 pod monitors discovered, including partner's pod monitor (10 targets)
 - ✅ 11 different account names in scrape config routing
 
 **Step 2 — The Mismatch:**
@@ -432,14 +367,14 @@ The ICM attached a pod monitor with:
 ```yaml
 relabelings:
   - action: replace
-    replacement: ue2-prod-pas-1-amw      # ← WRONG: prod East US 2
+    replacement: prod-partner-amw      # ← WRONG: prod East US 2
     targetLabel: microsoft_metrics_account
 ```
-But the partner's actual AMW is `wus2-dev-pas-1-amw` (dev West US 2). Different environment entirely.
+But the partner's actual AMW is `dev-partner-amw` (dev West US 2). Different environment entirely.
 
 **Step 3 — Verification via MDM:**
-- `wus2-dev-pas-1-amw` **IS in the routing list** and **IS receiving metrics** — 238 metrics, 246K daily time series ✅
-- `ue2-prod-pas-1-amw` is **NOT in routing**, **no ME logs**, no matching DCRA ❌
+- `dev-partner-amw` **IS in the routing list** and **IS receiving metrics** — 238 metrics, 246K daily time series ✅
+- `prod-partner-amw` is **NOT in routing**, **no ME logs**, no matching DCRA ❌
 - No MetricsExtension errors for the partner's account — the correctly-configured pod monitor works fine
 
 **Step 4 — ARM Forensics (the deeper investigation):**
@@ -448,11 +383,11 @@ Queried ARM telemetry for all DCRA operations on the cluster filtered to the par
 
 | DCRA Name | PUT ✅ | PUT 403 | DELETE ✅ | DELETE 403 |
 |-----------|--------|---------|-----------|------------|
-| `wus2-dev-pas-1-amw-association` | — | — | 9 | — |
-| `wus2-dev-pas-1-dcr-association` | — | 2 | 4 | 16 |
-| `pas-dcr-amw-association` | 1 | — | 1 (2 min later!) | — |
-| `pas-dcrTestdcr-association` | 1 | — | — | — |
-| `amw-mshapisg2-dev-uswest2-pas-association` | — | — | 2 | — |
+| `dev-partner-amw-association` | — | — | 9 | — |
+| `dev-partner-dcr-association` | — | 2 | 4 | 16 |
+| `partner-dcr-amw-association` | 1 | — | 1 (2 min later!) | — |
+| `partner-dcrTestdcr-association` | 1 | — | — | — |
+| `amw-shared-dev-partner-association` | — | — | 2 | — |
 
 Timeline revealed: partner tried **5 different DCRA naming conventions**, hit **403 permission failures** repeatedly, created associations then **deleted them minutes later**, and may not have a stable DCRA in place at all.
 
@@ -461,8 +396,8 @@ Timeline revealed: partner tried **5 different DCRA naming conventions**, hit **
 Two independent issues:
 
 1. Pod monitor account name mismatch:
-   Pod monitor says "ue2-prod-pas-1-amw" (prod/EUS2)
-   but AMW is "wus2-dev-pas-1-amw" (dev/WUS2)
+   Pod monitor says "prod-partner-amw" (prod/EUS2)
+   but AMW is "dev-partner-amw" (dev/WUS2)
    → Metrics with wrong label are silently dropped or go to default AMW
 
 2. DCRA instability:
@@ -481,6 +416,135 @@ The ad-hoc ARM DCRA forensics queries were so useful they were immediately added
 - Correlating across **6 different data sources** (ICM, App Insights, ARM, AMWInfo, MDM, AKS) to build the full picture
 - The ARM forensics query alone required querying `ARMPRODEUS` with a 30-day lookback across 158 operations
 - A human would need to: check the triage dashboard, then open Jarvis to check MDM, then open ARM Kusto to check DCRA history, then cross-reference account names — all while juggling 18 AMW associations on a shared cluster
+
+---
+
+## Live Demo: OOM Investigation — Two Clusters in Parallel
+
+This investigation shows how the agent can diagnose **multiple clusters simultaneously** and identify the shared root cause pattern.
+
+### The Setup
+
+Both clusters are in North Europe, both private, same addon version (6.26.0), same system pool VM size (Standard_E4s_v5 = 16GB RAM). The agent ran triage, workload, errors, and pods on both clusters **in parallel** — all 8 tool calls at once.
+
+### What the Agent Found
+
+**Cluster 1 (oom-cluster-01):**
+
+| Metric | Value |
+|--------|-------|
+| OOMKills in 24h | **~2,008** (ReplicaSet only — DaemonSet: 0) |
+| ReplicaSet memory limit | **14Gi** |
+| Memory P95 before OOMKill | **12.2 – 13.9 GB** (hitting the ceiling) |
+| Memory after OOMKill | **0.29 – 0.33 GB** (reset to near-zero) |
+| HPA replicas | Stable at 9–11 |
+| `kubernetes-pods-metrics` targets | **18,385 → 21,857** 🔴 |
+| `acstor-metrics-exporter` targets | ~3,545 |
+| `local-csi-driver` targets | ~3,545 |
+| Total scrape targets | **~28,000** |
+
+**Cluster 2 (oom-cluster-02):**
+
+| Metric | Value |
+|--------|-------|
+| OOMKills in 24h | **~148** (ReplicaSet only — DaemonSet: 0) |
+| ReplicaSet memory limit | **14Gi** |
+| Memory P95 before OOMKill | **12.6 – 13.3 GB** |
+| HPA replicas | **Oscillating 7 ↔ 14** 🔴 |
+| `kubernetes-pods-metrics` targets | **~10,041** |
+| Total scrape targets | **~14,000** |
+
+### The HPA/OOM Feedback Loop
+
+Cluster 2 shows the classic pattern:
+
+```
+Pod grows to 13GB → OOMKilled → memory resets to 0.3GB
+  → HPA sees low average memory → scales DOWN (14 → 7 replicas)
+    → fewer pods, more targets per pod
+      → faster memory growth → OOMKilled again
+        → cycle repeats (7 ↔ 14 oscillation)
+```
+
+The agent identified this from the HPA oscillation data — replica count bouncing between 7 and 14 every 15–30 minutes.
+
+### Root Cause
+
+1. **`kubernetes-pods-metrics` custom job** scraping 10K–22K annotated pod targets — massive volume
+2. Each ReplicaSet pod grows toward the **14Gi memory limit** holding scraped time series
+3. **HPA `minReplicas` never increased** (default min=2) — HPA can freely scale down after OOM resets memory
+4. OOMKill resets memory → HPA sees low avg → scales down → more OOM → feedback loop
+
+### Why This Investigation Is Interesting
+
+- **Parallel cluster comparison** — ran diagnostics on both clusters simultaneously, identified the shared pattern
+- **HPA oscillation detection** — the agent flagged the 7↔14 bouncing as the feedback loop from our TSG
+- **Target count analysis** — 22K targets is visible in the config data, but correlating it with the memory ceiling and OOMKill pattern is the insight
+- **DaemonSet as control group** — DaemonSet pods had 0 restarts on both clusters, confirming this is a ReplicaSet-specific load issue, not a systemic problem
+
+### Recommended Actions
+
+1. **Increase `minReplicas` on the HPA** to floor the replica count: `kubectl patch hpa ama-metrics-hpa -n kube-system --type merge --patch '{"spec": {"minReplicas": 15}}'` (supported range: 2–30, see [Autoscaling docs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-autoscaling))
+2. **Review `kubernetes-pods-metrics` targets** — can they filter by namespace or reduce the pod set?
+3. **Evaluate configmap jobs** — `acstor-metrics-exporter` (3,545 targets) and `local-csi-driver` (3,545 targets) — are all needed?
+
+---
+
+## Why This Is Better Than Dashboards
+
+### It Starts With Runbooks — But the Real Power Is What Comes After
+
+The MCP server and skill start with **runbook automation** — encoding the same KQL queries we'd run manually from the TSG dashboard. That alone saves time. But the real power comes from what the AI does *on top of that*:
+
+1. **Interpretation** — It doesn't just return query results. It reads them, identifies what's abnormal, and tells you what it means
+2. **Correlation** — It connects results across queries and data sources. "The HPA scaled down at 14:00 AND the OOMKill happened at 14:02 AND the DCRA was deleted at 13:58" — three separate queries, one story
+3. **Synthesis with existing knowledge** — It knows common issues, the e2e flow, which errors are red herrings, and what usually fixes what. A non-SME gets the same diagnostic intuition as someone who's investigated 50 ICMs
+
+### The Dashboard Problem
+
+With the ADX dashboard, you have to:
+- Parse through **panels of information and logs that may not relate to the issue** at hand
+- Look at each panel and **make inferences based on your own knowledge** — where to look first, where to head next
+- **Context switch** between multiple dashboards, portals, and query tools
+- Hold the entire investigation state **in your head** while you jump between tabs
+
+The dashboard shows you data. It doesn't tell you what it means or what to do next.
+
+### The Conversational Investigation Model
+
+With the agent, you can go **much deeper** — asking questions that need answers from queries, timing correlations, and cross-data-source joins that would have been hard and time-consuming to do manually.
+
+New things come up during an investigation that we aren't really sure about — even as an SME. With this approach, we can investigate those threads **quickly**. The flow becomes:
+
+> **I have a thought → that thought gives me back the data → that data gives me a new thought**
+
+Instead of: "I have a thought → open a new KQL tab → remember which cluster → find the right column names → write the query → wait for results → interpret → start over for the next thought."
+
+---
+
+## Key Takeaways
+
+### 1. The Magic Comes From What You Give It
+
+The skill and MCP server are only as good as the queries, TSGs, and domain knowledge you feed them. **It's worth the investment** to encode your TSGs, your investigation patterns, and your query library into the skill.
+
+### 2. Build Iteratively — Not All at Once
+
+You don't need to encode every TSG and every query on day one. **Build it iteratively with each new ICM that comes in:**
+
+- ICM comes in → investigate with the agent → it can't answer a question → you write an ad-hoc query → add that query to the MCP server → next time it knows how to answer that question automatically
+
+Every investigation makes the next one faster. The agent accumulates your team's collective experience one ICM at a time.
+
+### 3. Split and Index as You Grow
+
+As the skill file and TSGs get bigger and bigger, **split things up**:
+
+- One TSG file per symptom category (not a single giant doc)
+- Index everything — the skill file acts as a **routing table** that tells the agent which TSG to read for which symptom
+- Point the agent to specific files so it can pull them in when needed, and they **don't get lost in a sea of everything**
+
+This is why we have 16 separate TSG files instead of one mega-doc, and a `reference.md` for deep-dive topics. The skill's symptom→tool→TSG routing table makes sure the right knowledge gets used at the right time.
 
 ---
 
@@ -527,42 +591,11 @@ The conversational approach unlocks investigation patterns that are impossible w
 
 At first, the agent had misconceptions — it would check the wrong columns, misinterpret error messages, or follow the wrong diagnostic path. But **every ICM has made it better:**
 
-| ICM | What the Agent Learned |
-|-----|----------------------|
-| Early investigations | FQDN `-priv` pattern is NOT authoritative for private cluster detection → added definitive `privateLinkProfile` boolean check |
-| ICM 770972482 | Multi-AMW routing: metrics go to the AMW whose DCR matches the scrape job, not necessarily the "default" AMW → added multi-AMW diagnostic queries and TSG |
-| ICM 964000 | CCP cluster ID resolution is flaky (~6h sparse data) → added CCP-independent queries using `subscription` + `clusterName` directly |
-| ICM 964000 | `ManagedClusterSnapshot` has no `resourceId` column (unlike what you'd expect) → fixed all AKS queries to use correct columns |
-| ARM investigation | DCR/DCE/DCRA can be in any RG in the subscription, not just the cluster's RG → broadened ARM queries to subscription-level |
-| Cardinality spike | Total TS count isn't enough — need per-dimension breakdown to find which label is exploding → added risk-rated cardinality queries |
-
 **The key insight:** I'm the SME guiding the agent through each investigation. Every correction, every "no, check this instead", every "that column doesn't exist" gets permanently encoded into the queries, the TSGs, and the skill routing. The agent is accumulating the team's collective investigation experience — one ICM at a time.
 
 ---
 
 ## Technical Highlights
-
-### WSL2 Reliability Fix
-- Node.js `fetch` has **~80% TLS failure rate** to Kusto in WSL2
-- Replaced with `curl` subprocess — **100% reliable**
-- System OpenSSL handles WSL2 virtual networking correctly
-
-### Multi-Source Query Engine
-- Queries run in parallel (configurable concurrency, default 5)
-- Retry with exponential backoff for transient failures
-- 3-minute timeout per query
-- Progress notifications via MCP protocol
-
-### ICM Browser Scraper
-- Chrome DevTools Protocol (CDP) via Edge
-- Works on both Windows native and WSL2
-- Intercepts raw API responses during page reload
-- Extracts authored summary that ICM API tools don't return
-
-### Auth Check
-- Tests all data sources before investigation starts
-- Auto-detects ARMProd Conditional Access Policy issues
-- Suggests `azureauth` CLI for WAM-based auth
 
 ### Self-Improving: Every Investigation Makes the Next One Faster
 
@@ -607,52 +640,6 @@ Copilot will:
 5. **If auth fails** — diagnose why (expired token? missing `az login`? ARMProd CAP issue? VPN not connected?) and walk you through the fix
 
 This means nobody on the team has to spend time figuring out setup. They ask Copilot, and Copilot handles it — including troubleshooting auth issues that would otherwise be a Slack message to the person who built the tooling.
-
-### Manual Setup (if you prefer)
-
-### Prerequisites
-- Copilot CLI installed
-- Azure CLI logged in (`az login`)
-- Corp VPN connected
-- Node.js 22+ (comes with Copilot CLI)
-
-### Quick Start
-```bash
-# Clone and checkout the branch
-git checkout grwehner/tsg-tooling-and-devbox
-
-# Build the MCP server
-cd tools/prom-collector-tsg-mcp
-npm install
-npx tsc
-
-# Add to ~/.copilot/mcp.json
-{
-  "mcpServers": {
-    "prom-collector-tsg": {
-      "command": "node",
-      "args": ["tools/prom-collector-tsg-mcp/dist/index.js"]
-    }
-  }
-}
-
-# Start Copilot CLI and verify
-copilot
-> tsg_auth_check
-```
-
-### Usage
-```
-> Investigate ICM 12345678
-
-> Troubleshoot cluster /subscriptions/.../managedClusters/mycluster
-
-> Why are pods restarting? Check errors for the last 6 hours
-
-> What's the metric volume for MDM account mac_12345?
-
-> Run this KQL against AMWInfo: AzureMonitorMetricsDCRDaily | where ...
-```
 
 ---
 
@@ -914,25 +901,3 @@ This is especially useful early on — you probably have dozens of resolved ICMs
 | Each investigation starts from scratch | Each investigation builds on all previous ones |
 
 ---
-
-## Commits on This Branch
-
-| Commit | Description |
-|--------|-------------|
-| `a6f97ac` | feat: add Missing DCE triage check and subscription-level AMW fallback |
-| `759acaf` | fix: replace Node.js fetch with curl for Kusto queries (WSL2 TLS fix) |
-| `04ce2a5` | fix: use data queries for auth check, expand tested data sources |
-| `8a3585e` | docs: expand multi-AMW routing TSG from ICM 770972482 learnings |
-| `162aa88` | Split TSGs into individual files, remove public doc gaps |
-| `c0ae73e` | Add ARM regional data sources and investigation queries |
-| `2d02741` | Fix AKS/CCP query failures: token replacement and CCP ID resolver |
-| `91cd7bc` | feat: add ARMProd data source and improve retry logic |
-| ... | 20+ commits total |
-
----
-
-## Questions?
-
-**Repo:** `Azure/prometheus-collector` branch `grwehner/tsg-tooling-and-devbox`
-**MCP Server:** `tools/prom-collector-tsg-mcp/`
-**Skill:** `.github/skills/prom-collector-tsg/`
