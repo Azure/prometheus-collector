@@ -207,6 +207,11 @@ Based on triage results, identify the primary symptom category and follow the co
 
 ### Step 4: Summarize Findings
 
+**⚠️ Do NOT speculate.** Only state what the query data shows. If you don't know the origin or purpose of a Kubernetes resource (namespace, PodMonitor, ServiceMonitor, ConfigMap, etc.), say "I don't have data on this" rather than guessing. Common traps:
+- Don't claim resources are "auto-generated" unless you have documentation or code proving it
+- Don't infer intent from naming patterns (e.g., a GUID-prefixed namespace could be customer-created or platform-created — you don't know without evidence)
+- If a field or behavior is ambiguous, flag the uncertainty explicitly
+
 Present findings as:
 1. **Cluster Info** — version, region, state
 2. **Root Cause** — what the queries revealed, linked to TSG category

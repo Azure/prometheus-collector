@@ -2,7 +2,7 @@
 
 These are specific known behaviors and past incidents — not troubleshooting workflows, but useful context when a customer reports one of these patterns.
 
-**HPA scaling down unexpectedly** — HPA scaling down is expected behavior when metric volume decreases (e.g., customer deployed a new app version that exposes fewer metrics). Check `tsg_workload` → "HPA Status". Customer can set `minshards` in `ama-metrics-settings-configmap` to prevent scaling below a minimum.
+**HPA scaling down unexpectedly** — HPA scaling down is expected behavior when metric volume decreases (e.g., customer deployed a new app version that exposes fewer metrics). Check `tsg_workload` → "HPA Status". Customer can increase `minReplicas` on the `ama-metrics-hpa` HPA object in `kube-system` to prevent scaling below a minimum: `kubectl patch hpa ama-metrics-hpa -n kube-system --type merge --patch '{"spec": {"minReplicas": <N>}}'` — see [Autoscaling docs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-autoscaling).
 
 **Inconsistent cAdvisor scrape intervals** — cAdvisor scraping has known inconsistent intervals due to kubelet `/metrics/cadvisor` endpoint latency. Key investigation steps:
 1. **Check scrape interval** — run `tsg_config`, look at "Default Targets Scrape Interval". cAdvisor defaults to **15s** — the most aggressive default target (others are 30-60s). This is the primary contributor to timeouts.

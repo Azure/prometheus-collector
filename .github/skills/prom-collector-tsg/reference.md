@@ -66,6 +66,9 @@ When investigating **intermittent missing metrics** for a specific target (e.g. 
    - Calculate failure rate: `(typical_sum - actual_sum) / typical_sum × 100`
    - Failure rate < 1% → transient scrape timeouts, usually self-healing
    - Failure rate > 5% → persistent target health issue, check target pod logs
+   - **⚠️ `up=0` vs `up` missing — critical ownership distinction:**
+     - **`up=0` present** → our collector pod IS running and scraping, but the **target endpoint** is broken/unreachable. For `node` job, this means AKS broke their node-exporter endpoint (they own it) — escalate to AKS team, not our bug
+     - **`up` completely absent** (no data points) → our collector pod isn't running on that node — check `tsg_pods` for crashes/scheduling failures. This IS our addon's problem
 4. **Correlate with App Insights logs** — search for target-specific log tags:
    - `prometheus.log.kubestatemetricscontainer` — KSM pod logs
    - `prometheus.log.targetallocator.tacontainer` — target allocator logs
@@ -115,7 +118,7 @@ The `tsg_triage` tool includes these node health queries:
 7. `tsg_triage` → Check "Node Conditions" for `MemoryPressure == True` on system pool nodes
 8. `tsg_pods` → Check "Node Status Timeline" — shows when nodes transitioned to NotReady/Unknown, which may correlate with OOMKill waves
 9. If system pool VM size is too small for the metric volume → customer needs **bigger system pool VMs** (e.g., upgrade from Standard_E4s_v5 to Standard_E8s_v5)
-10. If HPA is at limit (`atLimit == true`) → customer can increase `maxReplicas` up to 30 via `ama-metrics-settings-configmap` → `minshards`, BUT only if system pool nodes can accommodate more pods
+10. If HPA is at limit (`atLimit == true`) → customer can increase `maxReplicas` by patching the `ama-metrics-hpa` HPA object in `kube-system`: `kubectl patch hpa ama-metrics-hpa -n kube-system --type merge --patch '{"spec": {"maxReplicas": 30}}'` — see [Autoscaling docs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-autoscaling). BUT only if system pool nodes can accommodate more pods
 11. If system pool is at max node count (`isFull == true`) → customer needs to increase maxCount on the system pool or use bigger VMs
 12. **Most common root cause:** Customer has high Istio/Envoy metric volume (millions of time series) but system pool uses small VMs (32GB). The HPA scales out replicas to handle volume, but each replica needs up to 14Gi memory. Small system pool nodes cannot fit enough replicas → constant OOMKill cycle. **Solution: reduce metric volume via metric_relabel_configs (drop histogram _bucket metrics) AND/OR upgrade system pool VM size**
 
