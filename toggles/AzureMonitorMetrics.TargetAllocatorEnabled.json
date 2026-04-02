@@ -1,0 +1,23 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.TargetAllocatorEnabled",
+  "Type": "bool",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.TargetAllocatorEnabled toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "0e4773a2-8221-441a-a06f-17db16ab16d4"
+          ]
+        }
+      ],
+      "Value": "true"
+    }
+  ]
+}

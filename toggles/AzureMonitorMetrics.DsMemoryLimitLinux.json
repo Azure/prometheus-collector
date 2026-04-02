@@ -1,0 +1,49 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.DsMemoryLimitLinux",
+  "Type": "string",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.DsMemoryLimitLinux toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "b9842c7c-1a38-4385-8f39-a51314758bcf"
+          ]
+        }
+      ],
+      "Value": "1.5Gi"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "a7919200-6bce-4900-b274-99ef2d9154e1",
+            "a9f01029-e382-4773-b28f-77e1f6fc3a3d",
+            "e40ffacb-ab7b-4fab-bc55-5a9e23cfabff"
+          ]
+        }
+      ],
+      "Value": "4.0Gi"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "armId",
+          "Operator": "equals",
+          "Values": [
+            "/subscriptions/63045519-f7f2-4d6a-b3e2-e2b3199e0e79/resourceGroups/RG-WE-P-AKS-01/providers/Microsoft.ContainerService/managedClusters/aks-we-p-caas-01"
+          ]
+        }
+      ],
+      "Value": "2.0Gi"
+    }
+  ]
+}
