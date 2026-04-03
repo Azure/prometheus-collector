@@ -1,5 +1,4 @@
-# Scoped Secrets Access for Pod/ServiceMonitors (Branch: `rashmi/secret-restriction`)
-
+# Scoped Secrets Access for Pod/ServiceMonitors
 ## Summary
 
 This change removes **cluster-wide secrets access** from the `ama-metrics` ClusterRole and replaces it with **namespace-scoped** RBAC, giving users explicit control over which namespaces the target allocator can read secrets from. This is a security improvement: previously, the target allocator had unrestricted `get`/`list`/`watch` on secrets across **all** namespaces in the cluster.
