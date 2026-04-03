@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -128,16 +129,29 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 
 	var targetAllocatorConfig shared.Config
 
-	// Parse secrets access namespaces from configmap setting
-	var secretsAccessNamespaces []string
-	if sns := os.Getenv("AZMON_SECRETS_ACCESS_NAMESPACES"); sns != "" {
-		for _, ns := range strings.Split(sns, ",") {
-			ns = strings.TrimSpace(ns)
-			if ns != "" {
-				secretsAccessNamespaces = append(secretsAccessNamespaces, ns)
+	// Determine secrets access namespaces.
+	// Default: watch all namespaces for secrets (backward-compatible behavior).
+	// On Kubernetes >= 1.36: use the explicit configmap setting instead.
+	secretsAccessNamespaces := []string{""}
+	log.Println("Defaulting to watch all namespaces for secrets")
+
+	kubeVersion := os.Getenv("KUBE_VERSION")
+	if kubeVersion != "" && !isKubeVersionLessThan(kubeVersion, 1, 36) {
+		// On >= 1.36, read the scoped namespace list from the configmap setting.
+		secretsAccessNamespaces = nil
+		if sns := os.Getenv("AZMON_SECRETS_ACCESS_NAMESPACES"); sns != "" {
+			for _, ns := range strings.Split(sns, ",") {
+				ns = strings.TrimSpace(ns)
+				if ns != "" {
+					secretsAccessNamespaces = append(secretsAccessNamespaces, ns)
+				}
 			}
+			log.Printf("Kubernetes version %s >= 1.36: SecretsAccessNamespaces from configmap: %v\n", kubeVersion, secretsAccessNamespaces)
+		} else {
+			log.Printf("Kubernetes version %s >= 1.36: no secrets_access_namespaces configured, no namespaces will be watched for secrets\n", kubeVersion)
 		}
-		log.Printf("SecretsAccessNamespaces from configmap: %v\n", secretsAccessNamespaces)
+	} else if kubeVersion != "" {
+		log.Printf("Kubernetes version %s < 1.36: watching all namespaces for secrets\n", kubeVersion)
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
@@ -153,8 +167,9 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 			},
 			Config: promScrapeConfig,
 			PrometheusCR: shared.PrometheusCRConfig{
-				ServiceMonitorSelector: &metav1.LabelSelector{},
-				PodMonitorSelector:     &metav1.LabelSelector{},
+				ServiceMonitorSelector:  &metav1.LabelSelector{},
+				PodMonitorSelector:      &metav1.LabelSelector{},
+				SecretsAccessNamespaces: secretsAccessNamespaces,
 			},
 			HTTPS: shared.HTTPSServerConfig{
 				Enabled:         true,
@@ -163,8 +178,6 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				TLSKeyFilePath:  "/etc/operator-targets/server/certs/server.key",
 				CAFilePath:      "/etc/operator-targets/server/certs/ca.crt",
 			},
-SecretsAccessNamespaces: secretsAccessNamespaces,
-			
 		}
 	} else {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation, not setting tls config in TargetAllocator")
@@ -179,10 +192,10 @@ SecretsAccessNamespaces: secretsAccessNamespaces,
 			},
 			Config: promScrapeConfig,
 			PrometheusCR: shared.PrometheusCRConfig{
-				ServiceMonitorSelector: &metav1.LabelSelector{},
-				PodMonitorSelector:     &metav1.LabelSelector{},
+				ServiceMonitorSelector:  &metav1.LabelSelector{},
+				PodMonitorSelector:      &metav1.LabelSelector{},
+				SecretsAccessNamespaces: secretsAccessNamespaces,
 			},
-			SecretsAccessNamespaces: secretsAccessNamespaces,
 		}
 	}
 
@@ -637,4 +650,26 @@ func main() {
 
 	http.ListenAndServe(":8081", nil)
 
+}
+
+// isKubeVersionLessThan parses a Kubernetes version string (e.g. "1.30.1", "v1.35.0")
+// and returns true if it is strictly less than major.minor.
+func isKubeVersionLessThan(version string, major, minor int) bool {
+	v := strings.TrimPrefix(version, "v")
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) < 2 {
+		return false
+	}
+	parsedMajor, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return false
+	}
+	parsedMinor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return false
+	}
+	if parsedMajor != major {
+		return parsedMajor < major
+	}
+	return parsedMinor < minor
 }

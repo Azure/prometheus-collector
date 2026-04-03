@@ -9,6 +9,7 @@ type PrometheusCRConfig struct {
 	Enabled                         bool                  `yaml:"enabled,omitempty"`
 	AllowNamespaces                 []string              `yaml:"allow_namespaces,omitempty"`
 	DenyNamespaces                  []string              `yaml:"deny_namespaces,omitempty"`
+	SecretsAccessNamespaces         []string              `yaml:"secrets_access_namespaces,omitempty"`
 	PodMonitorSelector              *metav1.LabelSelector `yaml:"pod_monitor_selector,omitempty"`
 	PodMonitorNamespaceSelector     *metav1.LabelSelector `yaml:"pod_monitor_namespace_selector,omitempty"`
 	ServiceMonitorSelector          *metav1.LabelSelector `yaml:"service_monitor_selector,omitempty"`
@@ -27,7 +28,6 @@ type Config struct {
 	PrometheusCR            PrometheusCRConfig     `yaml:"prometheus_cr,omitempty"`
 	FilterStrategy          string                 `yaml:"filter_strategy,omitempty"`
 	HTTPS                   HTTPSServerConfig      `yaml:"https,omitempty"`
-	SecretsAccessNamespaces []string               `yaml:"secrets_access_namespaces,omitempty"`
 }
 
 type OtelConfig struct {
