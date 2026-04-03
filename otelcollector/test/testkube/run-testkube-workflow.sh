@@ -172,6 +172,9 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-controlplane-istio-crs.yaml)
             workflows=(configprocessingcommon controlplaneistioenabled)
             ;;
+        testkube-config-test-secrets-access-namespaces-crs.yaml)
+            workflows=(configprocessingcommon secretsaccessnamespaces)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1
