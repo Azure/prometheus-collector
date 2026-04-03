@@ -19,7 +19,6 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver"
@@ -28,15 +27,6 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
 	mdata "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
-)
-
-var _ = featuregate.GlobalRegistry().MustRegister(
-	"receiver.prometheusreceiver.RemoveStartTimeAdjustment",
-	featuregate.StageStable,
-	featuregate.WithRegisterFromVersion("v0.121.0"),
-	featuregate.WithRegisterToVersion("v0.142.0"),
-	featuregate.WithRegisterDescription("When enabled, the Prometheus receiver will"+
-		" leave the start time unset. Use the new metricstarttime processor instead."),
 )
 
 type resourceKey struct {
@@ -340,15 +330,17 @@ func (t *transaction) AppendHistogram(_ storage.SeriesRef, ls labels.Labels, atM
 	// thus we don't check for them here as opposed to the Append function.
 
 	curMF := t.getOrCreateMetricFamily(*rKey, getScopeID(ls), metricName)
+	seriesRef := t.getSeriesRef(ls, curMF.mtype)
+	cacheRef := ls.Hash()
 
 	if h != nil && h.CounterResetHint == histogram.GaugeType || fh != nil && fh.CounterResetHint == histogram.GaugeType {
 		t.logger.Warn("dropping unsupported gauge histogram datapoint", zap.String("metric_name", metricName), zap.Any("labels", ls))
 	}
 
 	if schema == -53 {
-		err = curMF.addNHCBSeries(t.getSeriesRef(ls, curMF.mtype), metricName, ls, atMs, h, fh)
+		err = curMF.addNHCBSeries(seriesRef, metricName, ls, atMs, h, fh)
 	} else {
-		err = curMF.addExponentialHistogramSeries(t.getSeriesRef(ls, curMF.mtype), metricName, ls, atMs, h, fh)
+		err = curMF.addExponentialHistogramSeries(seriesRef, metricName, ls, atMs, h, fh)
 	}
 	if err != nil {
 		t.logger.Warn("failed to add histogram datapoint", zap.Error(err), zap.String("metric_name", metricName), zap.Any("labels", ls))
@@ -358,8 +350,8 @@ func (t *transaction) AppendHistogram(_ storage.SeriesRef, ls labels.Labels, atM
 	}
 
 	// never return errors, as that fails the whole scrape
-	// return ref==1 indicating that the series was added and needs staleness tracking
-	return 1, nil
+	// return a stable ref so Prometheus can track series staleness
+	return storage.SeriesRef(cacheRef), nil
 }
 
 func (t *transaction) AppendSTZeroSample(_ storage.SeriesRef, ls labels.Labels, atMs, stMs int64) (storage.SeriesRef, error) {
