@@ -26,8 +26,13 @@ rules:
     resources: ["secrets"]
     resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
     verbs: ["get", "watch"]
-  # Unrestricted cluster-wide secrets access removed. Secrets access for basic auth is now
-  # scoped to kube-system via a namespaced Role+RoleBinding (ama-metrics-secrets-role.yaml).
+  # For Kubernetes < 1.36, keep cluster-wide secrets access for basic auth in pod/service monitors.
+  # For >= 1.36, secrets access is scoped to specific namespaces via namespaced Role+RoleBinding.
+{{- if semverCompare "<1.36.0" .Values.global.commonGlobals.Versions.Kubernetes }}
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+{{- end }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - apiGroups: [""]
     resources: ["secrets"]

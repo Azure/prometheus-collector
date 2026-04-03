@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - rashmi/secret-restriction
 pr:
   autoCancel: true
   branches:
