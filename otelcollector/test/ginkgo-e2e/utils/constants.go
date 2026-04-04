@@ -29,6 +29,8 @@ var (
 		// ReplicaSet
 		"Failed to reach Target Allocator endpoint with HTTPS",
 		"tls: failed to verify certificate: x509",
+		// Service discovery
+		"Unable to refresh target groups",
 	}
 )
 
