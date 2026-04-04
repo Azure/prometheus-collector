@@ -258,9 +258,11 @@ var _ = Describe("Secrets Access for Basic Auth in ServiceMonitors",
 			It("should include the ServiceMonitor scrape job in the Prometheus scrape pool", func() {
 				// Query the Prometheus UI from the ama-metrics replicaset pod to check
 				// that the ServiceMonitor target appears in the scrape configuration.
-				var result utils.APIResponse
-				Eventually(func() error {
-					return utils.QueryPromUIFromPod(
+				// The entire check (query + target search) must be inside Eventually
+				// because the target allocator needs time to discover the new ServiceMonitor.
+				Eventually(func() bool {
+					var result utils.APIResponse
+					err := utils.QueryPromUIFromPod(
 						K8sClient, Cfg,
 						amaMetricsNamespace,
 						amaMetricsLabelKey, amaMetricsLabelValue,
@@ -269,29 +271,33 @@ var _ = Describe("Secrets Access for Basic Auth in ServiceMonitors",
 						true,
 						&result,
 					)
-				}, pollTimeout, pollInterval).Should(Succeed())
-
-				// Parse the targets response to look for our ServiceMonitor job
-				var targetsData struct {
-					ActiveTargets []struct {
-						ScrapePool string            `json:"scrapePool"`
-						Labels     map[string]string `json:"labels"`
-						Health     string            `json:"health"`
-					} `json:"activeTargets"`
-				}
-				err := json.Unmarshal(result.Data, &targetsData)
-				Expect(err).NotTo(HaveOccurred())
-
-				found := false
-				for _, target := range targetsData.ActiveTargets {
-					if strings.Contains(target.ScrapePool, secretsTestNamespace) &&
-						strings.Contains(target.ScrapePool, serviceMonitorName) {
-						found = true
-						fmt.Printf("Found target in scrape pool: %s (health: %s)\n", target.ScrapePool, target.Health)
-						break
+					if err != nil {
+						fmt.Printf("Error querying targets API: %v\n", err)
+						return false
 					}
-				}
-				Expect(found).To(BeTrue(),
+
+					var targetsData struct {
+						ActiveTargets []struct {
+							ScrapePool string            `json:"scrapePool"`
+							Labels     map[string]string `json:"labels"`
+							Health     string            `json:"health"`
+						} `json:"activeTargets"`
+					}
+					if err := json.Unmarshal(result.Data, &targetsData); err != nil {
+						fmt.Printf("Error parsing targets response: %v\n", err)
+						return false
+					}
+
+					for _, target := range targetsData.ActiveTargets {
+						if strings.Contains(target.ScrapePool, secretsTestNamespace) &&
+							strings.Contains(target.ScrapePool, serviceMonitorName) {
+							fmt.Printf("Found target in scrape pool: %s (health: %s)\n", target.ScrapePool, target.Health)
+							return true
+						}
+					}
+					fmt.Printf("ServiceMonitor target not yet found among %d active targets\n", len(targetsData.ActiveTargets))
+					return false
+				}, pollTimeout, pollInterval).Should(BeTrue(),
 					"Expected ServiceMonitor %s/%s to appear as an active target", secretsTestNamespace, serviceMonitorName)
 			})
 
