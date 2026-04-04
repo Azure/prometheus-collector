@@ -70,7 +70,7 @@ func ConfigureEnvironment() error {
 		SetEnvAndSourceBashrcOrPowershell(v, removeTrailingSlash(os.Getenv(v)), true)
 	}
 
-	namespace := getTargetAllocatorNamespace()
+	namespace := GetNamespace()
 	addNoProxy("ama-metrics-operator-targets." + namespace + ".svc.cluster.local")
 	setHTTPProxyEnabled()
 
