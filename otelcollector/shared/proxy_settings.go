@@ -70,7 +70,8 @@ func ConfigureEnvironment() error {
 		SetEnvAndSourceBashrcOrPowershell(v, removeTrailingSlash(os.Getenv(v)), true)
 	}
 
-	addNoProxy("ama-metrics-operator-targets.kube-system.svc.cluster.local")
+	namespace := getTargetAllocatorNamespace()
+	addNoProxy("ama-metrics-operator-targets." + namespace + ".svc.cluster.local")
 	setHTTPProxyEnabled()
 
 	// Process additional settings for Arc cluster with enabled HTTP proxy
