@@ -196,7 +196,7 @@ var _ = Describe("Secrets Access for Basic Auth in ServiceMonitors",
 						},
 						Endpoints: []monitoringv1.Endpoint{
 							{
-								Port: "basicauth-metrics",
+								Port: "ba-metrics",
 								Path: "/httpsmetrics",
 								HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 									HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
@@ -357,7 +357,7 @@ var _ = Describe("Secrets Access for Basic Auth in ServiceMonitors",
 						},
 						Endpoints: []monitoringv1.Endpoint{
 							{
-								Port: "basicauth-metrics",
+								Port: "ba-metrics",
 								Path: "/httpsmetrics",
 								HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 									HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
@@ -570,7 +570,7 @@ func createTestMetricsApp(namespace string) {
 							Protocol:      corev1.ProtocolTCP,
 						},
 						{
-							Name:          "basicauth-metrics",
+							Name:          "ba-metrics",
 							ContainerPort: 2114,
 							Protocol:      corev1.ProtocolTCP,
 						},
@@ -597,7 +597,7 @@ func createTestMetricsApp(namespace string) {
 			},
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "basicauth-metrics",
+					Name:       "ba-metrics",
 					Port:       2114,
 					TargetPort: intstr.FromInt(2114),
 					Protocol:   corev1.ProtocolTCP,

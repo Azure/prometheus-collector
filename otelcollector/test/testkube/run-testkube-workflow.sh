@@ -236,6 +236,11 @@ for wf in "${workflows[@]}"; do
     # Watch until the testworkflow finishes
     kubectl testkube watch testworkflowexecution $execution_id
 
+    # Dump the test execution logs so they appear in the pipeline output
+    echo "\n========== Logs for workflow: $wf (execution: $execution_id) =========="
+    kubectl testkube get testworkflowexecution $execution_id --output json | jq -r '.result.steps[]?.log // empty' 2>/dev/null || echo "(no step logs available)"
+    echo "========== End logs for $wf =========="
+
     # Get the results as a formatted json file
     kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${TARGET_ENV}-${wf}.json"
 
