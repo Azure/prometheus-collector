@@ -117,453 +117,453 @@ stages:
               mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
             displayName: "Prepare TestKube results directory"
           
-          # - bash: |
-          #     # Delete all the configmaps to test the no configmaps case
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+          - bash: |
+              # Delete all the configmaps to test the no configmaps case
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-no-configmaps-crs.yaml" \
-          #       "testkube-config-test-no-configmaps-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for no configmaps"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-no-configmaps-crs.yaml" \
+                "testkube-config-test-no-configmaps-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for no configmaps"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="no-configmaps"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-no-configmaps.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="no-configmaps"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-no-configmaps.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
               
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-all-targets-disabled-crs.yaml" \
-          #       "testkube-config-test-all-targets-disabled-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for all targets disabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-all-targets-disabled-crs.yaml" \
+                "testkube-config-test-all-targets-disabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for all targets disabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-disabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-disabled.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-disabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-disabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-default-targets-on-crs.yaml" \
-          #       "testkube-config-test-default-targets-on-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for all default targets in settings cfg map enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-targets-on-crs.yaml" \
+                "testkube-config-test-default-targets-on-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for all default targets in settings cfg map enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-on"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-on.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-on"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-on.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-rs-targets-enabled.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-rs-targets-enabled.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-all-rs-targets-enabled-crs.yaml" \
-          #       "testkube-config-test-all-rs-targets-enabled-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for all rs targets in settings cfg map enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-all-rs-targets-enabled-crs.yaml" \
+                "testkube-config-test-all-rs-targets-enabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for all rs targets in settings cfg map enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-rs-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-rs-targets-enabled.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-rs-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-rs-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-ds-targets-enabled.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-ds-targets-enabled.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-all-ds-targets-enabled-crs.yaml" \
-          #       "testkube-config-test-all-ds-targets-enabled-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for all ds targets in settings cfg map enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-all-ds-targets-enabled-crs.yaml" \
+                "testkube-config-test-all-ds-targets-enabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for all ds targets in settings cfg map enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-ds-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-ds-targets-enabled.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-ds-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-ds-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-enabled.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-enabled.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-all-targets-enabled-crs.yaml" \
-          #       "testkube-config-test-all-targets-enabled-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for all targets in settings cfg map enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-all-targets-enabled-crs.yaml" \
+                "testkube-config-test-all-targets-enabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for all targets in settings cfg map enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-enabled.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="all-targets-enabled"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-all-targets-enabled.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
+          - bash: |
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-only-custom-configmap-crs.yaml" \
-          #       "testkube-config-test-only-custom-configmap-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for custom configmap with all actions enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-only-custom-configmap-crs.yaml" \
+                "testkube-config-test-only-custom-configmap-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for custom configmap with all actions enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="only-custom-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-only-custom-configmap.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="only-custom-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-only-custom-configmap.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-global-settings-crs.yaml" \
-          #       "testkube-config-test-global-settings-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for global ext labels enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-global-settings-crs.yaml" \
+                "testkube-config-test-global-settings-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for global ext labels enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-settings"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-settings.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-settings"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-settings.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-custom-node-configmap-crs.yaml" \
-          #       "testkube-config-test-custom-node-configmap-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for custom node configmap enabled"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-custom-node-configmap-crs.yaml" \
+                "testkube-config-test-custom-node-configmap-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for custom node configmap enabled"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-node-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-node-configmap.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-node-configmap"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-node-configmap.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-error.yaml
+          - bash: |
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-error.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-settings-error-crs.yaml" \
-          #       "testkube-config-test-settings-error-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for errorprone settings configmap"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-settings-error-crs.yaml" \
+                "testkube-config-test-settings-error-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for errorprone settings configmap"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="settings-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-settings-error.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="settings-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-settings-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml
               
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-custom-configmap-error-crs.yaml" \
-          #       "testkube-config-test-custom-configmap-error-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for errorprone custom configmap"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-custom-configmap-error-crs.yaml" \
+                "testkube-config-test-custom-configmap-error-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for errorprone custom configmap"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-configmap-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-configmap-error.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="custom-configmap-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-custom-configmap-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/global-settings/ama-metrics-prometheus-config-configmap-with-global-error.yaml
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/global-settings/ama-metrics-prometheus-config-configmap-with-global-error.yaml
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-global-ext-labels-error-crs.yaml" \
-          #       "testkube-config-test-global-ext-labels-error-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for errorprone global ext labels"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-global-ext-labels-error-crs.yaml" \
+                "testkube-config-test-global-ext-labels-error-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for errorprone global ext labels"
+            continueOnError: true
 
-          # - bash: |
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-ext-labels-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-ext-labels-error.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary"
-          #   condition: always()
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="global-ext-labels-error"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-global-ext-labels-error.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
 
-          # - bash: |
-          #     # Clean up any leftover custom Prometheus configmaps from previous runs/tests
-          #     kubectl delete configmap ama-metrics-prometheus-config -n kube-system --ignore-not-found
-          #     kubectl delete configmap ama-metrics-prometheus-config-node -n kube-system --ignore-not-found
-          #     kubectl delete configmap ama-metrics-prometheus-config-node-windows -n kube-system --ignore-not-found
+          - bash: |
+              # Clean up any leftover custom Prometheus configmaps from previous runs/tests
+              kubectl delete configmap ama-metrics-prometheus-config -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node-windows -n kube-system --ignore-not-found
 
-          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-controlplane-istio-enabled.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-controlplane-istio-enabled.yaml
 
-          #     # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
-          #     # The test only validates config generation via /api/v1/status/config, not actual scraping.
-          #     kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
-          #     kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+              # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
+              # The test only validates config generation via /api/v1/status/config, not actual scraping.
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
 
-          #     # The controlplane_istio.yml template references /var/run/secrets/ama-metrics/token for auth.
-          #     # This projected volume is only mounted when the Helm value endpointFQDN is set (production).
-          #     # For CI testing, patch both deployments to add the projected volume + mount so the
-          #     # promconfigvalidator doesn't reject the config due to missing credentials_file.
-          #     kubectl patch deployment ama-metrics -n kube-system --type=json -p='[
-          #       {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
-          #       {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
-          #     ]'
-          #     kubectl patch deployment ama-metrics-operator-targets -n kube-system --type=json -p='[
-          #       {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
-          #       {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}},
-          #       {"op":"add","path":"/spec/template/spec/containers/1/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
-          #     ]'
+              # The controlplane_istio.yml template references /var/run/secrets/ama-metrics/token for auth.
+              # This projected volume is only mounted when the Helm value endpointFQDN is set (production).
+              # For CI testing, patch both deployments to add the projected volume + mount so the
+              # promconfigvalidator doesn't reject the config due to missing credentials_file.
+              kubectl patch deployment ama-metrics -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
+              kubectl patch deployment ama-metrics-operator-targets -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}},
+                {"op":"add","path":"/spec/template/spec/containers/1/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
 
-          #     kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
-          #     kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
-          #     export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
-          #     export BUILD_BUILDID="$(Build.BuildId)"
-          #     export SYSTEM_JOBID="$(System.JobId)"
-          #     export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
 
-          #     chmod +x ./testkube/run-testkube-workflow.sh
-          #     ./testkube/run-testkube-workflow.sh \
-          #       "${{ parameters.AMW_QUERY_ENDPOINT }}" \
-          #       "${{ parameters.AZURE_CLIENT_ID }}" \
-          #       "testkube-config-test-controlplane-istio-crs.yaml" \
-          #       "testkube-config-test-controlplane-istio-crs.yaml" \
-          #       "false" \
-          #       "480" \
-          #       "ConfigTests" \
-          #       "${{ parameters.branch }}"
-          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-          #   displayName: "Run tests for controlplane-istio with custom interval and regex"
-          #   continueOnError: true
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for controlplane-istio with custom interval and regex"
+            continueOnError: true
 
-          # - bash: |
-          #     # Clean up the fake MESH_MEMBER_METRICS_FQDN env var and projected volume for subsequent tests
-          #     kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
-          #     kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN-
+          - bash: |
+              # Clean up the fake MESH_MEMBER_METRICS_FQDN env var and projected volume for subsequent tests
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN-
 
-          #     # Remove the projected volume and mounts added for controlplane-istio testing.
-          #     # Use strategic merge patch to remove the volume by name; the rollout will recreate pods without it.
-          #     # For volumes, we need to filter out mcp-metrics-ama-metrics-token.
-          #     # Simplest approach: just let the rollout with removed env var recreate clean pods.
-          #     # The volume patches are tied to the deployment spec and will persist, but they're harmless
-          #     # (projected SA tokens are always valid). The env var removal is what matters for disabling the feature.
+              # Remove the projected volume and mounts added for controlplane-istio testing.
+              # Use strategic merge patch to remove the volume by name; the rollout will recreate pods without it.
+              # For volumes, we need to filter out mcp-metrics-ama-metrics-token.
+              # Simplest approach: just let the rollout with removed env var recreate clean pods.
+              # The volume patches are tied to the deployment spec and will persist, but they're harmless
+              # (projected SA tokens are always valid). The env var removal is what matters for disabling the feature.
 
-          #     kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
-          #     kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
 
-          #     TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="controlplane-istio"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
-          #     echo $TESTKUBE_RESULTS_OTEL
-          #     echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-controlplane-istio.json"
-          #     rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
-          #   displayName: "Create TestKube Results Summary and cleanup controlplane-istio env"
-          #   condition: always()
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="controlplane-istio"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-controlplane-istio.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary and cleanup controlplane-istio env"
+            condition: always()
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-secrets-access-namespaces.yaml
