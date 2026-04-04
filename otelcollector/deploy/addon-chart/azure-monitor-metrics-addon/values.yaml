@@ -1,5 +1,5 @@
 # Custom namespace for deployment (defaults to kube-system for compatibility)
-namespace: "kube-system"
+namespace: "ama-metrics-zane-test"
 
 AzureMonitorMetrics:
   KubeStateMetrics:
@@ -12,7 +12,7 @@ AzureMonitorMetrics:
     CPULimit: 1
     MemoryLimit: 5Gi
 # Kube-state-metrics ImageTag - 2.17.0, corresponds to chart version - 6.2.0
-    ImageTag: "v2.17.0-6"
+    ImageTag: "v2.17.0-4"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -43,9 +43,9 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRegistry: mcr.microsoft.com
-  ImageRepository: ${MCR_REPOSITORY}
-  ImageTag: ${IMAGE_TAG}
-  ImageTagWin: ${IMAGE_TAG}-win
+  ImageRepository: /azuremonitor/containerinsights/cidev/prometheus-collector/images
+  ImageTag: 6.24.1-zane-istio-play-12-01-2025-5872518c
+  ImageTagWin: 6.24.1-zane-istio-play-12-01-2025-5872518c-win
   RsCPULimit: 7
   RsMemoryLimit: 14Gi
   RsCPURequest: 150m
@@ -56,12 +56,11 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg
+  ImageTagTargetAllocator: 6.24.1-zane-istio-play-12-01-2025-5872518c-targetallocator
+  ImageTagCfgReader: 6.24.1-zane-istio-play-12-01-2025-5872518c-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
   OperatorTargetsHttpsEnabled: true
-  MeshMembershipMetricsFQDN: ""
   DeploymentReplicas: 2
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
@@ -71,6 +70,9 @@ AzureMonitorMetrics:
   TargetAllocatorMemoryLimit: 8Gi
   TargetAllocatorCPURequest: 10m
   TargetAllocatorMemoryRequest: 50Mi
+  IsAppMonitoringAutoInstrumentationEnabled: false
+  IsAppMonitoringOpenTelemetryMetricsEnabled: false
+  OpenTelemetryMetricsPort: "28333"
   enableDaemonSetSizing: false
   daemonSetSizingValues: {}
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
@@ -80,10 +82,10 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.260209.2"
+    ImageTag: "master.250423.2"
     ImageRepositoryWin: "/aks/msi/addon-token-adapter"
-    ImageTagWin: "master.260209.2"
-  ArcExtension: ${ARC_EXTENSION}
+    ImageTagWin: "master.250423.2"
+  ArcExtension: false
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
@@ -93,17 +95,16 @@ AzureMonitorMetrics:
     customResourceEndpoint: ""
 AppmonitoringAgent:
     enabled: false
+    isOpenTelemetryLogsEnabled: false
     isOpenTelemetryMetricsEnabled: false
     openTelemetryMetricsPort: 28333
-    openTelemetryMetricsPortGrpc: 28334
 global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
-    Region: "${AKS_REGION}"
+    Region: "westeurope"
     Customer:
-      AzureResourceID: ${AKS_RESOURCE_ID}
+      AzureResourceID: /subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourcegroups/zane-custom-ns/providers/Microsoft.ContainerService/managedClusters/zane-metrics-custom-ns
     isAutomaticSKU: false
-    endpointFQDN: ""
 
 # For ARC backdoor testing
 Azure:
