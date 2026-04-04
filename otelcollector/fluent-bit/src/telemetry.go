@@ -591,11 +591,9 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
-// getTargetAllocatorNamespace returns the namespace for target allocator service
+// getTargetAllocatorNamespace returns the namespace for target allocator service.
+// Reads POD_NAMESPACE (set via Kubernetes downward API), defaulting to "kube-system".
 func getTargetAllocatorNamespace() string {
-	if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
-		return ns
-	}
 	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
 		return ns
 	}

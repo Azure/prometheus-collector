@@ -13,18 +13,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// getTargetAllocatorNamespace returns the namespace for target allocator service
-// Checks OTELCOL_NAMESPACE first (if set), then POD_NAMESPACE, defaults to kube-system
-func getTargetAllocatorNamespace() string {
-	if ns := os.Getenv("OTELCOL_NAMESPACE"); ns != "" {
-		return ns
-	}
-	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
-		return ns
-	}
-	return "kube-system"
-}
-
 func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	configFileContents, err := os.ReadFile(configpath)
 	if err != nil {
@@ -43,7 +31,7 @@ func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	if tlsSettings != nil {
 		delete(targetAllocatorConfig, "tls")
 	}
-	namespace := getTargetAllocatorNamespace()
+	namespace := GetNamespace()
 	targetAllocatorConfig["endpoint"] = fmt.Sprintf("http://ama-metrics-operator-targets.%s.svc.cluster.local", namespace)
 
 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
@@ -123,7 +111,7 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 							},
 						},
 					}
-					namespace := getTargetAllocatorNamespace()
+					namespace := GetNamespace()
 					resp, err = client.Get(fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace))
 					if err != nil || resp.StatusCode != http.StatusOK {
 						if i == retries_https {
