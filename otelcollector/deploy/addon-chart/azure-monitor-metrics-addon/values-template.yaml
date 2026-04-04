@@ -102,7 +102,7 @@ global:
     isAutomaticSKU: false
     endpointFQDN: ""
     Versions:
-      Kubernetes: ""
+      Kubernetes: "1.33.7"
 
 # For ARC backdoor testing
 Azure:
