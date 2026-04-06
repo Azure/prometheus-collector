@@ -1,5 +1,5 @@
 # Custom namespace for deployment (defaults to kube-system for compatibility)
-namespace: "kube-system"
+namespace: "ama-metrics-zane-test"
 
 AzureMonitorMetrics:
   KubeStateMetrics:

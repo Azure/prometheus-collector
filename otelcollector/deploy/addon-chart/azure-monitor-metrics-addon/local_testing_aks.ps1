@@ -6,9 +6,10 @@
 # Chart-template.yaml file.
 
 # Define variables
-$ImageTag = "6.9.0-kaveesh-golang-windows-09-25-2024-5d45d385"
-$AKSRegion = "northeurope"
-$AKSResourceId = "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/Microsoft.ContainerService/managedClusters/kaveeshwin"
+$ImageTag = "6.26.0-zane-ama-metrics-custom-ns-04-03-2026-22a3caa9"
+$AKSRegion = "westeurope"
+$AKSResourceId = "/subscriptions/9c17527c-af8f-4148-8019-27bada0845f7/resourcegroups/zane-custom-ns/providers/Microsoft.ContainerService/managedClusters/zane-metrics-custom-ns"
+$Namespace = "ama-metrics-zane-test"
 
 # Read files
 $chartTemplatePath = ".\Chart-template.yaml"
@@ -36,6 +37,7 @@ $valuesTemplateContent = $valuesTemplateContent -replace '\$\{MCR_REPOSITORY\}',
 $valuesTemplateContent = $valuesTemplateContent -replace '\$\{ARC_EXTENSION\}', 'false'
 $valuesTemplateContent = $valuesTemplateContent -replace '\$\{AKS_REGION\}', $AKSRegion
 $valuesTemplateContent = $valuesTemplateContent -replace '\$\{AKS_RESOURCE_ID\}', $AKSResourceId
+$valuesTemplateContent = $valuesTemplateContent -replace 'namespace: "kube-system"', "namespace: `"$Namespace`""
 
 # Write the modified content back to the files
 $chartTemplateContent | Out-File -FilePath $chartOutputPath
