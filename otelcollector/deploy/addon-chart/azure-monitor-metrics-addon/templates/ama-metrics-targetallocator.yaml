@@ -93,6 +93,11 @@ spec:
           name: ama-metrics-operator-targets-server-tls-secret-volume
           readOnly: true
 {{- end }}
+        {{- if .Values.global.commonGlobals.endpointFQDN }}
+        - mountPath: /var/run/secrets/ama-metrics
+          name: mcp-metrics-ama-metrics-token
+          readOnly: true
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /health-ta
@@ -172,6 +177,10 @@ spec:
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
         - name: OPERATOR_TARGETS_HTTPS_ENABLED
           value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
+        {{- if and .Values.AzureMonitorMetrics.MeshMembershipMetricsFQDN (ne .Values.AzureMonitorMetrics.MeshMembershipMetricsFQDN "") }}
+        - name: MESH_MEMBER_METRICS_FQDN
+          value: "{{ .Values.AzureMonitorMetrics.MeshMembershipMetricsFQDN }}"
+        {{- end }}
         ports:
         - containerPort: 8081
           name: health
@@ -286,4 +295,14 @@ spec:
 {{- end }}
       - name: ta-config-shared
         emptyDir: {}
+      {{- if .Values.global.commonGlobals.endpointFQDN }}
+      - name: mcp-metrics-ama-metrics-token
+        projected:
+          defaultMode: 420
+          sources:
+            - serviceAccountToken:
+                path: token
+                expirationSeconds: 3600
+                audience: {{ printf "https://%s:443" .Values.global.commonGlobals.endpointFQDN | quote }}
+      {{- end }}
 {{- end }}

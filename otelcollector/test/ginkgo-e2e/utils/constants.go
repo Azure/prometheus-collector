@@ -13,6 +13,7 @@ var (
 		"Failed to open directory, disabling udev device properties",
 		// KSM
 		"ended with: an error on the server",
+		"Warning: watch ended with error",
 		"Objects listed",
 		"stat /etc/config/settings/ksm-config: no such file or directory",
 		// Target allocator
@@ -21,6 +22,8 @@ var (
 		"local error: tls: bad record",
 		"client sent an HTTP request to an HTTPS server",
 		"http: TLS handshake error",
+		"failed to encode data for http response",
+		"connection reset by peer",
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet
@@ -53,9 +56,10 @@ const (
 	ConfigProcessingOnlyCustomConfigMapWithAllActions = "config-processing-only-config-map-all-actions"
 	ConfigProcessingGlobalSettings                    = "config-processing-global-settings"
 	// ConfigProcessingSettingsCustomAndGlobal           = "config-processing-settings-custom-global"
-	ConfigProcessingSettingsNodeConfigMap = "config-processing-settings-node-config-map"
-	ConfigProcessingSettingsError         = "config-processing-settings-error"
-	ConfigProcessingCustomConfigMapError  = "config-processing-custom-config-map-error"
-	ConfigProcessingGlobalSettingsError   = "config-processing-global-settings-error"
-	ConfigProcessingDcgmExporterEnabled   = "config-processing-dcgm-exporter-enabled"
+	ConfigProcessingSettingsNodeConfigMap    = "config-processing-settings-node-config-map"
+	ConfigProcessingSettingsError            = "config-processing-settings-error"
+	ConfigProcessingCustomConfigMapError     = "config-processing-custom-config-map-error"
+	ConfigProcessingGlobalSettingsError      = "config-processing-global-settings-error"
+	ConfigProcessingDcgmExporterEnabled      = "config-processing-dcgm-exporter-enabled"
+	ConfigProcessingControlplaneIstioEnabled = "config-processing-controlplane-istio-enabled"
 )
