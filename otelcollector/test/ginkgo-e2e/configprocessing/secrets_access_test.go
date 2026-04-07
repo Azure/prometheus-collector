@@ -109,7 +109,7 @@ func createTestMetricsApp(namespace string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-var _ = Describe("Secrets access namespaces", func() {
+var _ = Describe("Secrets access namespaces", Ordered, func() {
 	BeforeAll(func() {
 		By("Creating the test namespace")
 		ns := &corev1.Namespace{
