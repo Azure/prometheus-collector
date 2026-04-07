@@ -13,7 +13,6 @@ rules:
   - list
   - watch
   - create
-  - delete
 - apiGroups:
   - ""
   resources:

@@ -62,5 +62,4 @@ const (
 	ConfigProcessingGlobalSettingsError      = "config-processing-global-settings-error"
 	ConfigProcessingDcgmExporterEnabled      = "config-processing-dcgm-exporter-enabled"
 	ConfigProcessingControlplaneIstioEnabled = "config-processing-controlplane-istio-enabled"
-	ConfigProcessingSecretsAccessNamespaces  = "config-processing-secrets-access-namespaces"
 )
