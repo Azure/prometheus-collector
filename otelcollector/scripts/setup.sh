@@ -35,7 +35,7 @@ gem install deep_merge
 gem install re2 -v 2.11.0
 
 echo "Installing mdsd..."
-sudo tdnf install -y azure-mdsd-1.36.2
+sudo tdnf install -y azure-mdsd-1.40.2
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
@@ -55,5 +55,3 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 # Remove any RPMs downloaded not from Mariner
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
-# Remove mdsd's telegraf
-rm /usr/sbin/telegraf
