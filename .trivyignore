@@ -5,7 +5,6 @@ CVE-2026-33186 #google.golang.org/grpc
 
 # HIGH
 # gobinary - otelcollector, promconfigvalidator
-GHSA-6g7g-w4f8-9c9x #github.com/buger/jsonparser - Denial of service (v1.1.1 -> 1.1.2)
 CVE-2026-32285 #github.com/buger/jsonparser - Denial of Service via malformed JSON input (v1.1.1 -> 1.1.2)
 CVE-2026-24051
 CVE-2026-25679
