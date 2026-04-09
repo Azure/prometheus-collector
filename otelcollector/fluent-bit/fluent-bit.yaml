@@ -2,7 +2,7 @@ service:
   flush:        15
   http_server:   Off
   daemon:        Off
-  log_level:     debug
+  log_level:     warning
   parsers_file:  /opt/fluent-bit/fluent-bit-parsers.conf
   log_file:      /opt/fluent-bit/fluent-bit.log
 
