@@ -1,11 +1,9 @@
 # This file contains CVEs to be ignored by Trivy
 
-# CRITICAL
-CVE-2026-33186 #google.golang.org/grpc
+# HIGH
+# gobinary - otelcollector, promconfigvalidator, target-allocator
+CVE-2026-39883 #go.opentelemetry.io/otel/sdk - BSD kenv command not using absolute path (v1.42.0 -> 1.43.0)
 
-# # HIGH
-CVE-2026-32285
-
-# # MEDIUM
-CVE-2026-34040
-CVE-2026-33997
+# MEDIUM
+# gobinary - otelcollector, promconfigvalidator, configuration-reader
+CVE-2026-39882 #go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp - OTLP HTTP exporters read unbounded HTTP (v0.18.0 -> 0.19.0)
