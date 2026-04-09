@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -128,6 +129,35 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 
 	var targetAllocatorConfig shared.Config
 
+	// Determine secrets access namespaces.
+	// Default: watch all namespaces for secrets (backward-compatible behavior).
+	// On Kubernetes >= 1.36: use the explicit configmap setting instead.
+	secretsAccessNamespaces := []string{""}
+	log.Println("Defaulting to watch all namespaces for secrets")
+
+	kubeVersion := os.Getenv("KUBE_VERSION")
+	parsedKubeVersion, kubeVersionErr := utilversion.ParseSemantic(kubeVersion)
+	if kubeVersion != "" && kubeVersionErr != nil {
+		log.Printf("Failed to parse Kubernetes version %q: %v, defaulting to watch all namespaces\n", kubeVersion, kubeVersionErr)
+	}
+	if kubeVersion != "" && kubeVersionErr == nil && !parsedKubeVersion.LessThan(utilversion.MustParseSemantic("v1.36.0")) {
+		// On >= 1.36, read the scoped namespace list from the configmap setting.
+		secretsAccessNamespaces = nil
+		if sns := os.Getenv("AZMON_SECRETS_ACCESS_NAMESPACES"); sns != "" {
+			for _, ns := range strings.Split(sns, ",") {
+				ns = strings.TrimSpace(ns)
+				if ns != "" {
+					secretsAccessNamespaces = append(secretsAccessNamespaces, ns)
+				}
+			}
+			log.Printf("Kubernetes version %s >= 1.36: SecretsAccessNamespaces from configmap: %v\n", kubeVersion, secretsAccessNamespaces)
+		} else {
+			log.Printf("Kubernetes version %s >= 1.36: no secrets_access_namespaces configured, no namespaces will be watched for secrets\n", kubeVersion)
+		}
+	} else if kubeVersion != "" && kubeVersionErr == nil {
+		log.Printf("Kubernetes version %s < 1.36: watching all namespaces for secrets\n", kubeVersion)
+	}
+
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
 		targetAllocatorConfig = shared.Config{
@@ -141,8 +171,9 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 			},
 			Config: promScrapeConfig,
 			PrometheusCR: shared.PrometheusCRConfig{
-				ServiceMonitorSelector: &metav1.LabelSelector{},
-				PodMonitorSelector:     &metav1.LabelSelector{},
+				ServiceMonitorSelector:  &metav1.LabelSelector{},
+				PodMonitorSelector:      &metav1.LabelSelector{},
+				SecretsAccessNamespaces: secretsAccessNamespaces,
 			},
 			HTTPS: shared.HTTPSServerConfig{
 				Enabled:         true,
@@ -165,8 +196,9 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 			},
 			Config: promScrapeConfig,
 			PrometheusCR: shared.PrometheusCRConfig{
-				ServiceMonitorSelector: &metav1.LabelSelector{},
-				PodMonitorSelector:     &metav1.LabelSelector{},
+				ServiceMonitorSelector:  &metav1.LabelSelector{},
+				PodMonitorSelector:      &metav1.LabelSelector{},
+				SecretsAccessNamespaces: secretsAccessNamespaces,
 			},
 		}
 	}

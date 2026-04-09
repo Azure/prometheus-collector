@@ -101,6 +101,8 @@ global:
       AzureResourceID: ${AKS_RESOURCE_ID}
     isAutomaticSKU: false
     endpointFQDN: ""
+    Versions:
+      Kubernetes: "1.33.7"
 
 # For ARC backdoor testing
 Azure:
