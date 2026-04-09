@@ -17,3 +17,6 @@ CVE-2026-39883 #go.opentelemetry.io/otel/sdk - BSD kenv command not using absolu
 CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privilege validation (v28.5.2 -> 29.3.1)
 # gobinary - otelcollector, promconfigvalidator, configuration-reader
 CVE-2026-39882 #go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp - OTLP HTTP exporters read unbounded HTTP (v0.18.0 -> 0.19.0)
+# os-pkgs - linux prometheus-collector image (glibc)
+CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS (2.38-18.azl3 -> 2.38-19.azl3)
+CVE-2026-4438 #glibc - Invalid DNS hostname returned (2.38-18.azl3 -> 2.38-19.azl3)
