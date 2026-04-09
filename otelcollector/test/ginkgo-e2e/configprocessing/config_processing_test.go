@@ -147,6 +147,20 @@ var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be true in logs",
 )
 
 /*
+ * Ensure MINIMAL_INGESTION_PROFILE is logged as false when the settings configmap
+ * explicitly sets minimalingestionprofile = false.
+ */
+var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be false in logs",
+	func(namespace string, controllerLabelName string, controllerLabelValue string) {
+		err := utils.CheckMinimalIngestionProfileFalse(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	},
+	Entry("rs pod (mip false)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingMipFalse)),
+	Entry("linux ds pod (mip false)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingMipFalse)),
+	Entry("windows ds pod (mip false)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingMipFalse)),
+)
+
+/*
  * Following tests make sure the Prometheus config as seen by otelcollector can be unmarshaled and only contain jobs we expect
  */
 
