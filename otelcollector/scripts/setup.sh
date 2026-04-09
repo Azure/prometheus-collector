@@ -35,14 +35,7 @@ gem install deep_merge
 gem install re2 -v 2.11.0
 
 echo "Installing mdsd..."
-# sudo tdnf install -y azure-mdsd-1.40.2
-if [ "$ARCH" = "amd64" ]; then
-    wget https://github.com/Azure/prometheus-collector/releases/download/ME-Delos-package-test/azure-mdsd-1.40.3-1349.x86_64.rpm
-    sudo tdnf install -y azure-mdsd-1.40.3-1349.x86_64.rpm
-else
-    wget https://github.com/Azure/prometheus-collector/releases/download/ME-Delos-package-test/azure-mdsd-1.40.3-1349.aarch64.rpm
-    sudo tdnf install -y azure-mdsd-1.40.3-1349.aarch64.rpm
-fi
+sudo tdnf install -y azure-mdsd-1.40.3
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
