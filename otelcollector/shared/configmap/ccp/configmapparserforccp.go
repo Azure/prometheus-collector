@@ -34,8 +34,8 @@ func Configmapparserforccp() {
 
 	fmt.Println("done listing /etc/config/settings")
 
-	// Set agent config schema version
-	if shared.ExistsAndNotEmpty(configSchemaPath) {
+	// Set agent config file version
+	if shared.ExistsAndNotEmpty(configVersionPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
 		if err != nil {
 			errMsg := fmt.Sprintf("Unable to read config version from ama-metrics-settings-configmap (%s): %v. Using default configuration", configVersionPath, err)
@@ -56,8 +56,8 @@ func Configmapparserforccp() {
 		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
 	}
 
-	// Set agent config file version
-	if shared.ExistsAndNotEmpty(configVersionPath) {
+	// Set agent config schema version
+	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
 		if err != nil {
 			errMsg := fmt.Sprintf("Unable to read schema version from ama-metrics-settings-configmap (%s): %v. Using default configuration", configSchemaPath, err)
