@@ -658,15 +658,15 @@ func isKubeVersionLessThan(version string, major, minor int) bool {
 	v := strings.TrimPrefix(version, "v")
 	parts := strings.SplitN(v, ".", 3)
 	if len(parts) < 2 {
-		return false
+		return true
 	}
 	parsedMajor, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return false
+		return true
 	}
 	parsedMinor, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return false
+		return true
 	}
 	if parsedMajor != major {
 		return parsedMajor < major
