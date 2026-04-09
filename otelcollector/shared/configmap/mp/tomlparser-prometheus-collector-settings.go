@@ -43,6 +43,28 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		cp.IsOperatorEnabledChartSetting = false
 	}
 
+	// Populate secrets access namespaces
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["secrets_access_namespaces"]; ok {
+			trimmed := strings.TrimSpace(value)
+			if trimmed != "" {
+				var namespaces []string
+				for _, ns := range strings.Split(trimmed, ",") {
+					ns = strings.TrimSpace(ns)
+					if ns != "" {
+						namespaces = append(namespaces, ns)
+					}
+				}
+				cp.SecretsAccessNamespaces = namespaces
+				log.Printf("Using configmap setting for secrets_access_namespaces in targetallocator: %v\n", cp.SecretsAccessNamespaces)
+			} else {
+				log.Printf("configmap setting secrets_access_namespaces is empty\n")
+			}
+		} else {
+			log.Printf("configmap setting secrets_access_namespaces is not set\n")
+		}
+	}
+
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
@@ -78,6 +100,9 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	}
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING=%t\n", configParser.TargetallocatorHttpsEnabledChartSetting))
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
+	if len(configParser.SecretsAccessNamespaces) > 0 {
+		file.WriteString(fmt.Sprintf("AZMON_SECRETS_ACCESS_NAMESPACES=%s\n", strings.Join(configParser.SecretsAccessNamespaces, ",")))
+	}
 	return nil
 }
 
