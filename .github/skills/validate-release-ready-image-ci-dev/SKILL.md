@@ -37,9 +37,61 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 12. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`).
 13. **Step 7 — Grafana Dashboard Metrics**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
 
-### Phase 3: Verdict
-14. Fill out the Release Readiness Checklist (at the bottom of this document) based on all results.
-15. Declare verdict: READY or NOT READY, with justification for any failures.
+### Phase 3: Summary and Verdict
+14. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
+15. Declare verdict: READY or NOT READY, with justification for any failures or warnings.
+
+#### Validation Summary Report Template
+
+```
+## Validation Summary Report
+**Image:** <full image tag, e.g. 6.27.0-main-04-10-2026-a2c43cc1>
+**Build:** <ADO build ID>
+**Date:** <validation date>
+**Cluster:** ci-dev-aks-mac-eus
+
+### Phase 1: CI Pipeline Results
+| Stage | Result | Details |
+|-------|--------|---------|
+| Build | ✅/❌ | <all images built? any build errors?> |
+| Deploy_AKS_Chart | ✅/❌ | <helm upgrade succeeded?> |
+| Deploy_AKS_Chart_Test_Cluster | ✅/❌ | |
+| Deploy_AKS_Chart_OTel_Cluster | ✅/❌ | |
+| Deploy_Chart_ARC | ✅/❌ | |
+| Testkube (AKS) | ✅/❌/⚠️ | <list each workflow: containerstatus, livenessprobe, prometheusui, operator, querymetrics — passed/failed/skipped. If failed, include root cause.> |
+| Testkube_OTel | ✅/❌ | <list each workflow result> |
+| Testkube_ARC | ✅/❌ | <list each workflow result> |
+| TestKube_Summary | ✅/❌ | |
+
+### Phase 2: Manual Validation Results
+| Step | Result | Evidence |
+|------|--------|----------|
+| 1. Pod Status | ✅/❌ | <# of RS pods, DS pods, Win DS pods running. Image tag confirmed.> |
+| 2. Pod Restarts | ✅/❌ | <restart counts for each pod type. If >0, root cause.> |
+| 3. Container Logs | ✅/❌/⚠️ | <errors found? In which container/pod type? Transient or ongoing? Timestamp of errors vs deployment time.> |
+| 4. Liveness/Readiness Probes | ✅/❌ | <probes configured on all pod types? Any probe failures in events?> |
+| 5a. Config Sources | ✅/❌ | <default scrape settings enabled, scrape intervals, custom configmaps present, PodMonitors/ServiceMonitors listed.> |
+| 5b. Replicaset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Do jobs match enabled settings?> |
+| 5c. Daemonset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Node-level jobs present?> |
+| 6. Metrics Ingestion | ✅/❌ | <count(up), count(kube_pod_info), count(scrape_samples_scraped) from AMW query.> |
+| 7. Grafana Dashboard Metrics | ✅/❌ | <series counts for: container_cpu, container_memory, kubelet, kube_pod_info, node_cpu, apiserver_request, coredns, kubeproxy, windows. # of jobs reporting. Latest data timestamp — is it fresh?> |
+
+### Verdict
+**Result:** READY / NOT READY
+**Justification:** <explain why the image is ready or not. If any steps failed, explain whether the failure is a real issue or a false positive and why.>
+```
+
+#### How to determine pass/fail for each step
+
+- **Pod Status**: PASS if all pods across all 3 types (RS, DS, Win DS) are `Running` with `READY` matching expected container count and the image tag matches the expected release version.
+- **Pod Restarts**: PASS if all restart counts are 0. WARN if restarts occurred but root cause is identified as transient (e.g., node scaling). FAIL if restarts are ongoing or unexplained.
+- **Container Logs**: PASS if no error-level log entries exist after deployment time. WARN if only transient startup errors exist (e.g., target allocator connection refused during pod init) that resolved within seconds. FAIL if ongoing errors exist.
+- **Liveness/Readiness Probes**: PASS if probes are configured on all containers that should have them and no probe failure events exist. FAIL if probes are missing or failing.
+- **Config Sources**: PASS if the enabled targets in `ama-metrics-settings-configmap` match expectations, scrape intervals are set, and expected PodMonitors/ServiceMonitors exist.
+- **Replicaset Config**: PASS if every enabled default target appears as a scrape job in the running config, PodMonitor/ServiceMonitor targets are discovered, and zero targets are `down`. Note: the target allocator distributes targets across replicas, so a single pod will only show a subset of total targets — this is expected.
+- **Daemonset Config**: PASS if node-level jobs (kubelet, cadvisor, node-exporter, kappie-basic, etc.) are present and zero targets are `down`.
+- **Metrics Ingestion**: PASS if `count(up)` returns a reasonable number (>0), `kube_pod_info` and `scrape_samples_scraped` are present. FAIL if any query returns 0 or errors.
+- **Grafana Dashboard Metrics**: PASS if all key metrics have non-zero series counts AND the latest data timestamp is within the last 5 minutes (no data gaps). FAIL if any key metric returns 0 series or data is stale.
 
 ---
 
