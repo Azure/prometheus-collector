@@ -313,8 +313,13 @@ spec:
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
           {{- end }}
         {{- else }}
+        {{- if and .Values.Azure .Values.Azure.Identity .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml }}
         - name: addon-token-adapter
 {{ tpl .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml $ | nindent 10 }}
+        {{- else }}
+        - name: addon-token-adapter
+{{ tpl .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml $ | nindent 10 }}
+        {{- end }}
         {{- end }}
       affinity:
         nodeAffinity:
