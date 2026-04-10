@@ -26,10 +26,13 @@ rules:
     resources: ["secrets"]
     resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
     verbs: ["get", "watch"]
-  # This is needed because the prometheus-operator watches for secrets to be able to retrive them for the pod and service monitor's basic auth functionality. Basically the operator watches for secrets so that it can read the value to use in the pod/service monitor - https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#basicauth 
+  # For Kubernetes < 1.36, keep cluster-wide secrets access for basic auth in pod/service monitors.
+  # For >= 1.36, secrets access is scoped to specific namespaces via namespaced Role+RoleBinding.
+{{- if semverCompare "<1.36.0" .Values.global.commonGlobals.Versions.Kubernetes }}
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
+{{- end }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - apiGroups: [""]
     resources: ["secrets"]
