@@ -1,0 +1,23 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.DsMemoryRequestWindows",
+  "Type": "string",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.DsMemoryRequestWindows toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "ce4d1293-71c0-4c72-bc55-133553ee9e50"
+          ]
+        }
+      ],
+      "Value": "550Mi"
+    }
+  ]
+}
