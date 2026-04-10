@@ -22,6 +22,10 @@ metadata:
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
+    app.kubernetes.io/name: ama-metrics-node
+    app.kubernetes.io/version: {{ $.Values.AzureMonitorMetrics.ImageTag | trunc 63 | trimSuffix "-" }}
+    app.kubernetes.io/part-of: azure-monitor-metrics-addon
+    app.kubernetes.io/component: ama-metrics-daemonset
     {{- if and $useDaemonSetSizing $size.name }}
     kubernetes.azure.com/ds-tshirt-size: {{ $size.name }}
     {{- end }}
@@ -170,6 +174,10 @@ spec:
               value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT_GRPC
               value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPortGrpc | default 28334 }}"
+            - name: AMCS_CLIENT_INSTALL_ID_OVERRIDE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
           ports:
             - name: otlp-http-port
@@ -549,6 +557,10 @@ spec:
               value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPort | default 28333 }}"
             - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT_GRPC
               value: "{{ $.Values.AppmonitoringAgent.openTelemetryMetricsPortGrpc | default 28334 }}"
+            - name: AMCS_CLIENT_INSTALL_ID_OVERRIDE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           {{- if $.Values.AppmonitoringAgent.isOpenTelemetryMetricsEnabled | default false }}
           ports:
             - name: otlp-http-port
