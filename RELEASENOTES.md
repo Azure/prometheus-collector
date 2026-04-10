@@ -1,5 +1,32 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 04-09-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images :
+  + Remove Waypoint Proxy default scrape target (https://github.com/Azure/prometheus-collector/pull/1431)
+  + update dropped labels in ztunnel default scrape config (https://github.com/Azure/prometheus-collector/pull/1448)
+  + Add control plane Istio scrape config and settings (https://github.com/Azure/prometheus-collector/pull/1393)
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.26.1 to 4.26.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1451)
+  + build(deps): bump google.golang.org/grpc from 1.79.1 to 1.79.3 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1460)
+  + build(deps): bump google.golang.org/grpc from 1.78.0 to 1.79.3 in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1471)
+  + build(deps): bump k8s.io/apimachinery from 0.35.1 to 0.35.3 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1465)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc from 1.40.0 to 1.42.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1464)
+  + build(deps): bump google.golang.org/grpc from 1.78.0 to 1.79.3 in /otelcollector/test/ginkgo-e2e/prometheusui (https://github.com/Azure/prometheus-collector/pull/1469)
+  + Add Health Metrics for CCP collector (https://github.com/Azure/prometheus-collector/pull/1457)
+  + build(deps): Upgrade otelcollector to v0.148.0 (https://github.com/Azure/prometheus-collector/pull/1473)
+  + fix: ccp configmap v2 bug fixes (https://github.com/Azure/prometheus-collector/pull/1446)
+  + Add secret restriction changes (https://github.com/Azure/prometheus-collector/pull/1493)
+  + April 2026 release (https://github.com/Azure/prometheus-collector/pull/1488)
+
+* Pipeline/Docs/Templates Updates:
+  + Added OTel gRPC ports support in extension chart (https://github.com/Azure/prometheus-collector/pull/1438)
+  + Fix builds with ghcr failure issues (https://github.com/Azure/prometheus-collector/pull/1470)
+  + build(deps): bump actions/create-github-app-token from 2 to 3 (https://github.com/Azure/prometheus-collector/pull/1454)
+  + build(deps): bump pascalgn/size-label-action from 0.5.5 to 0.5.7 (https://github.com/Azure/prometheus-collector/pull/1466)
+
 ## Release 03-05-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-win`
