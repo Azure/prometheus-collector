@@ -458,11 +458,11 @@ Use the Playwright MCP server (`@playwright/mcp`) to open the Grafana instance i
 **Procedure:**
 
 1. Use Playwright MCP `browser_navigate` to open the CI dev Grafana instance:
-   - URL: `https://ci-dev-aks-eus-mac-grafana-csfxfgbhbnddbxg3.eus.grafana.azure.com`
+   - URL: `https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com/`
    - If an Azure AD login page appears, inform the user they need to complete authentication in the browser window that Playwright opened, then retry.
 
 2. Once in Grafana, navigate to the **Azure Managed Prometheus** dashboard folder:
-   - Use `browser_navigate` to go to: `<grafana_url>/dashboards/f/azure-managed-prometheus/`
+   - Use `browser_navigate` to go to: `https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com/dashboards/f/azure-managed-prometheus/`
    - Or use `browser_click` to navigate via the sidebar: Dashboards → Browse → Azure Managed Prometheus
 
 3. Navigate to the dashboard folder listing page and use `browser_snapshot` to get the list of ALL dashboards in the folder. Record the full list.
