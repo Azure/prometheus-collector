@@ -76,7 +76,7 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 | 5c. Daemonset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Node-level jobs present?> |
 | 6. Metrics Ingestion | ✅/❌ | <count(up), count(kube_pod_info), count(scrape_samples_scraped) from AMW query.> |
 | 7a. Grafana Data (API) | ✅/❌ | <series counts for: container_cpu, container_memory, kubelet, kube_pod_info, node_cpu, apiserver_request, coredns, kubeproxy, windows. # of jobs reporting. Latest data timestamp — is it fresh?> |
-| 7b. Grafana Visual (Playwright) | ✅/❌/⏭️ | <If verified via Playwright MCP: dashboards checked, any panels with "No data"? If Playwright unavailable or auth failed: mark ⏭️ and note "Playwright MCP unavailable — data availability confirmed via API in 7a, manual visual check recommended"> |
+| 7b. Grafana Visual (Playwright) | ✅/❌/⏭️ | <List EVERY dashboard checked with panel counts: e.g. "Cluster: 12 panels, 12 with data, 0 'No data'. Kubelet: 8 panels, 8 with data." If any panel shows "No data", list the dashboard and panel title. If Playwright unavailable: mark ⏭️> |
 
 ### Verdict
 **Result:** READY / NOT READY
@@ -465,20 +465,22 @@ Use the Playwright MCP server (`@playwright/mcp`) to open the Grafana instance i
    - Use `browser_navigate` to go to: `<grafana_url>/dashboards/f/azure-managed-prometheus/`
    - Or use `browser_click` to navigate via the sidebar: Dashboards → Browse → Azure Managed Prometheus
 
-3. For each dashboard listed below, open it and verify data is present:
-   - **Kubernetes / Compute Resources / Cluster** — look for panels with data (not "No data")
-   - **Kubernetes / Compute Resources / Namespace (Pods)**
-   - **Kubernetes / Kubelet**
-   - **Node Exporter / Nodes**
-   - At minimum, check 3-4 dashboards. If all show data, the rest are likely fine.
+3. Navigate to the dashboard folder listing page and use `browser_snapshot` to get the list of ALL dashboards in the folder. Record the full list.
 
-4. On each dashboard:
-   - Use `browser_snapshot` to get the accessibility tree of the page
-   - Search the snapshot for text like "No data", "No values", or empty panel indicators
-   - Verify panel titles are present and have associated data values
-   - Check the time range picker shows a recent range (e.g., "Last 1 hour")
+4. For **every** dashboard in the folder, open it and verify ALL panels have data:
+   - Use `browser_navigate` or `browser_click` to open the dashboard
+   - Use `browser_snapshot` to get the full accessibility tree of the dashboard page
+   - Search the snapshot for ALL panel titles — each panel should have associated data values
+   - Search for "No data", "No values", or empty panel indicators — flag any panel that shows these
+   - Record: dashboard name, total panel count, panels with data, panels with "No data"
+   - Do NOT skip any dashboard. Do NOT stop after a few dashboards.
 
-5. Record results: which dashboards were checked, any panels showing "No data", and overall status.
+5. On each dashboard, also verify:
+   - The time range picker shows a recent range (e.g., "Last 1 hour")
+   - Scroll down to check panels below the fold — use `browser_snapshot` after scrolling to capture all panels
+   - If the dashboard has multiple rows/sections that are collapsed, expand them before taking the snapshot
+
+6. Record results in the summary report: list every dashboard checked, total panels per dashboard, and any panels showing "No data" with the panel title.
 
 **Fallback:** If Playwright MCP is not available or authentication fails, fall back to the AMW API approach in Step 7a and inform the user that visual verification must be done manually.
 
