@@ -25,7 +25,6 @@ data:
     networkobservabilityCilium = false
     ztunnel = false
     istio-cni = false
-    waypoint-proxy = false
     prometheuscollectorhealth = false
     controlplane-apiserver = false
     controlplane-cluster-autoscaler = false
@@ -38,8 +37,8 @@ data:
     local-csi-driver = false
     ztunnel = false
     istio-cni = false
-    waypoint-proxy = false
     dcgmexporter = false
+    controlplane-istio = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -62,7 +61,6 @@ data:
     networkobservabilityCilium = ""
     ztunnel = ""
     istio-cni = ""
-    waypoint-proxy = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-node-auto-provisioning = ""
@@ -74,6 +72,7 @@ data:
     local-csi-driver = ""
     minimalingestionprofile = true
     dcgmexporter = ""
+    controlplane-istio = ""
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
     coredns = "30s"
@@ -90,13 +89,13 @@ data:
     networkobservabilityCilium = "30s"
     ztunnel = "30s"
     istio-cni = "30s"
-    waypoint-proxy = "30s"
     prometheuscollectorhealth = "30s"
     acstor-capacity-provisioner = "30s"
     acstor-metrics-exporter = "30s"
     local-csi-driver = "30s"
     podannotations = "30s"
     dcgmexporter = "30s"
+    controlplane-istio = "30s"
   debug-mode: |-
     enabled = false
 metadata:

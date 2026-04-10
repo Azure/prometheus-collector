@@ -1,7 +1,22 @@
 # This file contains CVEs to be ignored by Trivy
 
 # CRITICAL
+# gobinary - promconfigvalidator
+CVE-2026-33186 #google.golang.org/grpc - grpc-go vulnerability (v1.79.2 -> 1.79.3)
 
 # HIGH
+# gobinary - otelcollector, promconfigvalidator
+CVE-2026-32285 #github.com/buger/jsonparser - Denial of Service via malformed JSON input (v1.1.1 -> 1.1.2)
+# gobinary - otel-allocator, promconfigvalidator
+CVE-2026-34040 #github.com/docker/docker - Moby AuthZ plugin bypass with oversized request bodies (v28.5.2 -> 29.3.1)
+# gobinary - otelcollector, promconfigvalidator, target-allocator
+CVE-2026-39883 #go.opentelemetry.io/otel/sdk - BSD kenv command not using absolute path (v1.42.0 -> 1.43.0)
 
 # MEDIUM
+# gobinary - otel-allocator, promconfigvalidator
+CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privilege validation (v28.5.2 -> 29.3.1)
+# gobinary - otelcollector, promconfigvalidator, configuration-reader
+CVE-2026-39882 #go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp - OTLP HTTP exporters read unbounded HTTP (v0.18.0 -> 0.19.0)
+# os-pkgs - linux prometheus-collector image (glibc)
+CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS (2.38-18.azl3 -> 2.38-19.azl3)
+CVE-2026-4438 #glibc - Invalid DNS hostname returned (2.38-18.azl3 -> 2.38-19.azl3)

@@ -78,8 +78,6 @@ var (
 	ZtunnelKeepListRegex string
 	// Istio CNI metrics keep list regex
 	IstioCniKeepListRegex string
-	// Waypoint Proxy metrics keep list regex
-	WaypointProxyKeepListRegex string
 	// DCGM Exporter metrics keep list regex
 	DCGMExporterKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
@@ -123,8 +121,6 @@ var (
 	ZtunnelScrapeInterval string
 	// Istio CNI scrape interval
 	IstioCniScrapeInterval string
-	// Waypoint Proxy scrape interval
-	WaypointProxyScrapeInterval string
 	// DCGM Exporter scrape interval
 	DCGMExporterScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
@@ -384,7 +380,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			LocalCSIDriverKeepListRegex = regexHash["LOCALCSIDRIVER_KEEP_LIST_REGEX"]
 			ZtunnelKeepListRegex = regexHash["ZTUNNEL_METRICS_KEEP_LIST_REGEX"]
 			IstioCniKeepListRegex = regexHash["ISTIOCNI_METRICS_KEEP_LIST_REGEX"]
-			WaypointProxyKeepListRegex = regexHash["WAYPOINT_PROXY_METRICS_KEEP_LIST_REGEX"]
 			DCGMExporterKeepListRegex = regexHash["DCGMEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
@@ -420,7 +415,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			LocalCSIDriverScrapeInterval = intervalHash["LOCALCSIDRIVER_SCRAPE_INTERVAL"]
 			ZtunnelScrapeInterval = intervalHash["ZTUNNEL_SCRAPE_INTERVAL"]
 			IstioCniScrapeInterval = intervalHash["ISTIOCNI_SCRAPE_INTERVAL"]
-			WaypointProxyScrapeInterval = intervalHash["WAYPOINT_PROXY_SCRAPE_INTERVAL"]
 			DCGMExporterScrapeInterval = intervalHash["DCGMEXPORTER_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
@@ -952,9 +946,6 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if IstioCniKeepListRegex != "" {
 					metric.Properties["IstioCniKeepListRegex"] = IstioCniKeepListRegex
 				}
-				if WaypointProxyKeepListRegex != "" {
-					metric.Properties["WaypointProxyKeepListRegex"] = WaypointProxyKeepListRegex
-				}
 				if DCGMExporterKeepListRegex != "" {
 					metric.Properties["DCGMExporterRegex"] = DCGMExporterKeepListRegex
 				}
@@ -1015,9 +1006,6 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if IstioCniScrapeInterval != "" {
 					metric.Properties["IstioCniScrapeInterval"] = IstioCniScrapeInterval
-				}
-				if WaypointProxyScrapeInterval != "" {
-					metric.Properties["WaypointProxyScrapeInterval"] = WaypointProxyScrapeInterval
 				}
 				if DCGMExporterScrapeInterval != "" {
 					metric.Properties["DCGMExporterScrapeInterval"] = DCGMExporterScrapeInterval
@@ -1138,9 +1126,9 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 
 func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-		ExportingFailedMutex.Lock()
-		OtelCollectorExportingFailedCount += 1
-		ExportingFailedMutex.Unlock()
+		OtelColExportingFailedMutex.Lock()
+		OtelColExportFailureEventCount += 1
+		OtelColExportingFailedMutex.Unlock()
 	}
 	return output.FLB_OK
 }

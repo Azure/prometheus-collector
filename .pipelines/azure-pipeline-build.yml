@@ -21,16 +21,16 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.17.0-6'
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.18.0-1'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.25.7'
-  FLUENTBIT_GOLANG_VERSION: '1.25.7'
-  TESTKUBE_GOLANG_VERSION: '1.24.0'
+  GOLANG_VERSION: '1.25.9'
+  FLUENTBIT_GOLANG_VERSION: '1.25.9'
+  TESTKUBE_GOLANG_VERSION: '1.25.9'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -43,6 +43,8 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    featureFlags:
+      disableNetworkIsolation: true
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204

@@ -1,10 +1,40 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 03-05-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-03-05-2026-701eb75f-cfg`
+* AKS and Arc Container Images :
+  + BUG: Missing log columns: Add pod and containerID columns to logged output (https://github.com/Azure/prometheus-collector/pull/1398)
+  + Add AI resource for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1408)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/stdout/stdoutmetric from 1.38.0 to 1.39.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1382)
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.25.9 to 4.26.1 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1406)
+  + build(deps): bump go.opentelemetry.io/otel/sdk from 1.39.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1405)
+  + build(deps): Upgrade otelcollector to v0.144.0 and kube-state-metrics to v2.17.0-6 (https://github.com/Azure/prometheus-collector/pull/1401)
+  + Remove nodes/proxy from clusterrole (https://github.com/Azure/prometheus-collector/pull/1418)
+  + feat: Add OperationEnvironment argument to MetricsExtension command execution (https://github.com/Azure/prometheus-collector/pull/1403)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc from 1.38.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1410)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp from 1.38.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1411)
+  + build(deps): bump google.golang.org/grpc from 1.78.0 to 1.79.1 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1420)
+  + Enable DCGM exporter by default and optimize label handling (https://github.com/Azure/prometheus-collector/pull/1417)
+  + build(deps): bump ajv from 8.11.2 to 8.18.0 in /tools/az-prom-rules-converter (https://github.com/Azure/prometheus-collector/pull/1416)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/stdout/stdoutmetric from 1.39.0 to 1.40.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1421)
+  + build(deps): bump k8s.io/client-go from 0.34.2 to 0.35.1 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1413)
+  + fix: upgrade ME to fix otel bug (https://github.com/Azure/prometheus-collector/pull/1407)
+  + upgrade ME for otel metrics empty bucket fix (https://github.com/Azure/prometheus-collector/pull/1439)
+
+* Pipeline/Docs/Templates Updates:
+  + test: nightly build notification fix (https://github.com/Azure/prometheus-collector/pull/1404)
+  + test: fix nightly build (https://github.com/Azure/prometheus-collector/pull/1409)
+  + Update REMOTE-WRITE-RELEASENOTES.md (https://github.com/Azure/prometheus-collector/pull/1422)
+  + add image in release note (https://github.com/Azure/prometheus-collector/pull/1435)
+
 ## Release 01-22-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.3-main-01-28-2026-e05105c7`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.3-main-01-28-2026-e05105c7-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.3-main-01-28-2026-e05105c7-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.24.3-main-01-28-2026-e05105c7-cfg`
 * AKS and Arc Container Images : 
   + Add pdb for prometheus collector replicaset and remove no schedule toleration for deployments(https://github.com/Azure/prometheus-collector/pull/1331)
   + build(deps): bump k8s.io/client-go from 0.34.0 to 0.34.2 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1346)

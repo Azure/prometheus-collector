@@ -256,6 +256,23 @@ func main() {
 				shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 			}
 		}
+	} else {
+		// In CCP mode, expose health metrics directly without fluent-bit.
+		// Primary health metrics (timeseries_received/sent_per_minute) are fed by
+		// TailMELogFile parsing /MetricsExtensionConsoleDebugLog.log (ME uses -Logger File).
+		log.Println("Starting Prometheus Collector Health metrics in CCP mode")
+		go shared.ExposePrometheusCollectorHealthMetrics()
+
+		// Tail ME log file for ProcessedCount/EventsProcessedLastPeriod → feeds ME and overall metrics
+		go shared.TailMELogFile("/MetricsExtensionConsoleDebugLog.log")
+
+		// Tail otelcollector log for "Exporting failed" messages → feeds otelcol_export_failures_total
+		go shared.TailOtelCollectorLogFile("/opt/microsoft/otelcollector/collector-log.txt")
+
+		// Scrape otelcollector internal metrics for sub-component diagnostics
+		// (otelcol_metrics_received, otelcol_metrics_sent, otelcol_metrics_dropped)
+		// Also provides overall_metrics_received (= otelcol receiver rate).
+		go shared.ScrapeOtelCollectorHealthMetrics()
 	}
 
 	if osType == "linux" && !otlpEnabled {
