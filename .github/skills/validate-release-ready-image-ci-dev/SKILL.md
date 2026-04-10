@@ -35,11 +35,12 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 10. **Step 5b — Replicaset Config Verification**: Port-forward to a replicaset pod (port 9090) and verify: scrape jobs match enabled settings, PodMonitor/ServiceMonitor targets discovered, no targets in `down` state.
 11. **Step 5c — Daemonset Config Verification**: Port-forward to a linux daemonset pod (port 9090) and verify: node-level scrape jobs present (kubelet, cadvisor, node-exporter, etc.), no targets in `down` state.
 12. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`).
-13. **Step 7 — Grafana Dashboard Metrics**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
+13. **Step 7a — Grafana Data Verification (automated)**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
+14. **Step 7b — Grafana Visual Verification (manual)**: Inform the user that visual Grafana dashboard verification cannot be done from the CLI and must be done manually in a browser. Provide the dashboard checklist from Step 7b.
 
 ### Phase 3: Summary and Verdict
-14. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
-15. Declare verdict: READY or NOT READY, with justification for any failures or warnings.
+15. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
+16. Declare verdict: READY or NOT READY, with justification for any failures or warnings.
 
 #### Validation Summary Report Template
 
@@ -74,7 +75,8 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 | 5b. Replicaset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Do jobs match enabled settings?> |
 | 5c. Daemonset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Node-level jobs present?> |
 | 6. Metrics Ingestion | ✅/❌ | <count(up), count(kube_pod_info), count(scrape_samples_scraped) from AMW query.> |
-| 7. Grafana Dashboard Metrics | ✅/❌ | <series counts for: container_cpu, container_memory, kubelet, kube_pod_info, node_cpu, apiserver_request, coredns, kubeproxy, windows. # of jobs reporting. Latest data timestamp — is it fresh?> |
+| 7a. Grafana Data (API) | ✅/❌ | <series counts for: container_cpu, container_memory, kubelet, kube_pod_info, node_cpu, apiserver_request, coredns, kubeproxy, windows. # of jobs reporting. Latest data timestamp — is it fresh?> |
+| 7b. Grafana Visual (manual) | ✅/❌/⏭️ | <If verified by user: dashboards checked, any panels with "No data"? If skipped: mark ⏭️ and note "requires manual browser verification — data availability confirmed via API in 7a"> |
 
 ### Verdict
 **Result:** READY / NOT READY
@@ -91,7 +93,7 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 - **Replicaset Config**: PASS if every enabled default target appears as a scrape job in the running config, PodMonitor/ServiceMonitor targets are discovered, and zero targets are `down`. Note: the target allocator distributes targets across replicas, so a single pod will only show a subset of total targets — this is expected.
 - **Daemonset Config**: PASS if node-level jobs (kubelet, cadvisor, node-exporter, kappie-basic, etc.) are present and zero targets are `down`.
 - **Metrics Ingestion**: PASS if `count(up)` returns a reasonable number (>0), `kube_pod_info` and `scrape_samples_scraped` are present. FAIL if any query returns 0 or errors.
-- **Grafana Dashboard Metrics**: PASS if all key metrics have non-zero series counts AND the latest data timestamp is within the last 5 minutes (no data gaps). FAIL if any key metric returns 0 series or data is stale.
+- **Grafana Dashboard Metrics**: PASS if all key metrics have non-zero series counts AND the latest data timestamp is within the last 5 minutes (no data gaps). FAIL if any key metric returns 0 series or data is stale. Note: the CLI agent can only verify data availability via AMW API queries (Step 7a). Visual Grafana dashboard verification (Step 7b) requires a browser and must be done manually by the user — inform the user of this and mark 7b as ⏭️ (skipped) in the report.
 
 ---
 
@@ -408,6 +410,35 @@ Query the Azure Monitor Workspace endpoint to confirm metrics are flowing:
 
 ### Step 7: Verify Grafana Dashboards
 
+This step has two parts: automated data verification (what the CLI agent can do) and visual dashboard verification (requires a browser or Grafana API access).
+
+#### 7a: Automated — Verify dashboard data exists via AMW API (CLI agent does this)
+
+Query the AMW PromQL API directly to confirm the underlying metrics that power Grafana dashboards exist and are fresh. This proves data is flowing into the AMW but does NOT verify that Grafana dashboards render correctly.
+
+```bash
+# Get an access token for the AMW
+TOKEN=$(az account get-access-token --resource "https://prometheus.monitor.azure.com" --query accessToken -o tsv)
+AMW="https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com"
+
+# Query key metrics that power Grafana dashboards
+for metric in container_cpu_usage_seconds_total container_memory_working_set_bytes kubelet_running_pods kube_pod_info node_cpu_seconds_total apiserver_request_total coredns_dns_requests_total kubeproxy_sync_proxy_rules_duration_seconds_count windows_cs_physical_memory_bytes; do
+  count=$(curl -s -H "Authorization: Bearer $TOKEN" "$AMW/api/v1/query?query=count($metric)" | jq -r '.data.result[0].value[1] // "0"')
+  echo "$metric: $count series"
+done
+
+# Verify data freshness — check that all jobs have recent data (within last 5 minutes)
+curl -s -H "Authorization: Bearer $TOKEN" "$AMW/api/v1/query?query=max(up) by (job)" | jq -r '.data.result[] | "\(.metric.job): \(.value[0] | todate)"'
+```
+
+**What this proves:** The metrics exist in the AMW with non-zero series counts and fresh timestamps. If data is present and recent here, the Grafana dashboards will show it (assuming Grafana is correctly configured).
+
+**What this does NOT prove:** That Grafana is accessible, dashboards are configured, panels render without errors, or there are no visual anomalies.
+
+#### 7b: Manual — Visual Grafana dashboard verification (user must do this)
+
+> **NOTE for CLI agent:** You cannot open a browser or access the Grafana UI. After completing Step 7a, inform the user that visual Grafana verification must be done manually and provide the checklist below.
+
 Open the Grafana instance linked to the CI dev Azure Monitor Workspace and confirm all dashboards under **Azure Managed Prometheus** show data for the time window after the new agent version was deployed.
 
 1. Navigate to the Grafana portal and select the data source connected to the CI dev AMW.
@@ -427,6 +458,20 @@ Open the Grafana instance linked to the CI dev Azure Monitor Workspace and confi
    - No panels showing "No data" that were previously populated
    - Metric values look reasonable (no unexpected zeroes or spikes)
    - The `cluster` label matches the expected CI dev cluster name
+
+#### What would enable full automated Grafana verification
+
+To fully automate Step 7b from the CLI, the agent would need:
+
+1. **Grafana API access** — A Grafana service account token or API key with Viewer permissions. This would allow the agent to:
+   - List dashboards via `GET /api/search?type=dash-db&folderTitle=Azure Managed Prometheus`
+   - Retrieve dashboard JSON models via `GET /api/dashboards/uid/<uid>`
+   - Extract the PromQL queries from each panel
+   - Execute those queries against the AMW API and verify non-empty results
+2. **Grafana instance URL** — The Grafana endpoint URL (e.g., `https://<name>.grafana.azure.com`)
+3. **Grafana MCP server or HTTP tool** — Either an MCP server for Azure Managed Grafana, or the ability to make authenticated HTTP requests to the Grafana API
+
+With these, the agent could programmatically iterate every panel in every dashboard, run the panel's query against the AMW, and verify data exists — achieving the same result as visual inspection.
 
 ---
 
