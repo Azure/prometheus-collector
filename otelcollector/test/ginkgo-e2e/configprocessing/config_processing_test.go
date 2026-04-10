@@ -147,6 +147,20 @@ var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be true in logs",
 )
 
 /*
+ * Ensure MINIMAL_INGESTION_PROFILE is logged as false when the settings configmap
+ * explicitly sets minimalingestionprofile = false.
+ */
+var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be false in logs",
+	func(namespace string, controllerLabelName string, controllerLabelValue string) {
+		err := utils.CheckMinimalIngestionProfileFalse(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	},
+	Entry("rs pod (mip false)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingMipFalse)),
+	Entry("linux ds pod (mip false)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingMipFalse)),
+	Entry("windows ds pod (mip false)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingMipFalse)),
+)
+
+/*
  * Following tests make sure the Prometheus config as seen by otelcollector can be unmarshaled and only contain jobs we expect
  */
 
@@ -759,4 +773,81 @@ var _ = DescribeTable("The Prometheus UI API should respect dcgm-exporter custom
 		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m0s",
 		[]string{"DCGM_FI_DEV_GPU_UTIL", "DCGM_FI_DEV_MEM_COPY_UTIL", "DCGM_FI_DEV_POWER_USAGE"},
 		Label(utils.ConfigProcessingDcgmExporterEnabled)),
+)
+
+// Controlplane Istio with custom scrape interval and regex override
+// This test requires MESH_MEMBER_METRICS_FQDN to be set in the deployment environment
+var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio custom scrape interval and regex overrides",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string, notExpectedRegexPatterns []string) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		if controllerLabelValue == "ama-metrics" {
+			// Verify total scrape config count includes controlplane-istio (10 default RS + controlplane-istio)
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 11),
+				"should have 11 scrape configs (10 default RS + controlplane-istio)")
+
+			var controlplaneIstioJobConfig *config.ScrapeConfig
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				if scrapeJob.JobName == "controlplane-istio" {
+					controlplaneIstioJobConfig = scrapeJob
+					break
+				}
+			}
+			Expect(controlplaneIstioJobConfig).NotTo(BeNil(), "controlplane-istio job should be present")
+
+			// Verify custom scrape interval
+			actualScrapeInterval := controlplaneIstioJobConfig.ScrapeInterval.String()
+			GinkgoWriter.Printf("[ControlplaneIstioCustomConfig] Custom scrape interval - expected=%s, actual=%s\n", expectedScrapeInterval, actualScrapeInterval)
+			Expect(actualScrapeInterval).To(Equal(expectedScrapeInterval), "controlplane-istio should use custom scrape interval from configmap")
+
+			// Verify custom metric regex override
+			Expect(controlplaneIstioJobConfig.MetricRelabelConfigs).NotTo(BeEmpty(), "controlplane-istio should have metric relabeling")
+
+			// Find the keep action with custom regex
+			foundCustomRegex := false
+			for _, relabelConfig := range controlplaneIstioJobConfig.MetricRelabelConfigs {
+				if relabelConfig.Action == "keep" && len(relabelConfig.SourceLabels) > 0 && string(relabelConfig.SourceLabels[0]) == "__name__" {
+					foundCustomRegex = true
+					regex := relabelConfig.Regex.String()
+					GinkgoWriter.Printf("[ControlplaneIstioCustomConfig] Custom metric regex=%s\n", regex)
+
+					// Verify all expected patterns are in the regex
+					for _, pattern := range expectedRegexPatterns {
+						Expect(regex).To(ContainSubstring(pattern), "controlplane-istio regex should contain custom pattern: %s", pattern)
+					}
+
+					// Verify it still includes the minimal ingestion profile patterns
+					Expect(regex).To(ContainSubstring("pilot_xds_pushes"), "controlplane-istio regex should still include minimal ingestion profile pilot_xds_pushes pattern")
+
+					// Verify unconfigured patterns are NOT in the regex (negative test)
+					for _, pattern := range notExpectedRegexPatterns {
+						Expect(regex).NotTo(ContainSubstring(pattern), "controlplane-istio regex should NOT contain unconfigured pattern: %s", pattern)
+					}
+					break
+				}
+			}
+			Expect(foundCustomRegex).To(BeTrue(), "controlplane-istio should have custom regex pattern in metric relabeling")
+
+			GinkgoWriter.Printf("[ControlplaneIstioCustomConfig] Custom interval and regex override validated successfully\n")
+		}
+	},
+	Entry("when controlplane-istio has custom 60s interval and specific metric regex",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m",
+		[]string{"pilot_xds_pushes", "pilot_xds_push_context_errors", "pilot_conflict_inbound_listener"},
+		[]string{"dummy_metric_not_configured"},
+		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )

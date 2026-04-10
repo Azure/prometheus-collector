@@ -55,6 +55,7 @@ var (
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
+	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
 
 type RegexValues struct {
@@ -79,6 +80,7 @@ type RegexValues struct {
 	ztunnel                    string
 	istiocni                   string
 	dcgmexporter               string
+	controlplaneistio          string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -99,9 +101,11 @@ type ConfigProcessor struct {
 	ControlplaneClusterAutoscaler           string
 	ControlplaneNodeAutoProvisioning        string
 	ControlplaneEtcd                        string
+	ControlplaneIstio                       string
 	NoDefaultsEnabled                       bool
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
+	SecretsAccessNamespaces                 []string
 
 	Kubelet                    string
 	Coredns                    string

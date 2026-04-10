@@ -84,6 +84,7 @@ data:
       kube-scheduler = false
       kube-controller-manager = false
       etcd = true
+      istio = false
     default-targets-metrics-keep-list: |-
       apiserver = ""
       cluster-autoscaler = ""
@@ -91,12 +92,14 @@ data:
       kube-scheduler = ""
       kube-controller-manager = ""
       etcd = ""
+      istio = ""
     minimal-ingestion-profile: |-
       enabled = true
   prometheus-collector-settings: |-
     cluster_alias = ""
     debug-mode = false
     https_config = true
+    secrets_access_namespaces = ""
   # Note that below section (ksm-config) is a yaml configuration, the settings override the configuration provided by optional parameters during 
   # onboarding for kube-state-metrics, only uncomment and use them if the collection needs to be customized.
   # Default settings - https://github.com/Azure/prometheus-collector/blob/e40947f3eaee8843021c90bd8645ce7875ad1fcf/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml#L2

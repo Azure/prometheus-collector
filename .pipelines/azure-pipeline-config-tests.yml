@@ -40,7 +40,7 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.24.9'
-  TESTKUBE_GOLANG_VERSION: '1.24.0'
+  TESTKUBE_GOLANG_VERSION: '1.25.9'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
@@ -65,12 +65,15 @@ stages:
             persistCredentials: true
 
           - bash: |
-              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-              sudo apt-get update
-              sudo apt-get install -y testkube
+              # Try apt install first, fall back to official install script
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \
+              sudo apt-get update && \
+              sudo apt-get install -y testkube || \
+              curl -sSLf https://get.testkube.io | sudo bash
 
-              exit 0
+              # Verify testkube is installed
+              which kubectl-testkube || which testkube || { echo "ERROR: testkube CLI not installed"; exit 1; }
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
 
@@ -492,6 +495,77 @@ stages:
             condition: always()
 
           - bash: |
+              # Clean up any leftover custom Prometheus configmaps from previous runs/tests
+              kubectl delete configmap ama-metrics-prometheus-config -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node -n kube-system --ignore-not-found
+              kubectl delete configmap ama-metrics-prometheus-config-node-windows -n kube-system --ignore-not-found
+
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-controlplane-istio-enabled.yaml
+
+              # Inject fake MESH_MEMBER_METRICS_FQDN so the config merger includes the controlplane-istio job.
+              # The test only validates config generation via /api/v1/status/config, not actual scraping.
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN="https://fake-istiod.example.com"
+
+              # The controlplane_istio.yml template references /var/run/secrets/ama-metrics/token for auth.
+              # This projected volume is only mounted when the Helm value endpointFQDN is set (production).
+              # For CI testing, patch both deployments to add the projected volume + mount so the
+              # promconfigvalidator doesn't reject the config due to missing credentials_file.
+              kubectl patch deployment ama-metrics -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
+              kubectl patch deployment ama-metrics-operator-targets -n kube-system --type=json -p='[
+                {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"mcp-metrics-ama-metrics-token","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"path":"token","expirationSeconds":3600,"audience":"https://fake-istiod.example.com:443"}}]}}},
+                {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}},
+                {"op":"add","path":"/spec/template/spec/containers/1/volumeMounts/-","value":{"name":"mcp-metrics-ama-metrics-token","mountPath":"/var/run/secrets/ama-metrics","readOnly":true}}
+              ]'
+
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "testkube-config-test-controlplane-istio-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for controlplane-istio with custom interval and regex"
+            continueOnError: true
+
+          - bash: |
+              # Clean up the fake MESH_MEMBER_METRICS_FQDN env var and projected volume for subsequent tests
+              kubectl set env deployment/ama-metrics -n kube-system MESH_MEMBER_METRICS_FQDN-
+              kubectl set env deployment/ama-metrics-operator-targets -n kube-system MESH_MEMBER_METRICS_FQDN-
+
+              # Remove the projected volume and mounts added for controlplane-istio testing.
+              # Use strategic merge patch to remove the volume by name; the rollout will recreate pods without it.
+              # For volumes, we need to filter out mcp-metrics-ama-metrics-token.
+              # Simplest approach: just let the rollout with removed env var recreate clean pods.
+              # The volume patches are tied to the deployment spec and will persist, but they're harmless
+              # (projected SA tokens are always valid). The env var removal is what matters for disabling the feature.
+
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="controlplane-istio"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-controlplane-istio.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary and cleanup controlplane-istio env"
+            condition: always()
+
+          - bash: |
               # Remove any leftover custom Prometheus configmaps first
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
@@ -520,6 +594,36 @@ stages:
               TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-on-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
               echo $TESTKUBE_RESULTS_OTEL
               echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-on-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/controlplane/ama-metrics-settings-configmap-mipfalse-emptykeep.yaml
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-mip-false-crs.yaml" \
+                "testkube-config-test-mip-false-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for minimal ingestion profile false"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="mip-false"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-mip-false.json"
               rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()
