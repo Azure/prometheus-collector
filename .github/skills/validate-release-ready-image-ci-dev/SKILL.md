@@ -36,7 +36,7 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 11. **Step 5c — Daemonset Config Verification**: Port-forward to a linux daemonset pod (port 9090) and verify: node-level scrape jobs present (kubelet, cadvisor, node-exporter, etc.), no targets in `down` state.
 12. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`).
 13. **Step 7a — Grafana Data Verification (automated)**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
-14. **Step 7b — Grafana Visual Verification (manual)**: Inform the user that visual Grafana dashboard verification cannot be done from the CLI and must be done manually in a browser. Provide the dashboard checklist from Step 7b.
+14. **Step 7b — Grafana Visual Verification (Playwright MCP)**: Use the Playwright MCP server to open the CI dev Grafana instance in a browser, navigate to Azure Managed Prometheus dashboards, and verify panels show data (no "No data" panels). If Playwright MCP is unavailable or auth fails, fall back to informing the user to verify manually.
 
 ### Phase 3: Summary and Verdict
 15. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
@@ -76,7 +76,7 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 | 5c. Daemonset Config | ✅/❌ | <# scrape jobs in running config, # active targets, # down targets. Node-level jobs present?> |
 | 6. Metrics Ingestion | ✅/❌ | <count(up), count(kube_pod_info), count(scrape_samples_scraped) from AMW query.> |
 | 7a. Grafana Data (API) | ✅/❌ | <series counts for: container_cpu, container_memory, kubelet, kube_pod_info, node_cpu, apiserver_request, coredns, kubeproxy, windows. # of jobs reporting. Latest data timestamp — is it fresh?> |
-| 7b. Grafana Visual (manual) | ✅/❌/⏭️ | <If verified by user: dashboards checked, any panels with "No data"? If skipped: mark ⏭️ and note "requires manual browser verification — data availability confirmed via API in 7a"> |
+| 7b. Grafana Visual (Playwright) | ✅/❌/⏭️ | <If verified via Playwright MCP: dashboards checked, any panels with "No data"? If Playwright unavailable or auth failed: mark ⏭️ and note "Playwright MCP unavailable — data availability confirmed via API in 7a, manual visual check recommended"> |
 
 ### Verdict
 **Result:** READY / NOT READY
@@ -93,7 +93,7 @@ Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step be
 - **Replicaset Config**: PASS if every enabled default target appears as a scrape job in the running config, PodMonitor/ServiceMonitor targets are discovered, and zero targets are `down`. Note: the target allocator distributes targets across replicas, so a single pod will only show a subset of total targets — this is expected.
 - **Daemonset Config**: PASS if node-level jobs (kubelet, cadvisor, node-exporter, kappie-basic, etc.) are present and zero targets are `down`.
 - **Metrics Ingestion**: PASS if `count(up)` returns a reasonable number (>0), `kube_pod_info` and `scrape_samples_scraped` are present. FAIL if any query returns 0 or errors.
-- **Grafana Dashboard Metrics**: PASS if all key metrics have non-zero series counts AND the latest data timestamp is within the last 5 minutes (no data gaps). FAIL if any key metric returns 0 series or data is stale. Note: the CLI agent can only verify data availability via AMW API queries (Step 7a). Visual Grafana dashboard verification (Step 7b) requires a browser and must be done manually by the user — inform the user of this and mark 7b as ⏭️ (skipped) in the report.
+- **Grafana Dashboard Metrics**: PASS if all key metrics have non-zero series counts AND the latest data timestamp is within the last 5 minutes (no data gaps). FAIL if any key metric returns 0 series or data is stale. For Step 7b, use the Playwright MCP server to open Grafana dashboards and check for "No data" panels via accessibility snapshots. If Playwright MCP is unavailable or Azure AD auth fails, mark 7b as ⏭️ (skipped) and note the fallback — data availability was confirmed via AMW API in 7a.
 
 ---
 
@@ -435,11 +435,56 @@ curl -s -H "Authorization: Bearer $TOKEN" "$AMW/api/v1/query?query=max(up) by (j
 
 **What this does NOT prove:** That Grafana is accessible, dashboards are configured, panels render without errors, or there are no visual anomalies.
 
-#### 7b: Manual — Visual Grafana dashboard verification (user must do this)
+#### 7b: Automated — Visual Grafana dashboard verification via Playwright MCP
 
-> **NOTE for CLI agent:** You cannot open a browser or access the Grafana UI. After completing Step 7a, inform the user that visual Grafana verification must be done manually and provide the checklist below.
+Use the Playwright MCP server (`@playwright/mcp`) to open the Grafana instance in a browser and verify dashboards visually. This requires the Playwright MCP server to be configured in `~/.copilot/mcp-config.json`.
 
-Open the Grafana instance linked to the CI dev Azure Monitor Workspace and confirm all dashboards under **Azure Managed Prometheus** show data for the time window after the new agent version was deployed.
+**Prerequisites:**
+- Playwright MCP server added to MCP config (see below)
+- User must be logged into Azure in their browser (Grafana uses Azure AD SSO)
+
+**MCP config entry:**
+```json
+{
+  "playwright": {
+    "type": "local",
+    "command": "npx",
+    "tools": ["*"],
+    "args": ["@playwright/mcp@latest"]
+  }
+}
+```
+
+**Procedure:**
+
+1. Use Playwright MCP `browser_navigate` to open the CI dev Grafana instance:
+   - URL: `https://ci-dev-aks-eus-mac-grafana-csfxfgbhbnddbxg3.eus.grafana.azure.com`
+   - If an Azure AD login page appears, inform the user they need to complete authentication in the browser window that Playwright opened, then retry.
+
+2. Once in Grafana, navigate to the **Azure Managed Prometheus** dashboard folder:
+   - Use `browser_navigate` to go to: `<grafana_url>/dashboards/f/azure-managed-prometheus/`
+   - Or use `browser_click` to navigate via the sidebar: Dashboards → Browse → Azure Managed Prometheus
+
+3. For each dashboard listed below, open it and verify data is present:
+   - **Kubernetes / Compute Resources / Cluster** — look for panels with data (not "No data")
+   - **Kubernetes / Compute Resources / Namespace (Pods)**
+   - **Kubernetes / Kubelet**
+   - **Node Exporter / Nodes**
+   - At minimum, check 3-4 dashboards. If all show data, the rest are likely fine.
+
+4. On each dashboard:
+   - Use `browser_snapshot` to get the accessibility tree of the page
+   - Search the snapshot for text like "No data", "No values", or empty panel indicators
+   - Verify panel titles are present and have associated data values
+   - Check the time range picker shows a recent range (e.g., "Last 1 hour")
+
+5. Record results: which dashboards were checked, any panels showing "No data", and overall status.
+
+**Fallback:** If Playwright MCP is not available or authentication fails, fall back to the AMW API approach in Step 7a and inform the user that visual verification must be done manually.
+
+#### What was previously here: manual visual verification checklist
+
+If Playwright MCP is unavailable, the user should manually verify in a browser:
 
 1. Navigate to the Grafana portal and select the data source connected to the CI dev AMW.
 2. Set the time range to start from when the new image was deployed (check the Helm upgrade timestamp from the pipeline or `helm history ama-metrics -n default`).
@@ -459,19 +504,15 @@ Open the Grafana instance linked to the CI dev Azure Monitor Workspace and confi
    - Metric values look reasonable (no unexpected zeroes or spikes)
    - The `cluster` label matches the expected CI dev cluster name
 
-#### What would enable full automated Grafana verification
+#### Automation via Playwright MCP
 
-To fully automate Step 7b from the CLI, the agent would need:
+With the Playwright MCP server configured, the agent can automate visual Grafana verification by:
+1. Opening the Grafana URL in a Playwright-controlled browser
+2. Taking accessibility snapshots of each dashboard page
+3. Searching snapshots for "No data" indicators
+4. Recording which dashboards have full data coverage
 
-1. **Grafana API access** — A Grafana service account token or API key with Viewer permissions. This would allow the agent to:
-   - List dashboards via `GET /api/search?type=dash-db&folderTitle=Azure Managed Prometheus`
-   - Retrieve dashboard JSON models via `GET /api/dashboards/uid/<uid>`
-   - Extract the PromQL queries from each panel
-   - Execute those queries against the AMW API and verify non-empty results
-2. **Grafana instance URL** — The Grafana endpoint URL (e.g., `https://<name>.grafana.azure.com`)
-3. **Grafana MCP server or HTTP tool** — Either an MCP server for Azure Managed Grafana, or the ability to make authenticated HTTP requests to the Grafana API
-
-With these, the agent could programmatically iterate every panel in every dashboard, run the panel's query against the AMW, and verify data exists — achieving the same result as visual inspection.
+**Limitation:** Azure Managed Grafana uses Azure AD SSO. If the user is not already authenticated in the browser, Playwright will encounter a login page. In this case, the agent should ask the user to complete the Azure AD login in the Playwright browser window, then retry navigation. Alternatively, if a Grafana service account token is available, the agent can use the Grafana HTTP API directly (no browser needed).
 
 ---
 
