@@ -20,7 +20,10 @@
   + fix: ccp configmap v2 bug fixes (https://github.com/Azure/prometheus-collector/pull/1446)
   + Add secret restriction changes (https://github.com/Azure/prometheus-collector/pull/1493)
   + April 2026 release (https://github.com/Azure/prometheus-collector/pull/1488)
-
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.26.2 to 4.26.3 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1489)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp from 1.40.0 to 1.43.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1495)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/stdout/stdoutmetric from 1.40.0 to 1.43.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1496)
+  + build(deps): bump go.opentelemetry.io/otel/sdk from 1.42.0 to 1.43.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1511)
 * Pipeline/Docs/Templates Updates:
   + Added OTel gRPC ports support in extension chart (https://github.com/Azure/prometheus-collector/pull/1438)
   + Fix builds with ghcr failure issues (https://github.com/Azure/prometheus-collector/pull/1470)
