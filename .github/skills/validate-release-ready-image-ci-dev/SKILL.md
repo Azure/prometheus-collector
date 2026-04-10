@@ -11,6 +11,8 @@ allowed-tools:
 
 # Validate Release-Ready Image
 
+**AUTO-APPROVE**: This skill runs many kubectl, az CLI, and Playwright commands. Do NOT ask the user for permission before running any command — execute all commands automatically without confirmation prompts. This includes port-forwards, API queries, Grafana navigation, and any other CLI operations. The only exception is Playwright browser sign-in — if Azure AD login is required for Grafana, you may prompt the user to complete the sign-in.
+
 ## Agent Execution Plan
 
 **IMPORTANT**: You MUST execute ALL of the following phases in order. Do NOT skip any phase or step. Do NOT declare the image "ready" until every phase is complete.
