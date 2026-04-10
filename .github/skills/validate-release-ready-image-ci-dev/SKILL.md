@@ -1,5 +1,5 @@
 ---
-name: validate-release-ready-image
+name: validate-release-ready-image-cidev
 description: Validate a prometheus-collector release image after version bump PR deploys to CI dev clusters, ensuring it's ready for production. Covers both the automated CI pipeline flow and manual validation steps. Use when "validate release image", "check CI test results", "debug testkube failures", or "is this image ready to release".
 allowed-tools:
   - run_in_terminal
@@ -10,6 +10,38 @@ allowed-tools:
 ---
 
 # Validate Release-Ready Image
+
+## Agent Execution Plan
+
+**IMPORTANT**: You MUST execute ALL of the following phases in order. Do NOT skip any phase or step. Do NOT declare the image "ready" until every phase is complete.
+
+### Phase 1: CI Pipeline Check
+1. Find the latest build on `main` for pipeline definition 440 (project `azure`, org `github-private.visualstudio.com`).
+2. Check the build result. If it failed, analyze build errors and identify which stage/job failed.
+3. For TestKube failures, get the "Run TestKube workflow" task log and identify which test workflows passed/failed and why.
+4. Record the CI results for all stages: Build, Deploy (all clusters), TestKube AKS, TestKube OTel, TestKube ARC.
+
+### Phase 2: Manual Validation (ALL steps required)
+Get credentials for `ci-dev-aks-mac-eus` cluster, then execute **every** step below:
+
+5. **Step 1 — Pod Status**: Check ALL ama-metrics pod types (replicaset, linux daemonset, windows daemonset) are Running with correct image tags.
+6. **Step 2 — Pod Restarts**: Check restart counts for ALL pod types. If any restarts > 0, investigate with `--previous` logs and events.
+7. **Step 3 — Container Logs**: Check logs for errors in ALL containers across ALL pod types:
+   - `prometheus-collector` in replicaset, linux daemonset, AND windows daemonset pods
+   - `addon-token-adapter` / `addon-token-adapter-win` in all pod types
+   - `config-reader` in all pod types (if present — may be merged into prometheus-collector)
+8. **Step 4 — Liveness/Readiness Probes**: Verify probe configuration on all pod types using `kubectl describe`.
+9. **Step 5a — Config Sources**: Check `ama-metrics-settings-configmap` (default scrape settings + intervals), custom prometheus config configmaps (`ama-metrics-prometheus-config`, `ama-metrics-prometheus-config-node`, `ama-metrics-prometheus-config-node-windows`), and PodMonitors/ServiceMonitors.
+10. **Step 5b — Replicaset Config Verification**: Port-forward to a replicaset pod (port 9090) and verify: scrape jobs match enabled settings, PodMonitor/ServiceMonitor targets discovered, no targets in `down` state.
+11. **Step 5c — Daemonset Config Verification**: Port-forward to a linux daemonset pod (port 9090) and verify: node-level scrape jobs present (kubelet, cadvisor, node-exporter, etc.), no targets in `down` state.
+12. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`).
+13. **Step 7 — Grafana Dashboard Metrics**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
+
+### Phase 3: Verdict
+14. Fill out the Release Readiness Checklist (at the bottom of this document) based on all results.
+15. Declare verdict: READY or NOT READY, with justification for any failures.
+
+---
 
 ## Overview
 
