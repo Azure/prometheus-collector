@@ -2699,6 +2699,7 @@ extends:
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
+        timeoutInMinutes: 90
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
@@ -2774,6 +2775,7 @@ extends:
 
       - deployment: Testkube_OTel
         displayName: "Test: OTel AKS testkube tests"
+        timeoutInMinutes: 90
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart_OTel_Cluster
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
@@ -2849,6 +2851,7 @@ extends:
     
       - deployment: Testkube_ARC
         displayName: "Test: Arc testkube tests"
+        timeoutInMinutes: 90
         environment: Prometheus-Collector
         dependsOn: Deploy_Chart_ARC
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
@@ -2924,6 +2927,7 @@ extends:
 
       - deployment: Testkube_OTel_Upgrade
         displayName: "Test: OTel Collector Upgrade testkube tests"
+        timeoutInMinutes: 90
         environment: Prometheus-Collector
         dependsOn:  Deploy_AKS_Chart_OTel_Upgrade_Cluster
         condition: eq(variables.IS_OTEL_UPGRADE_BRANCH, true)
