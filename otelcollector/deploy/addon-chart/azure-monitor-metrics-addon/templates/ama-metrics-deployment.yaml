@@ -313,6 +313,10 @@ spec:
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
           {{- end }}
         {{- else }}
+        {{- if and .Values.Azure .Values.Azure.Identity .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml }}
+        - name: addon-token-adapter
+{{ tpl .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml $ | nindent 10 }}
+        {{- else }}
         - name: addon-token-adapter
           command:
             - /addon-token-adapter
@@ -347,6 +351,7 @@ spec:
               add:
                 - NET_ADMIN
                 - NET_RAW
+        {{- end }}
         {{- end }}
       affinity:
         nodeAffinity:
