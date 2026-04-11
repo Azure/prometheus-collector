@@ -1,63 +1,49 @@
 ---
-name: validate-release-ready-image-cidev
-description: Validate a prometheus-collector release image after version bump PR deploys to CI dev clusters, ensuring it's ready for production. Covers both the automated CI pipeline flow and manual validation steps. Use when "validate release image", "check CI test results", "debug testkube failures", or "is this image ready to release".
+name: validate-release-ready-image-ciprod
+description: Validate a prometheus-collector release image on the CI prod cluster (ci-prod-aks-mac-weu), ensuring it's healthy and ready for production. Manual validation only — no build pipeline checks. Use when "validate prod image", "check ci-prod cluster", "verify prod deployment", or "is the prod image healthy".
 allowed-tools:
   - run_in_terminal
   - read_file
-  - mcp_azure-devops_get_build
-  - mcp_azure-devops_get_build_logs
-  - mcp_azure-devops_analyze_build_errors
 ---
 
-# Validate Release-Ready Image
+# Validate Release-Ready Image (CI Prod)
 
 **AUTO-APPROVE**: This skill runs many kubectl, az CLI, and Playwright commands. Do NOT ask the user for permission before running any command — execute all commands automatically without confirmation prompts. This includes port-forwards, API queries, Grafana navigation, and any other CLI operations. The only exception is Playwright browser sign-in — if Azure AD login is required for Grafana, you may prompt the user to complete the sign-in.
 
 ## Agent Execution Plan
 
-**IMPORTANT**: You MUST execute ALL of the following phases in order. Do NOT skip any phase or step. Do NOT declare the image "ready" until every phase is complete.
+**IMPORTANT**: You MUST execute ALL of the following steps in order. Do NOT skip any step. Do NOT declare the image "ready" until every step is complete.
 
-### Phase 1: CI Pipeline Check
-1. Find the latest build on `main` for pipeline definition 440 (project `azure`, org `github-private.visualstudio.com`).
-2. Check the build result. If it failed, analyze build errors and identify which stage/job failed.
-3. For TestKube failures, get the "Run TestKube workflow" task log and identify which test workflows passed/failed and why.
-4. Record the CI results for all stages: Build, Deploy (all clusters), TestKube AKS, TestKube OTel, TestKube ARC.
-
-### Phase 1.5: ADO API Fallback
-If the ADO MCP tools (`list_builds`, `get_build`, etc.) fail with 401/403 or are unavailable, fall back to **direct ADO REST API calls** using `$env:ADO_PAT` with Basic auth:
-```powershell
-$base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$env:ADO_PAT"))
-$headers = @{ "Authorization" = "Basic $base64Auth" }
-Invoke-RestMethod -Uri "https://github-private.visualstudio.com/azure/_apis/build/builds?definitions=440&branchName=refs/heads/main&`$top=1&api-version=7.1" -Headers $headers
-```
-If `$env:ADO_PAT` is also missing, stop and ask the user to provide it.
-
-### Phase 2: Manual Validation (ALL steps required)
-Get credentials for `ci-dev-aks-mac-eus` cluster. Before running any kubectl commands, **verify the subscription and kubectl context** are correct:
+### Validation (ALL steps required)
+Get credentials for `ci-prod-aks-mac-weu` cluster. Before running any kubectl commands, **verify the subscription and kubectl context** are correct:
 ```powershell
 az account set --subscription "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
-az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus --overwrite-existing
-kubectl config current-context  # must show "ci-dev-aks-mac-eus"
+az aks get-credentials -g ci-prod-aks-mac-weu-rg -n ci-prod-aks-mac-weu --overwrite-existing
+kubectl config current-context  # must show "ci-prod-aks-mac-weu"
 ```
 Then execute **every** step below:
 
-5. **Step 1 — Pod Status**: Check ALL ama-metrics pod types (replicaset, linux daemonset, windows daemonset) are Running with correct image tags.
-6. **Step 2 — Pod Restarts**: Check restart counts for ALL pod types. If any restarts > 0, investigate with `--previous` logs and events.
-7. **Step 3 — Container Logs**: Check logs for errors in ALL containers across ALL pod types:
+1. **Step 1 — Pod Status**: Check ALL ama-metrics pod types (replicaset, linux daemonset, windows daemonset) are Running with correct image tags.
+2. **Step 2 — Pod Restarts**: Check restart counts for ALL pod types. If any restarts > 0, investigate with `--previous` logs and events.
+3. **Step 3 — Container Logs**: Check logs for errors in ALL containers across ALL pod types:
    - `prometheus-collector` in replicaset, linux daemonset, AND windows daemonset pods
    - `addon-token-adapter` / `addon-token-adapter-win` in all pod types
    - `config-reader` in all pod types (if present — may be merged into prometheus-collector)
-8. **Step 4 — Liveness/Readiness Probes**: Verify probe configuration on all pod types using `kubectl describe`.
-9. **Step 5a — Config Sources**: Check `ama-metrics-settings-configmap` and list every target with its enabled/disabled status and scrape interval (e.g. `kubelet = true, 30s`). Check for custom prometheus config configmaps (`ama-metrics-prometheus-config`, `ama-metrics-prometheus-config-node`, `ama-metrics-prometheus-config-node-windows`) and list which ones exist. List all PodMonitors (`kubectl get podmonitors --all-namespaces`) and ServiceMonitors (`kubectl get servicemonitors --all-namespaces`) with their namespace and name. All of these should be summarized in the report table.
-10. **Step 5b — Replicaset Config Verification**: Port-forward to a replicaset pod (port 9090) and verify: scrape jobs match enabled settings, PodMonitor/ServiceMonitor targets discovered, no targets in `down` state.
-11. **Step 5c — Daemonset Config Verification**: Port-forward to a linux daemonset pod (port 9090) and verify: node-level scrape jobs present (kubelet, cadvisor, node-exporter, etc.), no targets in `down` state. Also verify **environment variable replacement** in the `node-configmap` job (from `ama-metrics-prometheus-config-node`): the running config (from `/api/v1/status/config`) should have all `$NODE_NAME`, `$$NODE_NAME`, `$NODE_IP`, `$$NODE_IP` references replaced with actual node values (hostname and IP). Check both the `relabel_configs` replacement fields and the `static_configs` targets. Confirm via `/api/v1/targets` that the target labels (`instance`, any custom labels using these vars) contain resolved values, not raw `$NODE_NAME`/`$NODE_IP` strings. Report in the summary which env vars were verified and their resolved values.
-12. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`).
-13. **Step 7a — Grafana Data Verification (automated)**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
-14. **Step 7b — Grafana Visual Verification (Playwright MCP)**: Use the Playwright MCP server to open the CI dev Grafana instance (`https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com`). 
+4. **Step 4 — Liveness/Readiness Probes**: Verify probe configuration on all pod types using `kubectl describe`.
+5. **Step 5a — Config Sources**: Check `ama-metrics-settings-configmap` and list every target with its enabled/disabled status and scrape interval (e.g. `kubelet = true, 30s`). Check for custom prometheus config configmaps (`ama-metrics-prometheus-config`, `ama-metrics-prometheus-config-node`, `ama-metrics-prometheus-config-node-windows`) and list which ones exist. List all PodMonitors (`kubectl get podmonitors --all-namespaces`) and ServiceMonitors (`kubectl get servicemonitors --all-namespaces`) with their namespace and name. All of these should be summarized in the report table.
+6. **Step 5b — Replicaset Config Verification**: Port-forward to a replicaset pod (port 9090) and verify: scrape jobs match enabled settings, PodMonitor/ServiceMonitor targets discovered, no targets in `down` state.
+7. **Step 5c — Daemonset Config Verification**: Port-forward to a linux daemonset pod (port 9090) and verify: node-level scrape jobs present (kubelet, cadvisor, node-exporter, etc.), no targets in `down` state. Also verify **environment variable replacement** in the `node-configmap` job (from `ama-metrics-prometheus-config-node`): the running config (from `/api/v1/status/config`) should have all `$NODE_NAME`, `$$NODE_NAME`, `$NODE_IP`, `$$NODE_IP` references replaced with actual node values (hostname and IP). Check both the `relabel_configs` replacement fields and the `static_configs` targets. Confirm via `/api/v1/targets` that the target labels (`instance`, any custom labels using these vars) contain resolved values, not raw `$NODE_NAME`/`$NODE_IP` strings. Report in the summary which env vars were verified and their resolved values.
+8. **Step 6 — Metrics Ingestion**: Query the AMW endpoint to confirm metrics are flowing (count of `up`, `kube_pod_info`, `scrape_samples_scraped`). **Discover the AMW endpoint dynamically** — do NOT hardcode it, as the hostname includes a generated suffix:
+   ```powershell
+   az monitor account show --name ci-prod-aks-weu-mac --resource-group ci-prod-aks-mac-weu-rg --query "metrics.prometheusQueryEndpoint" -o tsv
+   ```
+   Use the returned endpoint for all PromQL API queries in Steps 6 and 7a.
+9. **Step 7a — Grafana Data Verification (automated)**: Query AMW for ALL key metrics that power Grafana dashboards: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kubelet_running_pods`, `kube_pod_info`, `node_cpu_seconds_total`, `apiserver_request_total`, `coredns_dns_requests_total`, `kubeproxy_sync_proxy_rules_duration_seconds_count`, `windows_cs_physical_memory_bytes`. Verify all jobs report fresh data with no gaps.
+10. **Step 7b — Grafana Visual Verification (Playwright MCP)**: Use the Playwright MCP server to open the CI prod Grafana instance (`https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com`). 
     
     **Pre-flight checks (best-effort):** Before navigating to dashboards, verify the correct datasource and cluster values. These checks are best-effort — if Grafana API auth fails, fall back to the known values below:
-    - Query Grafana API `GET /api/datasources` to list all prometheus datasources, confirm the UID `ci-dev-aks-eus-mac` exists and points to the correct AMW endpoint (`https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com`).
-    - Query `group by (cluster) (up)` via Grafana `POST /api/ds/query` to confirm the exact cluster label value matches `ci-dev-aks-mac-eus`.
+    - Query Grafana API `GET /api/datasources` to list all prometheus datasources, confirm the UID `ci-prod-aks-weu-mac` exists and points to the correct AMW endpoint (the one discovered via `az monitor account show` in Step 6).
+    - Query `group by (cluster) (up)` via Grafana `POST /api/ds/query` to confirm the exact cluster label value matches `ci-prod-aks-mac-weu`.
     
     **Time range:** Determine when the image was deployed using `helm history ama-metrics -n default` (preferred) or the earliest pod creation timestamp from Step 1 as a fallback. Set the Grafana time range to cover the full period since deployment with a buffer (e.g., if deployed 18h ago, use `from=now-24h&to=now`). Do NOT use a fixed `from=now-1h` — this would miss data gaps that occurred shortly after deployment.
     
@@ -66,35 +52,21 @@ Then execute **every** step below:
     - `/api/search?tag=node-exporter-mixin&type=dash-db` — Node Exporter dashboards
     - `/api/search?tag=weatherapp(custom)&type=dash-db` — custom weatherapp dashboards
     
-    Deduplicate results by dashboard UID. For each discovered dashboard in the `Azure Managed Prometheus` folder (folderUid: `azure-managed-prometheus`), navigate to it with the correct datasource and cluster variables: `var-datasource=ci-dev-aks-eus-mac&var-cluster=ci-dev-aks-mac-eus&from=<deployment-aware-range>`. The datasource UID `ci-dev-aks-eus-mac` corresponds to `Managed_Prometheus_ci-dev-aks-eus-mac` which points to the ci-dev AMW endpoint. Wait for panels to load, and check for "No data" panels. Use Playwright's `page.locator('text="No data"').count()` to efficiently detect empty panels. Report a table of all dashboards grouped by tag with their total panel count and "No data" panel count. "No data" on error-rate, throttling, or swap I/O panels is expected when the system is healthy. If Playwright MCP is unavailable or auth fails, fall back to informing the user to verify manually.
+    Deduplicate results by dashboard UID. For each discovered dashboard in the `Azure Managed Prometheus` folder (folderUid: `azure-managed-prometheus`), navigate to it with the correct datasource and cluster variables: `var-datasource=ci-prod-aks-weu-mac&var-cluster=ci-prod-aks-mac-weu&from=<deployment-aware-range>`. The datasource UID `ci-prod-aks-weu-mac` corresponds to `Managed_Prometheus_ci-prod-aks-weu-mac` which points to the ci-prod AMW endpoint. Wait for panels to load, and check for "No data" panels. Use Playwright's `page.locator('text="No data"').count()` to efficiently detect empty panels. Report a table of all dashboards grouped by tag with their total panel count and "No data" panel count. "No data" on error-rate, throttling, or swap I/O panels is expected when the system is healthy. If Playwright MCP is unavailable or auth fails, fall back to informing the user to verify manually.
 
-### Phase 3: Summary and Verdict
-15. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
-16. Declare verdict: READY or NOT READY, with justification for any failures or warnings.
+### Summary and Verdict
+11. Generate a **Validation Summary Report** using the template below. Fill in every row with actual results and the evidence that led to your pass/fail determination. Do NOT leave any row blank.
+12. Declare verdict: READY or NOT READY, with justification for any failures or warnings.
 
 #### Validation Summary Report Template
 
 ```
 ## Validation Summary Report
 **Image:** <full image tag, e.g. 6.27.0-main-04-10-2026-a2c43cc1>
-**Build:** <ADO build ID>
 **Date:** <validation date>
-**Cluster:** ci-dev-aks-mac-eus
+**Cluster:** ci-prod-aks-mac-weu
 
-### Phase 1: CI Pipeline Results
-| Stage | Result | Details |
-|-------|--------|---------|
-| Build | ✅/❌ | <all images built? any build errors?> |
-| Deploy_AKS_Chart | ✅/❌ | <helm upgrade succeeded?> |
-| Deploy_AKS_Chart_Test_Cluster | ✅/❌ | |
-| Deploy_AKS_Chart_OTel_Cluster | ✅/❌ | |
-| Deploy_Chart_ARC | ✅/❌ | |
-| Testkube (AKS) | ✅/❌/⚠️ | <list each workflow: containerstatus, livenessprobe, prometheusui, operator, querymetrics — passed/failed/skipped. If failed, include root cause.> |
-| Testkube_OTel | ✅/❌ | <list each workflow result> |
-| Testkube_ARC | ✅/❌ | <list each workflow result> |
-| TestKube_Summary | ✅/❌ | |
-
-### Phase 2: Manual Validation Results
+### Validation Results
 | Step | Result | Evidence |
 |------|--------|----------|
 | 1. Pod Status | ✅/❌ | <# of RS pods, DS pods, Win DS pods running. Image tag confirmed.> |
@@ -127,141 +99,6 @@ Then execute **every** step below:
 
 ---
 
-## Overview
-
-After a version bump PR merges to `main`, the [Azure.prometheus-collector pipeline](https://github-private.visualstudio.com/azure/_build?definitionId=440) automatically builds images, deploys them to CI dev clusters, and runs TestKube validation tests. This skill covers:
-
-1. Understanding the automated CI validation pipeline.
-2. Debugging test failures from the pipeline.
-3. Manually validating the image on the `ci-dev-aks-mac-eus` cluster when needed.
-
-### When to Use
-
-- A version bump PR just merged and you want to confirm the image is release-ready.
-- The CI pipeline failed on the TestKube validation stage and you need to diagnose why.
-- You want to manually re-run or validate tests on the CI dev cluster.
-
----
-
-## Pipeline Architecture
-
-The pipeline (definition ID `440`, project `azure`, org `github-private.visualstudio.com`) runs these stages on `main` branch merges:
-
-### Build Stage
-- Builds Linux, Windows, CCP, target allocator, and config reader images.
-- Pushes to `cidev` MCR: `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:<TAG>`
-- Produces Helm chart artifacts.
-
-### Deploy Stages (parallel)
-| Stage | Cluster | Region | Purpose |
-|-------|---------|--------|---------|
-| `Deploy_AKS_Chart` | `ci-dev-aks-mac-eus` | eastus | Primary AKS validation |
-| `Deploy_AKS_Chart_Test_Cluster` | `ci-dev-aks-tests` | centralus | Config processing tests |
-| `Deploy_AKS_Chart_OTel_Cluster` | `ciprom-dev-aks-otlp` | westus3 | OTel/OTLP validation |
-| `Deploy_Chart_ARC` | `ci-dev-arc-wcus` | westcentralus | Arc extension validation |
-| `Deploy_AKS_Chart_OTel_Upgrade_Cluster` | `ciprom-upgrade-bot` | westus3 | OTel upgrade (only on `bot/*` branches) |
-
-Each deploy stage:
-1. Waits for images to appear in MCR (polls up to 10 minutes).
-2. Substitutes image tags into Chart.yaml and values.yaml.
-3. Runs `helm upgrade` with the new chart on the target cluster.
-4. Also deploys Retina (network observability) on AKS clusters.
-
-### TestKube Stages (after deploy)
-| Stage | Depends On | Test CRs File | Target Env |
-|-------|-----------|---------------|------------|
-| `Testkube` | `Deploy_AKS_Chart` | `testkube-test-crs.yaml` | AKS |
-| `Testkube_OTel` | `Deploy_AKS_Chart_OTel_Cluster` | `testkube-test-crs-otel.yaml` | OTel |
-| `Testkube_ARC` | `Deploy_Chart_ARC` | `testkube-test-crs-arc.yaml` | ARC |
-| `Testkube_OTel_Upgrade` | `Deploy_AKS_Chart_OTel_Upgrade_Cluster` | `testkube-test-crs-otelcollector-upgrade.yaml` | OTelCollector-Upgrade |
-
-Each TestKube stage runs `run-testkube-workflow.sh` which:
-1. Installs TestKube CLI.
-2. Applies test workflow CRs and configmaps to the cluster.
-3. Deploys the prometheus reference app.
-4. Waits 360s (default) for cluster readiness.
-5. Discovers and runs all test workflows sequentially.
-6. Collects results into `testkube-results-<ENV>.json`.
-
-### Summary Stage
-`TestKube_Summary` aggregates results from AKS, OTel, and ARC TestKube stages and sends a notification.
-
----
-
-## Test Workflows
-
-### AKS Tests (`testkube-test-crs.yaml`)
-
-All tests use Ginkgo framework with label filter `!(arc-extension,linux-daemonset-custom-config,otlp)`:
-
-| Workflow | Test Suite | What It Validates |
-|----------|-----------|-------------------|
-| `containerstatus` | `./containerstatus` | All ama-metrics containers are running and healthy |
-| `livenessprobe` | `./livenessprobe` | Liveness probes pass (90m timeout) |
-| `prometheusui` | `./prometheusui` | Prometheus UI is accessible and functional |
-| `operator` | `./operator` | CRD operator (azmonitoring.coreos.com) works correctly |
-| `querymetrics` | `./querymetrics` | Metrics are ingested and queryable from Azure Monitor Workspace |
-
-### OTel Tests (`testkube-test-crs-otel.yaml`)
-
-Same test suites with label filter `!(arc-extension,linux-daemonset-custom-config,fips,mdsd)` — validates OTLP pipeline-specific behavior.
-
-### ARC Tests (`testkube-test-crs-arc.yaml`)
-
-Uses `!(linux-daemonset-custom-config,otlp)` filter — includes Arc extension tests.
-
-### OTel Upgrade Tests (`testkube-test-crs-otelcollector-upgrade.yaml`)
-
-Same 5 workflows. Only runs on `bot/*` branches (IS_OTEL_UPGRADE_BRANCH).
-
----
-
-## Debugging CI Pipeline Failures
-
-### Step 1: Get Build Status
-
-Use the ADO MCP tools (requires `github-private.visualstudio.com` org):
-
-```
-Get build info: buildId=<ID>, project=azure
-Analyze build errors: buildId=<ID>, project=azure
-```
-
-Key things to check:
-- `result`: `failed` vs `partiallySucceeded`
-- `finishTime - startTime`: if >4h, likely a timeout
-- Error summary for `TestKube tests failed` messages
-
-### Step 2: Identify Which Stage Failed
-
-Look at the error messages from `analyze_build_errors`:
-- `"TestKube tests failed"` — a TestKube workflow failed
-- `"TestKube results file not found"` — the run script crashed before producing results
-- `"Images are not published to mcr within the timeout"` — MCR push delay
-- `"Helm lint failed"` — chart issue (build stage, not test)
-
-### Step 3: Get TestKube Logs
-
-The TestKube run log is in the "Run TestKube workflow" task. Find it by searching build logs for content containing `run-testkube-workflow.sh` or `Running workflow:`.
-
-Look for:
-- Which workflow failed: `<workflow> TestWorkflow failed. Execution ID: <id>`
-- The `TestWorkflow Summary` section at the end listing failed/successful workflows
-- Individual workflow execution output from `kubectl testkube watch`
-
-### Step 4: Common Failure Patterns
-
-| Pattern | Cause | Resolution |
-|---------|-------|------------|
-| Timeout after ~5h | `livenessprobe` test has 90m Ginkgo timeout + 6m sleep per workflow | Check if pods are crashlooping |
-| `querymetrics` fails | Metrics not reaching AMW | Check ME/MDSD logs, AMW endpoint connectivity |
-| `containerstatus` fails | Pod not running | Check image pull errors, node scheduling |
-| `operator` fails | CRD not installed or operator crash | Check operator pod logs |
-| `No testworkflows found` | TestKube CRs not applied | Check kubectl apply step |
-| `Could not find execution ID` | TestKube API server issue | Check testkube namespace pods |
-
----
-
 ## Manual Validation
 
 ### Prerequisites
@@ -272,7 +109,7 @@ Look for:
 ### Step 1: Get Cluster Credentials
 
 ```bash
-az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus
+az aks get-credentials -g ci-prod-aks-mac-weu-rg -n ci-prod-aks-mac-weu
 ```
 
 ### Step 2: Check Deployment Status
@@ -434,9 +271,7 @@ kill $PF_PID
 
 ### Step 6: Verify Metrics Ingestion
 
-Query the Azure Monitor Workspace endpoint to confirm metrics are flowing:
-- AKS AMW endpoint: `https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com`
-- Client ID: `c7f895bb-c4f6-45af-be82-2273a424e237`
+Query the Azure Monitor Workspace endpoint to confirm metrics are flowing. **Discover the endpoint dynamically** using `az monitor account show --name ci-prod-aks-weu-mac --resource-group ci-prod-aks-mac-weu-rg --query "metrics.prometheusQueryEndpoint" -o tsv` — do NOT hardcode the hostname as it includes a generated suffix (e.g., `-3d8z`).
 
 ### Step 7: Verify Grafana Dashboards
 
@@ -449,7 +284,7 @@ Query the AMW PromQL API directly to confirm the underlying metrics that power G
 ```bash
 # Get an access token for the AMW
 TOKEN=$(az account get-access-token --resource "https://prometheus.monitor.azure.com" --query accessToken -o tsv)
-AMW="https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com"
+AMW="$(az monitor account show --name ci-prod-aks-weu-mac --resource-group ci-prod-aks-mac-weu-rg --query 'metrics.prometheusQueryEndpoint' -o tsv)"
 
 # Query key metrics that power Grafana dashboards
 for metric in container_cpu_usage_seconds_total container_memory_working_set_bytes kubelet_running_pods kube_pod_info node_cpu_seconds_total apiserver_request_total coredns_dns_requests_total kubeproxy_sync_proxy_rules_duration_seconds_count windows_cs_physical_memory_bytes; do
@@ -487,7 +322,7 @@ Use the Playwright MCP server (`@playwright/mcp`) to open the Grafana instance i
 
 **Procedure:**
 
-1. Use Playwright MCP `browser_navigate` to open the CI dev Grafana instance:
+1. Use Playwright MCP `browser_navigate` to open the CI prod Grafana instance:
    - URL: `https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com/`
    - If an Azure AD login page appears, inform the user they need to complete authentication in the browser window that Playwright opened, then retry.
 
@@ -518,7 +353,7 @@ Use the Playwright MCP server (`@playwright/mcp`) to open the Grafana instance i
 
 If Playwright MCP is unavailable, the user should manually verify in a browser:
 
-1. Navigate to the Grafana portal and select the data source connected to the CI dev AMW.
+1. Navigate to the Grafana portal and select the data source connected to the CI prod AMW.
 2. Set the time range to start from when the new image was deployed (check the Helm upgrade timestamp from the pipeline or `helm history ama-metrics -n default`). Do NOT use a fixed short window like "Last 1 hour" — ensure coverage from deployment time to now.
 3. Go through each dashboard under the **Azure Managed Prometheus** folder:
    - **Kubernetes / Compute Resources / Cluster** — verify CPU, memory, and network panels have data
@@ -534,7 +369,7 @@ If Playwright MCP is unavailable, the user should manually verify in a browser:
    - No gaps in data starting from the deployment time
    - No panels showing "No data" that were previously populated
    - Metric values look reasonable (no unexpected zeroes or spikes)
-   - The `cluster` label matches the expected CI dev cluster name
+   - The `cluster` label matches the expected CI prod cluster name
 
 #### Automation via Playwright MCP
 
@@ -552,16 +387,6 @@ With the Playwright MCP server configured, the agent can automate visual Grafana
 
 Before declaring an image ready for production:
 
-**CI Pipeline (automated)**
-- [ ] CI pipeline build completed (build stage succeeded)
-- [ ] All images published to cidev MCR
-- [ ] `Deploy_AKS_Chart` succeeded — Helm upgrade on ci-dev-aks-mac-eus
-- [ ] `Testkube` (AKS) — all 5 workflows passed
-- [ ] `Testkube_OTel` — all workflows passed
-- [ ] `Testkube_ARC` — all workflows passed
-- [ ] `TestKube_Summary` notification sent
-
-**Manual Validation**
 - [ ] All ama-metrics pods running (replicaset, linux daemonset, windows daemonset) with correct image tags
 - [ ] No pod restarts after new version deployed; if restarts occurred, root cause identified and resolved
 - [ ] Container logs show no errors across all pod types and containers (prometheus-collector, addon-token-adapter, config-reader)
@@ -578,21 +403,4 @@ Before declaring an image ready for production:
 
 | Cluster | Resource Group | Subscription | AMW Endpoint |
 |---------|---------------|--------------|--------------|
-| ci-dev-aks-mac-eus | ci-dev-aks-mac-eus-rg | 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb | ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com |
-| ciprom-dev-aks-otlp | ciprom-dev-aks-otlp | 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb | ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com |
-| ci-dev-arc-wcus | ci-dev-arc-wcus | 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb | ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com |
-| ciprom-upgrade-bot | ciprom-upgrade-bot | 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb | ciprom-upgrade-bot-e4c4gvcgcqd7awhw.westus3.prometheus.monitor.azure.com |
-
----
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `.pipelines/azure-pipeline-build.yml` | Main CI/CD pipeline definition |
-| `otelcollector/test/testkube/run-testkube-workflow.sh` | TestKube orchestration script |
-| `otelcollector/test/testkube/testkube-test-crs.yaml` | AKS test workflow definitions |
-| `otelcollector/test/testkube/testkube-test-crs-otel.yaml` | OTel test workflow definitions |
-| `otelcollector/test/testkube/testkube-test-crs-arc.yaml` | ARC test workflow definitions |
-| `otelcollector/test/testkube/testkube-test-crs-otelcollector-upgrade.yaml` | OTel upgrade test definitions |
-| `otelcollector/test/ginkgo-e2e/` | Ginkgo test source code |
+| ci-prod-aks-mac-weu | ci-prod-aks-mac-weu-rg | 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb | Discover dynamically: `az monitor account show --name ci-prod-aks-weu-mac --resource-group ci-prod-aks-mac-weu-rg --query "metrics.prometheusQueryEndpoint" -o tsv` (includes generated suffix, e.g. ci-prod-aks-weu-mac-3d8z.westeurope.prometheus.monitor.azure.com) |
