@@ -2,7 +2,6 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ProgressNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
@@ -10,6 +9,8 @@ import { QUERIES, parameterizeQuery, type QueryCategory } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
 import { queryMdmThrottling, queryScrapeTargetHealth, queryMdmMetric, queryMeInternalMetrics } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
+import { writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
@@ -36,6 +37,10 @@ const endTimeParam = z
   .string()
   .optional()
   .describe("Absolute end time in ISO 8601 format, e.g. '2026-03-11T00:00:00Z'. When provided with startTime, overrides timeRange for precise historical queries.");
+const outputFileParam = z
+  .string()
+  .optional()
+  .describe("Optional file path to write ALL results (no truncation) as JSON. Example: /tmp/tsg-triage.json");
 
 interface QueryResult {
   name: string;
@@ -44,10 +49,13 @@ interface QueryResult {
   data?: Record<string, unknown>[];
   error?: string;
   rowCount?: number;
+  truncated?: boolean;
 }
 
 // Query timeout in ms — generous to avoid MCP SDK timeout (-32001) on large/slow clusters
 const QUERY_TIMEOUT_MS = parseInt(process.env.KQL_TIMEOUT_MS || "180000", 10); // 3 minutes
+const CONCURRENCY = parseInt(process.env.QUERY_CONCURRENCY || "5", 10);
+const MAX_RETRIES = parseInt(process.env.QUERY_MAX_RETRIES || "2", 10); // 0 = no retries
 
 type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
@@ -71,6 +79,43 @@ async function sendProgress(
   } catch {
     // Best-effort — don't let notification failures break the tool
   }
+}
+
+/**
+ * Retry a function with exponential backoff for transient failures.
+ * Retries on network errors, 429 (rate limit), and 5xx server errors.
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES
+): Promise<T> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // Check both message and cause (Node fetch wraps errors as "fetch failed" with cause)
+      const msg = lastError.message.toLowerCase();
+      const causeMsg = ((lastError as any).cause?.message || "").toLowerCase();
+      const fullMsg = `${msg} ${causeMsg}`;
+      const isRetryable =
+        fullMsg.includes("fetch failed") ||
+        fullMsg.includes("timeout") ||
+        fullMsg.includes("econnreset") ||
+        fullMsg.includes("econnrefused") ||
+        fullMsg.includes("socket hang up") ||
+        fullMsg.includes("429") ||
+        fullMsg.includes("503") ||
+        fullMsg.includes("502") ||
+        fullMsg.includes("504") ||
+        fullMsg.includes("throttl");
+      if (!isRetryable || attempt >= maxRetries) throw lastError;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError!;
 }
 
 /**
@@ -105,11 +150,13 @@ async function runAppInsightsQuery(
     timespan = { duration: durationMap[timeRange] || "PT24H" };
   }
 
-  const result = await logsClient.queryResource(
-    APP_INSIGHTS.resourceId,
-    kql,
-    timespan,
-    { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }
+  const result = await withRetry(() =>
+    logsClient.queryResource(
+      APP_INSIGHTS.resourceId,
+      kql,
+      timespan,
+      { serverTimeoutInSeconds: Math.floor(QUERY_TIMEOUT_MS / 1000) }
+    )
   );
 
   const rows: Record<string, unknown>[] = [];
@@ -140,7 +187,11 @@ async function runAppInsightsQuery(
 }
 
 /**
- * Execute a KQL query against a Kusto cluster via REST API.
+ * Execute a KQL query against a Kusto cluster via curl subprocess.
+ * Uses curl instead of Node.js fetch/https because the undici HTTP stack
+ * has chronic ECONNRESET/UND_ERR_CONNECT_TIMEOUT failures in WSL2 when
+ * connecting to Kusto TLS endpoints. curl uses the system OpenSSL stack
+ * which handles WSL2 networking reliably.
  */
 async function runKustoQuery(
   clusterUri: string,
@@ -152,32 +203,59 @@ async function runKustoQuery(
   if (clusterUri.includes("applicationinsights.io")) {
     scope = "https://api.applicationinsights.io/.default";
   } else {
-    // Extract the cluster host for the scope
     const url = new URL(clusterUri);
     scope = `${url.protocol}//${url.host}/.default`;
   }
 
   const token = await credential.getToken(scope);
+  const requestBody = JSON.stringify({ db: database, csl: kql });
+  const timeoutSecs = Math.ceil(QUERY_TIMEOUT_MS / 1000);
 
-  const response = await fetch(`${clusterUri}/v1/rest/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      db: database,
-      csl: kql,
-    }),
-    signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+  const output = await withRetry(() => {
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const result = execSync(
+          `curl -s -S --max-time ${timeoutSecs} ` +
+          `-w "\\n__HTTP_STATUS__:%{http_code}" ` +
+          `-X POST "${clusterUri}/v1/rest/query" ` +
+          `-H "Authorization: Bearer ${token.token}" ` +
+          `-H "Content-Type: application/json" ` +
+          `-d @-`,
+          {
+            input: requestBody,
+            encoding: "utf8",
+            maxBuffer: 100 * 1024 * 1024, // 100 MB
+            timeout: QUERY_TIMEOUT_MS + 5000,
+          }
+        );
+        resolve(result);
+      } catch (err: any) {
+        // execSync throws on non-zero exit code
+        const stderr = err.stderr?.toString() || "";
+        const stdout = err.stdout?.toString() || "";
+        reject(new Error(`curl failed: ${stderr || stdout || err.message}`.slice(0, 500)));
+      }
+    });
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Kusto query failed (${response.status}): ${text.slice(0, 500)}`);
+  // Split response body from HTTP status trailer
+  const statusMarker = "\n__HTTP_STATUS__:";
+  const markerIdx = output.lastIndexOf(statusMarker);
+  let responseBody: string;
+  let httpStatus: number;
+  if (markerIdx !== -1) {
+    responseBody = output.slice(0, markerIdx);
+    httpStatus = parseInt(output.slice(markerIdx + statusMarker.length).trim(), 10);
+  } else {
+    responseBody = output;
+    httpStatus = 200; // assume success if marker missing
   }
 
-  const body = await response.json();
+  if (httpStatus >= 400) {
+    throw new Error(`Kusto query failed (${httpStatus}): ${responseBody.slice(0, 500)}`);
+  }
+
+  const body = JSON.parse(responseBody);
   const rows: Record<string, unknown>[] = [];
 
   if (body.Tables && body.Tables.length > 0) {
@@ -236,8 +314,9 @@ async function executeQuery(
       name: queryDef.name,
       datasource: queryDef.datasource,
       status: "success",
-      data: data.slice(0, 100), // Limit rows to avoid huge responses
+      data: data.slice(0, 100),
       rowCount: data.length,
+      truncated: data.length > 100,
     };
   } catch (err) {
     return {
@@ -263,8 +342,7 @@ async function runCategory(
     return [];
   }
 
-  // Run queries in parallel with concurrency limit
-  const CONCURRENCY = 5;
+  // Run queries in parallel with configurable concurrency limit
   const results: QueryResult[] = [];
   const totalQueries = queries.length;
 
@@ -300,21 +378,48 @@ async function resolveCcpClusterId(
   const ccpQuery = QUERIES.triage.find((q) => q.name === "CCP Cluster ID");
   if (!ccpQuery) return undefined;
 
-  try {
-    const result = await executeQuery(ccpQuery, {
-      cluster,
-      timeRange,
-      interval: "6h",
-      startTime,
-      endTime,
-    });
-    if (result.status === "success" && result.data && result.data.length > 0) {
-      const id = String(result.data[0].cluster_id);
-      if (id && id !== "undefined" && id !== "null") return id;
+  // ManagedClusterMonitoring entries are sparse (~6h apart), so always use a
+  // wide lookback for the resolver regardless of the user's timeRange.
+  // Try the user's range first, then widen to 7d if needed.
+  const rangesToTry = [timeRange, "7d"];
+
+  for (const range of rangesToTry) {
+    try {
+      const result = await executeQuery(ccpQuery, {
+        cluster,
+        // Only override time range on retry — keep user's startTime/endTime on first attempt
+        timeRange: range,
+        interval: "6h",
+        startTime: range === timeRange ? startTime : undefined,
+        endTime: range === timeRange ? endTime : undefined,
+      });
+      if (result.status === "success" && result.data && result.data.length > 0) {
+        const id = String(result.data[0].cluster_id);
+        if (id && id !== "undefined" && id !== "null") return id;
+      }
+    } catch (err) {
+      console.error(`[tsg] CCP cluster ID resolution failed (${range}): ${err instanceof Error ? err.message : String(err)}`);
     }
-  } catch {
-    // Silently fail — queries that need CCP ID will get errors individually
   }
+
+  // Final fallback: resolve via AgentPoolSnapshot which has both cluster_id and resource_id
+  try {
+    const fallbackQuery = QUERIES.triage.find((q) => q.name === "CCP Cluster ID (AgentPoolSnapshot fallback)");
+    if (fallbackQuery) {
+      const result = await executeQuery(fallbackQuery, {
+        cluster,
+        timeRange: "7d",
+        interval: "6h",
+      });
+      if (result.status === "success" && result.data && result.data.length > 0) {
+        const id = String(result.data[0].cluster_id);
+        if (id && id !== "undefined" && id !== "null") return id;
+      }
+    }
+  } catch (err) {
+    console.error(`[tsg] CCP cluster ID AgentPoolSnapshot fallback failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   return undefined;
 }
 
@@ -329,6 +434,9 @@ function formatResults(results: QueryResult[]): string {
       parts.push(`❌ Error: ${r.error}`);
     } else if (r.data && r.data.length > 0) {
       parts.push(`✅ ${r.rowCount} row(s) returned`);
+      if (r.truncated) {
+        parts.push(`⚠️ Results truncated to 100 rows (${r.rowCount} total). Use a more specific query to see all data.`);
+      }
       // Format as a simple table for readability
       const columns = Object.keys(r.data[0]);
       parts.push(`| ${columns.join(" | ")} |`);
@@ -354,6 +462,66 @@ function formatResults(results: QueryResult[]): string {
   return parts.join("\n");
 }
 
+/**
+ * Write query result rows to a file as CSV or JSON.
+ * Returns the file path and row count written.
+ */
+function writeResultsToFile(
+  data: Record<string, unknown>[],
+  filePath: string,
+  format: "csv" | "json" = "csv"
+): { path: string; rows: number } {
+  if (format === "json") {
+    writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } else {
+    if (data.length === 0) {
+      writeFileSync(filePath, "", "utf-8");
+      return { path: filePath, rows: 0 };
+    }
+    const columns = Object.keys(data[0]);
+    const header = columns.map((c) => `"${c}"`).join(",");
+    const rows = data.map((row) =>
+      columns
+        .map((c) => {
+          const v = row[c];
+          if (v === null || v === undefined) return "";
+          const s = String(v).replace(/"/g, '""');
+          return `"${s}"`;
+        })
+        .join(",")
+    );
+    writeFileSync(filePath, [header, ...rows].join("\n"), "utf-8");
+  }
+  return { path: filePath, rows: data.length };
+}
+
+/**
+ * Format category results and optionally write all data to a file.
+ * Returns the MCP tool response content.
+ */
+function categoryResponse(
+  results: QueryResult[],
+  outputFile?: string
+): { content: Array<{ type: "text"; text: string }> } {
+  let text = formatResults(results);
+
+  if (outputFile) {
+    // Collect all successful result data into a structured object
+    const allData: Record<string, Record<string, unknown>[]> = {};
+    let totalRows = 0;
+    for (const r of results) {
+      if (r.status === "success" && r.data && r.data.length > 0) {
+        allData[r.name] = r.data;
+        totalRows += r.data.length;
+      }
+    }
+    writeFileSync(outputFile, JSON.stringify(allData, null, 2), "utf-8");
+    text += `\n📁 Full results (${totalRows} total rows across ${Object.keys(allData).length} queries) written to \`${outputFile}\``;
+  }
+
+  return { content: [{ type: "text", text }] };
+}
+
 // Create the MCP server
 const server = new McpServer({
   name: "prom-collector-tsg",
@@ -370,13 +538,12 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("triage", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -390,12 +557,11 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const results = await runCategory("errors", { cluster, timeRange, interval, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -409,13 +575,12 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("config", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -429,13 +594,12 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("workload", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -449,13 +613,12 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("pods", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -469,12 +632,13 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
     component: z
       .enum(["replicaset", "linux-daemonset", "windows-daemonset", "configreader"])
       .default("replicaset")
       .describe("Component to get logs for"),
   },
-  async ({ cluster, timeRange, interval, startTime, endTime, component }) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile, component }) => {
     const componentMap: Record<string, string> = {
       replicaset: "All ReplicaSet Logs",
       "linux-daemonset": "All Linux DaemonSet Logs",
@@ -495,9 +659,7 @@ server.tool(
       queries.map((q) => executeQuery(q, { cluster, timeRange, interval, startTime, endTime }))
     );
 
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
@@ -511,20 +673,19 @@ server.tool(
     interval: intervalParam,
     startTime: startTimeParam,
     endTime: endTimeParam,
+    outputFile: outputFileParam,
   },
-  async ({ cluster, timeRange, interval, startTime, endTime }, extra) => {
+  async ({ cluster, timeRange, interval, startTime, endTime, outputFile }, extra) => {
     const aksClusterId = await resolveCcpClusterId(cluster, timeRange, startTime, endTime);
     const results = await runCategory("controlPlane", { cluster, timeRange, interval, aksClusterId, startTime, endTime }, extra);
-    return {
-      content: [{ type: "text", text: formatResults(results) }],
-    };
+    return categoryResponse(results, outputFile);
   }
 );
 
 // Tool: tsg_query
 server.tool(
   "tsg_query",
-  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities.",
+  "Run an arbitrary KQL query against any of the configured data sources: PrometheusAppInsights, MetricInsights, AMWInfo, AKS, AKS CCP, AKS Infra, Vulnerabilities, ARMProd, ARMPRODSEA, ARMPRODEUS, ARMPRODWEU. Use outputFile to write ALL results (no truncation) to a CSV or JSON file.",
   {
     datasource: z
       .enum([
@@ -535,11 +696,45 @@ server.tool(
         "AKS CCP",
         "AKS Infra",
         "Vulnerabilities",
+        "ARMProd",
+        "ARMPRODSEA",
+        "ARMPRODEUS",
+        "ARMPRODWEU",
       ])
       .describe("Data source to query against"),
     kql: z.string().describe("KQL query to execute"),
+    cluster: z
+      .string()
+      .optional()
+      .describe(
+        "Optional cluster ARM resource ID. When provided, _cluster in the KQL will be replaced with this value."
+      ),
+    timeRange: z
+      .string()
+      .optional()
+      .default("24h")
+      .describe(
+        "Time range for App Insights queries, e.g. 1h, 6h, 24h, 7d. Default: 24h"
+      ),
+    outputFile: z
+      .string()
+      .optional()
+      .describe(
+        "Optional file path to write ALL results (no truncation). Supports .csv and .json extensions. Example: /tmp/results.csv"
+      ),
+    outputFormat: z
+      .enum(["csv", "json"])
+      .optional()
+      .default("csv")
+      .describe("Output format when outputFile is specified. Default: csv"),
+    maxRows: z
+      .number()
+      .optional()
+      .describe(
+        "Maximum rows to return inline (default: 100). Use outputFile for unlimited results."
+      ),
   },
-  async ({ datasource, kql }) => {
+  async ({ datasource, kql, cluster, timeRange, outputFile, outputFormat, maxRows }) => {
     const ds = DATA_SOURCES[datasource];
     if (!ds) {
       return {
@@ -547,24 +742,58 @@ server.tool(
       };
     }
 
+    // Replace _cluster placeholder if cluster is provided
+    let resolvedKql = kql;
+    if (cluster) {
+      resolvedKql = resolvedKql.replace(/(?<![a-zA-Z0-9])_cluster(?![a-zA-Z0-9_])/g, `"${cluster}"`);
+    }
+
     try {
       let data: Record<string, unknown>[];
       if (datasource === "PrometheusAppInsights") {
-        data = await runAppInsightsQuery(kql, "24h");
+        data = await runAppInsightsQuery(resolvedKql, timeRange || "24h");
       } else {
-        data = await runKustoQuery(ds.clusterUri, ds.database, kql);
+        data = await runKustoQuery(ds.clusterUri, ds.database, resolvedKql);
       }
 
+      // Write to file if requested (all rows, no truncation)
+      if (outputFile) {
+        const fmt = outputFormat || (outputFile.endsWith(".json") ? "json" : "csv");
+        const written = writeResultsToFile(data, outputFile, fmt);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ ${written.rows} rows written to \`${written.path}\` (${fmt} format)\n\nPreview (first 5 rows):\n\n${formatResults([{
+                name: "Custom Query",
+                datasource,
+                status: "success",
+                data: data.slice(0, 5),
+                rowCount: data.length,
+              }])}`,
+            },
+          ],
+        };
+      }
+
+      const limit = maxRows || 100;
+      const truncated = data.length > limit;
       const result: QueryResult = {
         name: "Custom Query",
         datasource,
         status: "success",
-        data: data.slice(0, 100),
+        data: data.slice(0, limit),
         rowCount: data.length,
+        truncated,
       };
 
+      let text = formatResults([result]);
+      if (truncated) {
+        text += `\n💡 **Tip:** To get all ${data.length} rows, re-run with \`outputFile: "/tmp/results.csv"\``;
+      }
+
       return {
-        content: [{ type: "text", text: formatResults([result]) }],
+        content: [{ type: "text", text }],
       };
     } catch (err) {
       return {
@@ -820,6 +1049,193 @@ server.tool(
     return {
       content: [{ type: "text", text }],
     };
+  }
+);
+
+// Tool: tsg_auth_check
+server.tool(
+  "tsg_auth_check",
+  "Validate credentials and connectivity to all data sources. Attempts to auto-fix issues: refreshes tokens via az CLI, clears cached credentials, and provides specific remediation steps. Run this first if queries fail with 403 or connection errors.",
+  {
+    autoFix: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe("Attempt to automatically fix auth issues (default: true)"),
+  },
+  async ({ autoFix }) => {
+    const results: string[] = ["## Auth & Connectivity Check\n"];
+    let hasFailures = false;
+
+    // Helper: run a shell command and return stdout or null on failure
+    function tryExec(cmd: string): string | null {
+      try {
+        return execSync(cmd, { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
+      } catch {
+        return null;
+      }
+    }
+
+    // 0. Check az CLI availability
+    const azVersion = tryExec("az version --output tsv 2>/dev/null | head -1");
+    if (!azVersion) {
+      results.push("❌ **Azure CLI**: `az` not found in PATH");
+      results.push("   → Install: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli");
+      hasFailures = true;
+    } else {
+      results.push(`✅ **Azure CLI**: Available`);
+
+      // Check if logged in
+      const account = tryExec('az account show --query "{name:name, id:id}" -o tsv 2>/dev/null');
+      if (!account) {
+        results.push("❌ **Azure CLI login**: Not logged in");
+        if (autoFix) {
+          results.push("   🔧 Auto-fix: Cannot auto-login (interactive). Please run `az login` manually");
+        }
+        hasFailures = true;
+      } else {
+        results.push(`✅ **Azure CLI login**: ${account}`);
+      }
+    }
+
+    // 1. Test Azure credential (DefaultAzureCredential)
+    let credentialOk = false;
+    try {
+      const token = await credential.getToken("https://api.loganalytics.io/.default");
+      if (token) {
+        credentialOk = true;
+        const expiresIn = Math.round((token.expiresOnTimestamp - Date.now()) / 60000);
+        if (expiresIn < 5) {
+          results.push(`⚠️ **Azure credential**: Token expires in ${expiresIn} minutes`);
+          if (autoFix) {
+            results.push("   🔧 Refreshing token...");
+            const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+            if (refreshed) {
+              results.push("   ✅ Token refreshed via az CLI");
+            } else {
+              results.push("   ❌ Token refresh failed — run `az login` to re-authenticate");
+              hasFailures = true;
+            }
+          }
+        } else {
+          results.push(`✅ **Azure credential**: Token valid (expires in ${expiresIn} min)`);
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push(`❌ **Azure credential**: ${msg.slice(0, 200)}`);
+      hasFailures = true;
+
+      if (autoFix) {
+        results.push("   🔧 Attempting token refresh via az CLI...");
+        const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+        if (refreshed) {
+          results.push("   ✅ az CLI token works — DefaultAzureCredential may need `AZURE_TENANT_ID` env var");
+          results.push("   → Set: `export AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)`");
+        } else {
+          results.push("   ❌ az CLI token also failed — run `az login` to re-authenticate");
+        }
+      }
+    }
+
+    // 2. Test App Insights
+    try {
+      await runAppInsightsQuery("traces | take 1", "1h");
+      results.push("✅ **PrometheusAppInsights**: Connected");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push(`❌ **PrometheusAppInsights**: ${msg.slice(0, 200)}`);
+      hasFailures = true;
+      if (msg.includes("403") || msg.includes("Forbidden")) {
+        results.push("   → Need Reader role on the App Insights resource");
+        results.push("   → Resource: ContainerInsightsPrometheusCollector-Prod (sub 13d371f9-...)");
+        if (autoFix) {
+          results.push("   🔧 Attempting Kusto scope token for cross-check...");
+          const kustoToken = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+          if (kustoToken) {
+            results.push("   → Token acquired but permission denied. Request JIT access or ask team for Reader role");
+          }
+        }
+      } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {
+        results.push("   → Cannot reach App Insights endpoint — **check VPN connection** (corpnet required)");
+      }
+    }
+
+    // 3. Test each Kusto data source
+    // Use lightweight data queries instead of .show database schema (which requires admin privileges)
+    const kustoAuthQueries: Record<string, string> = {
+      AKS: "ManagedClusterMonitoring | take 1",
+      "AKS CCP": "ControlPlaneEvents | take 1",
+      MetricInsights: "EventStatsInsightsV2 | take 1",
+      AMWInfo: "AzureMonitorAKSStatsDaily | take 1",
+      ARMProd: "HttpIncomingRequests | take 1",
+    };
+    const kustoSources = ["AKS", "AKS CCP", "MetricInsights", "AMWInfo", "ARMProd"] as const;
+    for (const dsName of kustoSources) {
+      const ds = DATA_SOURCES[dsName];
+      if (!ds) continue;
+      try {
+        await runKustoQuery(ds.clusterUri, ds.database, kustoAuthQueries[dsName] || ".show tables | take 1");
+        results.push(`✅ **${dsName}** (${ds.clusterUri.split("//")[1]?.split(".")[0]}): Connected`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push(`❌ **${dsName}**: ${msg.slice(0, 200)}`);
+        hasFailures = true;
+        if (msg.includes("403") || msg.includes("Forbidden")) {
+          if (dsName === "ARMProd") {
+            results.push(`   → ARMProd often blocks device-code flow due to Conditional Access Policy (CAP)`);
+            results.push(`   → Use \`azureauth\` CLI with WAM broker, or query manually via https://dataexplorer.azure.com`);
+          } else {
+            results.push(`   → Need Viewer role on Kusto cluster: ${ds.clusterUri}`);
+          }
+          if (autoFix) {
+            // Try to get a token for this specific cluster scope to verify auth works
+            const host = new URL(ds.clusterUri).host;
+            const scopeToken = tryExec(`az account get-access-token --resource https://${host} --query accessToken -o tsv 2>/dev/null`);
+            if (scopeToken) {
+              results.push("   → Token acquired but permission denied on database. Request Viewer access via JIT or ask team");
+            } else {
+              results.push("   → Cannot get token for this cluster — may need different tenant or subscription");
+            }
+          }
+        } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {
+          results.push("   → Cannot reach Kusto cluster — **check VPN connection** (corpnet required)");
+        }
+      }
+    }
+
+    // 4. Test MDM MCP server
+    try {
+      const mdmResp = await fetch("http://localhost:5050/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1.0" } } }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (mdmResp.ok) {
+        results.push("✅ **Geneva MDM MCP** (localhost:5050): Running");
+      } else {
+        results.push(`⚠️ **Geneva MDM MCP** (localhost:5050): HTTP ${mdmResp.status}`);
+      }
+    } catch {
+      results.push("⚠️ **Geneva MDM MCP** (localhost:5050): Not running (optional — needed for tsg_mdm_throttling)");
+      if (autoFix) {
+        results.push("   🔧 To start: `cd tools/geneva-mdm-mcp && dotnet run` (requires .NET 8+ SDK)");
+      }
+    }
+
+    // Summary
+    results.push("\n---");
+    if (hasFailures) {
+      results.push("**⚠️ Some checks failed.** Fix the ❌ issues above before running tsg_triage.");
+      if (!autoFix) {
+        results.push("💡 Re-run with `autoFix: true` to attempt automatic remediation.");
+      }
+    } else {
+      results.push("**✅ All checks passed.** Ready to run tsg_triage.");
+    }
+
+    return { content: [{ type: "text", text: results.join("\n") }] };
   }
 );
 

@@ -10,7 +10,7 @@ export interface Query {
 export type QueryCategory = 
   | "triage" | "errors" | "config" | "workload"
   | "pods" | "logs" | "controlPlane" | "metricInsights"
-  | "dimensionAnalysis";
+  | "dimensionAnalysis" | "armInvestigation";
 
 export const QUERIES: Record<QueryCategory, Query[]> = {
   triage: [
@@ -25,6 +25,23 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | summarize dcount(tostring(customDimensions.cluster)) by addonversion, bin(timestamp, totimespan(Interval))
 | order by timestamp desc 
 | top 1 by timestamp`,
+    },
+    {
+      name: "Component Versions (ME, OtelCollector, Golang, Prometheus)",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > _startTime
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "ME_VERSION" or message has "OTEL_VERSION" or message has "GOLANG_VERSION" or message has "PROMETHEUS_VERSION"
+| extend controllertype=tostring(customDimensions.controllertype)
+| extend cleaned = replace_regex(message, @"\\x1b\\[[0-9;]*m", "")
+| extend meVersion = extract(@"ME_VERSION=([^\\s]+)", 1, cleaned)
+| extend otelVersion = extract(@"OTEL_VERSION=([^\\s]+)", 1, cleaned)
+| extend golangVersion = extract(@"GOLANG_VERSION=([^\\s]+)", 1, cleaned)
+| extend promVersion = extract(@"PROMETHEUS_VERSION=([^\\s]+)", 1, cleaned)
+| where isnotempty(meVersion) or isnotempty(otelVersion) or isnotempty(golangVersion) or isnotempty(promVersion)
+| summarize LastSeen=max(timestamp) by meVersion, otelVersion, golangVersion, promVersion, controllertype
+| order by LastSeen desc`,
     },
     {
       name: "Cluster Region",
@@ -92,6 +109,26 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | distinct Location`,
     },
     {
+      name: "⚠️ Private Cluster Check (definitive — from ManagedClusterSnapshot)",
+      datasource: "AKS",
+      kql: `// DEFINITIVE private cluster check — uses subscription+clusterName, no CCP ID required
+// privateLinkProfile.enablePrivateCluster = Private V1 (legacy)
+// privateConnectProfile.enabled + !enablePublicEndpoint = Private V2 (private connect)
+ManagedClusterSnapshot
+| where TIMESTAMP > ago(7d)
+| where subscription == '_subscriptionId'
+| where clusterName has '_clusterName'
+| top 1 by TIMESTAMP desc
+| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
+| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
+| extend isPrivateV2 = isPrivateConnect and not(coalesce(tobool(privateConnectProfile.enablePublicEndpoint), false))
+| extend isPrivateCluster = isPrivateV1 or isPrivateV2
+| extend isNetworkIsolated = outboundType contains "none" or outboundType contains "block"
+| extend hasHttpProxy = isnotempty(httpProxyConfig) and httpProxyConfig != "na"
+| extend privateType = case(isPrivateV1, "Private V1 (privateLinkProfile)", isPrivateV2, "Private V2 (privateConnect)", "Not Private")
+| project clusterName, ['Is Private Cluster']=isPrivateCluster, ['Private Type']=privateType, ['Network Isolated']=isNetworkIsolated, ['Has HTTP Proxy']=hasHttpProxy, privateDNSZone, publicNetworkAcess, azurePortalFQDN`,
+    },
+    {
       name: "Internal DCE and DCR Ids",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
@@ -104,6 +141,17 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 //| extend interval=(_endTime - _startTime) / 4
 //| summarize dcount(tostring(customDimensions.cluster)) by addonversion, bin(timestamp, interval)
 //| order by timestamp`,
+    },
+    {
+      name: "⚠️ Missing DCE for Private Cluster (AMCS 403)",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| mv-expand message = split(message, "\\n") to typeof(string)
+| where message contains 'Data collection endpoint must be used to access configuration over private link.'
+| summarize HitCount=count(), FirstSeen=min(timestamp), LastSeen=max(timestamp) by controllertype=tostring(customDimensions.controllertype)
+| extend Status="❌ MISSING DCE — private cluster requires a Data Collection Endpoint for AMCS access. Create a DCE and link it via DCRA."`,
     },
     {
       name: "Token Adapter Health",
@@ -155,6 +203,15 @@ export const QUERIES: Record<QueryCategory, Query[]> = {
 | join kind=innerunique AzureMonitorWorkspaceStatsDaily on AMWAccountResourceId
 | distinct AzureMonitorWorkspace=AMWAccountResourceId, MDMAccountName, Location, DCRId
 `,
+    },
+    {
+      name: "Azure Monitor Workspace(s) in Subscription (fallback)",
+      datasource: "AMWInfo",
+      kql: `// Falls back to subscription-level search when no DCR is linked to the cluster
+AzureMonitorWorkspaceStatsDaily
+| where Timestamp > ago(30d)
+| where SubscriptionGuid == extract("/subscriptions/([^/]+)", 1, _cluster)
+| distinct AMWAccountResourceId, AMWAccountUniqueName, MDMAccountName, Location, AMWCreationTime`,
     },
     {
       name: "AKS Cluster Network Settings",
@@ -687,6 +744,16 @@ ManagedClusterMonitoring
     | project cluster_id, subscription, resourceGroup`,
     },
     {
+      name: "CCP Cluster ID (AgentPoolSnapshot fallback)",
+      datasource: "AKS",
+      kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(7d)
+| where isnotempty(cluster_id)
+| top 1 by TIMESTAMP desc
+| project cluster_id`,
+    },
+    {
       name: "Node Pool Capacity",
       datasource: "AKS",
       kql: `AgentPoolSnapshot
@@ -753,6 +820,43 @@ KubeAudit
     enableAutoScaling, minCount=toint(minCount), maxCount=toint(maxCount), provisioningState,
     isFull=iff(enableAutoScaling == true, size >= toint(maxCount), false)
 | order by name asc, PreciseTimeStamp asc`,
+    },
+    {
+      name: "AKS Upgrade History",
+      datasource: "AKS",
+      kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(48h)
+| summarize min_ts=min(TIMESTAMP), max_ts=max(TIMESTAMP), latest_size=arg_max(TIMESTAMP, size).size by name, orchestratorVersion
+| order by name asc, min_ts asc`,
+    },
+    {
+      name: "Node Pool Versions (resource_id fallback)",
+      datasource: "AKS",
+      kql: `AgentPoolSnapshot
+| where resource_id =~ _cluster
+| where TIMESTAMP > ago(48h)
+| summarize arg_max(TIMESTAMP, *) by name
+| project TIMESTAMP, name, orchestratorVersion, osSku, currentNodes=size, distroVersion, imageRef
+| order by name asc`,
+    },
+    {
+      name: "Cluster Overview (subscription+name lookup, no CCP required)",
+      datasource: "AKS",
+      kql: `// Direct lookup — works even when CCP cluster ID resolution fails
+ManagedClusterSnapshot
+| where TIMESTAMP > ago(7d)
+| where subscription == '_subscriptionId'
+| where clusterName has '_clusterName'
+| top 1 by TIMESTAMP desc
+| extend k8sVersion = tostring(orchestratorProfile.orchestratorVersion)
+| extend skuTier = iff(isempty(sku.tier), "free", tolower(sku.tier))
+| extend isPrivateV1 = coalesce(tobool(privateLinkProfile.enablePrivateCluster), false)
+| extend isPrivateConnect = coalesce(tobool(privateConnectProfile.enabled), false)
+| extend isPrivateCluster = isPrivateV1 or isPrivateConnect
+| extend upgradeChannel = coalesce(tostring(autoUpgradeProfile.upgradeChannel), "none")
+| extend azureMonitorMetricsEnabled = tobool(azureMonitorProfile.metrics.enabled)
+| project clusterName, location, k8sVersion, skuTier, isPrivateCluster, upgradeChannel, azureMonitorMetricsEnabled, azurePortalFQDN, createdTime`,
     },
   ],
   errors: [
@@ -1126,6 +1230,37 @@ customMetrics
 | extend errorDetail = iff(isempty(errorDetail), extract(@"(Cannot load configuration:.*)", 1, preContext), errorDetail)
 | where isnotempty(errorDetail)
 | summarize LastSeen=max(timestamp), Count=count() by errorDetail=substring(errorDetail, 0, 300), controllertype
+| order by Count desc`,
+    },
+    {
+      name: "Custom Config YAML Error Lines",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > _startTime
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "prom-config-validator" and message has "validation failed"
+| where message has "unmarshal"
+| extend controllertype=tostring(customDimensions.controllertype)
+| extend cleaned = replace_regex(message, @"\\x1b\\[[0-9;]*m", "")
+| extend errorLines = extract_all(@"line (\\d+): (field \\S+ not found in type \\S+)", cleaned)
+| mv-expand errorLines
+| project timestamp, controllertype, lineNum = tostring(errorLines[0]), errorMsg = tostring(errorLines[1])
+| distinct lineNum, errorMsg, controllertype
+| order by toint(lineNum) asc`,
+    },
+    {
+      name: "Custom Config OTel Loading Errors",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > _startTime
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "Cannot load configuration"
+| extend controllertype=tostring(customDimensions.controllertype)
+| extend podname=tostring(customDimensions.podname)
+| extend cleaned = replace_regex(message, @"\\x1b\\[[0-9;]*m", "")
+| extend idx = indexof(cleaned, "Cannot load configuration")
+| extend errorBlock = substring(cleaned, idx, 500)
+| summarize LastSeen=max(timestamp), Count=count() by errorBlock=substring(errorBlock, 0, 500), controllertype
 | order by Count desc`,
     },
     {
@@ -2122,6 +2257,69 @@ KubeAudit
 | project PreciseTimeStamp, hpaName, minReplicas, maxReplicas, currentReplicas, desiredReplicas, atLimit`,
     },
     {
+      name: "HPA Scaling Metric and Oscillation",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeAudit
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where tostring(objectRef) has 'ama-metrics-hpa'
+| where verb == 'update'
+| extend reqObj = todynamic(requestObject)
+| extend desiredReplicas = toint(reqObj.status.desiredReplicas), currentReplicas = toint(reqObj.status.currentReplicas)
+| extend specMetrics = tostring(reqObj.spec.metrics), currentMetrics = tostring(reqObj.status.currentMetrics)
+| where isnotempty(currentReplicas)
+| summarize min_replicas=min(currentReplicas), max_replicas=max(currentReplicas), avg_replicas=round(avg(currentReplicas),1), samples=count() by bin(PreciseTimeStamp, 15m)
+| order by PreciseTimeStamp asc`,
+    },
+    {
+      name: "HPA Metric Configuration",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeAudit
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where tostring(objectRef) has 'ama-metrics-hpa'
+| where verb == 'update'
+| extend reqObj = todynamic(requestObject)
+| extend specMetrics = tostring(reqObj.spec.metrics)
+| where isnotempty(specMetrics)
+| summarize arg_max(PreciseTimeStamp, specMetrics)
+| project PreciseTimeStamp, specMetrics`,
+    },
+    {
+      name: "Cluster Autoscaler Scale Decisions",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+ClusterAutoscaler
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where log has 'ScaleUp' or log has 'ScaleDown' or log has 'scale_up' or log has 'scale_down' or log has 'unschedulable' or log has 'Unschedulable' or log has 'removing node'
+| where not(log has 'No unschedulable')
+| where not(log has 'deletion timestamp')
+| project PreciseTimeStamp, logSnippet=substring(log, 0, 300)
+| order by PreciseTimeStamp desc
+| take 50`,
+    },
+    {
+      name: "Cluster Autoscaler No Unschedulable Count",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+ClusterAutoscaler
+| where PreciseTimeStamp between(queryFrom .. queryTo)
+| where cluster_id == queryCcpNamespace
+| where log has 'No unschedulable pods'
+| summarize count_no_unschedulable=count(), first_seen=min(PreciseTimeStamp), last_seen=max(PreciseTimeStamp)`,
+    },
+    {
       name: "Pod Resource Limits",
       datasource: "AKS CCP",
       kql: `let queryCcpNamespace = AKSClusterID;
@@ -2240,6 +2438,45 @@ configChanges | union restartEvents | union errorSpikes
 | summarize avgSamplesPerMin = round(avg(value), 0) by pod
 | order by avgSamplesPerMin desc
 | take 20`,
+    },
+    {
+      name: "Scrape Samples Per Job Over Time",
+      datasource: "PrometheusAppInsights",
+      kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "prometheus_scrape_samples_post_metric_relabeling"
+| extend job = tostring(customDimensions.job)
+| summarize avg_samples=round(avg(value), 0), max_samples=max(value) by bin(timestamp, totimespan(Interval)), job
+| order by timestamp asc, job asc`,
+    },
+    {
+      name: "ME Throughput by Pod Type Over Time",
+      datasource: "PrometheusAppInsights",
+      kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "meMetricsProcessedCount"
+| extend podname = tostring(customDimensions.podname)
+| extend podtype = case(
+    podname startswith "ama-metrics-win", "windows-ds",
+    podname startswith "ama-metrics-node", "linux-ds",
+    "replicaset")
+| summarize total=sum(value) by bin(timestamp, totimespan(Interval)), podtype
+| order by timestamp asc, podtype asc`,
+    },
+    {
+      name: "Node Exporter Sample Count Trend",
+      datasource: "PrometheusAppInsights",
+      kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "prometheus_scrape_samples_post_metric_relabeling"
+| extend job = tostring(customDimensions.job)
+| where job == "node"
+| where value > 0
+| summarize count_nonzero=count(), avg_samples=round(avg(value), 0), max_samples=max(value), p50=round(percentile(value, 50), 0), p95=round(percentile(value, 95), 0) by bin(timestamp, totimespan(Interval))
+| order by timestamp asc`,
     },
   ],
   pods: [
@@ -2845,6 +3082,277 @@ GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDime
 | distinct MetricName
 | order by MetricName asc`,
     },
+    {
+      name: "Per-Dimension Cardinality Breakdown (Top 10 Metrics)",
+      datasource: "MetricInsights",
+      kql: `// Shows which dimensions cause cardinality explosion for the top 10 highest-cardinality metrics
+let _mdmAccount = mdmAccountID;
+let _metric = dynamic(null);
+let _namespace = dynamic(['customdefault']);
+let _preaggDimensions = dynamic(null);
+let _numOfDaysQueryLookBack = 180;
+let topMetrics = GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| summarize ['Daily TS']=sum(DailyTSAcrossAccounts) by MetricName
+| top 10 by ['Daily TS'];
+GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| where MetricName in ((topMetrics | project MetricName))
+| project MetricName, Dimensions, DailyTSAcrossAccounts
+| mv-expand Dimensions
+| extend DimName = tostring(Dimensions)
+| summarize ['Unique Values']=dcount(DimName), ['Total TS']=sum(DailyTSAcrossAccounts) by MetricName, DimName
+| order by MetricName asc, ['Unique Values'] desc`,
+    },
+    {
+      name: "Cardinality Trend Over Time (Top 5 Metrics, Last 30d)",
+      datasource: "MetricInsights",
+      kql: `// Tracks daily time series growth for top 5 metrics to detect cardinality spikes
+let _mdmAccount = mdmAccountID;
+let _namespace = dynamic(['customdefault']);
+EventStatsInsightsV2
+| where MonitoringAccount == _mdmAccount
+| where MetricNamespace in~ (_namespace)
+| where PreciseTimeStamp > ago(30d)
+| summarize ['Daily TS']=max(DailyTimeSeriesCount) by MetricName, bin(PreciseTimeStamp, 1d)
+| partition hint.strategy=native by MetricName (top 1 by ['Daily TS'])
+| top 5 by ['Daily TS']
+| project TopMetric=MetricName;
+EventStatsInsightsV2
+| where MonitoringAccount == _mdmAccount
+| where MetricNamespace in~ (_namespace)
+| where PreciseTimeStamp > ago(30d)
+| where MetricName in ((TopMetric))
+| summarize ['Daily TS']=max(DailyTimeSeriesCount) by MetricName, Day=bin(PreciseTimeStamp, 1d)
+| order by MetricName asc, Day asc`,
+    },
+    {
+      name: "Metric Dimension Names and Value Counts",
+      datasource: "MetricInsights",
+      kql: `// For a specific high-cardinality metric, shows each dimension and how many unique values it has
+// Useful to identify which label (e.g. pod, container_id, instance) is causing cardinality explosion
+let _mdmAccount = mdmAccountID;
+let _metric = dynamic(null);
+let _namespace = dynamic(['customdefault']);
+let _preaggDimensions = dynamic(null);
+let _numOfDaysQueryLookBack = 180;
+GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| summarize ['Unique Dimension Combos']=count(), ['Total Daily TS']=sum(DailyTSAcrossAccounts), ['Avg Sample Rate']=round(sum(AvgEventRate), 0) by MetricName
+| where ['Unique Dimension Combos'] > 50
+| extend ['Cardinality Risk'] = case(
+    ['Unique Dimension Combos'] > 1000, "🔴 Critical",
+    ['Unique Dimension Combos'] > 500, "🟠 High",
+    ['Unique Dimension Combos'] > 100, "🟡 Medium",
+    "🟢 Low")
+| order by ['Unique Dimension Combos'] desc
+| take 20`,
+    },
+  ],
+  armInvestigation: [
+    {
+      name: "ARM PUT Operations by Resource Provider (Subscription Health)",
+      datasource: "ARMPRODSEA",
+      kql: `// Switch datasource to ARMPRODSEA/ARMPRODEUS/ARMPRODWEU based on cluster region
+// Asia/Pacific/UK/Africa → ARMPRODSEA, Americas → ARMPRODEUS, Europe → ARMPRODWEU
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where httpMethod == 'PUT'
+| summarize count() by toupper(targetResourceProvider)
+| order by count_ desc
+| take 30`,
+    },
+    {
+      name: "Managed Clusters PUT Operations (Addon Enablement Check)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.CONTAINERSERVICE'
+| where toupper(targetResourceType) has 'MANAGEDCLUSTERS'
+| where httpMethod == 'PUT'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "Microsoft.Insights PUT/DELETE Operations (DCR/DCE/DCRA)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod in ('PUT', 'DELETE')
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "Microsoft.Insights DELETE Details (DCR/DCE/DCRA Deletion)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod == 'DELETE'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, resourceType, resourceName, targetUri, userAgent
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "ContainerService Operations Breakdown",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.CONTAINERSERVICE'
+| summarize count() by httpMethod, toupper(targetResourceType)
+| order by count_ desc`,
+    },
+    {
+      name: "ARM Outgoing Requests to Insights RP (AKS RP → Monitor RP)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpOutgoingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, correlationId
+| order by TIMESTAMP desc
+| take 50`,
+    },
+    {
+      name: "All Operations on Specific Cluster (Last 30d)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where targetUri has '_clusterName'
+| project TIMESTAMP, httpMethod, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "All Subscription DELETEs on Microsoft.Insights (DCR/DCE/DCRA)",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpMethod == 'DELETE'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| extend parentResource = extract(@'/providers/([^/]+/[^/]+/[^/]+)/providers/microsoft\\.insights', 1, tolower(targetUri))
+| project TIMESTAMP, httpStatusCode, resourceGroup, resourceType, resourceName, parentResource, targetUri, userAgent
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "AMW (Microsoft.Monitor) All Operations",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.MONITOR'
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.monitor/([^/]+)', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.monitor/[^/]+/([^?/]+)', 1, tolower(targetUri))
+| summarize count(), methods=make_set(httpMethod), statuses=make_set(httpStatusCode), firstSeen=min(TIMESTAMP), lastSeen=max(TIMESTAMP) by resourceGroup, resourceType, resourceName
+| order by count_ desc`,
+    },
+    {
+      name: "AMW (Microsoft.Monitor) PUT/DELETE Operations",
+      datasource: "ARMPRODSEA",
+      kql: `HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.MONITOR'
+| where httpMethod in ('PUT', 'DELETE')
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend resourceType = extract(@'/providers/microsoft\\.monitor/([^/]+)', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\\.monitor/[^/]+/([^?/]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, resourceType, resourceName, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCRA Operations for Cluster (dataCollectionRuleAssociations)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows all DCRA operations (PUT/GET/DELETE) targeting this specific cluster
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has tolower('_clusterName')
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| extend dcraName = extract(@'/providers/microsoft\.insights/datacollectionruleassociations/([^?/]+)', 1, tolower(targetUri))
+| extend httpMethodAndStatus = strcat(httpMethod, ' → ', httpStatusCode)
+| project TIMESTAMP, httpMethodAndStatus, dcraName, httpStatusCode, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCRA Failed Operations (4xx/5xx errors)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows failed DCRA/DCR/DCE operations — creation failures, permission errors, region mismatches
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where toupper(targetResourceProvider) == 'MICROSOFT.INSIGHTS'
+| where httpStatusCode >= 400
+| extend resourceType = extract(@'/providers/microsoft\.insights/([^/]+)/', 1, tolower(targetUri))
+| extend resourceName = extract(@'/providers/microsoft\.insights/[^/]+/([^?]+)', 1, tolower(targetUri))
+| extend parentResource = extract(@'/providers/([^/]+/[^/]+/[^/]+)/providers/microsoft\.insights', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceType, resourceName, parentResource, targetUri, userAgent, correlationId
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCE Operations in Subscription (dataCollectionEndpoints)",
+      datasource: "ARMPRODSEA",
+      kql: `// Shows all DCE create/delete operations — critical for private link clusters
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionendpoints'
+| where httpMethod in ('PUT', 'DELETE')
+| extend resourceGroup = extract(@'/resourcegroups/([^/]+)/', 1, tolower(targetUri))
+| extend dceName = extract(@'/datacollectionendpoints/([^?/]+)', 1, tolower(targetUri))
+| project TIMESTAMP, httpMethod, httpStatusCode, resourceGroup, dceName, targetUri, userAgent
+| order by TIMESTAMP desc`,
+    },
+    {
+      name: "DCRA History Timeline (datacollectionruleassociations on cluster)",
+      datasource: "ARMPRODSEA",
+      kql: `// Full timeline of DCRA create/delete/get operations on the cluster
+// Reveals: setup attempts, teardown cycles, 403 permission failures, naming conventions tried
+// Critical for multi-AMW routing issues — shows if partner DCRA was deleted or never created
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| where tolower(targetUri) has '_clusterName'
+| where httpStatusCode != -1
+| extend assocName = extract(@'(?i)datacollectionruleassociations/([^?/]+)', 1, targetUri)
+| summarize
+    FirstSeen = min(TIMESTAMP),
+    LastSeen = max(TIMESTAMP),
+    PutSuccess = countif(httpMethod == 'PUT' and httpStatusCode >= 200 and httpStatusCode < 300),
+    PutFailed = countif(httpMethod == 'PUT' and httpStatusCode >= 400),
+    DeleteSuccess = countif(httpMethod == 'DELETE' and httpStatusCode >= 200 and httpStatusCode < 300),
+    DeleteFailed = countif(httpMethod == 'DELETE' and httpStatusCode >= 400),
+    GetCount = countif(httpMethod == 'GET')
+    by assocName
+| order by LastSeen desc`,
+    },
+    {
+      name: "DCRA Detailed Timeline for Specific Partner",
+      datasource: "ARMPRODSEA",
+      kql: `// Detailed chronological timeline of ALL DCRA operations on the cluster
+// Use to trace exact sequence of create/delete cycles and identify permission issues
+// Filter further by adding: | where assocName has '<partner-keyword>'
+HttpIncomingRequests
+| where TIMESTAMP > ago(30d)
+| where subscriptionId == '_subscriptionId'
+| where tolower(targetUri) has 'datacollectionruleassociations'
+| where tolower(targetUri) has '_clusterName'
+| where httpStatusCode != -1
+| extend assocName = extract(@'(?i)datacollectionruleassociations/([^?/]+)', 1, targetUri)
+| project TIMESTAMP, httpMethod, httpStatusCode, assocName
+| order by TIMESTAMP asc`,
+    },
   ],
 
   dimensionAnalysis: [
@@ -2989,17 +3497,28 @@ export function parameterizeQuery(
   q = q.replace(/totimespan\(Interval\)/g, `totimespan(${interval})`);
   q = q.replace(/\bInterval\b/g, `"${interval}"`);
 
-  // Replace cluster parameter
-  q = q.replace(/_cluster/g, `"${params.cluster}"`);
+  // Replace cluster parameter — use word boundary to avoid corrupting variables
+  // like local_clusterVersion that contain "_cluster" as a substring
+  q = q.replace(/(?<![a-zA-Z0-9])_cluster(?![a-zA-Z0-9_])/g, `"${params.cluster}"`);
 
+  // Replace ARM investigation tokens derived from the cluster ARM resource ID
+  // Extract subscriptionId and cluster name from: /subscriptions/{sub}/resourceGroups/{rg}/providers/.../managedClusters/{name}
+  const subMatch = params.cluster.match(/\/subscriptions\/([^/]+)\//i);
+  const nameMatch = params.cluster.match(/\/managedClusters\/([^/]+)$/i);
+  if (subMatch) {
+    q = q.replace(/'_subscriptionId'/g, `'${subMatch[1]}'`);
+  }
+  if (nameMatch) {
+    q = q.replace(/'_clusterName'/g, `'${nameMatch[1]}'`);
+  }
   // Replace MDM account if provided
   if (params.mdmAccountId) {
-    q = q.replace(/mdmAccountID/g, `"${params.mdmAccountId}"`);
+    q = q.replace(/(?<![a-zA-Z0-9])mdmAccountID(?![a-zA-Z0-9_])/g, `"${params.mdmAccountId}"`);
   }
 
   // Replace AKS cluster ID if provided
   if (params.aksClusterId) {
-    q = q.replace(/AKSClusterID/g, `"${params.aksClusterId}"`);
+    q = q.replace(/(?<![a-zA-Z0-9])AKSClusterID(?![a-zA-Z0-9_])/g, `"${params.aksClusterId}"`);
   }
 
   // Replace metric name if provided

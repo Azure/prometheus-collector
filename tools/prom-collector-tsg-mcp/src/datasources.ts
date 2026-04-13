@@ -51,6 +51,34 @@ export const DATA_SOURCES: Record<string, DataSource> = {
     database: "ShaVulnMgmt",
     description: "Image CVE vulnerability scanning",
   },
+  ARMProd: {
+    name: "ARMProd",
+    clusterUri: "https://armprod.kusto.windows.net",
+    database: "ARMProd",
+    description:
+      "ARM global query proxy — routes to regional clusters. Prefer regional clusters (ARMPRODSEA, ARMPRODEUS, ARMPRODWEU) for direct queries.",
+  },
+  ARMPRODSEA: {
+    name: "ARMPRODSEA",
+    clusterUri: "https://armprodsea.southeastasia.kusto.windows.net",
+    database: "Requests",
+    description:
+      "ARM regional cluster for Asia/Pacific/UK/Africa (East Asia, Southeast Asia, Australia, Japan, Korea, India, Israel, UAE, UK, South Africa)",
+  },
+  ARMPRODEUS: {
+    name: "ARMPRODEUS",
+    clusterUri: "https://armprodeus.eastus.kusto.windows.net",
+    database: "Requests",
+    description:
+      "ARM regional cluster for Americas (East US, West US, Central US, Canada, Brazil, etc.)",
+  },
+  ARMPRODWEU: {
+    name: "ARMPRODWEU",
+    clusterUri: "https://armprodweu.westeurope.kusto.windows.net",
+    database: "Requests",
+    description:
+      "ARM regional cluster for Europe (West Europe, North Europe, Germany, France, Switzerland, Norway, Sweden, etc.)",
+  },
 };
 
 // App Insights REST API config (for PrometheusAppInsights queries)
