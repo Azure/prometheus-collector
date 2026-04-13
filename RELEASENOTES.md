@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 04-09-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa-cfg`
 * AKS and Arc Container Images :
   + Remove Waypoint Proxy default scrape target (https://github.com/Azure/prometheus-collector/pull/1431)
   + update dropped labels in ztunnel default scrape config (https://github.com/Azure/prometheus-collector/pull/1448)
