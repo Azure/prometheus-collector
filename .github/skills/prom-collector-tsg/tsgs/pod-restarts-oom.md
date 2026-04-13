@@ -37,4 +37,26 @@ Run `tsg_errors` and `tsg_workload`. Then:
 5. If DaemonSet pods are OOMing but ReplicaSet pods are healthy, the wrong-configmap pattern is almost certainly the cause
 
 **ama-metrics-operator-targets:**
-- Rare. Check if service discovery is not scoped to specific namespaces (e.g. kube-api-server endpoints should be scoped to `default` namespace)
+- Check if service discovery is not scoped to specific namespaces (e.g. kube-api-server endpoints should be scoped to `default` namespace)
+- **Stakater Reloader / TLS certificate rotation crash loop** — this is the most common operator-targets failure pattern. Symptoms: thousands of restarts per day, every pod gets a different ReplicaSet name, `tls: bad certificate` errors in TA logs, collectors report "Failed to reach Target Allocator endpoint with HTTPS". The chain:
+  1. The addon uses cert-manager-generated TLS secrets (`ama-metrics-operator-targets-server-tls-secret` and `client-tls-secret`) for mTLS between collectors and the target allocator
+  2. If the customer has **Stakater Reloader** (or similar secret-watching controller) installed, it detects TLS secret updates and triggers deployment rollouts on `ama-metrics-operator-targets`
+  3. The constant rollouts create new pods with new certs, but collector pods still hold stale client certs → TLS handshake failures → TA crashes (exit code 1)
+  4. This creates a vicious cycle: secret change → rollout → crash → repeat (5,000+ restarts/day)
+  5. **Impact:** Target allocator never stays running → no scrape target distribution → no kube-state-metrics data → recording rules empty. DaemonSet metrics (cadvisor, kubelet, node-exporter) are unaffected since they don't depend on the TA
+  - **Detection:** Run `tsg_pods` — if `ama-metrics-operator-targets` has hundreds/thousands of restarts with `reason: Error` and many different ReplicaSet names, this is the pattern. Run `tsg_errors` → check "TargetAllocator Errors" for `tls: bad certificate` messages
+  - **Fix (recommended):** Set `https_config = false` in `ama-metrics-settings-configmap` to disable TLS between TA and collectors entirely. This eliminates certificate generation, so there are no secrets for the reloader to trigger on:
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ama-metrics-settings-configmap
+      namespace: kube-system
+    data:
+      prometheus-collector-settings: |-
+        cluster_alias = ""
+        https_config = false
+    ```
+    This setting is durable — it survives addon upgrades since the configmap is customer-managed. The tradeoff is that TA↔collector traffic is unencrypted within the cluster network (acceptable for most private AKS clusters)
+  - **Alternative fix:** Exclude the operator-targets deployment from Stakater Reloader by annotating `reloader.stakater.com/auto=false`, but this annotation may be overwritten on addon upgrades (the deployment is Helm-managed)
+  - **After applying either fix:** Delete the current operator-targets pod to force a clean start: `kubectl delete pod -n kube-system -l app.kubernetes.io/name=ama-metrics-operator-targets`

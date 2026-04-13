@@ -419,6 +419,7 @@ Some ME internals are not documented in EngHub (e.g. the exact dimension count l
 | ARC cluster pod restarts | `tsg_errors` + `tsg_logs` | Firewall / Network (ARC/Azure Local) |
 | Proxy / auth proxy issues | `tsg_errors` + `tsg_config` | Proxy / Authenticated Proxy |
 | Target allocator errors | `tsg_errors` | Pod Restarts (operator-targets) |
+| TA crash loop / Reloader TLS storm | `tsg_pods` + `tsg_errors` | Pod Restarts (operator-targets cert rotation) |
 | Token/auth errors | `tsg_errors` | Missing Metrics (auth issues) |
 | Liveness probe 503 | `tsg_errors` | Liveness Probe Failures |
 | Control plane metrics missing | `tsg_control_plane` | Control Plane Metrics |
