@@ -9,6 +9,8 @@ var (
 		// Arc token adapter
 		"create or renew cluster identity error",
 		"get token from status error",
+		// Arc MSI adapter - transient API server errors
+		"Error in the Getting Config",
 		// Arc node-exporter
 		"Failed to open directory, disabling udev device properties",
 		// KSM

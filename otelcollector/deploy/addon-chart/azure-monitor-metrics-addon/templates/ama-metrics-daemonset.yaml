@@ -1,6 +1,6 @@
 {{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 {{/* Get sizes */}}
-{{- $useDaemonSetSizing := and .Values.global.commonGlobals.isAutomaticSKU .Values.AzureMonitorMetrics.enableDaemonSetSizing -}}
+{{- $useDaemonSetSizing := and (eq .Values.Azure.Cluster.Kind "automatic") .Values.AzureMonitorMetrics.enableDaemonSetSizing -}}
 {{- $singleSize := dict "containers" (dict "addon-token-adapter" (dict "cpuLimit" "500m" "memoryLimit" "500Mi" "cpuRequest" "20m" "memoryRequest" "30Mi") "prometheus-collector" (dict "cpuLimit" .Values.AzureMonitorMetrics.DsCPULimitLinux "memoryLimit" .Values.AzureMonitorMetrics.DsMemoryLimitLinux "cpuRequest" .Values.AzureMonitorMetrics.DsCPURequestLinux "memoryRequest" .Values.AzureMonitorMetrics.DsMemoryRequestLinux)) -}}
 {{- $sizes := list ($singleSize) -}}
 {{- if $useDaemonSetSizing -}}
@@ -61,8 +61,8 @@ spec:
           resources:
             limits:
               {{- $containerResources := index $size.containers "prometheus-collector" }}
-              cpu: {{ $containerResources.cpuLimit }}
-              memory: {{ $containerResources.memoryLimit }}
+              cpu: {{ $.Values.AzureMonitorMetrics.DsCPULimitLinux }}
+              memory: {{ $.Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
             requests:
               cpu: {{ $containerResources.cpuRequest }}
               memory: {{ $containerResources.memoryRequest }}
