@@ -169,6 +169,12 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-global-settings-crs.yaml)
             workflows=(configprocessingcommon globalextlabels)
             ;;
+        testkube-config-test-controlplane-istio-crs.yaml)
+            workflows=(configprocessingcommon controlplaneistioenabled)
+            ;;
+        testkube-config-test-mip-false-crs.yaml)
+            workflows=(configprocessingmipfalse mipfalse)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1

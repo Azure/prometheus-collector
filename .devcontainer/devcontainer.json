@@ -1,0 +1,10 @@
+{
+  "name": "prometheus-collector",
+  "image": "mcr.microsoft.com/devcontainers/go:1.23",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "remoteEnv": {
+    "GOPATH": "/go",
+    "GOFLAGS": "-vet=off"
+  }
+}

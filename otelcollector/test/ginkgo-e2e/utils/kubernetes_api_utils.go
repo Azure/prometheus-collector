@@ -123,6 +123,15 @@ func CheckMinimalIngestionProfileTrue(clientset *kubernetes.Clientset, namespace
 }
 
 /*
+ * Convenience wrapper that ensures MINIMAL_INGESTION_PROFILE is logged as false for all containers
+ * in all pods matching the provided label selector. This is used when the settings configmap
+ * explicitly sets minimalingestionprofile = false (v1) or minimal-ingestion-profile: enabled = false (v2).
+ */
+func CheckMinimalIngestionProfileFalse(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
+	return CheckContainerLogsContainKeyValue(clientset, namespace, labelName, labelValue, "prometheus-collector", "MINIMAL_INGESTION_PROFILE", "false")
+}
+
+/*
  * Returns all pods in the given namespace with the given label.
  */
 func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKey string, labelValue string) ([]corev1.Pod, error) {
