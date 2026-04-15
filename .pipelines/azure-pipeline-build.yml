@@ -186,9 +186,9 @@ extends:
             # export HELM_SEMVER=$SETUP_SEMVER
             # export IMAGE_TAG=$SETUP_SEMVER
             # export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
-            export HELM_SEMVER=6.26.0-ext-main-03-05-2026-701eb75f-2
-            export IMAGE_TAG=6.26.0-main-03-05-2026-701eb75f
-            export IMAGE_TAG_WINDOWS=6.26.0-main-03-05-2026-701eb75f-win
+            export HELM_SEMVER=6.27.0-main-04-10-2026-196e83aa
+            export IMAGE_TAG=6.27.0-main-04-10-2026-196e83aa
+            export IMAGE_TAG_WINDOWS=6.27.0-main-04-10-2026-196e83aa-win
             export INCLUDE_DEPENDENT_CHARTS=true
             env
             envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
@@ -2063,13 +2063,11 @@ extends:
         - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
-          HELM_SEMVER: 6.26.0-addon-token-adapter-test
-          #HELM_SEMVER: 6.26.0-ext-t-shirt-sizing
-          IMAGE_TAG: 6.26.0-main-03-05-2026-701eb75f
-          IMAGE_TAG_WINDOWS: 6.26.0-main-03-05-2026-701eb75f-win
+          HELM_SEMVER: 6.27.0-main-04-10-2026-196e83aa
+          IMAGE_TAG: 6.27.0-main-04-10-2026-196e83aa
+          IMAGE_TAG_WINDOWS: 6.27.0-main-04-10-2026-196e83aa-win
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-addon-token-adapter-test
-          # AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.26.0-ext-t-shirt-sizing
+          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:6.27.0-main-04-10-2026-196e83aa
           #ARC_EXTENSION: false
           INCLUDE_DEPENDENT_CHARTS: true
           skipComponentGovernanceDetection: true
