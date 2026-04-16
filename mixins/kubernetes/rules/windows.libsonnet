@@ -10,6 +10,8 @@
             expr: |||
               count by (%(clusterLabel)s) (
                 windows_system_boot_time_timestamp_seconds{%(windowsExporterSelector)s}
+                or
+                windows_system_boot_time_timestamp{%(windowsExporterSelector)s}
               )
             ||| % $._config,
           },
@@ -44,7 +46,7 @@
               1 -
               sum by (%(clusterLabel)s) (windows_memory_available_bytes{%(windowsExporterSelector)s})
               /
-              sum by (%(clusterLabel)s) (windows_os_visible_memory_bytes{%(windowsExporterSelector)s})
+              sum by (%(clusterLabel)s) (windows_os_visible_memory_bytes{%(windowsExporterSelector)s} or windows_memory_physical_total_bytes{%(windowsExporterSelector)s})
             ||| % $._config,
           },
           // Add separate rules for Free & Total, so we can aggregate across clusters
@@ -64,7 +66,7 @@
           {
             record: ':windows_node_memory_MemTotal_bytes:sum',
             expr: |||
-              sum by (%(clusterLabel)s) (windows_os_visible_memory_bytes{%(windowsExporterSelector)s})
+              sum by (%(clusterLabel)s) (windows_os_visible_memory_bytes{%(windowsExporterSelector)s} or windows_memory_physical_total_bytes{%(windowsExporterSelector)s})
             ||| % $._config,
           },
           {
@@ -82,7 +84,7 @@
             record: 'node:windows_node_memory_bytes_total:sum',
             expr: |||
               sum by (%(clusterLabel)s, instance) (
-                windows_os_visible_memory_bytes{%(windowsExporterSelector)s}
+                windows_os_visible_memory_bytes{%(windowsExporterSelector)s} or windows_memory_physical_total_bytes{%(windowsExporterSelector)s}
               )
             ||| % $._config,
           },

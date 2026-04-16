@@ -73,7 +73,9 @@ data:
     acstor-capacity-provisioner = "30s"
     local-csi-driver = "30s"
   pod-annotation-based-scraping: podannotationnamespaceregex = ".*"
-  prometheus-collector-settings: cluster_alias = ""
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    windowsexporter_port = "19182"
   schema-version: v1
 metadata:
   name: ama-metrics-settings-configmap

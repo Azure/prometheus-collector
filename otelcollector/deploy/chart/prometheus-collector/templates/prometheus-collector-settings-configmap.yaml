@@ -14,6 +14,7 @@ data:
     default_metric_account_name = "notapplicable"
   {{- end }}
     cluster_alias = {{ index .Values "clusterAlias" | toString | quote }}
+    windowsexporter_port = {{ .Values.collectorSettings.windowsExporterPort | toString | quote }}
   default-scrape-settings-enabled: |-
     kubelet = {{ .Values.scrapeTargets.kubelet }}
     coredns = {{ .Values.scrapeTargets.coreDns }}

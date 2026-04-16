@@ -103,6 +103,8 @@ var (
 	NodeExporterScrapeInterval string
 	// Windows Exporter scrape interval
 	WinExporterScrapeInterval string
+	// Windows Exporter port
+	WinExporterPort string
 	// Windows KubeProxy scrape interval
 	WinKubeProxyScrapeInterval string
 	// PrometheusCollector Health scrape interval
@@ -406,6 +408,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KubeStateScrapeInterval = intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
 			NodeExporterScrapeInterval = intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
 			WinExporterScrapeInterval = intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
+			WinExporterPort = os.Getenv("AZMON_WINDOWS_EXPORTER_PORT")
 			WinKubeProxyScrapeInterval = intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
 			PromHealthScrapeInterval = intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
@@ -982,6 +985,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if WinExporterScrapeInterval != "" {
 					metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
+				}
+				if WinExporterPort != "" {
+					metric.Properties["WinExporterPort"] = WinExporterPort
 				}
 				if WinKubeProxyScrapeInterval != "" {
 					metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval

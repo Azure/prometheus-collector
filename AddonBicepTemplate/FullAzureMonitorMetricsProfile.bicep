@@ -286,7 +286,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
     rules: [
       {
         record: 'node:windows_node:sum'
-        expression: 'count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"})'
+        expression: 'count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"} or windows_system_boot_time_timestamp{job="windows-exporter"})'
       }
       {
         record: 'node:windows_node_num_cpu:sum'
@@ -302,7 +302,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
       }
       {
         record: ':windows_node_memory_utilisation:'
-        expression: '1 -sum(windows_memory_available_bytes{job="windows-exporter"})/sum(windows_os_visible_memory_bytes{job="windows-exporter"})'
+        expression: '1 -sum(windows_memory_available_bytes{job="windows-exporter"})/sum(windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})'
       }
       {
         record: ':windows_node_memory_MemFreeCached_bytes:sum'
@@ -314,7 +314,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
       }
       {
         record: ':windows_node_memory_MemTotal_bytes:sum'
-        expression: 'sum(windows_os_visible_memory_bytes{job="windows-exporter"})'
+        expression: 'sum(windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})'
       }
       {
         record: 'node:windows_node_memory_bytes_available:sum'
@@ -322,7 +322,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
       }
       {
         record: 'node:windows_node_memory_bytes_total:sum'
-        expression: 'sum by (instance) (windows_os_visible_memory_bytes{job="windows-exporter"})'
+        expression: 'sum by (instance) (windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})'
       }
       {
         record: 'node:windows_node_memory_utilisation:ratio'
@@ -637,7 +637,7 @@ resource uxRecordingRulesRuleGroupWinObj 'Microsoft.AlertsManagement/prometheusR
           }
           {
             record: 'ux:node_memory_usage_windows:sum'
-            expression: '''sum by (instance, cluster, microsoft_resourceid) ((windows_os_visible_memory_bytes{job = "windows-exporter"}- windows_memory_available_bytes{job = "windows-exporter"}))'''
+            expression: '''sum by (instance, cluster, microsoft_resourceid) (((windows_os_visible_memory_bytes{job = "windows-exporter"} or windows_memory_physical_total_bytes{job = "windows-exporter"})- windows_memory_available_bytes{job = "windows-exporter"}))'''
           }
           {
             record: 'ux:node_network_packets_received_drop_total_windows:sum_irate'

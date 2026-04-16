@@ -9,6 +9,7 @@ data:
     ver1
   prometheus-collector-settings: |-
     cluster_alias = ""
+    windowsexporter_port = "19182"
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = true

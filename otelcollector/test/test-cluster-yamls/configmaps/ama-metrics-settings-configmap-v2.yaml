@@ -87,6 +87,7 @@ data:
   prometheus-collector-settings: |-
     cluster_alias = ""
     debug-mode = "false"
+    windowsexporter_port = "19182"
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system

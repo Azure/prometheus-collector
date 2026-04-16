@@ -26,15 +26,15 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "ConfigReaderSidecar",
-				"CONTROLLER_TYPE": "ReplicaSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "ConfigReaderSidecar",
+				"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 			setupConfigFiles(true)
 			setupProcessedFiles()
@@ -43,73 +43,73 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			envVars := map[string]string {
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
-				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "",
-				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
-				"AZMON_CLUSTER_LABEL":                              "",
-				"AZMON_CLUSTER_ALIAS":                              "",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "false",
-				"AZMON_OPERATOR_ENABLED":                            "true",
-				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":         "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":         "false",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":      "true",
+			envVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
+				"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "",
+				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
+				"AZMON_CLUSTER_LABEL":                                          "",
+				"AZMON_CLUSTER_ALIAS":                                          "",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "false",
+				"AZMON_OPERATOR_ENABLED":                                       "true",
+				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
+				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":                    "false",
+				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":                   "true",
+				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":               "true",
+				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":             "",
+				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":            "true",
+				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
-				"DEBUG_MODE_ENABLED": "",
-				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG": "false",
-				"CONFIG_VALIDATOR_RUNNING_IN_AGENT": "true",
-				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG": "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
+				"DEBUG_MODE_ENABLED":                                           "",
+				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":                       "false",
+				"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                            "true",
+				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":                          "true",
 			}
 			err := checkEnvVars(envVars)
 			Expect(err).NotTo(HaveOccurred())
 
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeletRegex_minimal_mac),
-				"COREDNS_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",coreDNSRegex_minimal_mac),
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",cadvisorRegex_minimal_mac),
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeproxyRegex_minimal_mac),
-				"APISERVER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",apiserverRegex_minimal_mac),
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubestateRegex_minimal_mac),
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",nodeexporterRegex_minimal_mac),
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowsexporterRegex_minimal_mac),
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowskubeproxyRegex_minimal_mac),
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kappiebasicRegex_minimal_mac),
-				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityRetinaRegex_minimal_mac),
-				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityHubbleRegex_minimal_mac),
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", kubeletRegex_minimal_mac),
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", coreDNSRegex_minimal_mac),
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   fmt.Sprintf("|%s", cadvisorRegex_minimal_mac),
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubeproxyRegex_minimal_mac),
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", apiserverRegex_minimal_mac),
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubestateRegex_minimal_mac),
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               fmt.Sprintf("|%s", nodeexporterRegex_minimal_mac),
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            fmt.Sprintf("|%s", windowsexporterRegex_minimal_mac),
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           fmt.Sprintf("|%s", windowskubeproxyRegex_minimal_mac),
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                fmt.Sprintf("|%s", kappiebasicRegex_minimal_mac),
+				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityRetinaRegex_minimal_mac),
+				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityHubbleRegex_minimal_mac),
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "",
 			})
 
-			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string {
-				"KUBELET_SCRAPE_INTERVAL": "30s",
-				"COREDNS_SCRAPE_INTERVAL": "30s",
-				"CADVISOR_SCRAPE_INTERVAL": "30s",
-				"KUBEPROXY_SCRAPE_INTERVAL": "30s",
-				"APISERVER_SCRAPE_INTERVAL": "30s",
-				"KUBESTATE_SCRAPE_INTERVAL": "30s",
-				"NODEEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL": "30s",
+			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string{
+				"KUBELET_SCRAPE_INTERVAL":                     "30s",
+				"COREDNS_SCRAPE_INTERVAL":                     "30s",
+				"CADVISOR_SCRAPE_INTERVAL":                    "30s",
+				"KUBEPROXY_SCRAPE_INTERVAL":                   "30s",
+				"APISERVER_SCRAPE_INTERVAL":                   "30s",
+				"KUBESTATE_SCRAPE_INTERVAL":                   "30s",
+				"NODEEXPORTER_SCRAPE_INTERVAL":                "30s",
+				"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "30s",
+				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "30s",
 				"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "30s",
-				"POD_ANNOTATION_SCRAPE_INTERVAL": "30s",
-				"KAPPIEBASIC_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "30s",
+				"POD_ANNOTATION_SCRAPE_INTERVAL":              "30s",
+				"KAPPIEBASIC_SCRAPE_INTERVAL":                 "30s",
+				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL":  "30s",
 			})
 
 			mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
@@ -120,15 +120,15 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config with defaults for the Linux DaemonSet", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "",
-				"CONTROLLER_TYPE": "DaemonSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "",
+				"CONTROLLER_TYPE":        "DaemonSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 			setupConfigFiles(true)
 			setupProcessedFiles()
@@ -136,73 +136,73 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			envVars := map[string]string {
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
-				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "",
-				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
-				"AZMON_CLUSTER_LABEL":                              "",
-				"AZMON_CLUSTER_ALIAS":                              "",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "false",
-				"AZMON_OPERATOR_ENABLED":                            "true",
-				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":         "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":         "false",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":      "true",
+			envVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
+				"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "",
+				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
+				"AZMON_CLUSTER_LABEL":                                          "",
+				"AZMON_CLUSTER_ALIAS":                                          "",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "false",
+				"AZMON_OPERATOR_ENABLED":                                       "true",
+				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
+				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":                    "false",
+				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":                   "true",
+				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":               "true",
+				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":             "",
+				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":            "true",
+				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
-				"DEBUG_MODE_ENABLED": "",
-				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG": "false",
-				"CONFIG_VALIDATOR_RUNNING_IN_AGENT": "true",
-				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG": "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
+				"DEBUG_MODE_ENABLED":                                           "",
+				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":                       "false",
+				"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                            "true",
+				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":                          "true",
 			}
 			err := checkEnvVars(envVars)
 			Expect(err).NotTo(HaveOccurred())
 
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeletRegex_minimal_mac),
-				"COREDNS_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",coreDNSRegex_minimal_mac),
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",cadvisorRegex_minimal_mac),
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeproxyRegex_minimal_mac),
-				"APISERVER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",apiserverRegex_minimal_mac),
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubestateRegex_minimal_mac),
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",nodeexporterRegex_minimal_mac),
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowsexporterRegex_minimal_mac),
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowskubeproxyRegex_minimal_mac),
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kappiebasicRegex_minimal_mac),
-				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityRetinaRegex_minimal_mac),
-				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityHubbleRegex_minimal_mac),
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", kubeletRegex_minimal_mac),
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", coreDNSRegex_minimal_mac),
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   fmt.Sprintf("|%s", cadvisorRegex_minimal_mac),
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubeproxyRegex_minimal_mac),
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", apiserverRegex_minimal_mac),
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubestateRegex_minimal_mac),
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               fmt.Sprintf("|%s", nodeexporterRegex_minimal_mac),
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            fmt.Sprintf("|%s", windowsexporterRegex_minimal_mac),
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           fmt.Sprintf("|%s", windowskubeproxyRegex_minimal_mac),
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                fmt.Sprintf("|%s", kappiebasicRegex_minimal_mac),
+				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityRetinaRegex_minimal_mac),
+				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityHubbleRegex_minimal_mac),
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "",
 			})
 
-			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string {
-				"KUBELET_SCRAPE_INTERVAL": "30s",
-				"COREDNS_SCRAPE_INTERVAL": "30s",
-				"CADVISOR_SCRAPE_INTERVAL": "30s",
-				"KUBEPROXY_SCRAPE_INTERVAL": "30s",
-				"APISERVER_SCRAPE_INTERVAL": "30s",
-				"KUBESTATE_SCRAPE_INTERVAL": "30s",
-				"NODEEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL": "30s",
+			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string{
+				"KUBELET_SCRAPE_INTERVAL":                     "30s",
+				"COREDNS_SCRAPE_INTERVAL":                     "30s",
+				"CADVISOR_SCRAPE_INTERVAL":                    "30s",
+				"KUBEPROXY_SCRAPE_INTERVAL":                   "30s",
+				"APISERVER_SCRAPE_INTERVAL":                   "30s",
+				"KUBESTATE_SCRAPE_INTERVAL":                   "30s",
+				"NODEEXPORTER_SCRAPE_INTERVAL":                "30s",
+				"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "30s",
+				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "30s",
 				"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "30s",
-				"POD_ANNOTATION_SCRAPE_INTERVAL": "30s",
-				"KAPPIEBASIC_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "30s",
+				"POD_ANNOTATION_SCRAPE_INTERVAL":              "30s",
+				"KAPPIEBASIC_SCRAPE_INTERVAL":                 "30s",
+				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL":  "30s",
 			})
 
 			mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
@@ -216,22 +216,21 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 	})
 
-
 	Context("when the settings configmap sections exist but are empty", func() {
 		AfterEach(func() {
 			cleanupEnvVars()
 		})
 
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "ConfigReaderSidecar",
-				"CONTROLLER_TYPE": "ReplicaSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "ConfigReaderSidecar",
+				"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 			setupConfigFiles(false)
 			setupProcessedFiles()
@@ -240,73 +239,73 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			envVars := map[string]string {
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
-				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "",
-				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
-				"AZMON_CLUSTER_LABEL":                              "",
-				"AZMON_CLUSTER_ALIAS":                              "",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "false",
-				"AZMON_OPERATOR_ENABLED":                            "true",
-				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":         "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":         "false",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":       "false",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "false",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "false",
-				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":      "true",
+			envVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
+				"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "",
+				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
+				"AZMON_CLUSTER_LABEL":                                          "",
+				"AZMON_CLUSTER_ALIAS":                                          "",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "false",
+				"AZMON_OPERATOR_ENABLED":                                       "true",
+				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
+				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":                    "false",
+				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":                   "true",
+				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":                  "false",
+				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":               "true",
+				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":             "",
+				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":            "true",
+				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED":           "false",
+				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
-				"DEBUG_MODE_ENABLED": "false",
-				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG": "false",
-				"CONFIG_VALIDATOR_RUNNING_IN_AGENT": "true",
-				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG": "true",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
+				"DEBUG_MODE_ENABLED":                                           "false",
+				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG":                       "false",
+				"CONFIG_VALIDATOR_RUNNING_IN_AGENT":                            "true",
+				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":                          "true",
 			}
 			err := checkEnvVars(envVars)
 			Expect(err).NotTo(HaveOccurred())
-			
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeletRegex_minimal_mac),
-				"COREDNS_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",coreDNSRegex_minimal_mac),
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",cadvisorRegex_minimal_mac),
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubeproxyRegex_minimal_mac),
-				"APISERVER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",apiserverRegex_minimal_mac),
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kubestateRegex_minimal_mac),
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",nodeexporterRegex_minimal_mac),
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowsexporterRegex_minimal_mac),
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",windowskubeproxyRegex_minimal_mac),
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",kappiebasicRegex_minimal_mac),
-				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityRetinaRegex_minimal_mac),
-				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s",networkobservabilityHubbleRegex_minimal_mac),
+
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", kubeletRegex_minimal_mac),
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("|%s", coreDNSRegex_minimal_mac),
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   fmt.Sprintf("|%s", cadvisorRegex_minimal_mac),
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubeproxyRegex_minimal_mac),
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", apiserverRegex_minimal_mac),
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("|%s", kubestateRegex_minimal_mac),
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               fmt.Sprintf("|%s", nodeexporterRegex_minimal_mac),
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            fmt.Sprintf("|%s", windowsexporterRegex_minimal_mac),
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           fmt.Sprintf("|%s", windowskubeproxyRegex_minimal_mac),
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                fmt.Sprintf("|%s", kappiebasicRegex_minimal_mac),
+				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityRetinaRegex_minimal_mac),
+				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("|%s", networkobservabilityHubbleRegex_minimal_mac),
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "",
 			})
 
-			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string {
-				"KUBELET_SCRAPE_INTERVAL": "30s",
-				"COREDNS_SCRAPE_INTERVAL": "30s",
-				"CADVISOR_SCRAPE_INTERVAL": "30s",
-				"KUBEPROXY_SCRAPE_INTERVAL": "30s",
-				"APISERVER_SCRAPE_INTERVAL": "30s",
-				"KUBESTATE_SCRAPE_INTERVAL": "30s",
-				"NODEEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSEXPORTER_SCRAPE_INTERVAL": "30s",
-				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL": "30s",
+			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string{
+				"KUBELET_SCRAPE_INTERVAL":                     "30s",
+				"COREDNS_SCRAPE_INTERVAL":                     "30s",
+				"CADVISOR_SCRAPE_INTERVAL":                    "30s",
+				"KUBEPROXY_SCRAPE_INTERVAL":                   "30s",
+				"APISERVER_SCRAPE_INTERVAL":                   "30s",
+				"KUBESTATE_SCRAPE_INTERVAL":                   "30s",
+				"NODEEXPORTER_SCRAPE_INTERVAL":                "30s",
+				"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "30s",
+				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "30s",
 				"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "30s",
-				"POD_ANNOTATION_SCRAPE_INTERVAL": "30s",
-				"KAPPIEBASIC_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "30s",
-				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "30s",
+				"POD_ANNOTATION_SCRAPE_INTERVAL":              "30s",
+				"KAPPIEBASIC_SCRAPE_INTERVAL":                 "30s",
+				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL":  "30s",
+				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL":  "30s",
 			})
 
 			mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
@@ -330,15 +329,15 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should process the config for the Linux ReplicaSet", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "ConfigReaderSidecar",
-				"CONTROLLER_TYPE": "ReplicaSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "ConfigReaderSidecar",
+				"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 
 			schemaVersionFile = createTempFile("schema-version", "v1")
@@ -401,73 +400,72 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			envVars := map[string]string {
-				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
-				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-			  "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "'.*|value'",
-				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
-				"AZMON_CLUSTER_LABEL":                              "alias",
-				"AZMON_CLUSTER_ALIAS":                              "alias",
-				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "true",
-				"AZMON_OPERATOR_ENABLED":                            "true",
-				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
-				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":         "true",
-				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":         "true",
-				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":        "true",
-				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":       "true",
-				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":    "true",
-				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "true",
-				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "true",
-				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":      "true",
+			envVars := map[string]string{
+				"AZMON_AGENT_CFG_SCHEMA_VERSION":                               "v1",
+				"AZMON_AGENT_CFG_FILE_VERSION":                                 "ver1",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX":             "'.*|value'",
+				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                            "",
+				"AZMON_CLUSTER_LABEL":                                          "alias",
+				"AZMON_CLUSTER_ALIAS":                                          "alias",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":                         "true",
+				"AZMON_OPERATOR_ENABLED":                                       "true",
+				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":                       "",
+				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED":                    "true",
+				"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED":                   "true",
+				"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":                  "true",
+				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":               "true",
+				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED":           "true",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":             "true",
+				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":            "true",
+				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED":           "true",
+				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":                "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
-				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
+				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED":                 "false",
 				//"DEBUG_MODE_ENABLED": "true",
 				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG": "false",
-				"CONFIG_VALIDATOR_RUNNING_IN_AGENT": "true",
-				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG": "true",
+				"CONFIG_VALIDATOR_RUNNING_IN_AGENT":      "true",
+				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG":    "true",
 			}
 			err := checkEnvVars(envVars)
 			Expect(err).NotTo(HaveOccurred())
 
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",kubeletRegex_minimal_mac),
-				"COREDNS_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",coreDNSRegex_minimal_mac),
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",cadvisorRegex_minimal_mac),
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",kubeproxyRegex_minimal_mac),
-				"APISERVER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",apiserverRegex_minimal_mac),
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",kubestateRegex_minimal_mac),
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",nodeexporterRegex_minimal_mac),
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",windowsexporterRegex_minimal_mac),
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",windowskubeproxyRegex_minimal_mac),
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",kappiebasicRegex_minimal_mac),
-				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",networkobservabilityRetinaRegex_minimal_mac),
-				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s",networkobservabilityHubbleRegex_minimal_mac),
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("test.*|test2|%s", kubeletRegex_minimal_mac),
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    fmt.Sprintf("test.*|test2|%s", coreDNSRegex_minimal_mac),
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   fmt.Sprintf("test.*|test2|%s", cadvisorRegex_minimal_mac),
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("test.*|test2|%s", kubeproxyRegex_minimal_mac),
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("test.*|test2|%s", apiserverRegex_minimal_mac),
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  fmt.Sprintf("test.*|test2|%s", kubestateRegex_minimal_mac),
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               fmt.Sprintf("test.*|test2|%s", nodeexporterRegex_minimal_mac),
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            fmt.Sprintf("test.*|test2|%s", windowsexporterRegex_minimal_mac),
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           fmt.Sprintf("test.*|test2|%s", windowskubeproxyRegex_minimal_mac),
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "test.*|test2",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                fmt.Sprintf("test.*|test2|%s", kappiebasicRegex_minimal_mac),
+				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s", networkobservabilityRetinaRegex_minimal_mac),
+				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": fmt.Sprintf("test.*|test2|%s", networkobservabilityHubbleRegex_minimal_mac),
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "test.*|test2",
 			})
 
-			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string {
-				"KUBELET_SCRAPE_INTERVAL": "15s",
-				"COREDNS_SCRAPE_INTERVAL": "15s",
-				"CADVISOR_SCRAPE_INTERVAL": "15s",
-				"KUBEPROXY_SCRAPE_INTERVAL": "15s",
-				"APISERVER_SCRAPE_INTERVAL": "15s",
-				"KUBESTATE_SCRAPE_INTERVAL": "15s",
-				"NODEEXPORTER_SCRAPE_INTERVAL": "15s",
-				"WINDOWSEXPORTER_SCRAPE_INTERVAL": "15s",
-				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL": "15s",
-				"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "15s",
-				"POD_ANNOTATION_SCRAPE_INTERVAL": "15s",
-				"KAPPIEBASIC_SCRAPE_INTERVAL": "15s",
-				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "15s",
-				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "15s",
-				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "15s",
+			checkHashMaps(scrapeIntervalEnvVarPath, map[string]string{
+				"KUBELET_SCRAPE_INTERVAL":                     "15s",
+				"COREDNS_SCRAPE_INTERVAL":                     "15s",
+				"CADVISOR_SCRAPE_INTERVAL":                    "15s",
+				"KUBEPROXY_SCRAPE_INTERVAL":                   "15s",
+				"APISERVER_SCRAPE_INTERVAL":                   "15s",
+				"KUBESTATE_SCRAPE_INTERVAL":                   "15s",
+				"NODEEXPORTER_SCRAPE_INTERVAL":                "15s",
+				"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "15s",
+				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "15s",
+				"POD_ANNOTATION_SCRAPE_INTERVAL":              "15s",
+				"KAPPIEBASIC_SCRAPE_INTERVAL":                 "15s",
+				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL":  "15s",
+				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL":  "15s",
+				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL":  "15s",
 			})
 		})
 
@@ -486,15 +484,15 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should handle it being set to false with the keeplist regex values", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "ConfigReaderSidecar",
-				"CONTROLLER_TYPE": "ReplicaSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "ConfigReaderSidecar",
+				"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 
 			schemaVersionFile = createTempFile("schema-version", "v1")
@@ -526,18 +524,18 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"COREDNS_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"APISERVER_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "test.*|test2",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": "test.*|test2",
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    "test.*|test2",
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    "test.*|test2",
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   "test.*|test2",
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  "test.*|test2",
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  "test.*|test2",
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  "test.*|test2",
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               "test.*|test2",
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            "test.*|test2",
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           "test.*|test2",
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "test.*|test2",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                "test.*|test2",
 				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": "test.*|test2",
 				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": "test.*|test2",
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "test.*|test2",
@@ -545,15 +543,15 @@ var _ = Describe("Configmapparser", Ordered, func() {
 		})
 
 		It("should handle it being set to false with no keeplist regex values", func() {
-			setEnvVars(map[string]string {
+			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
-				"CONTAINER_TYPE": "ConfigReaderSidecar",
-				"CONTROLLER_TYPE": "ReplicaSet",
-				"OS_TYPE": "linux",
-				"MODE": "advanced",
-				"KUBE_STATE_NAME": "ama-metrics-ksm",
-				"POD_NAMESPACE": "kube-system",
-				"MAC": "true",
+				"CONTAINER_TYPE":         "ConfigReaderSidecar",
+				"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":                "linux",
+				"MODE":                   "advanced",
+				"KUBE_STATE_NAME":        "ama-metrics-ksm",
+				"POD_NAMESPACE":          "kube-system",
+				"MAC":                    "true",
 			})
 
 			schemaVersionFile = createTempFile("schema-version", "v1")
@@ -576,24 +574,24 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 			Configmapparser()
 
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string {
-				"KUBELET_METRICS_KEEP_LIST_REGEX": "",
-				"COREDNS_METRICS_KEEP_LIST_REGEX": "",
-				"CADVISOR_METRICS_KEEP_LIST_REGEX": "",
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX": "",
-				"APISERVER_METRICS_KEEP_LIST_REGEX": "",
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX": "",
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX": "",
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX": "",
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX": "",
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX": "",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX": "",
+			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                    "",
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                    "",
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   "",
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  "",
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                  "",
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  "",
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               "",
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            "",
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           "",
+				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                "",
 				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": "",
 				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": "",
 				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "",
 			})
 		})
-	})	
+	})
 })
 
 func createTempFile(name string, content string) string {
@@ -630,7 +628,7 @@ func setEnvVars(envVars map[string]string) {
 
 func setupConfigFiles(defaultPath bool) {
 	if defaultPath {
-		configMapDebugMountPath   = "/etc/config/settings/debug-mode"
+		configMapDebugMountPath = "/etc/config/settings/debug-mode"
 		replicaSetCollectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 		defaultSettingsMountPath = "/etc/config/settings/default-scrape-settings"
 		configMapKeepListMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
@@ -667,7 +665,7 @@ func setupProcessedFiles() {
 }
 
 func cleanupEnvVars() {
-	allEnvVars := []string {
+	allEnvVars := []string{
 		"CONTAINER_TYPE",
 		"CONTROLLER_TYPE",
 		"OS_TYPE",

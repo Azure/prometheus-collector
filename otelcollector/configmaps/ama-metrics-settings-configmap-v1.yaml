@@ -11,6 +11,7 @@ data:
     cluster_alias = ""
     https_config = true
     secrets_access_namespaces = ""
+    windowsexporter_port = "19182"
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false
@@ -19,7 +20,7 @@ data:
     apiserver = false
     kubestate = true
     nodeexporter = true
-    windowsexporter = false
+    windowsexporter = true
     windowskubeproxy = false
     kappiebasic = true
     networkobservabilityRetina = true

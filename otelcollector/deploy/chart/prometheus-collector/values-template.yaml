@@ -33,7 +33,7 @@ scrapeTargets:
   # -- when true, automatically install prometheus-node-exporter chart and then scrape node exporters (linux only) in the k8s cluster without any additional scrape config
   nodeExporter: true
    # -- when true, scrape windows exporter (windows only) in every windows node in the k8s cluster without any additional scrape config. Note:- windows exporter currently needs to be setup outside/seperately/manually with default port defaulting to 8192. Please see docs on this.
-  windowsExporter: false
+  windowsExporter: true
    # -- when true, scrape kube proxy endpoint (windows only) in every windows node in the k8s cluster without any additional scrape config
   windowsKubeProxy: false
   # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
@@ -51,6 +51,10 @@ scrapeIntervalTargets:
   windowsExporter: "30s"
   windowsKubeProxy: "30s"
   prometheusCollectorHealth: "30s"
+
+# Windows exporter port setting
+collectorSettings:
+  windowsExporterPort: "19182"
 
 # when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list of metrics included per default target in our docs.
 minimalIngestionProfile: true

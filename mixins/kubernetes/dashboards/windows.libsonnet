@@ -979,7 +979,7 @@ local var = g.dashboard.variable;
             '${datasource}',
             |||
               max(
-                windows_os_visible_memory_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"}
+                (windows_os_visible_memory_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"} or windows_memory_physical_total_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"})
                 - windows_memory_available_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"}
               )
             ||| % $._config

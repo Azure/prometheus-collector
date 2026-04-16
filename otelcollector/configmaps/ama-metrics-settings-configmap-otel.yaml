@@ -10,6 +10,7 @@ data:
   prometheus-collector-settings: |-
     cluster_alias = ""
     https_config = true
+    windowsexporter_port = "19182"
   opentelemetry-metrics: |-
       enabled = false
   default-scrape-settings-enabled: |-
@@ -20,7 +21,7 @@ data:
     apiserver = false
     kubestate = true
     nodeexporter = true
-    windowsexporter = false
+    windowsexporter = true
     windowskubeproxy = false
     kappiebasic = true
     networkobservabilityRetina = true

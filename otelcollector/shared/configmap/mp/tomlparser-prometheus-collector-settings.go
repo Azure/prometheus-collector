@@ -65,6 +65,17 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		}
 	}
 
+	// Populate Windows exporter port
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["windowsexporter_port"]; ok {
+			trimmed := strings.TrimSpace(value)
+			if trimmed != "" {
+				cp.WindowsExporterPort = trimmed
+				log.Printf("Using configmap setting for windowsexporter_port: %s\n", cp.WindowsExporterPort)
+			}
+		}
+	}
+
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
@@ -102,6 +113,9 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	if len(configParser.SecretsAccessNamespaces) > 0 {
 		file.WriteString(fmt.Sprintf("AZMON_SECRETS_ACCESS_NAMESPACES=%s\n", strings.Join(configParser.SecretsAccessNamespaces, ",")))
+	}
+	if configParser.WindowsExporterPort != "" {
+		file.WriteString(fmt.Sprintf("AZMON_WINDOWS_EXPORTER_PORT=%s\n", configParser.WindowsExporterPort))
 	}
 	return nil
 }

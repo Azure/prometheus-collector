@@ -673,6 +673,11 @@ func populateDefaultPrometheusConfig() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				winExporterPort := "19182"
+				if port := os.Getenv("AZMON_WINDOWS_EXPORTER_PORT"); port != "" {
+					winExporterPort = port
+				}
+				contents = []byte(strings.ReplaceAll(string(contents), "$$WINDOWS_EXPORTER_PORT$$", winExporterPort))
 				err = os.WriteFile(windowsExporterDefaultRsSimpleFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultRsSimpleFile)
@@ -689,6 +694,11 @@ func populateDefaultPrometheusConfig() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				winExporterPort := "19182"
+				if port := os.Getenv("AZMON_WINDOWS_EXPORTER_PORT"); port != "" {
+					winExporterPort = port
+				}
+				contents = []byte(strings.ReplaceAll(string(contents), "$$WINDOWS_EXPORTER_PORT$$", winExporterPort))
 				err = os.WriteFile(windowsExporterDefaultDsFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultDsFile)
@@ -1246,6 +1256,11 @@ func populateDefaultPrometheusConfigWithOperator() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				winExporterPort := "19182"
+				if port := os.Getenv("AZMON_WINDOWS_EXPORTER_PORT"); port != "" {
+					winExporterPort = port
+				}
+				contents = []byte(strings.ReplaceAll(string(contents), "$$WINDOWS_EXPORTER_PORT$$", winExporterPort))
 				err = os.WriteFile(windowsExporterDefaultRsSimpleFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultRsSimpleFile)
@@ -1262,6 +1277,11 @@ func populateDefaultPrometheusConfigWithOperator() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				winExporterPort := "19182"
+				if port := os.Getenv("AZMON_WINDOWS_EXPORTER_PORT"); port != "" {
+					winExporterPort = port
+				}
+				contents = []byte(strings.ReplaceAll(string(contents), "$$WINDOWS_EXPORTER_PORT$$", winExporterPort))
 				err = os.WriteFile(windowsExporterDefaultDsFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultDsFile)

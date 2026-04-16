@@ -117,6 +117,7 @@ type ConfigProcessor struct {
 	PrometheusCollectorHealth  string
 	PodAnnotation              string
 	Windowsexporter            string
+	WindowsExporterPort        string
 	Windowskubeproxy           string
 	Kappiebasic                string
 	NetworkObservabilityRetina string

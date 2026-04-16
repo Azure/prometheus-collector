@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultScrapeInterval = "30s"
+	defaultScrapeInterval            = "30s"
 )
 
 var (
