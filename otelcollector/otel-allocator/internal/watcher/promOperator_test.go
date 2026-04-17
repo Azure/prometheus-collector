@@ -3,11 +3,25 @@
 
 package watcher
 
+// Tests in this file use testing/synctest to make async behavior deterministic.
+//
+// Tests that call Watch() use time.Sleep(watchSyncDuration) before synctest.Wait()
+// to let the informer cache sync complete. This is necessary because Watch()
+// calls WaitForNamedCacheSync for each informer sequentially, and each sync poll
+// involves mutex operations inside the k8s informer machinery. Mutexes are not
+// "durably blocking" in synctest, so synctest.Wait() can return before the
+// informers finish syncing, causing the 15s WaitForNamedCacheSync timeout to
+// fire. Advancing the fake clock by watchSyncDuration gives the ~6 informers
+// enough 100ms poll ticks (client-go's syncedPollPeriod) to each observe that
+// their cache has synced.
+
 import (
 	"context"
 	"log/slog"
 	"os"
+	"slices"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -30,12 +44,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/fake"
+	metadatafake "k8s.io/client-go/metadata/fake"
 	"k8s.io/client-go/tools/cache"
 	fcache "k8s.io/client-go/tools/cache/testing"
 	"k8s.io/utils/ptr"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/config"
 )
+
+// watchSyncDuration is the fake-clock time we advance after starting Watch() to
+// let all informer caches sync. Watch() syncs ~6 informers sequentially, each
+// requiring at least one 100ms poll tick, so 1s gives comfortable headroom.
+const watchSyncDuration = time.Second
 
 func TestLoadConfig(t *testing.T) {
 	namespace := "test"
@@ -1072,37 +1092,33 @@ func TestLoadConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, _ := getTestPrometheusCRWatcher(t, namespace, tt.serviceMonitors, tt.podMonitors, tt.probes, tt.scrapeConfigs, tt.cfg)
+			synctest.Test(t, func(t *testing.T) {
+				w, _, _ := getTestPrometheusCRWatcher(t, namespace, tt.serviceMonitors, tt.podMonitors, tt.probes, tt.scrapeConfigs, tt.cfg)
 
-			// Start namespace informers in order to populate cache.
-			go w.nsInformer.Run(w.stopChannel)
-			for !w.nsInformer.HasSynced() {
-				time.Sleep(50 * time.Millisecond)
-			}
+				// Start namespace informers in order to populate cache.
+				go w.nsInformer.Run(w.stopChannel)
+				synctest.Wait()
 
-			for _, informer := range w.informers {
-				// Start informers in order to populate cache.
-				informer.Start(w.stopChannel)
-			}
-
-			// Wait for informers to sync.
-			for _, informer := range w.informers {
-				for !informer.HasSynced() {
-					time.Sleep(50 * time.Millisecond)
+				for _, informer := range w.informers {
+					// Start informers in order to populate cache.
+					informer.Start(w.stopChannel)
 				}
-			}
+				synctest.Wait()
 
-			got, err := w.LoadConfig(context.Background())
-			assert.NoError(t, err)
+				got, err := w.LoadConfig(context.Background())
+				assert.NoError(t, err)
 
-			sanitizeScrapeConfigsForTest(got.ScrapeConfigs)
-			assert.Equal(t, tt.want.ScrapeConfigs, got.ScrapeConfigs)
+				sanitizeScrapeConfigsForTest(got.ScrapeConfigs)
+				assert.Equal(t, tt.want.ScrapeConfigs, got.ScrapeConfigs)
+
+				close(w.stopChannel)
+				synctest.Wait()
+			})
 		})
 	}
 }
 
 func TestNamespaceLabelUpdate(t *testing.T) {
-	var err error
 	namespace := "test"
 	portName := "web"
 	podMonitors := []*monitoringv1.PodMonitor{
@@ -1184,51 +1200,201 @@ func TestNamespaceLabelUpdate(t *testing.T) {
 		ScrapeConfigs: []*promconfig.ScrapeConfig{},
 	}
 
-	w, source := getTestPrometheusCRWatcher(t, namespace, nil, podMonitors, nil, nil, cfg)
-	events := make(chan Event, 1)
-	eventInterval := 5 * time.Millisecond
+	synctest.Test(t, func(t *testing.T) {
+		w, source, _ := getTestPrometheusCRWatcher(t, namespace, nil, podMonitors, nil, nil, cfg)
+		events := make(chan Event, 1)
+		eventInterval := 5 * time.Millisecond
 
-	defer w.Close()
-	w.eventInterval = eventInterval
+		defer w.Close()
+		w.eventInterval = eventInterval
 
-	go func() {
-		watchErr := w.Watch(events, make(chan error))
-		require.NoError(t, watchErr)
-	}()
+		go func() {
+			watchErr := w.Watch(events, make(chan error))
+			require.NoError(t, watchErr)
+		}()
+		// Advance time past the informer sync polling period to let Watch complete setup.
+		time.Sleep(watchSyncDuration)
+		synctest.Wait()
 
-	if success := cache.WaitForNamedCacheSync("namespace", w.stopChannel, w.nsInformer.HasSynced); !success {
-		require.True(t, success)
-	}
-
-	for _, informer := range w.informers {
-		success := cache.WaitForCacheSync(w.stopChannel, informer.HasSynced)
-		require.True(t, success)
-	}
-
-	got, err := w.LoadConfig(context.Background())
-	assert.NoError(t, err)
-
-	sanitizeScrapeConfigsForTest(got.ScrapeConfigs)
-	assert.Equal(t, want_before.ScrapeConfigs, got.ScrapeConfigs)
-
-	source.Modify(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{
-		Name: "labellednamespace",
-		Labels: map[string]string{
-			"label2": "label2",
-		},
-	}})
-
-	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-		got, err = w.LoadConfig(context.Background())
-		assert.NoError(collect, err)
+		got, err := w.LoadConfig(context.Background())
+		assert.NoError(t, err)
 
 		sanitizeScrapeConfigsForTest(got.ScrapeConfigs)
-		assert.Equal(collect, want_after.ScrapeConfigs, got.ScrapeConfigs)
-	}, time.Second*60, time.Millisecond*100)
+		assert.Equal(t, want_before.ScrapeConfigs, got.ScrapeConfigs)
+
+		source.Modify(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name: "labellednamespace",
+			Labels: map[string]string{
+				"label2": "label2",
+			},
+		}})
+		synctest.Wait()
+		time.Sleep(eventInterval)
+		synctest.Wait()
+
+		got, err = w.LoadConfig(context.Background())
+		assert.NoError(t, err)
+
+		sanitizeScrapeConfigsForTest(got.ScrapeConfigs)
+		assert.Equal(t, want_after.ScrapeConfigs, got.ScrapeConfigs)
+	})
+}
+
+// TestSecretInformerUpdatesStore verifies that when a secret is updated through the informer,
+// the asset store is automatically updated and LoadConfig reflects the new values.
+func TestSecretInformerUpdatesStore(t *testing.T) {
+	namespace := "test"
+	portName := "web"
+
+	sm := &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "auth",
+			Namespace: namespace,
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			JobLabel: "auth",
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: portName,
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+								BasicAuth: &monitoringv1.BasicAuth{
+									Username: v1.SecretKeySelector{
+										LocalObjectReference: v1.LocalObjectReference{
+											Name: "basic-auth",
+										},
+										Key: "username",
+									},
+									Password: v1.SecretKeySelector{
+										LocalObjectReference: v1.LocalObjectReference{
+											Name: "basic-auth",
+										},
+										Key: "password",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Selector: metav1.LabelSelector{},
+		},
+	}
+
+	cfg := allocatorconfig.Config{
+		PrometheusCR: allocatorconfig.PrometheusCRConfig{
+			ServiceMonitorSelector: &metav1.LabelSelector{},
+			PodMonitorSelector:     &metav1.LabelSelector{},
+		},
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+		w, _, mdClient := getTestPrometheusCRWatcher(t, namespace, []*monitoringv1.ServiceMonitor{sm}, nil, nil, nil, cfg)
+		defer w.Close()
+
+		// Add initial secret to the metadata client's tracker so the informer can watch it
+		secretGVR := v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets))
+		initialSecretMeta := &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "basic-auth",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+			},
+		}
+		err := mdClient.Tracker().Add(initialSecretMeta)
+		require.NoError(t, err)
+
+		events := make(chan Event, 1)
+		errors := make(chan error, 1)
+		eventInterval := 5 * time.Millisecond
+		w.eventInterval = eventInterval
+
+		// Start Watch in a goroutine - this registers the secret informer event handlers
+		go func() {
+			watchErr := w.Watch(events, errors)
+			require.NoError(t, watchErr)
+		}()
+
+		// Advance time past the informer sync polling period, then wait for the first event.
+		time.Sleep(watchSyncDuration)
+		synctest.Wait()
+		<-events
+
+		// Initial config should reflect the original secret values.
+		got, err := w.LoadConfig(context.Background())
+		require.NoError(t, err)
+		require.NotEmpty(t, got.ScrapeConfigs)
+
+		var smSC *promconfig.ScrapeConfig
+		for _, sc := range got.ScrapeConfigs {
+			if sc.JobName == "serviceMonitor/test/auth/0" {
+				smSC = sc
+				break
+			}
+		}
+		require.NotNil(t, smSC)
+		require.NotNil(t, smSC.HTTPClientConfig.BasicAuth)
+		assert.Equal(t, "admin", smSC.HTTPClientConfig.BasicAuth.Username)
+		assert.Equal(t, config.Secret("password"), smSC.HTTPClientConfig.BasicAuth.Password)
+
+		// Update the k8sClient first (this is what the informer's UpdateFunc reads from)
+		updatedSecret := &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "basic-auth",
+				Namespace:       namespace,
+				ResourceVersion: "2",
+			},
+			Data: map[string][]byte{
+				"username": []byte("newadmin"),
+				"password": []byte("newpassword"),
+			},
+		}
+		_, err = w.k8sClient.CoreV1().Secrets(namespace).Update(context.Background(), updatedSecret, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		// Update the metadata client's tracker to trigger the informer's UpdateFunc
+		updatedSecretMeta := &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "basic-auth",
+				Namespace:       namespace,
+				ResourceVersion: "2",
+			},
+		}
+		err = mdClient.Tracker().Update(secretGVR, updatedSecretMeta, namespace)
+		require.NoError(t, err)
+
+		// Wait for the informer event to be processed
+		synctest.Wait()
+		time.Sleep(eventInterval)
+		synctest.Wait()
+
+		got, err = w.LoadConfig(context.Background())
+		require.NoError(t, err)
+
+		smSC = nil
+		for _, sc := range got.ScrapeConfigs {
+			if sc.JobName == "serviceMonitor/test/auth/0" {
+				smSC = sc
+				break
+			}
+		}
+		require.NotNil(t, smSC)
+		require.NotNil(t, smSC.HTTPClientConfig.BasicAuth)
+		assert.Equal(t, "newadmin", smSC.HTTPClientConfig.BasicAuth.Username)
+		assert.Equal(t, config.Secret("newpassword"), smSC.HTTPClientConfig.BasicAuth.Password)
+	})
 }
 
 func TestRateLimit(t *testing.T) {
-	var err error
 	namespace := "test"
 	serviceMonitor := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1244,67 +1410,48 @@ func TestRateLimit(t *testing.T) {
 			},
 		},
 	}
-	events := make(chan Event, 1)
-	eventInterval := 500 * time.Millisecond
-	cfg := allocatorconfig.Config{}
+	synctest.Test(t, func(t *testing.T) {
+		events := make(chan Event, 1)
+		eventInterval := 500 * time.Millisecond
+		cfg := allocatorconfig.Config{}
 
-	w, _ := getTestPrometheusCRWatcher(t, namespace, nil, nil, nil, nil, cfg)
-	defer w.Close()
-	w.eventInterval = eventInterval
+		w, _, _ := getTestPrometheusCRWatcher(t, namespace, nil, nil, nil, nil, cfg)
+		defer w.Close()
+		w.eventInterval = eventInterval
 
-	go func() {
-		watchErr := w.Watch(events, make(chan error))
-		require.NoError(t, watchErr)
-	}()
-	// we don't have a simple way to wait for the watch to actually add event handlers to the informer,
-	// instead, we just update a ServiceMonitor periodically and wait until we get a notification
-	_, err = w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Create(context.Background(), serviceMonitor, metav1.CreateOptions{})
-	require.NoError(t, err)
+		go func() {
+			watchErr := w.Watch(events, make(chan error))
+			require.NoError(t, watchErr)
+		}()
+		time.Sleep(watchSyncDuration)
+		synctest.Wait()
 
-	// wait for cache sync first
-	for _, informer := range w.informers {
-		success := cache.WaitForCacheSync(w.stopChannel, informer.HasSynced)
-		require.True(t, success)
-	}
+		_, err := w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Create(context.Background(), serviceMonitor, metav1.CreateOptions{})
+		require.NoError(t, err)
+		synctest.Wait()
+		time.Sleep(eventInterval)
+		synctest.Wait()
+		<-events
 
-	require.Eventually(t, func() bool {
-		_, createErr := w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Update(context.Background(), serviceMonitor, metav1.UpdateOptions{})
-		if createErr != nil {
-			return false
-		}
-		select {
-		case <-events:
-			return true
-		default:
-			return false
-		}
-	}, time.Second*5, eventInterval/10)
+		// Send two updates and verify that the elapsed time is at least eventInterval
+		startTime := time.Now()
+		_, err = w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Update(context.Background(), serviceMonitor, metav1.UpdateOptions{})
+		require.NoError(t, err)
+		synctest.Wait()
+		time.Sleep(eventInterval)
+		synctest.Wait()
+		<-events
 
-	// it's difficult to measure the rate precisely
-	// what we do, is send two updates, and then assert that the elapsed time is at least eventInterval
-	startTime := time.Now()
-	_, err = w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Update(context.Background(), serviceMonitor, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		select {
-		case <-events:
-			return true
-		default:
-			return false
-		}
-	}, time.Second*5, eventInterval/10)
-	_, err = w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Update(context.Background(), serviceMonitor, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		select {
-		case <-events:
-			return true
-		default:
-			return false
-		}
-	}, time.Second*5, eventInterval/10)
-	elapsedTime := time.Since(startTime)
-	assert.Less(t, eventInterval, elapsedTime)
+		_, err = w.kubeMonitoringClient.MonitoringV1().ServiceMonitors("test").Update(context.Background(), serviceMonitor, metav1.UpdateOptions{})
+		require.NoError(t, err)
+		synctest.Wait()
+		time.Sleep(eventInterval)
+		synctest.Wait()
+		<-events
+
+		elapsedTime := time.Since(startTime)
+		assert.Less(t, eventInterval, elapsedTime)
+	})
 }
 
 func TestDefaultDurations(t *testing.T) {
@@ -1375,42 +1522,37 @@ func TestDefaultDurations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, _ := getTestPrometheusCRWatcher(t, namespace, tt.serviceMonitors, nil, nil, nil, tt.cfg)
-			defer w.Close()
+			synctest.Test(t, func(t *testing.T) {
+				w, _, _ := getTestPrometheusCRWatcher(t, namespace, tt.serviceMonitors, nil, nil, nil, tt.cfg)
+				defer w.Close()
 
-			events := make(chan Event, 1)
-			eventInterval := 5 * time.Millisecond
-			w.eventInterval = eventInterval
+				events := make(chan Event, 1)
+				eventInterval := 5 * time.Millisecond
+				w.eventInterval = eventInterval
 
-			go func() {
-				watchErr := w.Watch(events, make(chan error))
-				require.NoError(t, watchErr)
-			}()
+				go func() {
+					watchErr := w.Watch(events, make(chan error))
+					require.NoError(t, watchErr)
+				}()
+				time.Sleep(watchSyncDuration)
+				synctest.Wait()
 
-			if success := cache.WaitForNamedCacheSync("namespace", w.stopChannel, w.nsInformer.HasSynced); !success {
-				require.True(t, success)
-			}
+				got, err := w.LoadConfig(context.Background())
+				assert.NoError(t, err)
 
-			for _, informer := range w.informers {
-				success := cache.WaitForCacheSync(w.stopChannel, informer.HasSynced)
-				require.True(t, success)
-			}
+				assert.NotEmpty(t, got.ScrapeConfigs)
 
-			got, err := w.LoadConfig(context.Background())
-			assert.NoError(t, err)
-
-			assert.NotEmpty(t, got.ScrapeConfigs)
-
-			for _, sc := range got.ScrapeConfigs {
-				assert.Equal(t, tt.expectedScrape, sc.ScrapeInterval)
-			}
-			assert.Equal(t, tt.expectedEval, got.GlobalConfig.EvaluationInterval)
+				for _, sc := range got.ScrapeConfigs {
+					assert.Equal(t, tt.expectedScrape, sc.ScrapeInterval)
+				}
+				assert.Equal(t, tt.expectedEval, got.GlobalConfig.EvaluationInterval)
+			})
 		})
 	}
 }
 
 // getTestPrometheusCRWatcher creates a test instance of PrometheusCRWatcher with fake clients
-// and test secrets.
+// and test secrets. Returns the watcher, namespace source, and metadata client for secret updates.
 func getTestPrometheusCRWatcher(
 	t *testing.T,
 	namespace string,
@@ -1419,7 +1561,7 @@ func getTestPrometheusCRWatcher(
 	probes []*monitoringv1.Probe,
 	scrapeConfigs []*promv1alpha1.ScrapeConfig,
 	cfg allocatorconfig.Config,
-) (*PrometheusCRWatcher, *fcache.FakeControllerSource) {
+) (*PrometheusCRWatcher, *fcache.FakeControllerSource, *metadatafake.FakeMetadataClient) {
 	mClient := fakemonitoringclient.NewSimpleClientset()
 	for _, sm := range svcMonitors {
 		if sm != nil {
@@ -1477,9 +1619,15 @@ func getTestPrometheusCRWatcher(
 		t.Fatal(t, err)
 	}
 
-	factory := informers.NewMonitoringInformerFactories(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mClient, 0, nil)
+	factory := informers.NewMonitoringInformerFactories(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mClient, 1*time.Second, nil)
 
-	informers, err := getTestInformers(factory)
+	// Create fake metadata client for secret informer
+	scheme := metadatafake.NewTestScheme()
+	_ = metav1.AddMetaToScheme(scheme)
+	mdClient := metadatafake.NewSimpleMetadataClient(scheme)
+	metadataFactory := informers.NewMetadataInformerFactory(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mdClient, 1*time.Second, nil)
+
+	informers, err := getTestInformers(factory, metadataFactory)
 	if err != nil {
 		t.Fatal(t, err)
 	}
@@ -1518,17 +1666,17 @@ func getTestPrometheusCRWatcher(
 	store := assets.NewStoreBuilder(k8sClient.CoreV1(), k8sClient.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
 	operatorMetrics := operator.NewMetrics(promRegisterer)
-	eventRecorderFactoryFactory := operator.NewEventRecorderFactory(false)
-	eventRecorderFactory := eventRecorderFactoryFactory(k8sClient, "target-allocator")
-	eventRecorder := eventRecorderFactory(prom)
+	eventRecorder := operator.NewFakeRecorder(10, prom)
 
 	source := fcache.NewFakeControllerSource()
+	t.Cleanup(func() { source.Broadcaster.Shutdown() })
 	source.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}})
 	source.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{
 		Name: "labellednamespace",
 		Labels: map[string]string{
 			"label1": "label1",
-		}}})
+		},
+	}})
 
 	// create the shared informer and resync every 1s
 	nsMonInf := cache.NewSharedInformer(source, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -1551,8 +1699,7 @@ func getTestPrometheusCRWatcher(
 		resourceSelector:                resourceSelector,
 		store:                           store,
 		prometheusCR:                    prom,
-	}, source
-
+	}, source, mdClient
 }
 
 // Remove relable configs fields from scrape configs for testing,
@@ -1565,7 +1712,7 @@ func sanitizeScrapeConfigsForTest(scs []*promconfig.ScrapeConfig) {
 }
 
 // getTestInformers creates informers for testing without CRD availability checks.
-func getTestInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getTestInformers(factory, metadataFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	informersMap := make(map[string]*informers.ForResource)
 
 	// Create ServiceMonitor informers
@@ -1595,6 +1742,21 @@ func getTestInformers(factory informers.FactoriesForNamespaces) (map[string]*inf
 		return nil, err
 	}
 	informersMap[promv1alpha1.ScrapeConfigName] = scrapeConfigInformers
+
+	// Secret informer - mirrors production code in getInformers
+	if metadataFactory != nil {
+		secretInformer, err := informers.NewInformersForResourceWithTransform(
+			metadataFactory,
+			v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)),
+			informers.PartialObjectMetadataStrip(operator.SecretGVK()),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if secretInformer != nil {
+			informersMap[string(v1.ResourceSecrets)] = secretInformer
+		}
+	}
 
 	return informersMap, nil
 }
@@ -1666,13 +1828,7 @@ func TestCRDAvailabilityChecks(t *testing.T) {
 				available, err := checkCRDAvailability(fakeDiscovery, crd)
 				require.NoError(t, err)
 
-				expected := false
-				for _, expectedCRD := range tt.expectedCRDs {
-					if crd == expectedCRD {
-						expected = true
-						break
-					}
-				}
+				expected := slices.Contains(tt.expectedCRDs, crd)
 
 				assert.Equal(t, expected, available, "CRD %s availability should match expectation", crd)
 			}
