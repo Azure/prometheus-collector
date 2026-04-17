@@ -163,6 +163,11 @@ msiTokenAdapterLinux:
   memoryLimit: "500Mi"
   cpuRequest: "20m"
   memoryRequest: "30Mi"
+msiTokenAdapterWin:
+  cpuLimit: "250m"
+  memoryLimit: "500Mi"
+  cpuRequest: "100m"
+  memoryRequest: "100Mi"
 
 msiTokenAdapterWin:
   cpuLimit: "250m"
