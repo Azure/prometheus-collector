@@ -46,17 +46,8 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-# if [ "$ARCH" = "amd64" ]; then
-#     wget https://github.com/Azure/prometheus-collector/releases/download/ME-Delos-package-test/metricsext2-2.2025.1124.1632-1.azl3.x86_64.rpm
-#     sudo tdnf install -y metricsext2-2.2025.1124.1632-1.azl3.x86_64.rpm
-# else
-#     wget https://github.com/Azure/prometheus-collector/releases/download/ME-Delos-package-test/metricsext2-2.2025.1124.1632-1.azl3.aarch64.rpm
-#     sudo tdnf install -y metricsext2-2.2025.1124.1632-1.azl3.aarch64.rpm
-# fi
-
 sudo tdnf install -y metricsext2-2.2026.227.1509
 
-# sudo tdnf install -y metricsext2-2.2025.722.956
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
