@@ -1,0 +1,23 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.KsmMemoryLimit",
+  "Type": "string",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.KsmMemoryLimit toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "b9842c7c-1a38-4385-8f39-a51314758bcf"
+          ]
+        }
+      ],
+      "Value": "5.5Gi"
+    }
+  ]
+}
