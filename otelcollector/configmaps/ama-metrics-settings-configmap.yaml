@@ -10,6 +10,7 @@ data:
   prometheus-collector-settings: |-
     cluster_alias = ""
     https_config = true
+    secrets_access_namespaces = ""
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false

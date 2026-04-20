@@ -1,5 +1,17 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 04-14-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260414.1`
+* Change log -
+  * golang upgrade 1.25.7 -> 1.25.9 (6 Go stdlib CVE fixes)
+* Fixed CVEs:
+    - [GO-2026-4864](https://pkg.go.dev/vuln/GO-2026-4864) — `os.Root.Chmod` on Linux can follow symlinks outside the root via race condition.
+    - [GO-2026-4865](https://pkg.go.dev/vuln/GO-2026-4865) — `html/template` JS template literal escaping issues leading to potential XSS.
+    - [GO-2026-4869](https://pkg.go.dev/vuln/GO-2026-4869) — Security fix in the `go` command and compiler.
+    - [GO-2026-4870](https://pkg.go.dev/vuln/GO-2026-4870) — Security fix in `archive/tar` and `crypto/tls`.
+    - [GO-2026-4946](https://pkg.go.dev/vuln/GO-2026-4946) — `crypto/x509` certificate policy validation can cause denial of service.
+    - [GO-2026-4947](https://pkg.go.dev/vuln/GO-2026-4947) — Security fix in `html/template` and `os` packages.
+
 ## Release 02-23-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260226.1`
 * Change log -

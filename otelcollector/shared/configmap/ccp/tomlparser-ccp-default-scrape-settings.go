@@ -111,7 +111,7 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 	}
 
 	// Check advanced mode
-	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
+	if os.Getenv("MODE") != "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		fmt.Println("PopulateSettingValues::Advanced mode detected")
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
