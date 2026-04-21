@@ -1,9 +1,0 @@
-﻿{
-  "providerType": "ServiceTree",
-  "identifier": "3170cdd2-19f0-4027-912b-1027311691a2",
-  "description": "CI-Delos-test-subscriptions",
-  "ownerGroupObjectId": "53dc716c-42dd-4043-9113-aca3cc115035",
-  "ownerGroupContactEmail": "ci-prometheus-aks-addons@microsoft.com",
-  "policyCheckEnabled": true,
-  "contentVersion": "1.0.0.0"
-}
