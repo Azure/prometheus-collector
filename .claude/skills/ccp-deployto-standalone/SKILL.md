@@ -1,6 +1,6 @@
 ---
 name: ccp-deployto-standalone
-description: Build a prometheus-collector CCP test image, deploy it to an AKS standalone, and validate metric scraping and ingestion into Azure Monitor.
+description: Deploy prometheus-collector and configmap-watcher CCP images to an AKS standalone (from a branch build or prereleased MCR images) and validate control-plane metric scraping and ingestion into Azure Monitor.
 allowed-tools:
   - Bash
   - Read
@@ -9,39 +9,58 @@ allowed-tools:
   - Glob
 ---
 
-# Prom-Collector Buddy-Build Standalone
+# CCP Deploy-to-Standalone
 
 ## Overview
 
-This skill verifies that a new CCP component's managed Prometheus addon functions correctly by deploying a **prometheus-collector** test image into an AKS standalone environment. It automates the full end-to-end flow:
+This skill verifies that CCP component images function correctly by deploying them into an AKS standalone environment and validating control-plane metric ingestion. It supports two modes:
 
-1. Building a CI/dev CCP image from a prometheus-collector branch.
+- **Buddy-build mode** — build a CI image from an unmerged prometheus-collector branch to validate changes before merging.
+- **Pre-release mode** — use images already published to MCR to validate a completed build before production rollout.
+
+It automates the full end-to-end flow:
+
+1. Obtaining CCP images (either by building from a branch or using prereleased images).
 2. Creating a standalone environment and test cluster.
-3. Patching the `ama-metrics-ccp` deployment with the test image.
-4. Validating metric scraping and ingestion into Azure Monitor.
+3. Patching the `ama-metrics-ccp` deployment with the test images.
+4. Validating api-server and etcd metric scraping and ingestion into Azure Monitor.
 
 ### When to Use
 
-- You have a prometheus-collector PR/branch with CCP changes (new scrape targets, config changes, etc.).
-- You need to validate CCP metrics ingestion end-to-end before merging.
+- **Buddy-build:** You have a prometheus-collector PR/branch with CCP changes (new scrape targets, config changes, etc.) and want to validate before merging.
+- **Pre-release:** You have prereleased prometheus-collector and/or configmap-watcher images in MCR and want to validate before production rollout.
 - You want to test in an isolated standalone environment rather than staging.
+
+### Mode Selection
+
+| User provides | Mode | Image source |
+|---|---|---|
+| `PROM_COLLECTOR_BRANCH` | Buddy-build | Built from branch via CI pipeline (`cidev`) |
+| `PROM_COLLECTOR_IMAGE` / `CONFIGMAP_WATCHER_IMAGE` | Pre-release | Prereleased MCR images (`ciprod` or other) |
+| Neither | Pre-release (defaults) | Default prereleased images below |
+
+**Default prereleased images** (used when neither branch nor image tags are provided):
+```
+PROM_COLLECTOR_IMAGE=mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-04-07-2026-a33a1ce0-ccp
+CONFIGMAP_WATCHER_IMAGE=mcr.microsoft.com/aks/hcp/configmap-watcher:master.20260330-2c1da807
+```
 
 ---
 
 ## Repository Setup
-
-This skill requires the **prometheus-collector** repo. Ask the user for their local checkout path.
-
-If they don't have it:
-```bash
-git clone https://github.com/Azure/prometheus-collector.git <destination>
-```
 
 The standalone creation steps reference the **aks-rp** repo for `aksdev` binary and `azureconfig.yaml`. Ask the user for their local aks-rp checkout path.
 
 If they don't have it:
 ```bash
 git clone https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp <destination>
+```
+
+**Buddy-build mode only:** This mode also requires the **prometheus-collector** repo. Ask the user for their local checkout path.
+
+If they don't have it:
+```bash
+git clone https://github.com/Azure/prometheus-collector.git <destination>
 ```
 
 ## Prerequisites
@@ -56,15 +75,17 @@ git clone https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/
 
 ## Inputs
 
-| Input | Description | Example |
-|-------|-------------|---------|
-| `PROM_COLLECTOR_BRANCH` | The prometheus-collector branch to test | `user/my-ccp-feature` |
-| `USER_ALIAS` | Your Microsoft alias | `dakydd` |
-| `STANDALONE_NAME` | Name of an existing standalone (if reusing) | `standalone-260216bm47nl` |
+| Input | Description | Required | Example |
+|-------|-------------|----------|---------|
+| `PROM_COLLECTOR_BRANCH` | Branch to build from (buddy-build mode) | One of branch or images | `user/my-ccp-feature` |
+| `PROM_COLLECTOR_IMAGE` | Full prereleased prometheus-collector image (pre-release mode) | One of branch or images | `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-04-07-2026-a33a1ce0-ccp` |
+| `CONFIGMAP_WATCHER_IMAGE` | Full prereleased configmap-watcher image (pre-release mode) | Optional | `mcr.microsoft.com/aks/hcp/configmap-watcher:master.20260330-2c1da807` |
+| `USER_ALIAS` | Your Microsoft alias | Yes | `dakydd` |
+| `STANDALONE_NAME` | Name of an existing standalone (if reusing) | No | `standalone-260216bm47nl` |
 
 ---
 
-## Helper Script
+## Helper Script (Buddy-Build Mode Only)
 
 The skill includes a helper script at `tools/check_build.py` that checks a prometheus-collector pipeline build for the CCP ORAS push stage status and extracts the image tag.
 
@@ -77,7 +98,9 @@ python3 tools/check_build.py <build-id>
 
 ## Steps
 
-### Step 1: Build a Test Image from Your Branch
+### Step 1: Obtain CCP Images
+
+#### Option A: Buddy-Build (from unmerged branch)
 
 Build the CCP image using the [Azure/prometheus-collector pipeline](https://github-private.visualstudio.com/azure/_build?definitionId=440):
 
@@ -100,13 +123,28 @@ az devops invoke --organization https://github-private.visualstudio.com --area b
 mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:<TAG>-ccp
 ```
 
-> **Important:** Use `cidev` (not `ciprod`), and the tag must end with `-ccp`.
+> **Important:** Buddy-build images use `cidev` (not `ciprod`), and the tag must end with `-ccp`.
 
 ```bash
 export CCP_IMAGE_TAG="<paste-the-tag-here>"
-export TEST_IMAGE="mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:${CCP_IMAGE_TAG}"
-echo "CCP test image: $TEST_IMAGE"
+export PROM_COLLECTOR_IMAGE="mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:${CCP_IMAGE_TAG}"
+echo "Prometheus-collector image: $PROM_COLLECTOR_IMAGE"
 ```
+
+> **Note:** In buddy-build mode, only the prometheus-collector image is built. The configmap-watcher image is not changed unless a `CONFIGMAP_WATCHER_IMAGE` is also specified.
+
+#### Option B: Pre-Release (from MCR)
+
+No build required — specify the prereleased images directly:
+
+```bash
+export PROM_COLLECTOR_IMAGE="mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.26.0-main-04-07-2026-a33a1ce0-ccp"
+export CONFIGMAP_WATCHER_IMAGE="mcr.microsoft.com/aks/hcp/configmap-watcher:master.20260330-2c1da807"
+echo "Prometheus-collector image: $PROM_COLLECTOR_IMAGE"
+echo "Configmap-watcher image:    $CONFIGMAP_WATCHER_IMAGE"
+```
+
+> **Note:** The prometheus-collector image tag must end with `-ccp`.
 
 ### Step 2: Set Up Your Standalone Environment
 
@@ -140,7 +178,7 @@ az aks get-credentials -n $AKS_CLUSTER_NAME -g $RESOURCE_GROUP -f $AKS_CLUSTER_N
 
 ```bash
 export USER_ALIAS=<your-alias>
-export WORKFLOW_NAME=buddybuild-standalone
+export WORKFLOW_NAME=ccp-standalone
 export CX_CLUSTER_NAME=$USER_ALIAS-$WORKFLOW_NAME
 export MC_SUB=82acd5bb-4206-47d4-9c12-a65db028483d
 export LOCATION=<standalone-location>  # Must match standalone location
@@ -187,8 +225,6 @@ kubectl annotate namespace $CCP_NS skip-ccp-reconcile-until-this-time="$SKIP_CCP
 ```
 
 ### Step 7: Patch the ama-metrics-ccp Deployment
-
-Make three updates to the `ama-metrics-ccp` deployment:
 
 > **Note:** `kubectl set env` does **not** work for env vars that use `valueFrom` (e.g., `fieldRef`). Use `kubectl patch` with strategic merge and `"valueFrom": null`.
 
@@ -254,11 +290,19 @@ The `addon-token-adapter` container block to use:
         - NET_RAW
 ```
 
-#### 7c. Update the prometheus-collector image to your test image
+#### 7c. Update the prometheus-collector image
 
 ```bash
-kubectl set image deployment/ama-metrics-ccp -n $CCP_NS prometheus-collector=$TEST_IMAGE --kubeconfig $AKS_CLUSTER_NAME.kubeconfig
+kubectl set image deployment/ama-metrics-ccp -n $CCP_NS prometheus-collector=$PROM_COLLECTOR_IMAGE --kubeconfig $AKS_CLUSTER_NAME.kubeconfig
 ```
+
+#### 7d. Update the configmap-watcher image (if CONFIGMAP_WATCHER_IMAGE is set)
+
+```bash
+kubectl set image deployment/ama-metrics-ccp -n $CCP_NS configmap-watcher=$CONFIGMAP_WATCHER_IMAGE --kubeconfig $AKS_CLUSTER_NAME.kubeconfig
+```
+
+> **Note:** Skip this step in buddy-build mode if no `CONFIGMAP_WATCHER_IMAGE` was provided.
 
 ---
 
@@ -277,17 +321,27 @@ controlplane-node-auto-provisioning: true
 kubectl logs deploy/ama-metrics-ccp -c prometheus-collector -n $CCP_NS --kubeconfig $AKS_CLUSTER_NAME.kubeconfig | tail -50
 ```
 
-### V3. Check Azure Monitor Workspace Ingestion
+Look for log lines confirming that the control-plane scrape configs have been loaded and targets are being discovered.
 
-Verify that metrics are appearing in the connected Azure Monitor workspace.
+### V3. Verify Control-Plane Metric Ingestion
 
-### V4. Validate Minimal Ingestion Profile (Default Behavior)
+Confirm that **api-server** and **etcd** metrics are arriving in the connected Azure Monitor workspace. These are the primary control-plane metrics that the CCP addon scrapes by default.
 
-With `minimalingestionprofile` enabled (default), confirm only the metrics in your minimal list are ingested.
+Query the Azure Monitor workspace (via Metrics Explorer or the Logs blade) for metrics such as:
+- **api-server:** `apiserver_request_total`, `apiserver_request_duration_seconds`
+- **etcd:** `etcd_server_has_leader`, `etcd_mvcc_db_total_size_in_bytes`
+
+> **Tip:** Allow 5–10 minutes after patching the deployment for metrics to begin appearing. If no metrics arrive, check the prometheus-collector logs (V2) for scrape errors or target discovery failures.
+
+### V4. Validate Minimal Ingestion Profile (Control-Plane Section)
+
+With `minimalingestionprofile` enabled (default), only and exactly etcd and api-server are being scraped of the control-plane scrape targets, and only the metrics in the **controlPlane** section's minimal keep-list are ingested. Other non-controlPlane addon-level metrics from the standalone cx-1 underlay that have been enabled for the workspace should be expected to continue to flow to the workspace.
+
+To inspect the active controlPlane minimal keep-list, check the ConfigMap or the [default controlPlane scrape configs](https://github.com/Azure/prometheus-collector/tree/main/otelcollector/configmapparser/default-prom-configs).
 
 ### V5. Test KeepList Override Behavior
 
-Add an additional metric to the `keeplist` in the ConfigMap and confirm ingestion.
+Add an additional metric to the `keeplist` in the **controlPlane** section of the ConfigMap and confirm that it begins appearing in the Azure Monitor workspace alongside the default minimal set.
 
 ---
 
@@ -307,6 +361,8 @@ export KUBECONFIG=$AKS_CLUSTER_NAME.kubeconfig           # underlay
 3. **MinMac regex syntax** — use single parentheses for metrics, e.g., `karpenter_(nodes_created_total|nodes_terminated_total)`.
 4. **Compare multiple existing configs** from [default-prom-configs](https://github.com/Azure/prometheus-collector/tree/main/otelcollector/configmapparser/default-prom-configs).
 5. **Reconcilers reverting changes** — verify all four reconcilers from Step 5 are scaled to 0.
+6. **Image pull errors** — verify the images exist in MCR and are accessible from the standalone. For buddy-build images, confirm the ORAS push stage succeeded.
+7. **No api-server/etcd metrics** — confirm `--enable-control-plane-metrics` was set in Step 3, and that the controlPlane scrape targets are enabled in the ConfigMap.
 
 ---
 

@@ -85,6 +85,14 @@ Same edit as 2a.
 
 Run from the aks-rp root (`${workspaceFolder:aks-rp}`):
 
+> **macOS / podman users**: The Makefile hardcodes `docker`. If Docker is not installed but `podman` is, create a shim so `docker` resolves to `podman`:
+> ```bash
+> mkdir -p /tmp/docker-shim && ln -sf "$(which podman)" /tmp/docker-shim/docker
+> export PATH="/tmp/docker-shim:$PATH"
+> export DOCKER_HOST="unix://$( podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' )"
+> ```
+> Ensure the podman machine is running (`podman machine start`; init first with `podman machine init` if needed).
+
 ```bash
 make generate-helm-fixtures
 make render-ccp-plugin-adapter-chart-snapshots
@@ -92,6 +100,8 @@ make render-ccp-plugin-chart-snapshots
 ```
 
 These regenerate golden files that embed the image tag. Without this step, CI snapshot tests will fail.
+
+> **Note**: `render-ccp-plugin-chart-snapshots` may show pre-existing failures for unrelated plugins. Verify the failures are not related to your image tag change and restore any unrelated snapshot deletions with `git checkout -- ccp/charts/tests/ccp-plugin-charts/snapshots/`.
 
 ---
 
