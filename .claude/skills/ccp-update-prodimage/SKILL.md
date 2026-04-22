@@ -19,11 +19,12 @@ Update the CCP prometheus-collector container image tag across all required file
 ## Files That Change
 
 1. **Toggle file** (default value): `toggles/global/sigs/containerinsights/ama-metrics-ccp-promcollector-imagetag.yaml`
-2. **Primary featureflag reader**: `ccp/control-plane-core/helmvalues/featureflag/ccp_plugins_reader.go`
-3. **Synced copy (core-addon-synth)**: `ccp/core-addon-synth/helmvalues/featureflag/ccp_plugins_reader.go`
-4. **Synced copy (overlaymgr)**: `overlaymgr/server/helmvalues/featureflag/ccp_plugins_reader.go`
+2. **Primary featureflag reader (azure_monitor_metrics_ccp)**: `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader.go`
+3. **Test for azure_monitor_metrics_ccp reader**: `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader_test.go`
+4. **Synced copy (core-addon-synth)**: `ccp/core-addon-synth/helmvalues/featureflag/ccp_plugins_reader.go`
+5. **Synced copy (overlaymgr)**: `overlaymgr/server/helmvalues/featureflag/ccp_plugins_reader.go`
 
-> **Note**: Files 3 and 4 are auto-synced copies of file 2. They carry a header comment saying not to edit directly, but we update all four in one shot to keep the branch green locally. CI sync will produce a no-op diff.
+> **Note**: Files 4 and 5 are auto-synced copies of file 2. They carry a header comment saying not to edit directly, but we update all in one shot to keep the branch green locally. CI sync will produce a no-op diff.
 
 ---
 
@@ -55,11 +56,11 @@ Only the `defaultValue` line changes. Leave all rules/matchers untouched.
 
 ### Stage 2: Update Featureflag Readers
 
-Update the default value in the `AzureMonitorMetricsCCPPromCollectorImageTag` function across all three copies of `ccp_plugins_reader.go`.
+Update the default value in the `AzureMonitorMetricsCCPPromCollectorImageTag` function in the reader file, and update the test assertion.
 
-#### 2a. Primary (source of truth)
+#### 2a. Primary — azure_monitor_metrics_ccp_reader (source of truth)
 
-**File**: `ccp/control-plane-core/helmvalues/featureflag/ccp_plugins_reader.go`
+**File**: `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader.go`
 
 In the function `AzureMonitorMetricsCCPPromCollectorImageTag`, replace the old tag string with the new tag in the `getStringWithContext` call:
 
@@ -67,17 +68,17 @@ In the function `AzureMonitorMetricsCCPPromCollectorImageTag`, replace the old t
 return t.getStringWithContext(ctx, "ama-metrics-ccp-promcollector-imagetag", t.newEntity(e), "<NEW_TAG>")
 ```
 
-#### 2b. Synced copy — core-addon-synth
+#### 2b. Test — azure_monitor_metrics_ccp_reader_test
 
-**File**: `ccp/core-addon-synth/helmvalues/featureflag/ccp_plugins_reader.go`
+**File**: `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader_test.go`
 
-Same edit as 2a.
+Update the default-value assertion in the "no toggles" test case to expect the new tag:
 
-#### 2c. Synced copy — overlaymgr
+```go
+assert.Equal(t, "<NEW_TAG>", r.AzureMonitorMetricsCCPPromCollectorImageTag(ctx, e))
+```
 
-**File**: `overlaymgr/server/helmvalues/featureflag/ccp_plugins_reader.go`
-
-Same edit as 2a.
+Only update the assertion that tests the default (no toggles) case. Leave the custom-toggle test case (`"7.0.0-custom"`) unchanged.
 
 ---
 
@@ -108,7 +109,7 @@ These regenerate golden files that embed the image tag. Without this step, CI sn
 ### Stage 4: Verify Changes
 
 1. Run `git diff` to confirm only the expected files changed:
-   - The 4 source files from Stages 1–2
+   - The 3 source files from Stages 1–2
    - Generated fixture/snapshot files from Stage 3
 2. Verify no unrelated changes crept in.
 
@@ -119,7 +120,6 @@ These regenerate golden files that embed the image tag. Without this step, CI sn
 | What | Where |
 |------|-------|
 | Toggle YAML | `toggles/global/sigs/containerinsights/ama-metrics-ccp-promcollector-imagetag.yaml` |
-| Primary reader | `ccp/control-plane-core/helmvalues/featureflag/ccp_plugins_reader.go` |
-| Synced reader (synth) | `ccp/core-addon-synth/helmvalues/featureflag/ccp_plugins_reader.go` |
-| Synced reader (overlaymgr) | `overlaymgr/server/helmvalues/featureflag/ccp_plugins_reader.go` |
+| Primary reader (azure_monitor_metrics_ccp) | `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader.go` |
+| Reader test (azure_monitor_metrics_ccp) | `ccp/control-plane-core/helmvalues/featureflag/azure_monitor_metrics_ccp_reader_test.go` |
 | Make targets | `generate-helm-fixtures`, `render-ccp-plugin-adapter-chart-snapshots`, `render-ccp-plugin-chart-snapshots` |
