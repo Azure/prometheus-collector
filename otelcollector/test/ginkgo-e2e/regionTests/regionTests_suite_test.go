@@ -39,6 +39,16 @@ const controllerLabelName = "rsName"
 const controllerLabelValue = "ama-metrics"
 const AZURE_CLIENT_ID = "AZURE_CLIENT_ID"
 
+var testResultCode byte = 0
+
+const test1 byte = 0x01
+const test2 byte = 0x02
+const test3 byte = 0x04
+const test4 byte = 0x08
+const test5 byte = 0x10
+const test6 byte = 0x20
+const test7 byte = 0x40
+
 func init() {
 	//flag.StringVar(&parmKubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file") //*************NEW - WTD***************************
 	flag.StringVar(&parmRuleName, "parmRuleName", "", "Prometheus rule name to use in this test suite")
@@ -50,6 +60,13 @@ func TestTest(t *testing.T) {
 	flag.Parse()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Suite")
+
+	if testResultCode != 0 {
+		fmt.Printf("Test suite completed with failures. Result code: %d\r\n", testResultCode)
+		os.Exit(int(testResultCode))
+	} else {
+		fmt.Println("Test suite completed successfully with no failures.")
+	}
 }
 
 // var envConfig = cloud.Configuration{
@@ -208,7 +225,9 @@ var _ = Describe("Regions Suite", func() {
 
 	Context("Examine selected files and directories", func() {
 
-		It("Check that there are no errors in /opt/microsoft/linuxmonagent/mdsd.err", func() {
+		It("Test 1 - Check that there are no errors in /opt/microsoft/linuxmonagent/mdsd.err", func() {
+
+			testResultCode |= test1 // Assume failure first
 
 			numErrLines := writeLines(readFile(mdsdErrFileName, podName))
 			if numErrLines > 0 {
@@ -218,9 +237,11 @@ var _ = Describe("Regions Suite", func() {
 			}
 
 			Expect(numErrLines).To(Equal(0))
+
+			testResultCode &^= test1 // Clear failure bit if we got here without errors
 		})
 
-		It("Enumerate all the 'error' or 'warning' records in /MetricsExtensionConsoleDebugLog.log", func() {
+		It("Test 2 - Enumerate all the 'error' or 'warning' records in /MetricsExtensionConsoleDebugLog.log", func() {
 
 			var lines []string = readFile(metricsExtDebugLogFileName, podName)
 			count := 0
@@ -245,7 +266,7 @@ var _ = Describe("Regions Suite", func() {
 			Expect(count).To(Equal(0))
 		})
 
-		It("Check that /etc/mdsd.d/config-cache/metricsextension exists", func() {
+		It("Test 3 - Check that /etc/mdsd.d/config-cache/metricsextension exists", func() {
 
 			var cmd []string = []string{"ls", "/etc/mdsd.d/config-cache/"}
 			stdout, _, err := utils.ExecCmd(K8sClient, Cfg, podName, containerName, namespace, cmd)
@@ -267,7 +288,7 @@ var _ = Describe("Regions Suite", func() {
 	})
 
 	Context("Examine Prometheus via the AMW", func() {
-		It("Query for a metric", func() {
+		It("Test 4 - Query for a metric", func() {
 			query := "up"
 
 			fmt.Printf("Examining metrics via the query: '%s'\r\n", query)
@@ -284,7 +305,7 @@ var _ = Describe("Regions Suite", func() {
 			fmt.Printf("%d metrics were returned from the query.\r\n", vectorResult.Len())
 		})
 
-		It("Query the specified recording rule", func() {
+		It("Test 5 - Query the specified recording rule", func() {
 			fmt.Printf("Examining the recording rule: %s", parmRuleName)
 
 			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, parmRuleName)
@@ -300,7 +321,7 @@ var _ = Describe("Regions Suite", func() {
 			fmt.Printf("%d metrics were returned from the recording rule.\r\n", vectorResult.Len())
 		})
 
-		It("Query Prometheus alerts", func() {
+		It("Test 6 - Query Prometheus alerts", func() {
 			fmt.Println("Querying Prometheus alerts")
 
 			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, "alerts")
@@ -312,7 +333,7 @@ var _ = Describe("Regions Suite", func() {
 			fmt.Printf("Instant query results: %+v\r\n", result.(model.Value).String())
 		})
 
-		It("Query Azure Monitor for AMW usage and limits metrics", func() {
+		It("Test 7 - Query Azure Monitor for AMW usage and limits metrics", func() {
 			////cred, err := azidentity.NewDefaultAzureCredential(nil)
 
 			cloudConfig, err := utils.GetCloudConfigFromEnvironment()
