@@ -26,6 +26,7 @@ var (
 		"http: TLS handshake error",
 		"failed to encode data for http response",
 		"connection reset by peer",
+		"Failed to retrieve job list",
 		// Config reader
 		"AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation",
 		// ReplicaSet
