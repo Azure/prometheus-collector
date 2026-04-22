@@ -1,0 +1,11 @@
+{
+  "upstreams": [
+    {
+      "name": "o11y-squad",
+      "type": "local",
+      "source": "/Users/davidkydd/code/github/emu/aks-o11y-squad/.squad",
+      "added_at": "2026-04-22T06:42:56.347Z",
+      "last_synced": null
+    }
+  ]
+}
