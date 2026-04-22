@@ -7,6 +7,10 @@ metadata:
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
+    app.kubernetes.io/name: ama-metrics
+    app.kubernetes.io/version: {{ .Values.AzureMonitorMetrics.ImageTag | trunc 63 | trimSuffix "-" }}
+    app.kubernetes.io/part-of: azure-monitor-metrics-addon
+    app.kubernetes.io/component: ama-metrics-deployment
 spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
@@ -201,6 +205,10 @@ spec:
             - name: MOUNT_UBUNTU_CERTS
               value: "{{ $arcExtensionSettings.mountUbuntuCerts }}"
             {{- end }}
+            - name: AMCS_CLIENT_INSTALL_ID_OVERRIDE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           securityContext:
             privileged: false
             capabilities:

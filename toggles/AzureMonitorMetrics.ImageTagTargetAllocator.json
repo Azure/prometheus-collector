@@ -1,0 +1,49 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.ImageTagTargetAllocator",
+  "Type": "string",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.ImageTagTargetAllocator toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "region",
+          "Operator": "equals",
+          "Values": [
+            "eastus2euap"
+          ]
+        }
+      ],
+      "Value": "6.24.3-main-01-28-2026-e05105c7-targetallocator"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "armId",
+          "Operator": "equals",
+          "Values": [
+            "/subscriptions/0c35cae8-20b2-4d1f-b3d9-e4d0340b92a2/resourceGroups/RG-ML-QAS-WESTUS/providers/Microsoft.ContainerService/managedClusters/aks-qas-westus4f969174e"
+          ]
+        }
+      ],
+      "Value": "6.24.3-main-01-28-2026-e05105c7-targetallocator"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "f1eb856e-d060-45c8-957b-bb6ed6516d84",
+            "05a3a26f-2a39-45e0-9049-88630764168b",
+            "a051d865-71b3-4930-8752-6a2e0a5e970d"
+          ]
+        }
+      ],
+      "Value": "6.24.3-main-01-28-2026-e05105c7-targetallocator"
+    }
+  ]
+}

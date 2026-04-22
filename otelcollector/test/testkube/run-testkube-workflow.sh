@@ -174,6 +174,8 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
             ;;
         testkube-config-test-secrets-access-namespaces-crs.yaml)
             workflows=(configprocessingcommon secretsaccessnamespaces)
+        testkube-config-test-mip-false-crs.yaml)
+            workflows=(configprocessingmipfalse mipfalse)
             ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"

@@ -79,36 +79,24 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
 		if settings, ok := metricsConfigBySection["default-targets-metrics-keep-list"]; ok {
 			fmt.Println("parseConfigMapForKeepListRegex::Found default-targets-metrics-keep-list section")
-			// Map v2 keys to v1 keys
-			v2ToV1KeyMap := map[string]string{
-				"apiserver":               "controlplane-apiserver",
-				"cluster-autoscaler":      "controlplane-cluster-autoscaler",
-				"node-auto-provisioning":  "controlplane-node-auto-provisioning",
-				"kube-scheduler":          "controlplane-kube-scheduler",
-				"kube-controller-manager": "controlplane-kube-controller-manager",
-				"etcd":                    "controlplane-etcd",
-			}
 			for key, value := range settings {
-				if v1Key, ok := v2ToV1KeyMap[key]; ok {
-					fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", v1Key, value)
-					configMap[v1Key] = value
-				}
+				fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", key, value)
+				configMap[key] = value
 			}
+		}
 
-			// Handle minimal-ingestion-profile for v2
-			if minimalProfileSection, ok := metricsConfigBySection["minimal-ingestion-profile"]; ok {
-				if enabledValue, ok := minimalProfileSection["enabled"]; ok {
-					fmt.Printf("parseConfigMapForKeepListRegex::Found minimal-ingestion-profile enabled: %s\n", enabledValue)
-					configMap["minimalingestionprofile"] = enabledValue
-				} else {
-					fmt.Println("parseConfigMapForKeepListRegex::minimal-ingestion-profile enabled not found, setting default to true")
-					configMap["minimalingestionprofile"] = "true" // Setting the default value
-				}
+		// Handle minimal-ingestion-profile for v2
+		if minimalProfileSection, ok := metricsConfigBySection["minimal-ingestion-profile"]; ok {
+			if enabledValue, ok := minimalProfileSection["enabled"]; ok {
+				fmt.Printf("parseConfigMapForKeepListRegex::Found minimal-ingestion-profile enabled: %s\n", enabledValue)
+				configMap["minimalingestionprofile"] = enabledValue
 			} else {
-				fmt.Println("parseConfigMapForKeepListRegex::minimal-ingestion-profile section not found, setting default to true")
+				fmt.Println("parseConfigMapForKeepListRegex::minimal-ingestion-profile enabled not found, setting default to true")
 				configMap["minimalingestionprofile"] = "true" // Setting the default value
 			}
-
+		} else {
+			fmt.Println("parseConfigMapForKeepListRegex::minimal-ingestion-profile section not found, setting default to true")
+			configMap["minimalingestionprofile"] = "true" // Setting the default value
 		}
 	}
 
