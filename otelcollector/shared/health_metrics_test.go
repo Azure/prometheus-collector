@@ -23,7 +23,6 @@ func TestHealthMetricsRegistration(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	// Register all health metrics
-	registry.MustRegister(overallSentMetric)
 	registry.MustRegister(meBytesSentMetric)
 	registry.MustRegister(overallDroppedMetric)
 	registry.MustRegister(meReceivedMetric)
@@ -44,13 +43,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	// Create new instances of the metrics for testing
-	testOverallSent := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "overall_metrics_sent_per_minute",
-			Help: "Rate of metric points delivered to Azure Monitor",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
 	testMEBytesSent := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "me_bytes_sent_per_minute",
@@ -101,7 +93,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	registry.MustRegister(testOverallSent)
 	registry.MustRegister(testMEBytesSent)
 	registry.MustRegister(testOverallDropped)
 	registry.MustRegister(testMEReceived)
@@ -111,7 +102,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	registry.MustRegister(testOtelColExportFailures)
 
 	// Set some test values
-	testOverallSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testMEBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
 	testOverallDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 	testMEReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
@@ -139,7 +129,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 
 	// Verify all metrics are in the response
 	expectedMetrics := []string{
-		"overall_metrics_sent_per_minute",
 		"me_bytes_sent_per_minute",
 		"overall_metrics_dropped_total",
 		"me_metrics_received_per_minute",

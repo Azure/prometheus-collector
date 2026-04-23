@@ -346,8 +346,6 @@ The following metrics should all be present. They are organized by sub-component
 
 All metrics carry labels: `computer`, `release`, `controller_type`. The `invalid_metrics_settings_config` metric has an additional `error` label.
 
-> **Note:** The code also exposes `overall_metrics_sent_per_minute` which duplicates `me_metrics_sent_per_minute` and should not be relied on for monitoring.
-
 **Validation commands:**
 
 ```bash

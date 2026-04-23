@@ -42,16 +42,6 @@ var (
 	MEDroppedCount float64 = 0
 
 	// --- Overall (component-level) metrics ---
-	// These represent the full pipeline: input = otelcol receiver, output = ME publication
-
-	// overallSentMetric is the pipeline output rate (what ME published to Azure Monitor per minute)
-	overallSentMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "overall_metrics_sent_per_minute",
-			Help: "Rate of metric points delivered to Azure Monitor (per minute)",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
 
 	// meBytesSentMetric is the byte rate published by ME to Azure Monitor
 	meBytesSentMetric = prometheus.NewGaugeVec(
@@ -164,7 +154,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
 	// Overall (component-level) metrics
-	r.MustRegister(overallSentMetric)
 	r.MustRegister(meBytesSentMetric)
 	r.MustRegister(overallDroppedMetric)
 	// ME (sub-component) metrics
@@ -198,9 +187,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 			// ME sub-component metrics (ME receives from otelcol, sends to Azure Monitor)
 			meReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesReceivedRate)
 			meSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
-
-			// Overall metrics: input = otelcol receiver, output = ME publication
-			overallSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
 			meBytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
 
 			TimeseriesReceivedTotal = 0.0
