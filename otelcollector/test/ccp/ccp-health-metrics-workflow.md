@@ -320,6 +320,7 @@ The following metrics should all be present. They are organized by sub-component
 |--------|------|--------|----------------|
 | `me_metrics_received_per_minute` | Gauge | ME logs | > 0 |
 | `me_metrics_sent_per_minute` | Gauge | ME logs | > 0 |
+| `me_bytes_sent_per_minute` | Gauge | ME logs | > 0 |
 | `me_metrics_dropped_total` | Counter | ME logs | >= 0 |
 
 **OtelCol (sub-component) metrics** — what the otelcollector receiver/exporter handles:
@@ -345,13 +346,13 @@ The following metrics should all be present. They are organized by sub-component
 
 All metrics carry labels: `computer`, `release`, `controller_type`. The `invalid_metrics_settings_config` metric has an additional `error` label.
 
-> **Note:** The code also exposes `overall_metrics_received_per_minute`, `overall_metrics_sent_per_minute`, and `overall_bytes_sent_per_minute`. These duplicate values already available in the sub-component metrics (`otelcol_metrics_received_per_minute` and `me_metrics_sent_per_minute` respectively) and should not be relied on for monitoring.
+> **Note:** The code also exposes `overall_metrics_received_per_minute` and `overall_metrics_sent_per_minute`. These duplicate values already available in the sub-component metrics (`otelcol_metrics_received_per_minute` and `me_metrics_sent_per_minute` respectively) and should not be relied on for monitoring.
 
 **Validation commands:**
 
 ```bash
 # Check key metrics are present
-grep -cE "me_metrics_received_per_minute|me_metrics_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|overall_metrics_dropped_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
+grep -cE "me_metrics_received_per_minute|me_metrics_sent_per_minute|me_bytes_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|overall_metrics_dropped_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
 # Check ME-based metrics are > 0 (primary ingestion indicators)
 grep -E "^me_metrics_(received|sent)_per_minute" /tmp/ccp_health_metrics.txt

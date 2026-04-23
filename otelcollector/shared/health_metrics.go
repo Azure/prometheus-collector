@@ -62,11 +62,11 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// overallBytesSentMetric is the pipeline output byte rate
-	overallBytesSentMetric = prometheus.NewGaugeVec(
+	// meBytesSentMetric is the byte rate published by ME to Azure Monitor
+	meBytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "overall_bytes_sent_per_minute",
-			Help: "Bytes of metric data delivered to Azure Monitor (per minute)",
+			Name: "me_bytes_sent_per_minute",
+			Help: "Bytes of metric data published by ME to Azure Monitor (per minute)",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -175,7 +175,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 	// Overall (component-level) metrics
 	r.MustRegister(overallReceivedMetric)
 	r.MustRegister(overallSentMetric)
-	r.MustRegister(overallBytesSentMetric)
+	r.MustRegister(meBytesSentMetric)
 	r.MustRegister(overallDroppedMetric)
 	// ME (sub-component) metrics
 	r.MustRegister(meReceivedMetric)
@@ -211,7 +211,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 
 			// Overall metrics: input = otelcol receiver, output = ME publication
 			overallSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(timeseriesSentRate)
-			overallBytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
+			meBytesSentMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(bytesSentRate)
 
 			TimeseriesReceivedTotal = 0.0
 			TimeseriesSentTotal = 0.0

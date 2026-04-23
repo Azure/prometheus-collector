@@ -25,7 +25,7 @@ func TestHealthMetricsRegistration(t *testing.T) {
 	// Register all health metrics
 	registry.MustRegister(overallReceivedMetric)
 	registry.MustRegister(overallSentMetric)
-	registry.MustRegister(overallBytesSentMetric)
+	registry.MustRegister(meBytesSentMetric)
 	registry.MustRegister(overallDroppedMetric)
 	registry.MustRegister(meReceivedMetric)
 	registry.MustRegister(meSentMetric)
@@ -59,10 +59,10 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
-	testOverallBytesSent := prometheus.NewGaugeVec(
+	testMEBytesSent := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "overall_bytes_sent_per_minute",
-			Help: "Rate of bytes delivered to Azure Monitor",
+			Name: "me_bytes_sent_per_minute",
+			Help: "Rate of bytes published by ME to Azure Monitor",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -111,7 +111,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 
 	registry.MustRegister(testOverallReceived)
 	registry.MustRegister(testOverallSent)
-	registry.MustRegister(testOverallBytesSent)
+	registry.MustRegister(testMEBytesSent)
 	registry.MustRegister(testOverallDropped)
 	registry.MustRegister(testMEReceived)
 	registry.MustRegister(testMESent)
@@ -122,7 +122,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	// Set some test values
 	testOverallReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testOverallSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
-	testOverallBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
+	testMEBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
 	testOverallDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 	testMEReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testMESent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
@@ -151,7 +151,7 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	expectedMetrics := []string{
 		"overall_metrics_received_per_minute",
 		"overall_metrics_sent_per_minute",
-		"overall_bytes_sent_per_minute",
+		"me_bytes_sent_per_minute",
 		"overall_metrics_dropped_total",
 		"me_metrics_received_per_minute",
 		"me_metrics_sent_per_minute",
