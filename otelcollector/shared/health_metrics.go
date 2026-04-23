@@ -41,22 +41,11 @@ var (
 	// (ProcessedCount - SentToPublicationCount from ME log lines)
 	MEDroppedCount float64 = 0
 
-	// --- Overall (component-level) metrics ---
-
 	// meBytesSentMetric is the byte rate published by ME to Azure Monitor
 	meBytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "me_bytes_sent_per_minute",
 			Help: "Bytes of metric data published by ME to Azure Monitor (per minute)",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-
-	// overallDroppedMetric is the sum of all stage drops (otelcol + ME)
-	overallDroppedMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "overall_metrics_dropped_total",
-			Help: "Total metric points dropped across all pipeline stages",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -153,9 +142,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 
 	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
-	// Overall (component-level) metrics
 	r.MustRegister(meBytesSentMetric)
-	r.MustRegister(overallDroppedMetric)
 	// ME (sub-component) metrics
 	r.MustRegister(meReceivedMetric)
 	r.MustRegister(meSentMetric)
@@ -204,7 +191,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 
 			MEDroppedMutex.Lock()
 			meDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEDroppedCount)
-			overallDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(MEDroppedCount)
 			MEDroppedCount = 0
 			MEDroppedMutex.Unlock()
 
@@ -218,7 +204,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 			otelcolReceivedRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
 			otelcolSentRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSentRate)
 			otelcolDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
-			overallDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
 			OtelColDroppedCount = 0
 			OtelColDiagMutex.Unlock()
 

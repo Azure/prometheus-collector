@@ -332,12 +332,6 @@ The following metrics should all be present. They are organized by sub-component
 | `otelcol_metrics_dropped_total` | Counter | Otelcol `:8888/metrics` | >= 0 |
 | `otelcol_export_failures_total` | Counter | Otelcol logs | >= 0 |
 
-**Cross-pipeline:**
-
-| Metric | Type | Source | Expected Value |
-|--------|------|--------|----------------|
-| `overall_metrics_dropped_total` | Counter | ME logs + Otelcol | >= 0 |
-
 **Configuration validation:**
 
 | Metric | Type | Source | Expected Value |
@@ -350,7 +344,7 @@ All metrics carry labels: `computer`, `release`, `controller_type`. The `invalid
 
 ```bash
 # Check key metrics are present
-grep -cE "me_metrics_received_per_minute|me_metrics_sent_per_minute|me_bytes_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|overall_metrics_dropped_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
+grep -cE "me_metrics_received_per_minute|me_metrics_sent_per_minute|me_bytes_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
 # Check ME-based metrics are > 0 (primary ingestion indicators)
 grep -E "^me_metrics_(received|sent)_per_minute" /tmp/ccp_health_metrics.txt

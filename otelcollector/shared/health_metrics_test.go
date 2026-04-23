@@ -24,7 +24,6 @@ func TestHealthMetricsRegistration(t *testing.T) {
 
 	// Register all health metrics
 	registry.MustRegister(meBytesSentMetric)
-	registry.MustRegister(overallDroppedMetric)
 	registry.MustRegister(meReceivedMetric)
 	registry.MustRegister(meSentMetric)
 	registry.MustRegister(meDroppedMetric)
@@ -47,13 +46,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 		prometheus.GaugeOpts{
 			Name: "me_bytes_sent_per_minute",
 			Help: "Rate of bytes published by ME to Azure Monitor",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-	testOverallDropped := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "overall_metrics_dropped_total",
-			Help: "Total metric points dropped across all pipeline stages",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
@@ -94,7 +86,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	)
 
 	registry.MustRegister(testMEBytesSent)
-	registry.MustRegister(testOverallDropped)
 	registry.MustRegister(testMEReceived)
 	registry.MustRegister(testMESent)
 	registry.MustRegister(testMEDropped)
@@ -103,7 +94,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 
 	// Set some test values
 	testMEBytesSent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(1000)
-	testOverallDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
 	testMEReceived.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testMESent.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Set(100)
 	testMEDropped.With(prometheus.Labels{"computer": "test", "release": "test", "controller_type": "test"}).Add(0)
@@ -130,7 +120,6 @@ func TestHealthMetricsEndpoint(t *testing.T) {
 	// Verify all metrics are in the response
 	expectedMetrics := []string{
 		"me_bytes_sent_per_minute",
-		"overall_metrics_dropped_total",
 		"me_metrics_received_per_minute",
 		"me_metrics_sent_per_minute",
 		"me_metrics_dropped_total",

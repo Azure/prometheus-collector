@@ -123,7 +123,6 @@ $response.Content
 | `me_metrics_sent_per_minute` | > 0 |
 | `me_metrics_received_per_minute` | > 0 |
 | `me_bytes_sent_per_minute` | > 0 |
-| `overall_metrics_dropped_total` | = 0 |
 | `invalid_metrics_settings_config` | = 0 |
 
 ---
