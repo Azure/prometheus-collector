@@ -44,15 +44,6 @@ var (
 	// --- Overall (component-level) metrics ---
 	// These represent the full pipeline: input = otelcol receiver, output = ME publication
 
-	// overallReceivedMetric is the pipeline input rate (what otelcol's receiver accepted per minute)
-	overallReceivedMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "overall_metrics_received_per_minute",
-			Help: "Rate of metric points entering the collection pipeline (per minute)",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-
 	// overallSentMetric is the pipeline output rate (what ME published to Azure Monitor per minute)
 	overallSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -173,7 +164,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
 	// Overall (component-level) metrics
-	r.MustRegister(overallReceivedMetric)
 	r.MustRegister(overallSentMetric)
 	r.MustRegister(meBytesSentMetric)
 	r.MustRegister(overallDroppedMetric)
@@ -243,8 +233,6 @@ func ExposePrometheusCollectorHealthMetrics() {
 			otelcolSentRateMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColSentRate)
 			otelcolDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
 			overallDroppedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Add(OtelColDroppedCount)
-			// Overall input = otelcol receiver rate
-			overallReceivedMetric.With(prometheus.Labels{"computer": computer, "release": helmReleaseName, "controller_type": controllerType}).Set(OtelColReceivedRate)
 			OtelColDroppedCount = 0
 			OtelColDiagMutex.Unlock()
 
