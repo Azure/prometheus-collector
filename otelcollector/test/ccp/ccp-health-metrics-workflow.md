@@ -310,35 +310,58 @@ curl -s http://127.0.0.1:12234/metrics > /tmp/ccp_health_metrics.txt
 kill $PF_PID 2>/dev/null
 ```
 
-### Step 5.3: Validate All 8 Health Metrics
+### Step 5.3: Validate All 12 Health Metrics
 
-The following metrics should all be present:
+The following metrics should all be present. They are organized into three tiers: overall (full pipeline), ME sub-component, and otelcol sub-component.
 
-| Metric | Source | Expected Value |
-|--------|--------|----------------|
-| `timeseries_received_per_minute` | ME logs | > 0 |
-| `timeseries_sent_per_minute` | ME logs | > 0 |
-| `bytes_sent_per_minute` | ME logs | > 0 |
-| `invalid_custom_prometheus_config` | Status | 0 |
-| `exporting_metrics_failed` | Status | 0 |
-| `otelcol_receiver_accepted_metric_points` | Otelcol diagnostic | >= 0 |
-| `otelcol_exporter_sent_metric_points` | Otelcol diagnostic | >= 0 |
-| `otelcol_exporter_send_failed_metric_points` | Otelcol diagnostic | >= 0 |
+**Overall (pipeline-level) metrics** — input = otelcol receiver, output = ME publication:
+
+| Metric | Type | Source | Expected Value |
+|--------|------|--------|----------------|
+| `overall_metrics_received_per_minute` | Gauge | Otelcol `:8888/metrics` | > 0 |
+| `overall_metrics_sent_per_minute` | Gauge | ME logs | > 0 |
+| `overall_bytes_sent_per_minute` | Gauge | ME logs | > 0 |
+| `overall_metrics_dropped_total` | Counter | ME logs + Otelcol | >= 0 |
+
+**ME (sub-component) metrics** — what ME receives from otelcol and publishes to Azure Monitor:
+
+| Metric | Type | Source | Expected Value |
+|--------|------|--------|----------------|
+| `me_metrics_received_per_minute` | Gauge | ME logs | > 0 |
+| `me_metrics_sent_per_minute` | Gauge | ME logs | > 0 |
+| `me_metrics_dropped_total` | Counter | ME logs | >= 0 |
+
+**OtelCol (sub-component) metrics** — what the otelcollector receiver/exporter handles:
+
+| Metric | Type | Source | Expected Value |
+|--------|------|--------|----------------|
+| `otelcol_metrics_received_per_minute` | Gauge | Otelcol `:8888/metrics` | > 0 |
+| `otelcol_metrics_sent_per_minute` | Gauge | Otelcol `:8888/metrics` | > 0 |
+| `otelcol_metrics_dropped_total` | Counter | Otelcol `:8888/metrics` | >= 0 |
+| `otelcol_export_failures_total` | Counter | Otelcol logs | >= 0 |
+
+**Configuration validation:**
+
+| Metric | Type | Source | Expected Value |
+|--------|------|--------|----------------|
+| `invalid_metrics_settings_config` | Gauge | Configmap parser | 0 |
+
+All metrics carry labels: `computer`, `release`, `controller_type`. The `invalid_metrics_settings_config` metric has an additional `error` label.
 
 **Validation commands:**
 
 ```bash
-# Check all 8 metrics are present
-grep -cE "timeseries_received_per_minute|timeseries_sent_per_minute|bytes_sent_per_minute|invalid_custom_prometheus_config|exporting_metrics_failed|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_send_failed_metric_points" /tmp/ccp_health_metrics.txt
+# Check all 12 metrics are present
+grep -cE "overall_metrics_received_per_minute|overall_metrics_sent_per_minute|overall_bytes_sent_per_minute|overall_metrics_dropped_total|me_metrics_received_per_minute|me_metrics_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
-# Check ME-based metrics are > 0 (primary ingestion indicators)
-grep -E "^(timeseries_received|timeseries_sent|bytes_sent)" /tmp/ccp_health_metrics.txt
+# Check overall pipeline metrics are > 0 (primary ingestion indicators)
+grep -E "^overall_(metrics_received|metrics_sent|bytes_sent)" /tmp/ccp_health_metrics.txt
 
-# Check status metrics are 0 (healthy state)
-grep -E "^(invalid_custom_prometheus_config|exporting_metrics_failed)" /tmp/ccp_health_metrics.txt
+# Check status metric is 0 (healthy state)
+grep -E "^invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
 # Check labels include computer, release, controller_type
-grep "timeseries_received_per_minute" /tmp/ccp_health_metrics.txt | head -1
+grep "overall_metrics_received_per_minute" /tmp/ccp_health_metrics.txt | head -1
 ```
 
 ### Step 5.4: Verify CCP Mode in Logs
