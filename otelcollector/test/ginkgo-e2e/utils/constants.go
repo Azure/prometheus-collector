@@ -65,4 +65,6 @@ const (
 	ConfigProcessingDcgmExporterEnabled      = "config-processing-dcgm-exporter-enabled"
 	ConfigProcessingControlplaneIstioEnabled = "config-processing-controlplane-istio-enabled"
 	ConfigProcessingMipFalse                 = "config-processing-mip-false"
+	ConfigProcessingBasicAuthSmon            = "config-processing-basic-auth-smon"
+	ConfigProcessingBasicAuthSecretUpdate    = "config-processing-basic-auth-secret-update"
 )

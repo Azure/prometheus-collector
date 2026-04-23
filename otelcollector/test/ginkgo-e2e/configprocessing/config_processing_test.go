@@ -2,7 +2,10 @@ package configprocessing
 
 import (
 	"encoding/json"
+	"fmt"
 	"prometheus-collector/otelcollector/test/utils"
+	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -851,3 +854,182 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 		[]string{"dummy_metric_not_configured"},
 		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )
+
+// parseMinorVersion extracts the minor version number from a Kubernetes version string like "1.35" or "v1.36.0-preview".
+func parseMinorVersion(gitVersion string) (int, error) {
+	v := strings.TrimPrefix(gitVersion, "v")
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) < 2 {
+		return 0, fmt.Errorf("unexpected version format: %s", gitVersion)
+	}
+	return strconv.Atoi(parts[1])
+}
+
+// Basic auth ServiceMonitor — verify RBAC, config, and targets
+var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
+	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {
+		time.Sleep(120 * time.Second)
+
+		// --- Detect Kubernetes version ---
+		versionInfo, err := utils.GetKubernetesVersion(K8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		GinkgoWriter.Printf("[BasicAuth] Kubernetes version: %s\n", versionInfo.GitVersion)
+
+		minor, err := parseMinorVersion(versionInfo.GitVersion)
+		Expect(err).NotTo(HaveOccurred())
+		GinkgoWriter.Printf("[BasicAuth] Parsed minor version: %d\n", minor)
+
+		// --- ClusterRole assertions ---
+		clusterRole, err := utils.GetClusterRole(K8sClient, "ama-metrics-reader")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(clusterRole).NotTo(BeNil())
+
+		// Check for a generic secrets rule (no resourceNames constraint)
+		hasGenericSecretsRule := false
+		for _, rule := range clusterRole.Rules {
+			isSecretsResource := false
+			for _, res := range rule.Resources {
+				if res == "secrets" {
+					isSecretsResource = true
+					break
+				}
+			}
+			if !isSecretsResource {
+				continue
+			}
+			// Skip rules that are scoped to specific resourceNames (e.g., aad-msi-auth-token)
+			if len(rule.ResourceNames) > 0 {
+				continue
+			}
+			hasGetListWatch := false
+			for _, verb := range rule.Verbs {
+				if verb == "get" || verb == "list" || verb == "watch" {
+					hasGetListWatch = true
+					break
+				}
+			}
+			if hasGetListWatch {
+				hasGenericSecretsRule = true
+				break
+			}
+		}
+
+		if minor < 36 {
+			GinkgoWriter.Printf("[BasicAuth] K8s < 1.36: expecting generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.36, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
+		} else {
+			GinkgoWriter.Printf("[BasicAuth] K8s >= 1.36: expecting NO generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.36, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
+
+			// Verify namespaced Role and RoleBinding exist
+			role, err := utils.GetRole(K8sClient, "basic-auth-test", "ama-metrics-secrets-reader")
+			Expect(err).NotTo(HaveOccurred(), "Role ama-metrics-secrets-reader should exist in basic-auth-test namespace")
+			Expect(role).NotTo(BeNil())
+
+			roleBinding, err := utils.GetRoleBinding(K8sClient, "basic-auth-test", "ama-metrics-secrets-rolebinding")
+			Expect(err).NotTo(HaveOccurred(), "RoleBinding ama-metrics-secrets-rolebinding should exist in basic-auth-test namespace")
+			Expect(roleBinding).NotTo(BeNil())
+			GinkgoWriter.Printf("[BasicAuth] Verified Role and RoleBinding exist in basic-auth-test namespace\n")
+		}
+
+		// --- Config check: verify basic-auth job exists with correct basic_auth config ---
+		var apiResponse utils.APIResponse
+		err = utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/status/config", true, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		// Find the basic-auth scrape job
+		var basicAuthJob *config.ScrapeConfig
+		var jobNames []string
+		for _, sc := range prometheusConfig.ScrapeConfigs {
+			jobNames = append(jobNames, sc.JobName)
+			if strings.Contains(sc.JobName, "basic-auth") {
+				basicAuthJob = sc
+			}
+		}
+		GinkgoWriter.Printf("[BasicAuth] All jobs: %v\n", jobNames)
+		Expect(basicAuthJob).NotTo(BeNil(), "Expected a scrape job containing 'basic-auth' in its name, found jobs: %v", jobNames)
+		GinkgoWriter.Printf("[BasicAuth] Found basic-auth job: %s\n", basicAuthJob.JobName)
+
+		// Verify the job has basic_auth configured with username=admin
+		Expect(basicAuthJob.HTTPClientConfig.BasicAuth).NotTo(BeNil(), "basic-auth job should have basic_auth configured")
+		Expect(basicAuthJob.HTTPClientConfig.BasicAuth.Username).To(Equal("admin"), "basic-auth job should have username=admin")
+		GinkgoWriter.Printf("[BasicAuth] Verified basic_auth username=admin\n")
+
+		// --- Targets check: verify target is up ---
+		var targetsResponse utils.APIResponse
+		err = utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, &targetsResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(targetsResponse.Data).NotTo(BeNil())
+
+		var targetsResult v1.TargetsResult
+		json.Unmarshal([]byte(targetsResponse.Data), &targetsResult)
+		Expect(targetsResult).NotTo(BeNil())
+		Expect(targetsResult.Active).NotTo(BeNil())
+
+		foundBasicAuthTarget := false
+		for _, target := range targetsResult.Active {
+			if strings.Contains(string(target.ScrapePool), "basic-auth") {
+				foundBasicAuthTarget = true
+				GinkgoWriter.Printf("[BasicAuth] Found target in scrape pool: %s, health: %s, lastError: %s\n", target.ScrapePool, target.Health, target.LastError)
+				Expect(target.Health).To(Equal(v1.HealthGood), "basic-auth target should be healthy (up)")
+				break
+			}
+		}
+		Expect(foundBasicAuthTarget).To(BeTrue(), "Expected to find an active target in a basic-auth scrape pool")
+
+		GinkgoWriter.Printf("[BasicAuth] All checks passed\n")
+	})
+})
+
+// Basic auth secret update — verify updated username is reflected in config
+var _ = Describe("Basic auth secret update", Label(utils.ConfigProcessingBasicAuthSecretUpdate), func() {
+	It("should reflect the updated username in the Prometheus scrape config", func() {
+		time.Sleep(120 * time.Second)
+
+		// Query config from ama-metrics RS
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/status/config", true, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		// Find the basic-auth scrape job
+		var basicAuthJob *config.ScrapeConfig
+		var jobNames []string
+		for _, sc := range prometheusConfig.ScrapeConfigs {
+			jobNames = append(jobNames, sc.JobName)
+			if strings.Contains(sc.JobName, "basic-auth") {
+				basicAuthJob = sc
+			}
+		}
+		GinkgoWriter.Printf("[BasicAuthSecretUpdate] All jobs: %v\n", jobNames)
+		Expect(basicAuthJob).NotTo(BeNil(), "Expected a scrape job containing 'basic-auth' in its name, found jobs: %v", jobNames)
+
+		// Verify the job has basic_auth with updated username=newadmin
+		Expect(basicAuthJob.HTTPClientConfig.BasicAuth).NotTo(BeNil(), "basic-auth job should have basic_auth configured")
+		GinkgoWriter.Printf("[BasicAuthSecretUpdate] basic_auth username=%s\n", basicAuthJob.HTTPClientConfig.BasicAuth.Username)
+		Expect(basicAuthJob.HTTPClientConfig.BasicAuth.Username).To(Equal("newadmin"), "basic-auth job should have updated username=newadmin after secret update")
+
+		GinkgoWriter.Printf("[BasicAuthSecretUpdate] Secret update verification passed\n")
+	})
+})
