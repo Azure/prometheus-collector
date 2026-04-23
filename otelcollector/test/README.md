@@ -54,7 +54,7 @@
 - Health Metrics (CCP)
   - **These tests cannot run in the standard CI pipeline.** CCP pods live on standalone underlay clusters, not CI clusters.
   - Run interactively via the [CCP Health Metrics Workflow](ccp/ccp-health-metrics-workflow.md) in a VS Code chat session.
-  - Validates all 12 health metrics: `overall_metrics_received_per_minute`, `overall_metrics_sent_per_minute`, `overall_bytes_sent_per_minute`, `overall_metrics_dropped_total`, `me_metrics_received_per_minute`, `me_metrics_sent_per_minute`, `me_metrics_dropped_total`, `otelcol_metrics_received_per_minute`, `otelcol_metrics_sent_per_minute`, `otelcol_metrics_dropped_total`, `otelcol_export_failures_total`, `invalid_metrics_settings_config`.
+  - Validates all 9 key health metrics: `me_metrics_received_per_minute`, `me_metrics_sent_per_minute`, `me_metrics_dropped_total`, `otelcol_metrics_received_per_minute`, `otelcol_metrics_sent_per_minute`, `otelcol_metrics_dropped_total`, `otelcol_export_failures_total`, `overall_metrics_dropped_total`, `invalid_metrics_settings_config`.
   - Validates correct labels (computer, release, controller_type).
   - Validates CCP mode active in logs and fluent-bit NOT running.
 

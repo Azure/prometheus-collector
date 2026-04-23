@@ -310,18 +310,9 @@ curl -s http://127.0.0.1:12234/metrics > /tmp/ccp_health_metrics.txt
 kill $PF_PID 2>/dev/null
 ```
 
-### Step 5.3: Validate All 12 Health Metrics
+### Step 5.3: Validate Health Metrics
 
-The following metrics should all be present. They are organized into three tiers: overall (full pipeline), ME sub-component, and otelcol sub-component.
-
-**Overall (pipeline-level) metrics** — input = otelcol receiver, output = ME publication:
-
-| Metric | Type | Source | Expected Value |
-|--------|------|--------|----------------|
-| `overall_metrics_received_per_minute` | Gauge | Otelcol `:8888/metrics` | > 0 |
-| `overall_metrics_sent_per_minute` | Gauge | ME logs | > 0 |
-| `overall_bytes_sent_per_minute` | Gauge | ME logs | > 0 |
-| `overall_metrics_dropped_total` | Counter | ME logs + Otelcol | >= 0 |
+The following metrics should all be present. They are organized by sub-component, plus one cross-pipeline counter and a config validation gauge.
 
 **ME (sub-component) metrics** — what ME receives from otelcol and publishes to Azure Monitor:
 
@@ -340,6 +331,12 @@ The following metrics should all be present. They are organized into three tiers
 | `otelcol_metrics_dropped_total` | Counter | Otelcol `:8888/metrics` | >= 0 |
 | `otelcol_export_failures_total` | Counter | Otelcol logs | >= 0 |
 
+**Cross-pipeline:**
+
+| Metric | Type | Source | Expected Value |
+|--------|------|--------|----------------|
+| `overall_metrics_dropped_total` | Counter | ME logs + Otelcol | >= 0 |
+
 **Configuration validation:**
 
 | Metric | Type | Source | Expected Value |
@@ -348,20 +345,22 @@ The following metrics should all be present. They are organized into three tiers
 
 All metrics carry labels: `computer`, `release`, `controller_type`. The `invalid_metrics_settings_config` metric has an additional `error` label.
 
+> **Note:** The code also exposes `overall_metrics_received_per_minute`, `overall_metrics_sent_per_minute`, and `overall_bytes_sent_per_minute`. These duplicate values already available in the sub-component metrics (`otelcol_metrics_received_per_minute` and `me_metrics_sent_per_minute` respectively) and should not be relied on for monitoring.
+
 **Validation commands:**
 
 ```bash
-# Check all 12 metrics are present
-grep -cE "overall_metrics_received_per_minute|overall_metrics_sent_per_minute|overall_bytes_sent_per_minute|overall_metrics_dropped_total|me_metrics_received_per_minute|me_metrics_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
+# Check key metrics are present
+grep -cE "me_metrics_received_per_minute|me_metrics_sent_per_minute|me_metrics_dropped_total|otelcol_metrics_received_per_minute|otelcol_metrics_sent_per_minute|otelcol_metrics_dropped_total|otelcol_export_failures_total|overall_metrics_dropped_total|invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
-# Check overall pipeline metrics are > 0 (primary ingestion indicators)
-grep -E "^overall_(metrics_received|metrics_sent|bytes_sent)" /tmp/ccp_health_metrics.txt
+# Check ME-based metrics are > 0 (primary ingestion indicators)
+grep -E "^me_metrics_(received|sent)_per_minute" /tmp/ccp_health_metrics.txt
 
 # Check status metric is 0 (healthy state)
 grep -E "^invalid_metrics_settings_config" /tmp/ccp_health_metrics.txt
 
 # Check labels include computer, release, controller_type
-grep "overall_metrics_received_per_minute" /tmp/ccp_health_metrics.txt | head -1
+grep "me_metrics_received_per_minute" /tmp/ccp_health_metrics.txt | head -1
 ```
 
 ### Step 5.4: Verify CCP Mode in Logs
