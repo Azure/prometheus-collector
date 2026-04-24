@@ -67,4 +67,6 @@ const (
 	ConfigProcessingMipFalse                 = "config-processing-mip-false"
 	ConfigProcessingBasicAuthSmon            = "config-processing-basic-auth-smon"
 	ConfigProcessingBasicAuthSecretUpdate    = "config-processing-basic-auth-secret-update"
+	ConfigProcessingBasicAuthSmonV2          = "config-processing-basic-auth-smon-v2"
+	ConfigProcessingBasicAuthSecretUpdateV2  = "config-processing-basic-auth-secret-update-v2"
 )
