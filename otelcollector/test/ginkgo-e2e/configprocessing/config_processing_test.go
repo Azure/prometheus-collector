@@ -967,26 +967,40 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		GinkgoWriter.Printf("[BasicAuth] Verified basic_auth username=admin\n")
 
 		// --- Targets check: verify target is up ---
-		var targetsResponse utils.APIResponse
-		err = utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, &targetsResponse)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(targetsResponse.Data).NotTo(BeNil())
+		// Wait for at least one scrape interval to elapse so targets appear
+		GinkgoWriter.Printf("[BasicAuth] Waiting 60s for first scrape to complete...\n")
+		time.Sleep(60 * time.Second)
 
-		var targetsResult v1.TargetsResult
-		json.Unmarshal([]byte(targetsResponse.Data), &targetsResult)
-		Expect(targetsResult).NotTo(BeNil())
-		Expect(targetsResult.Active).NotTo(BeNil())
+		// Query targets from both RS pods since the basic-auth target may be assigned to either one
+		var targetsResponses = make([]*utils.APIResponse, 2)
+		err = utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, true, targetsResponses)
+		Expect(err).NotTo(HaveOccurred())
 
 		foundBasicAuthTarget := false
-		for _, target := range targetsResult.Active {
-			if strings.Contains(string(target.ScrapePool), "basic-auth") {
-				foundBasicAuthTarget = true
-				GinkgoWriter.Printf("[BasicAuth] Found target in scrape pool: %s, health: %s, lastError: %s\n", target.ScrapePool, target.Health, target.LastError)
-				Expect(target.Health).To(Equal(v1.HealthGood), "basic-auth target should be healthy (up)")
+		for podIdx, targetsResponse := range targetsResponses {
+			if targetsResponse == nil {
+				continue
+			}
+			Expect(targetsResponse.Data).NotTo(BeNil())
+
+			var targetsResult v1.TargetsResult
+			json.Unmarshal([]byte(targetsResponse.Data), &targetsResult)
+			Expect(targetsResult).NotTo(BeNil())
+			Expect(targetsResult.Active).NotTo(BeNil())
+
+			for _, target := range targetsResult.Active {
+				if strings.Contains(string(target.ScrapePool), "basic-auth") {
+					foundBasicAuthTarget = true
+					GinkgoWriter.Printf("[BasicAuth] Found target in RS pod %d scrape pool: %s, health: %s, lastError: %s\n", podIdx, target.ScrapePool, target.Health, target.LastError)
+					Expect(target.Health).To(Equal(v1.HealthGood), "basic-auth target should be healthy (up)")
+					break
+				}
+			}
+			if foundBasicAuthTarget {
 				break
 			}
 		}
-		Expect(foundBasicAuthTarget).To(BeTrue(), "Expected to find an active target in a basic-auth scrape pool")
+		Expect(foundBasicAuthTarget).To(BeTrue(), "Expected to find an active target in a basic-auth scrape pool in at least one RS pod")
 
 		GinkgoWriter.Printf("[BasicAuth] All checks passed\n")
 	})
