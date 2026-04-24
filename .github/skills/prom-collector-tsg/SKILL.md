@@ -132,6 +132,82 @@ Do NOT guess, fabricate, or skip this step. If `tsg_icm_page` failed (e.g. Edge 
 
 **Connection issues:** If MCP server queries fail with connection errors, timeouts, or authentication failures, **STOP and ask the user**: "Are you connected to the corp VPN? The MCP server queries require VPN access to reach internal data sources (App Insights, Kusto, AKS CCP)."
 
+#### 1d. Check ICM Attachment Logs
+
+**⚠️ CRITICAL — Do this BEFORE running KQL queries.** ICM attachments often contain a diagnostic bundle (zip file named after the cluster) that can answer key questions in minutes — saving hours of KQL investigation.
+
+**How to find and extract attachments:**
+
+1. Check the ICM discussion entries (from `tsg_icm_page`) for attachment references — CSS engineers often attach diagnostic bundles
+2. Look in the user's Downloads folder for zip files matching the cluster name:
+   ```powershell
+   Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "*cluster-name*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 3
+   ```
+3. If found, extract to a working directory:
+   ```powershell
+   Expand-Archive -Path "<zip-path>" -DestinationPath "<session-dir>/icm-attachments/" -Force
+   ```
+
+**What the diagnostic bundle typically contains:**
+
+| File | What to look for | Priority |
+|------|-----------------|----------|
+| `pods-all-wide.txt` | **ALL pods** with namespace, name, ready state, status, **restart count**, **age**, IP, **node placement**. Search for the exporter/target pods mentioned in the ICM — check their restart count, node, and age | 🔴 Check first |
+| `nodes.txt` | Node names, ready state, **age**, K8s version. Nodes with age `0d` were recently reimaged/recreated (indicates drain activity) | 🔴 Check first |
+| `nodes-detailed.yaml` | Full node conditions (MemoryPressure, CPUPressure, DiskPressure), taints, allocatable resources. Check system pool nodes for pressure conditions | 🟡 Check if nodes.txt shows issues |
+| `cluster-info.txt` | K8s version, namespace list, component statuses | 🟢 Quick context |
+| `diagnostic.log` | HPA status, validation results, addon health checks | 🟢 Quick context |
+| `configmap_ama-metrics-settings-configmap.yaml` | Custom settings — keep lists, scrape intervals, debug mode, default targets enabled | 🟡 Check for config issues |
+| `configmap_ama-metrics-prometheus-config.yaml` | Custom Prometheus scrape config (RS) | 🟡 Check for custom jobs |
+| `configmap_ama-metrics-prometheus-config-node.yaml` | Custom DS scrape config | 🟡 If DS-related issue |
+| `deployment-ama-metrics.yaml` | RS deployment spec — resource limits, replicas, image version | 🟢 Version verification |
+| `daemonset-ama-metrics-node.yaml` | DS spec — tolerations, resource limits, image version | 🟢 Version verification |
+| `replicaset-pods/` | RS pod logs (may be empty/truncated). If present, search for errors, ME failures, scrape timeouts | 🟡 If RS-related issue |
+
+**Key diagnostic patterns in `pods-all-wide.txt`:**
+
+1. **For "missing metrics" ICMs** — identify the exporter pods that produce the missing metrics:
+   - Search for the pod name or namespace mentioned in the ICM
+   - Check **restart count** — high restarts (>2) indicate pod instability (crashlooping)
+   - Check **age** — very young pods (minutes/hours) on old nodes suggest recent eviction/recreation
+   - Check **node** — if exporter pods run on system pool nodes that show age `0d` in `nodes.txt`, they were likely evicted during node drains
+   - Compare restart counts: if the exporter pods have many restarts but other pods on the same node have zero, the exporter has an application-level stability issue
+
+2. **For "pod restarts/OOM" ICMs** — check our addon pods (`ama-metrics-*`):
+   - RS pods: `ama-metrics-{hash}-{id}` — check restart count, age, node placement
+   - DS pods: `ama-metrics-node-*` — check per-node status, restart count
+   - If RS pods have ages much shorter than the cluster uptime, they were recently evicted/recreated
+   - If RS pods are all on the same node pool (especially system pool), they're vulnerable to pool-wide drains
+
+3. **Cross-reference nodes.txt with pods:**
+   - System nodes with age `0d` = reimaged today (drain activity)
+   - Match pod node placement → node age to determine if pods were affected by drains
+   - Compare addon pod stability vs customer pod stability on the same nodes
+
+**Example — rapid diagnosis from attachment:**
+```
+# 1. Find the exporter pods producing the missing metrics
+Select-String -Path "pods-all-wide.txt" -Pattern "my-exporter|custom-metrics"
+# → my-exporter-deployment on system pool nodes, 4-6 restarts, age 4-5h
+
+# 2. Check those nodes (replace with actual system pool name)
+Select-String -Path "nodes.txt" -Pattern "aks-systempool"
+# → system pool nodes all age 0d (reimaged today)
+
+# 3. Check our RS pods on the same nodes
+Get-Content "pods-all-wide.txt" | Where-Object { $_ -match "ama-metrics-[0-9a-f]" }
+# → RS pods also on system pool, ages 2-5h, 0-3 restarts
+
+# Conclusion: Node drains evicted both exporter and RS pods.
+# Exporter pods crashlooping (4-6 restarts) extended the gap.
+# RS pods recovered faster (0-3 restarts).
+```
+
+**⚠️ Important:** The attachment is a **point-in-time snapshot** — it shows pod/node state at collection time, not during the incident. Use the pod age and restart count to infer what happened:
+- Pod age < incident duration → pod was recreated during/after the incident
+- High restart count + young age → pod has been crashing since recreation
+- Pod `Running` with 0 restarts and age > incident duration → pod was stable throughout
+
 ### Step 2: Run Triage Queries
 
 **Use the `prom-collector-tsg` MCP server** which provides these tools:
@@ -141,8 +217,8 @@ Do NOT guess, fabricate, or skip this step. If `tsg_icm_page` failed (e.g. Edge 
 | `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Includes ⚠️ Private Cluster Check (definitive — from `ManagedClusterSnapshot.privateLinkProfile.enablePrivateCluster` boolean, NOT the FQDN) and ⚠️ Missing DCE check.** Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback). |
 | `tsg_errors` | Scan all error categories: container, OtelCollector, ME, MDSD, token adapter, TA, DNS, private link |
 | `tsg_config` | Configuration: scrape configs, keep lists, intervals, custom config validation status/errors, custom job names from startup logs, HPA, pod/service monitors, **addon enabled check, recording rules** |
-| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, HPA scaling metric and oscillation analysis, HPA metric configuration, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, and node exporter sample count trend.** |
-| `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, cluster autoscaler events, and cluster autoscaler scale decisions (scale-up/down with unschedulable pod detection).** |
+| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, HPA scaling metric and oscillation analysis, HPA metric configuration, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, node exporter sample count trend, AKSClusterMetrics CPU/memory/throttling for ALL ama-metrics pods (including KSM), KSM cAdvisor telemetry from App Insights (CPU, memory, node placement via `ksmUsage`), and KSM scrape timeout detection (broken pipe errors).** |
+| `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, cluster autoscaler events, cluster autoscaler scale decisions, system node drain events (safeDrain with reasons), ama-metrics pod eviction events, NodeNotReady breakdown by node pool (system vs user vs windows), CoreDNS pod disruption during incident, and critical infrastructure pod evictions (CoreDNS/kube-proxy/azure-cns).** |
 | `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
 | `tsg_control_plane` | Control plane metrics config and health |
 | `tsg_query` | Run arbitrary KQL against any data source (including `ARMProd` for ARM deployment logs). Accepts optional `cluster`, `timeRange`, `outputFile` (write ALL rows to CSV/JSON), `outputFormat`, and `maxRows` params |
@@ -245,6 +321,9 @@ Based on triage results, identify the primary symptom category and follow the co
 - Don't claim resources are "auto-generated" unless you have documentation or code proving it
 - Don't infer intent from naming patterns (e.g., a GUID-prefixed namespace could be customer-created or platform-created — you don't know without evidence)
 - If a field or behavior is ambiguous, flag the uncertainty explicitly
+- **Don't speculate about mechanisms** — don't claim pods are "overwhelmed by timeouts" or "experiencing backpressure" without data showing it. Instead, check for concrete events: pod evictions (`tsg_pods` → "AMA-Metrics Pod Eviction Events"), node drains (`tsg_pods` → "System Node Drain Events"), or actual error logs
+- **When metrics are partially missing, check system node health first** — repeated system node drains (safeDrain) are a common, easily-missed cause of metric gaps. Always run `tsg_pods` and check the drain/eviction queries before theorizing about scrape timeouts, config issues, or capacity problems
+- **When RS pods show DNS errors or "connection refused" to TA, check both cert rotation and cluster infra health** — RS pods log `dial tcp: lookup ... no such host` during DNS failures OR during TLS cert rotation restarts. Check ConfigReader logs (`tsg_logs` → configreader) for `inotifyoutput-ta-server-cert-secret.txt has been updated` and `tsg_pods` → "CoreDNS Pod Disruption During Incident". If CoreDNS was NOT disrupted, the DNS error is transient from the RS pod restarting during cert rotation. If CoreDNS WAS evicted, it's a cluster infrastructure issue
 
 Present findings as:
 1. **Cluster Info** — version, region, state
@@ -444,6 +523,14 @@ Some ME internals are not documented in EngHub (e.g. the exact dimension count l
 | Metrics missing after AKS upgrade | `tsg_triage` + `tsg_scrape_health` + `tsg_workload` | Missing Metrics (AKS upgrade / node exporter) |
 | TS explosion / cardinality spike | `tsg_workload` + `tsg_mdm_throttling` + `tsg_metric_insights` | Spike in Metrics (label churn / floodgate) |
 | Node exporter down (up=0) | `tsg_scrape_health` + `tsg_triage` | Missing Metrics (node image / NE version) |
+| System node drain / eviction loop | `tsg_pods` (System Node Drain Events + Pod Eviction) | Missing Metrics (node remediation) |
+| Metrics briefly return then drop again | `tsg_pods` (Drain Timeline + Eviction Events) | Missing Metrics (repeated drain loop on system pool) |
+| DNS resolution failures in RS logs | `tsg_pods` (CoreDNS Pod Disruption) + `tsg_logs` (configreader) | Missing Metrics (cert rotation or cluster DNS issue) |
+| Liveness 503 during cert rotation | `tsg_logs` (configreader) + `tsg_pods` | Pod Restarts (TLS cert rotation — brief ~4min disruption) |
+| Mass node reimage + metric gap | `tsg_pods` (NodeNotReady by Pool + NetworkNotReady) | Missing Metrics (DaemonSet pods cycling on reimaging nodes) |
+| Customer exporter pods crashing | ICM attachment `pods-all-wide.txt` + `nodes.txt` | Missing Metrics (customer app issue, not addon) |
+| RS pods evicted during node drain | ICM attachment `pods-all-wide.txt` (RS pod age/restarts) | Missing Metrics (addon also disrupted by drain) |
+| KSM scrape timeout (large cluster) | KSM logs: "broken pipe" + `tsg_config` (labels allowlist `[*]`) | Missing Metrics (KSM payload too large for scrape_timeout) |
 
 ---
 

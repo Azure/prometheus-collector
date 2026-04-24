@@ -587,7 +587,7 @@ server.tool(
 // Tool: tsg_workload
 server.tool(
   "tsg_workload",
-  "Check workload health: replica/pod counts, samples per minute, samples dropped, CPU/memory usage, queue sizes, export failures, target allocator errors, collector discovery.",
+  "Check workload health: replica/pod counts, samples per minute, samples dropped, CPU/memory usage (CCP pods via ProcessInfo AND all ama-metrics pods incl. KSM via AKSClusterMetrics), queue sizes, export failures, target allocator errors, collector discovery, KSM cAdvisor telemetry (CPU, memory, node placement via App Insights ksmUsage), and KSM scrape timeout detection (broken pipe errors).",
   {
     cluster: clusterParam,
     timeRange: timeRangeParam,
@@ -606,7 +606,7 @@ server.tool(
 // Tool: tsg_pods
 server.tool(
   "tsg_pods",
-  "Check pod health: latest pod restarts, restart counts during interval, and restart reasons for the AMA metrics addon pods.",
+  "Check pod health: latest pod restarts, restart counts during interval, restart reasons, system node drain events (safeDrain with reasons like HGefficiency/Kevlar), ama-metrics pod eviction events, NodeNotReady breakdown by node pool (system vs user vs windows), CoreDNS pod disruption during incident, critical infrastructure pod evictions (CoreDNS/kube-proxy/azure-cns), cluster autoscaler events, and pod scheduling events.",
   {
     cluster: clusterParam,
     timeRange: timeRangeParam,

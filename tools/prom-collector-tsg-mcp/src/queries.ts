@@ -2767,6 +2767,128 @@ KubeAudit
 | project PreciseTimeStamp, verb, eventReason, eventType, involvedObject, eventMessage
 | order by PreciseTimeStamp desc`,
     },
+    {
+      name: "System Node Drain Events",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP between(queryFrom .. queryTo)
+| where reason == "safeDrain"
+| extend drainReason = extract("provided reason: \\"([^\\"]+)", 1, message)
+| extend nodepool = case(
+    name has "vmss", extract("aks-([a-z0-9]+)-", 1, name),
+    extract("aks([a-z0-9]+)", 1, name),
+    "unknown")
+| summarize drainCount=count(), nodes=dcount(name), nodeList=make_set(name, 5) by drainReason, nodepool
+| order by drainCount desc`,
+    },
+    {
+      name: "System Node Drain Timeline",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP between(queryFrom .. queryTo)
+| where reason == "safeDrain"
+| extend drainReason = extract("provided reason: \\"([^\\"]+)", 1, message)
+| project TIMESTAMP, node=name, drainReason
+| order by TIMESTAMP asc`,
+    },
+    {
+      name: "AMA-Metrics Pod Eviction Events",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP between(queryFrom .. queryTo)
+| where reason in ("PodEvicted", "Killing")
+| where name has "ama-metrics"
+| extend drainReason = extract("provided reason: \\"([^\\"]+)", 1, message)
+| extend drainNode = extract("Draining node ([^,]+)", 1, message)
+| project TIMESTAMP, reason, pod=name, drainNode, drainReason, msg=substring(message, 0, 200)
+| order by TIMESTAMP asc`,
+    },
+    {
+      name: "NodeNotReady by Pool",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP between(queryFrom .. queryTo)
+| where reason == "NodeNotReady"
+| where name matches regex "^aks"
+| extend nodepool = case(
+    name matches regex "^aks-([a-z0-9]+)-", extract("^aks-([a-z0-9]+)-", 1, name),
+    name matches regex "^akswtt([0-9]+)", "wtt" + extract("^akswtt([0-9]+)", 1, name),
+    "unknown")
+| extend isSystem = nodepool has "sys" or nodepool has "system"
+| summarize notReadyNodes=dcount(name), events=count() by bin(TIMESTAMP, 15m), nodepool, isSystem
+| order by TIMESTAMP asc, isSystem desc, notReadyNodes desc`,
+    },
+    {
+      name: "System Node Drain Concurrency",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+let queryFrom = _startTime;
+let queryTo = _endTime;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP between(queryFrom .. queryTo)
+| where reason == "safeDrain"
+| extend nodepool = case(
+    name matches regex "^aks-([a-z0-9]+)-", extract("^aks-([a-z0-9]+)-", 1, name),
+    name matches regex "^akswtt([0-9]+)", "wtt" + extract("^akswtt([0-9]+)", 1, name),
+    "unknown")
+| summarize nodes=make_set(name), drainReasons=make_set(extract("provided reason: \\"([^\\"]+)", 1, message)) by bin(TIMESTAMP, 1m), nodepool
+| extend concurrentDrains=array_length(nodes)
+| where concurrentDrains > 0
+| summarize maxConcurrent=max(concurrentDrains), totalDrainMinutes=count(), avgConcurrent=round(avg(concurrentDrains), 1) by nodepool
+| order by maxConcurrent desc`,
+    },
+    {
+      name: "Drain Reason Scope (7d)",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where TIMESTAMP > ago(7d)
+| where reason == "safeDrain"
+| extend drainReason = extract("provided reason: \\"([^\\"]+)", 1, message)
+| summarize drainCount=count(), nodesAffected=dcount(name), nodeList=make_set(name, 5), firstSeen=min(TIMESTAMP), lastSeen=max(TIMESTAMP) by drainReason
+| order by drainCount desc`,
+    },
+    {
+      name: "CoreDNS Pod Disruption During Incident",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where name has "coredns"
+| where reason in ("PodEvicted","Scheduled","NodeNotReady","TaintManagerEviction","FailedScheduling","SandboxChanged","FailedCreatePodSandBox","Killing")
+| summarize eventCount=count() by reason, bin(TIMESTAMP, 5m)
+| order by TIMESTAMP asc, reason`,
+    },
+    {
+      name: "Critical Infrastructure Pod Evictions",
+      datasource: "AKS CCP",
+      kql: `let queryCcpNamespace = AKSClusterID;
+KubeSystemEvents
+| where cluster_id == queryCcpNamespace
+| where name has_any ("coredns","kube-proxy","azure-cns","azure-ip-masq","cloud-node-manager")
+| where reason in ("PodEvicted","NodeNotReady","TaintManagerEviction","FailedScheduling")
+| summarize evictions=countif(reason=="PodEvicted"), notReady=countif(reason=="NodeNotReady"), failedSched=countif(reason=="FailedScheduling"), taintEvict=countif(reason=="TaintManagerEviction") by component=extract("^([a-z-]+)", 1, name)
+| where evictions > 0 or notReady > 0
+| order by evictions desc`,
+    },
   ],
   logs: [
     {
@@ -2946,6 +3068,77 @@ ProcessInfo
 | summarize cpu=max(CPUUtil) by bin(TIMESTAMP, totimespan(Interval)), PodName, PodContainerName
 //| where PodContainerRestartCount > 0
 //| distinct PodName, PodContainerName, PodContainerStartedAt, PodContainerRestartCount, ImageRepoTags`,
+    },
+    {
+      name: "AMA-Metrics Pod CPU (All Pods incl. KSM)",
+      datasource: "AKS",
+      kql: `AKSClusterMetrics
+| where PreciseTimeStamp between(_startTime.._endTime)
+| where cluster_id == AKSClusterID
+| where metric == "pod_container:container_millicore_seconds:max_rate5m"
+| where podName startswith "ama-metrics"
+| summarize avgCPU=round(avg(value), 1), maxCPU=round(max(value), 1), p95CPU=round(percentile(value, 95), 1) by podName
+| order by maxCPU desc`,
+    },
+    {
+      name: "AMA-Metrics Pod Memory (All Pods incl. KSM)",
+      datasource: "AKS",
+      kql: `AKSClusterMetrics
+| where PreciseTimeStamp between(_startTime.._endTime)
+| where cluster_id == AKSClusterID
+| where metric == "pod_container:container_memory_working_set_bytes:max5m"
+| where podName startswith "ama-metrics"
+| summarize avgMemMB=round(avg(value)/1024/1024, 1), maxMemMB=round(max(value)/1024/1024, 1), p95MemMB=round(percentile(value, 95)/1024/1024, 1) by podName
+| order by maxMemMB desc`,
+    },
+    {
+      name: "AMA-Metrics Pod CPU Throttling (All Pods incl. KSM)",
+      datasource: "AKS",
+      kql: `AKSClusterMetrics
+| where PreciseTimeStamp between(_startTime.._endTime)
+| where cluster_id == AKSClusterID
+| where metric == "pod_container:container_cpu_cfs_throttled_milliseconds:max_rate5m"
+| where podName startswith "ama-metrics"
+| summarize avgThrottle=round(avg(value), 1), maxThrottle=round(max(value), 1), p95Throttle=round(percentile(value, 95), 1) by podName
+| order by maxThrottle desc`,
+    },
+    {
+      name: "AMA-Metrics KSM CPU Over Time",
+      datasource: "AKS",
+      kql: `AKSClusterMetrics
+| where PreciseTimeStamp between(_startTime.._endTime)
+| where cluster_id == AKSClusterID
+| where metric == "pod_container:container_millicore_seconds:max_rate5m"
+| where podName startswith "ama-metrics-ksm"
+| summarize maxCPU=max(value) by bin(PreciseTimeStamp, 5m), podName
+| order by PreciseTimeStamp desc`,
+    },
+    {
+      name: "KSM cAdvisor Telemetry (CPU, Memory, Node)",
+      datasource: "PrometheusAppInsights",
+      kql: `customMetrics
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where name == "ksmUsage"
+| extend cpuMillicores = round(value / 1000000000 * 1000, 2),
+        computer = tostring(customDimensions.computer),
+        memKsmRssMB = round(toreal(customDimensions.MemKsmRssBytes) / 1024 / 1024, 1),
+        podRefName = tostring(customDimensions.PodRefName)
+| summarize cpuP95=round(percentile(cpuMillicores, 95), 2),
+            avgMemMB=round(avg(memKsmRssMB), 1),
+            samples=count()
+  by podRefName, computer, bin(timestamp, totimespan(Interval))
+| order by timestamp desc`,
+    },
+    {
+      name: "KSM Scrape Timeout Detection (broken pipe errors)",
+      datasource: "PrometheusAppInsights",
+      kql: `traces
+| where timestamp > ago(_endTime - _startTime)
+| where tostring(customDimensions.cluster) =~ _cluster
+| where message has "kube-state-metrics" and (message has "timeout" or message has "context deadline exceeded" or message has "broken pipe")
+| summarize errorCount=count() by bin(timestamp, totimespan(Interval))
+| order by timestamp desc`,
     },
   ],
 
