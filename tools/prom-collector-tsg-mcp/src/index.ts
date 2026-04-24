@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
-import { QUERIES, parameterizeQuery, type QueryCategory } from "./queries.js";
+import { QUERIES, parameterizeQuery, regionToArmCluster, type QueryCategory } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
 import { queryMdmThrottling, queryScrapeTargetHealth, queryMdmMetric, queryMeInternalMetrics } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
@@ -292,19 +292,26 @@ async function executeQuery(
       metricName: params.metricName,
     });
 
-    const ds = DATA_SOURCES[queryDef.datasource];
+    // Auto-route ARM queries to the correct regional cluster based on the cluster's region
+    let effectiveDatasource = queryDef.datasource;
+    const armDatasources = ["ARMProd", "ARMPRODSEA", "ARMPRODEUS", "ARMPRODWEU"];
+    if (armDatasources.includes(queryDef.datasource) && params.cluster) {
+      effectiveDatasource = regionToArmCluster(params.cluster);
+    }
+
+    const ds = DATA_SOURCES[effectiveDatasource];
     if (!ds) {
       return {
         name: queryDef.name,
-        datasource: queryDef.datasource,
+        datasource: effectiveDatasource,
         status: "error",
-        error: `Unknown data source: ${queryDef.datasource}`,
+        error: `Unknown data source: ${effectiveDatasource}`,
       };
     }
 
     let data: Record<string, unknown>[];
 
-    if (queryDef.datasource === "PrometheusAppInsights") {
+    if (effectiveDatasource === "PrometheusAppInsights") {
       data = await runAppInsightsQuery(kql, params.timeRange, params.startTime, params.endTime);
     } else {
       data = await runKustoQuery(ds.clusterUri, ds.database, kql);
@@ -312,7 +319,7 @@ async function executeQuery(
 
     return {
       name: queryDef.name,
-      datasource: queryDef.datasource,
+      datasource: effectiveDatasource,
       status: "success",
       data: data.slice(0, 100),
       rowCount: data.length,
@@ -735,10 +742,17 @@ server.tool(
       ),
   },
   async ({ datasource, kql, cluster, timeRange, outputFile, outputFormat, maxRows }) => {
-    const ds = DATA_SOURCES[datasource];
+    // Auto-route ARM queries to the correct regional cluster based on the cluster's region
+    let effectiveDatasource: string = datasource;
+    const armDatasources = ["ARMProd", "ARMPRODSEA", "ARMPRODEUS", "ARMPRODWEU"];
+    if (armDatasources.includes(datasource) && cluster) {
+      effectiveDatasource = regionToArmCluster(cluster);
+    }
+
+    const ds = DATA_SOURCES[effectiveDatasource];
     if (!ds) {
       return {
-        content: [{ type: "text", text: `Unknown data source: ${datasource}` }],
+        content: [{ type: "text", text: `Unknown data source: ${effectiveDatasource}` }],
       };
     }
 
@@ -750,7 +764,7 @@ server.tool(
 
     try {
       let data: Record<string, unknown>[];
-      if (datasource === "PrometheusAppInsights") {
+      if (effectiveDatasource === "PrometheusAppInsights") {
         data = await runAppInsightsQuery(resolvedKql, timeRange || "24h");
       } else {
         data = await runKustoQuery(ds.clusterUri, ds.database, resolvedKql);
@@ -764,9 +778,9 @@ server.tool(
           content: [
             {
               type: "text",
-              text: `✅ ${written.rows} rows written to \`${written.path}\` (${fmt} format)\n\nPreview (first 5 rows):\n\n${formatResults([{
+              text: `✅ ${written.rows} rows written to \`${written.path}\` (${fmt} format)${effectiveDatasource !== datasource ? `\n📍 Auto-routed: ${datasource} → ${effectiveDatasource} (based on cluster region)` : ""}\n\nPreview (first 5 rows):\n\n${formatResults([{
                 name: "Custom Query",
-                datasource,
+                datasource: effectiveDatasource,
                 status: "success",
                 data: data.slice(0, 5),
                 rowCount: data.length,
@@ -780,7 +794,7 @@ server.tool(
       const truncated = data.length > limit;
       const result: QueryResult = {
         name: "Custom Query",
-        datasource,
+        datasource: effectiveDatasource,
         status: "success",
         data: data.slice(0, limit),
         rowCount: data.length,
@@ -788,6 +802,9 @@ server.tool(
       };
 
       let text = formatResults([result]);
+      if (effectiveDatasource !== datasource) {
+        text = `📍 Auto-routed: ${datasource} → ${effectiveDatasource} (based on cluster region)\n\n` + text;
+      }
       if (truncated) {
         text += `\n💡 **Tip:** To get all ${data.length} rows, re-run with \`outputFile: "/tmp/results.csv"\``;
       }
@@ -1068,16 +1085,23 @@ server.tool(
     let hasFailures = false;
 
     // Helper: run a shell command and return stdout or null on failure
+    // Works cross-platform (Windows + Linux) — stderr is suppressed via stdio config
     function tryExec(cmd: string): string | null {
       try {
-        return execSync(cmd, { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
+        const result = execSync(cmd, { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
+        // Return first line only (equivalent to head -1)
+        return result.split(/\r?\n/)[0] || result;
       } catch {
         return null;
       }
     }
 
+    // Detect az CLI — on Windows it may be az.cmd, on Linux just az
+    const isWindows = process.platform === "win32";
+    const azCmd = isWindows ? "az.cmd" : "az";
+
     // 0. Check az CLI availability
-    const azVersion = tryExec("az version --output tsv 2>/dev/null | head -1");
+    const azVersion = tryExec(`${azCmd} version --output tsv`);
     if (!azVersion) {
       results.push("❌ **Azure CLI**: `az` not found in PATH");
       results.push("   → Install: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli");
@@ -1086,7 +1110,7 @@ server.tool(
       results.push(`✅ **Azure CLI**: Available`);
 
       // Check if logged in
-      const account = tryExec('az account show --query "{name:name, id:id}" -o tsv 2>/dev/null');
+      const account = tryExec(`${azCmd} account show --query "{name:name, id:id}" -o tsv`);
       if (!account) {
         results.push("❌ **Azure CLI login**: Not logged in");
         if (autoFix) {
@@ -1109,7 +1133,7 @@ server.tool(
           results.push(`⚠️ **Azure credential**: Token expires in ${expiresIn} minutes`);
           if (autoFix) {
             results.push("   🔧 Refreshing token...");
-            const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+            const refreshed = tryExec(`${azCmd} account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv`);
             if (refreshed) {
               results.push("   ✅ Token refreshed via az CLI");
             } else {
@@ -1128,7 +1152,7 @@ server.tool(
 
       if (autoFix) {
         results.push("   🔧 Attempting token refresh via az CLI...");
-        const refreshed = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+        const refreshed = tryExec(`${azCmd} account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv`);
         if (refreshed) {
           results.push("   ✅ az CLI token works — DefaultAzureCredential may need `AZURE_TENANT_ID` env var");
           results.push("   → Set: `export AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)`");
@@ -1147,13 +1171,15 @@ server.tool(
       results.push(`❌ **PrometheusAppInsights**: ${msg.slice(0, 200)}`);
       hasFailures = true;
       if (msg.includes("403") || msg.includes("Forbidden")) {
-        results.push("   → Need Reader role on the App Insights resource");
-        results.push("   → Resource: ContainerInsightsPrometheusCollector-Prod (sub 13d371f9-...)");
+        results.push("   → **Access needed:** Reader role on the App Insights resource");
+        results.push("   → **Resource:** ContainerInsightsPrometheusCollector-Prod");
+        results.push("   → **Security group:** Join 'citelemetry' SG via IDWeb: https://idweb.microsoft.com/IdentityManagement/aspx/groups/AllGroups.aspx?popupFromClipboard=%2Fidentitymanagement%2Faspx%2FGroups%2FEditGroup.aspx%3Fid%3D556d489e-f6cf-47af-93f3-94559fe54932");
+        results.push("   → **How to request:** Go to the IDWeb link above → request to join the 'citelemetry' security group. This grants Reader access to the ContainerInsightsPrometheusCollector-Prod App Insights resource.");
         if (autoFix) {
           results.push("   🔧 Attempting Kusto scope token for cross-check...");
-          const kustoToken = tryExec("az account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv 2>/dev/null");
+          const kustoToken = tryExec(`${azCmd} account get-access-token --resource https://api.loganalytics.io --query accessToken -o tsv`);
           if (kustoToken) {
-            results.push("   → Token acquired but permission denied. Request JIT access or ask team for Reader role");
+            results.push("   → Token acquired but permission denied on the resource. Confirm you have Reader role assigned");
           }
         }
       } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {
@@ -1168,9 +1194,10 @@ server.tool(
       "AKS CCP": "ControlPlaneEvents | take 1",
       MetricInsights: "EventStatsInsightsV2 | take 1",
       AMWInfo: "AzureMonitorAKSStatsDaily | take 1",
-      ARMProd: "HttpIncomingRequests | take 1",
+      // Test regional ARMPRODEUS instead of global ARMProd — the global proxy is CAP-blocked
+      ARMPRODEUS: "HttpIncomingRequests | take 1",
     };
-    const kustoSources = ["AKS", "AKS CCP", "MetricInsights", "AMWInfo", "ARMProd"] as const;
+    const kustoSources = ["AKS", "AKS CCP", "MetricInsights", "AMWInfo", "ARMPRODEUS"] as const;
     for (const dsName of kustoSources) {
       const ds = DATA_SOURCES[dsName];
       if (!ds) continue;
@@ -1182,20 +1209,82 @@ server.tool(
         results.push(`❌ **${dsName}**: ${msg.slice(0, 200)}`);
         hasFailures = true;
         if (msg.includes("403") || msg.includes("Forbidden")) {
-          if (dsName === "ARMProd") {
-            results.push(`   → ARMProd often blocks device-code flow due to Conditional Access Policy (CAP)`);
-            results.push(`   → Use \`azureauth\` CLI with WAM broker, or query manually via https://dataexplorer.azure.com`);
+          // Provide specific access details per data source
+          const accessInfo: Record<string, { role: string; resource: string; securityGroup: string; howToRequest: string }> = {
+            AKS: {
+              role: "Viewer",
+              resource: `Kusto cluster: akshuba.centralus.kusto.windows.net / database: AKSprod`,
+              securityGroup: "Join 'AKS Kusto Partners' via CoreIdentity: https://coreidentity.microsoft.com/manage/Entitlement/entitlement/akskustopart-mqif",
+              howToRequest: "Go to https://coreidentity.microsoft.com/manage/Entitlement/entitlement/akskustopart-mqif → request access. This grants Viewer on all akshuba databases (AKSprod, AKSccplogs, AKSinfra).",
+            },
+            "AKS CCP": {
+              role: "Viewer",
+              resource: `Kusto cluster: akshuba.centralus.kusto.windows.net / database: AKSccplogs`,
+              securityGroup: "Same entitlement as AKS: 'AKS Kusto Partners' via CoreIdentity",
+              howToRequest: "If you already requested AKS access via https://coreidentity.microsoft.com/manage/Entitlement/entitlement/akskustopart-mqif, you should have AKSccplogs too. If not, request there.",
+            },
+            "AKS Infra": {
+              role: "Viewer",
+              resource: `Kusto cluster: akshuba.centralus.kusto.windows.net / database: AKSinfra`,
+              securityGroup: "Same entitlement as AKS: 'AKS Kusto Partners' via CoreIdentity",
+              howToRequest: "If you already requested AKS access via https://coreidentity.microsoft.com/manage/Entitlement/entitlement/akskustopart-mqif, you should have AKSinfra too. If not, request there.",
+            },
+            MetricInsights: {
+              role: "Viewer",
+              resource: `Kusto cluster: metricsinsights.westus2.kusto.windows.net / database: metricsinsightsUX`,
+              securityGroup: "'Everyone Microsoft FTE' already has Viewer — all Microsoft FTEs should have access. If denied, also check 'CRG-genevametric-3iok-Reader-qu2m'",
+              howToRequest: "All Microsoft FTEs should have access automatically via the 'Everyone Microsoft FTE' group. If still denied, verify you're logged in as an FTE (not a vendor account) and in the Microsoft tenant. Try https://dataexplorer.azure.com → connect to metricsinsights.westus2.",
+            },
+            AMWInfo: {
+              role: "Viewer",
+              resource: `Kusto cluster: appinsightstlm.kusto.windows.net / database: azuremonitorattach`,
+              securityGroup: "Join 'citelemetry' SG via IDWeb: https://idweb.microsoft.com/IdentityManagement/aspx/groups/AllGroups.aspx?popupFromClipboard=%2Fidentitymanagement%2Faspx%2FGroups%2FEditGroup.aspx%3Fid%3D556d489e-f6cf-47af-93f3-94559fe54932",
+              howToRequest: "Same 'citelemetry' group as App Insights. Go to the IDWeb link above → request to join. This grants Viewer on the azuremonitorattach database.",
+            },
+            ARMProd: {
+              role: "Viewer",
+              resource: `Kusto cluster: armprod.kusto.windows.net / database: ARMProd (and regional clusters ARMPRODSEA/ARMPRODEUS/ARMPRODWEU)`,
+              securityGroup: "Join 'ARMProd Kusto Reader' via CoreIdentity: https://coreidentity.microsoft.com/manage/Entitlement/entitlement/armlogs-pbfu",
+              howToRequest: "Request via CoreIdentity link above. Note: ARMProd global proxy often blocks device-code auth due to Conditional Access Policy (CAP). Use `azureauth` CLI with WAM broker on Windows, or query manually via https://dataexplorer.azure.com. Prefer regional clusters (ARMPRODSEA/ARMPRODEUS/ARMPRODWEU).",
+            },
+            ARMPRODEUS: {
+              role: "Viewer",
+              resource: `Kusto cluster: armprodeus.eastus.kusto.windows.net / database: Requests (ARM regional — Americas)`,
+              securityGroup: "Join 'ARMProd Kusto Reader' via CoreIdentity: https://coreidentity.microsoft.com/manage/Entitlement/entitlement/armlogs-pbfu",
+              howToRequest: "Request via CoreIdentity link above. Same entitlement covers all ARM clusters (global + regional).",
+            },
+            ARMPRODSEA: {
+              role: "Viewer",
+              resource: `Kusto cluster: armprodsea.southeastasia.kusto.windows.net / database: Requests (ARM regional — Asia/Pacific)`,
+              securityGroup: "Join 'ARMProd Kusto Reader' via CoreIdentity: https://coreidentity.microsoft.com/manage/Entitlement/entitlement/armlogs-pbfu",
+              howToRequest: "Request via CoreIdentity link above. Same entitlement covers all ARM clusters (global + regional).",
+            },
+            ARMPRODWEU: {
+              role: "Viewer",
+              resource: `Kusto cluster: armprodweu.westeurope.kusto.windows.net / database: Requests (ARM regional — Europe)`,
+              securityGroup: "Join 'ARMProd Kusto Reader' via CoreIdentity: https://coreidentity.microsoft.com/manage/Entitlement/entitlement/armlogs-pbfu",
+              howToRequest: "Request via CoreIdentity link above. Same entitlement covers all ARM clusters (global + regional).",
+            },
+          };
+
+          const info = accessInfo[dsName];
+          if (info) {
+            results.push(`   → **Access needed:** ${info.role} role on ${info.resource}`);
+            results.push(`   → **Security group:** ${info.securityGroup}`);
+            results.push(`   → **How to request:** ${info.howToRequest}`);
           } else {
-            results.push(`   → Need Viewer role on Kusto cluster: ${ds.clusterUri}`);
+            results.push(`   → **Access needed:** Viewer role on Kusto cluster: ${ds.clusterUri} / database: ${ds.database}`);
+            results.push(`   → **How to request:** Go to https://myaccess.microsoft.com/ and search for the database name, or ask your team lead for Viewer access`);
           }
+
           if (autoFix) {
             // Try to get a token for this specific cluster scope to verify auth works
             const host = new URL(ds.clusterUri).host;
-            const scopeToken = tryExec(`az account get-access-token --resource https://${host} --query accessToken -o tsv 2>/dev/null`);
+            const scopeToken = tryExec(`${azCmd} account get-access-token --resource https://${host} --query accessToken -o tsv`);
             if (scopeToken) {
-              results.push("   → Token acquired but permission denied on database. Request Viewer access via JIT or ask team");
+              results.push("   → ℹ️ Token acquired successfully — the issue is database-level permission, not authentication. Request the role above.");
             } else {
-              results.push("   → Cannot get token for this cluster — may need different tenant or subscription");
+              results.push("   → ℹ️ Cannot acquire token for this cluster — you may be in the wrong tenant. Run `az account show --query tenantId -o tsv` and verify it's the Microsoft tenant (72f988bf-86f1-41af-91ab-2d7cd011db47)");
             }
           }
         } else if (msg.includes("ENOTFOUND") || msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT")) {

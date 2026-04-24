@@ -7,9 +7,89 @@ description: "Complete onboarding guide for setting up the Azure Managed Prometh
 
 This guide walks through setting up the complete troubleshooting environment for Azure Managed Prometheus (prometheus-collector) ICM investigation using Copilot CLI, MCP servers, and diagnostic tools.
 
+## Agent Setup Instructions
+
+**When a user asks to "set up my environment" or "set up troubleshooting", execute these steps yourself.** Do NOT just print instructions — run the commands.
+
+### Step 1: Check prerequisites
+
+Detect the platform (`process.platform` or `uname`) and check for:
+- **Node.js 18+**: Run `node --version`. If missing:
+  - Windows: `winget install OpenJS.NodeJS.LTS`
+  - Linux/WSL2: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs`
+  - OR use Agency's bundled Node.js: `~/.agency/nodejs/node-v22.21.0-linux-x64/bin/node`
+- **Azure CLI**: Run `az version`. If missing:
+  - Windows: `winget install Microsoft.AzureCLI`
+  - Linux/WSL2: `curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash`
+
+### Step 2: Build the TSG MCP server
+
+```
+cd <repo-root>/tools/prom-collector-tsg-mcp
+npm install
+npx tsc
+```
+
+Verify `dist/index.js` exists after build.
+
+### Step 3: Write ~/.copilot/mcp-config.json
+
+Create `~/.copilot/mcp-config.json` (NOT `mcp.json` — Copilot CLI ignores `mcp.json`):
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "prom-collector-tsg": {
+      "command": "node",
+      "args": ["C:\\Users\\<username>\\go\\src\\prometheus-collector\\tools\\prom-collector-tsg-mcp\\dist\\index.js"]
+    }
+  }
+}
+```
+
+**Linux/WSL2:**
+```json
+{
+  "mcpServers": {
+    "prom-collector-tsg": {
+      "command": "node",
+      "args": ["/home/<username>/go/src/prometheus-collector/tools/prom-collector-tsg-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Use the actual absolute path to `dist/index.js`. JSON does not expand `~` or `$HOME`.
+
+### Step 4: Check Azure login
+
+Run `az account show`. If not logged in, tell the user to run `az login` (requires interactive browser auth — you cannot do this for them).
+
+### Step 5: Set up Edge CDP for ICM browsing (optional)
+
+**Windows:** Launch Edge with CDP:
+```powershell
+Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\Users\$env:USERNAME\.edge-cdp-debug","--no-first-run","--disable-sync"
+```
+
+**WSL2:** Run `setup.sh` for the port proxy setup (requires admin UAC prompt on Windows side).
+
+Remind the user to sign in to https://portal.microsofticm.com in that Edge window.
+
+### Step 6: Verify
+
+Tell the user to **restart Copilot CLI** (`exit` then `agency copilot` from the repo root) to load the new MCP config. After restart, the `tsg_*` tools will be available.
+
+If tsg tools are already loaded (because mcp-config.json existed before), run `tsg_auth_check` to verify connectivity. Report any 403 errors with the specific security group links shown in the output.
+
+---
+
 ## Quick Start (Automated Setup)
 
-If you already have **Agency CLI** installed and the **repo cloned**, run the setup script:
+The fastest path: run `agency copilot` from inside the repo and say **"Set up my troubleshooting environment"**. The agent instructions above will guide Copilot through the full setup.
+
+Alternatively, if you prefer manual setup, run the setup script:
 
 ```bash
 cd ~/go/src/prometheus-collector

@@ -3721,3 +3721,69 @@ export function parameterizeQuery(
 
   return q;
 }
+
+/**
+ * Map an Azure region (from a cluster ARM resource ID) to the correct ARM regional Kusto cluster.
+ * The global ARMProd endpoint is a query proxy that's CAP-blocked — always use regional clusters.
+ *
+ * Region mapping:
+ *   ARMPRODSEA — East Asia, Southeast Asia, Australia, Japan, Korea, India, Israel, UAE, UK, South Africa
+ *   ARMPRODEUS — East US, West US, Central US, Canada, Brazil, all Americas
+ *   ARMPRODWEU — West Europe, North Europe, Germany, France, Switzerland, Norway, Sweden
+ */
+export function regionToArmCluster(clusterArmId: string): string {
+  // Extract region from the ARM resource ID — it's in the resource group's location or
+  // we can infer from common region naming patterns in the resource ID path
+  // e.g., /subscriptions/.../resourceGroups/MC_rg_cluster_eastus/providers/...
+  // But region isn't always in the ARM ID. Instead, use a lookup by known region names.
+
+  const id = clusterArmId.toLowerCase();
+
+  // Americas regions
+  const americasRegions = [
+    "eastus", "eastus2", "westus", "westus2", "westus3", "centralus",
+    "northcentralus", "southcentralus", "westcentralus",
+    "canadacentral", "canadaeast",
+    "brazilsouth", "brazilsoutheast",
+    "usgovarizona", "usgovvirginia", "usdodcentral", "usdodeast",
+    "mexicocentral",
+  ];
+
+  // Europe regions
+  const europeRegions = [
+    "westeurope", "northeurope",
+    "germanywestcentral", "germanynorth",
+    "francecentral", "francesouth",
+    "switzerlandnorth", "switzerlandwest",
+    "norwayeast", "norwaywest",
+    "swedencentral", "swedensouth",
+    "polandcentral", "italynorth", "spaincentral",
+  ];
+
+  // Asia/Pacific/UK/Africa regions → ARMPRODSEA
+  const seaRegions = [
+    "eastasia", "southeastasia",
+    "australiaeast", "australiasoutheast", "australiacentral",
+    "japaneast", "japanwest",
+    "koreacentral", "koreasouth",
+    "centralindia", "southindia", "westindia", "jioindiawest", "jioindiacentral",
+    "israelcentral",
+    "uaenorth", "uaecentral", "qatarcentral",
+    "uksouth", "ukwest",
+    "southafricanorth", "southafricawest",
+    "newzealandnorth",
+  ];
+
+  for (const region of americasRegions) {
+    if (id.includes(region)) return "ARMPRODEUS";
+  }
+  for (const region of europeRegions) {
+    if (id.includes(region)) return "ARMPRODWEU";
+  }
+  for (const region of seaRegions) {
+    if (id.includes(region)) return "ARMPRODSEA";
+  }
+
+  // Default to ARMPRODEUS (Americas) if region can't be determined
+  return "ARMPRODEUS";
+}
