@@ -398,6 +398,9 @@ stages:
             condition: always()
 
           # --- Basic Auth ServiceMonitor Tests ---
+          # TODO: When AKS 1.36 becomes available, create a 1.36+ test cluster to validate
+          # the namespaced RBAC path (Role/RoleBinding + secrets_access_namespaces configmap setting)
+          # instead of the cluster-wide secrets access that is used on < 1.36.
           - bash: |
               # Deploy basic-auth test resources
               kubectl apply -f ./test-cluster-yamls/basic-auth/namespace.yaml

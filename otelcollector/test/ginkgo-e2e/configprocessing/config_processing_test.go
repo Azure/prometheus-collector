@@ -2,9 +2,7 @@ package configprocessing
 
 import (
 	"encoding/json"
-	"fmt"
 	"prometheus-collector/otelcollector/test/utils"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +11,7 @@ import (
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
+	utilversion "k8s.io/apimachinery/pkg/util/version"
 )
 
 /*
@@ -855,16 +854,6 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )
 
-// parseMinorVersion extracts the minor version number from a Kubernetes version string like "1.35" or "v1.36.0-preview".
-func parseMinorVersion(gitVersion string) (int, error) {
-	v := strings.TrimPrefix(gitVersion, "v")
-	parts := strings.SplitN(v, ".", 3)
-	if len(parts) < 2 {
-		return 0, fmt.Errorf("unexpected version format: %s", gitVersion)
-	}
-	return strconv.Atoi(parts[1])
-}
-
 // Basic auth ServiceMonitor — verify RBAC, config, and targets
 var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
 	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {
@@ -877,9 +866,9 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		Expect(err).NotTo(HaveOccurred())
 		GinkgoWriter.Printf("[BasicAuth] Kubernetes version: %s\n", versionInfo.GitVersion)
 
-		minor, err := parseMinorVersion(versionInfo.GitVersion)
+		parsedVersion, err := utilversion.ParseSemantic(versionInfo.GitVersion)
 		Expect(err).NotTo(HaveOccurred())
-		GinkgoWriter.Printf("[BasicAuth] Parsed minor version: %d\n", minor)
+		GinkgoWriter.Printf("[BasicAuth] Parsed version: %s\n", parsedVersion.String())
 
 		// --- ClusterRole assertions ---
 		GinkgoWriter.Printf("[BasicAuth] Step 2: Checking ClusterRole ama-metrics-reader for secrets rule...\n")
@@ -920,7 +909,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			}
 		}
 
-		if minor < 36 {
+		if parsedVersion.LessThan(utilversion.MustParseSemantic("v1.36.0")) {
 			GinkgoWriter.Printf("[BasicAuth] K8s < 1.36: expecting generic secrets rule in ClusterRole\n")
 			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.36, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
 			GinkgoWriter.Printf("[BasicAuth] ClusterRole secrets rule check passed\n")
