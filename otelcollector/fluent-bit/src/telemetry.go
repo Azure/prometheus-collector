@@ -80,6 +80,8 @@ var (
 	IstioCniKeepListRegex string
 	// DCGM Exporter metrics keep list regex
 	DCGMExporterKeepListRegex string
+	// Advanced GPU Observability metrics keep list regex
+	AdvancedGPUObservabilityKeepListRegex string
 	// Network Observability Cilium metrics keep list regex
 	NetworkObservabilityCiliumKeepListRegex string
 	// Network Observability Hubble metrics keep list regex
@@ -123,6 +125,8 @@ var (
 	IstioCniScrapeInterval string
 	// DCGM Exporter scrape interval
 	DCGMExporterScrapeInterval string
+	// Advanced GPU Observability scrape interval
+	AdvancedGPUObservabilityScrapeInterval string
 	// Network Observability Cilium metrics scrape interval
 	NetworkObservabilityCiliumScrapeInterval string
 	// Network Observability Hubble metrics scrape interval
@@ -381,6 +385,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			ZtunnelKeepListRegex = regexHash["ZTUNNEL_METRICS_KEEP_LIST_REGEX"]
 			IstioCniKeepListRegex = regexHash["ISTIOCNI_METRICS_KEEP_LIST_REGEX"]
 			DCGMExporterKeepListRegex = regexHash["DCGMEXPORTER_METRICS_KEEP_LIST_REGEX"]
+			AdvancedGPUObservabilityKeepListRegex = regexHash["ADVANCEDGPUOBSERVABILITY_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
@@ -416,6 +421,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			ZtunnelScrapeInterval = intervalHash["ZTUNNEL_SCRAPE_INTERVAL"]
 			IstioCniScrapeInterval = intervalHash["ISTIOCNI_SCRAPE_INTERVAL"]
 			DCGMExporterScrapeInterval = intervalHash["DCGMEXPORTER_SCRAPE_INTERVAL"]
+			AdvancedGPUObservabilityScrapeInterval = intervalHash["ADVANCEDGPUOBSERVABILITY_SCRAPE_INTERVAL"]
 			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
 			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
 			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
@@ -962,6 +968,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if DCGMExporterKeepListRegex != "" {
 					metric.Properties["DCGMExporterRegex"] = DCGMExporterKeepListRegex
 				}
+				if AdvancedGPUObservabilityKeepListRegex != "" {
+					metric.Properties["AdvancedGPUObservabilityRegex"] = AdvancedGPUObservabilityKeepListRegex
+				}
 				if NetworkObservabilityCiliumKeepListRegex != "" {
 					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex
 				}
@@ -1022,6 +1031,9 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if DCGMExporterScrapeInterval != "" {
 					metric.Properties["DCGMExporterScrapeInterval"] = DCGMExporterScrapeInterval
+				}
+				if AdvancedGPUObservabilityScrapeInterval != "" {
+					metric.Properties["AdvancedGPUObservabilityScrapeInterval"] = AdvancedGPUObservabilityScrapeInterval
 				}
 				if NetworkObservabilityCiliumScrapeInterval != "" {
 					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval

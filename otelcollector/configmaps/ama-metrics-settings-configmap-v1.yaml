@@ -39,6 +39,7 @@ data:
     ztunnel = false
     istio-cni = false
     dcgmexporter = true
+    advancedgpuobservability = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
   # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
@@ -72,6 +73,7 @@ data:
     ztunnel = ""
     istio-cni = ""
     dcgmexporter = ""
+    advancedgpuobservability = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -94,6 +96,7 @@ data:
     ztunnel = "30s"
     istio-cni = "30s"
     dcgmexporter = "30s"
+    advancedgpuobservability = "30s"
     podannotations = "30s"
   debug-mode: |-
     enabled = false

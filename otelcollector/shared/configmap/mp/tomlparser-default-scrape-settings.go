@@ -32,6 +32,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["dcgmexporter"] = "true"
+	config["advancedgpuobservability"] = "true"
 	config["controlplane-istio"] = "false"
 
 	return config, nil
@@ -61,6 +62,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["ztunnel"] = "false"
 	config["istio-cni"] = "false"
 	config["dcgmexporter"] = "true"
+	config["advancedgpuobservability"] = "true"
 	config["controlplane-istio"] = "false"
 
 	configSectionName := "default-scrape-settings-enabled"
@@ -181,6 +183,11 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config:: Using scrape settings for dcgmexporter: %v\n", cp.DcgmExporter)
 	}
 
+	if val, ok := parsedConfig["advancedgpuobservability"]; ok && val != "" {
+		cp.AdvancedGPUObservability = val
+		fmt.Printf("config:: Using scrape settings for advancedgpuobservability: %v\n", cp.AdvancedGPUObservability)
+	}
+
 	if val, ok := parsedConfig["controlplane-istio"]; ok && val != "" {
 		cp.ControlplaneIstio = val
 		fmt.Printf("config:: Using scrape settings for controlplane-istio: %v\n", cp.ControlplaneIstio)
@@ -231,6 +238,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ZTUNNEL_SCRAPING_ENABLED=%v\n", cp.Ztunnel))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ISTIOCNI_SCRAPING_ENABLED=%v\n", cp.IstioCni))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_DCGMEXPORTER_SCRAPING_ENABLED=%v\n", cp.DcgmExporter))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ADVANCEDGPUOBSERVABILITY_SCRAPING_ENABLED=%v\n", cp.AdvancedGPUObservability))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_ISTIO_ENABLED=%v\n", cp.ControlplaneIstio))
 
 	return nil

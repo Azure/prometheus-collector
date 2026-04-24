@@ -55,6 +55,7 @@ var (
 	ztunnelDefaultFile                           = "ztunnelDefault.yml"
 	istioCniDefaultFile                          = "istioCniDefault.yml"
 	dcgmExporterDefaultFile                      = "dcgmExporterDefault.yml"
+	advancedGPUObservabilityDefaultFile           = "advancedGPUObservabilityDefault.yml"
 	controlplaneIstioDefaultFile                 = "controlplane_istio.yml"
 )
 
@@ -80,6 +81,7 @@ type RegexValues struct {
 	ztunnel                    string
 	istiocni                   string
 	dcgmexporter               string
+	advancedgpuobservability   string
 	controlplaneistio          string
 }
 
@@ -128,6 +130,7 @@ type ConfigProcessor struct {
 	Ztunnel                    string
 	IstioCni                   string
 	DcgmExporter               string
+	AdvancedGPUObservability   string
 }
 
 // ConfigParser is an interface for parsing configurations.

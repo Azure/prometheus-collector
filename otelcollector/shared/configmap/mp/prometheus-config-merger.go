@@ -811,6 +811,18 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ADVANCEDGPUOBSERVABILITY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		advancedGPUObservabilityMetricsKeepListRegex, exists := regexHash["ADVANCEDGPUOBSERVABILITY_METRICS_KEEP_LIST_REGEX"]
+		advancedGPUObservabilityScrapeInterval := intervalHash["ADVANCEDGPUOBSERVABILITY_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			UpdateScrapeIntervalConfig(advancedGPUObservabilityDefaultFile, advancedGPUObservabilityScrapeInterval)
+			if exists && advancedGPUObservabilityMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(advancedGPUObservabilityDefaultFile, advancedGPUObservabilityMetricsKeepListRegex)
+			}
+			defaultConfigs = append(defaultConfigs, advancedGPUObservabilityDefaultFile)
+		}
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1389,6 +1401,19 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ADVANCEDGPUOBSERVABILITY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		advancedGPUObservabilityMetricsKeepListRegex, exists := regexHash["ADVANCEDGPUOBSERVABILITY_METRICS_KEEP_LIST_REGEX"]
+		advancedGPUObservabilityScrapeInterval := intervalHash["ADVANCEDGPUOBSERVABILITY_SCRAPE_INTERVAL"]
+		if isConfigReaderSidecar() || currentControllerType == replicasetControllerType {
+			log.Printf("path %s: %s\n", "advancedGPUObservabilityDefaultFile", advancedGPUObservabilityDefaultFile)
+			UpdateScrapeIntervalConfig(advancedGPUObservabilityDefaultFile, advancedGPUObservabilityScrapeInterval)
+			if exists && advancedGPUObservabilityMetricsKeepListRegex != "" {
+				AppendMetricRelabelConfig(advancedGPUObservabilityDefaultFile, advancedGPUObservabilityMetricsKeepListRegex)
+			}
+			defaultConfigs = append(defaultConfigs, advancedGPUObservabilityDefaultFile)
+		}
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1508,7 +1533,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
 		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
-		LocalCSIDriverDefaultFile, dcgmExporterDefaultFile,
+		LocalCSIDriverDefaultFile, dcgmExporterDefaultFile, advancedGPUObservabilityDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {

@@ -1,0 +1,30 @@
+scrape_configs:
+  - job_name: advanced-gpu-observability
+    scheme: http
+    metrics_path: /metrics
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - gadget
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: gadget
+      - source_labels: [__meta_kubernetes_pod_label_k8s_app]
+        action: keep
+        regex: gadget
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:2224
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: instance
+    # TODO: Add metric_relabel_configs with labelkeep (like dcgmExporterDefault.yml)
+    # once GPU metrics are emitted with high-cardinality labels (e.g. pid, container).
+    # This will prevent cardinality explosion and cost spikes in Azure Monitor.

@@ -38,6 +38,7 @@ data:
     ztunnel = false
     istio-cni = false
     dcgmexporter = true
+    advancedgpuobservability = true
     controlplane-istio = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default.
@@ -71,6 +72,7 @@ data:
     acstor-metrics-exporter = ""
     local-csi-driver = ""
     dcgmexporter = ""
+    advancedgpuobservability = ""
     controlplane-istio = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
@@ -95,6 +97,7 @@ data:
     podannotations = "30s"
     local-csi-driver = "30s"
     dcgmexporter = "30s"
+    advancedgpuobservability = "30s"
     controlplane-istio = "30s"
   debug-mode: |-
     enabled = false
