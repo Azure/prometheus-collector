@@ -868,9 +868,11 @@ func parseMinorVersion(gitVersion string) (int, error) {
 // Basic auth ServiceMonitor — verify RBAC, config, and targets
 var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
 	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {
+		GinkgoWriter.Printf("[BasicAuth] Starting test — waiting 120s for cluster to stabilize...\n")
 		time.Sleep(120 * time.Second)
 
 		// --- Detect Kubernetes version ---
+		GinkgoWriter.Printf("[BasicAuth] Step 1: Detecting Kubernetes version...\n")
 		versionInfo, err := utils.GetKubernetesVersion(K8sClient)
 		Expect(err).NotTo(HaveOccurred())
 		GinkgoWriter.Printf("[BasicAuth] Kubernetes version: %s\n", versionInfo.GitVersion)
@@ -880,9 +882,11 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		GinkgoWriter.Printf("[BasicAuth] Parsed minor version: %d\n", minor)
 
 		// --- ClusterRole assertions ---
+		GinkgoWriter.Printf("[BasicAuth] Step 2: Checking ClusterRole ama-metrics-reader for secrets rule...\n")
 		clusterRole, err := utils.GetClusterRole(K8sClient, "ama-metrics-reader")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(clusterRole).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuth] ClusterRole ama-metrics-reader found with %d rules\n", len(clusterRole.Rules))
 
 		// Check for a generic secrets rule (no resourceNames constraint)
 		hasGenericSecretsRule := false
@@ -899,6 +903,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			}
 			// Skip rules that are scoped to specific resourceNames (e.g., aad-msi-auth-token)
 			if len(rule.ResourceNames) > 0 {
+				GinkgoWriter.Printf("[BasicAuth] Skipping scoped secrets rule (resourceNames=%v)\n", rule.ResourceNames)
 				continue
 			}
 			hasGetListWatch := false
@@ -910,6 +915,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			}
 			if hasGetListWatch {
 				hasGenericSecretsRule = true
+				GinkgoWriter.Printf("[BasicAuth] Found generic secrets rule with verbs: %v\n", rule.Verbs)
 				break
 			}
 		}
@@ -917,11 +923,13 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		if minor < 36 {
 			GinkgoWriter.Printf("[BasicAuth] K8s < 1.36: expecting generic secrets rule in ClusterRole\n")
 			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.36, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
+			GinkgoWriter.Printf("[BasicAuth] ClusterRole secrets rule check passed\n")
 		} else {
 			GinkgoWriter.Printf("[BasicAuth] K8s >= 1.36: expecting NO generic secrets rule in ClusterRole\n")
 			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.36, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
 
 			// Verify namespaced Role and RoleBinding exist
+			GinkgoWriter.Printf("[BasicAuth] Checking namespaced Role and RoleBinding in basic-auth-test...\n")
 			role, err := utils.GetRole(K8sClient, "basic-auth-test", "ama-metrics-secrets-reader")
 			Expect(err).NotTo(HaveOccurred(), "Role ama-metrics-secrets-reader should exist in basic-auth-test namespace")
 			Expect(role).NotTo(BeNil())
@@ -933,10 +941,12 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		}
 
 		// --- Config check: verify basic-auth job exists with correct basic_auth config ---
+		GinkgoWriter.Printf("[BasicAuth] Step 3: Querying Prometheus config from ama-metrics RS pod...\n")
 		var apiResponse utils.APIResponse
 		err = utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/status/config", true, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuth] Successfully retrieved Prometheus config\n")
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -947,6 +957,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		Expect(err).NotTo(HaveOccurred())
 		Expect(prometheusConfig).NotTo(BeNil())
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuth] Parsed Prometheus config with %d scrape configs\n", len(prometheusConfig.ScrapeConfigs))
 
 		// Find the basic-auth scrape job
 		var basicAuthJob *config.ScrapeConfig
@@ -962,23 +973,27 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 		GinkgoWriter.Printf("[BasicAuth] Found basic-auth job: %s\n", basicAuthJob.JobName)
 
 		// Verify the job has basic_auth configured with username=admin
+		GinkgoWriter.Printf("[BasicAuth] Step 4: Verifying basic_auth credentials in scrape config...\n")
 		Expect(basicAuthJob.HTTPClientConfig.BasicAuth).NotTo(BeNil(), "basic-auth job should have basic_auth configured")
 		Expect(basicAuthJob.HTTPClientConfig.BasicAuth.Username).To(Equal("admin"), "basic-auth job should have username=admin")
 		GinkgoWriter.Printf("[BasicAuth] Verified basic_auth username=admin\n")
 
 		// --- Targets check: verify target is up ---
 		// Wait for at least one scrape interval to elapse so targets appear
-		GinkgoWriter.Printf("[BasicAuth] Waiting 60s for first scrape to complete...\n")
+		GinkgoWriter.Printf("[BasicAuth] Step 5: Waiting 60s for first scrape interval to complete...\n")
 		time.Sleep(60 * time.Second)
 
 		// Query targets from both RS pods since the basic-auth target may be assigned to either one
+		GinkgoWriter.Printf("[BasicAuth] Querying targets from both RS pods...\n")
 		var targetsResponses = make([]*utils.APIResponse, 2)
 		err = utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, true, targetsResponses)
 		Expect(err).NotTo(HaveOccurred())
+		GinkgoWriter.Printf("[BasicAuth] Successfully queried targets from RS pods\n")
 
 		foundBasicAuthTarget := false
 		for podIdx, targetsResponse := range targetsResponses {
 			if targetsResponse == nil {
+				GinkgoWriter.Printf("[BasicAuth] RS pod %d: no response (nil), skipping\n", podIdx)
 				continue
 			}
 			Expect(targetsResponse.Data).NotTo(BeNil())
@@ -987,6 +1002,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			json.Unmarshal([]byte(targetsResponse.Data), &targetsResult)
 			Expect(targetsResult).NotTo(BeNil())
 			Expect(targetsResult.Active).NotTo(BeNil())
+			GinkgoWriter.Printf("[BasicAuth] RS pod %d: found %d active targets\n", podIdx, len(targetsResult.Active))
 
 			for _, target := range targetsResult.Active {
 				if strings.Contains(string(target.ScrapePool), "basic-auth") {
@@ -999,6 +1015,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			if foundBasicAuthTarget {
 				break
 			}
+			GinkgoWriter.Printf("[BasicAuth] RS pod %d: no basic-auth target found in active targets\n", podIdx)
 		}
 		Expect(foundBasicAuthTarget).To(BeTrue(), "Expected to find an active target in a basic-auth scrape pool in at least one RS pod")
 
