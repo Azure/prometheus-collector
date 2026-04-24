@@ -19,7 +19,7 @@ spec:
           ports:
             - containerPort: 2114
               protocol: TCP
-              name: "basic-auth-metrics"
+              name: "ba-metrics"
       nodeSelector:
         kubernetes.io/os: linux
         kubernetes.io/arch: amd64
@@ -35,7 +35,7 @@ spec:
   selector:
     app: basic-auth-ref-app
   ports:
-    - name: "basic-auth-metrics"
+    - name: "ba-metrics"
       protocol: TCP
       port: 2114
       targetPort: 2114

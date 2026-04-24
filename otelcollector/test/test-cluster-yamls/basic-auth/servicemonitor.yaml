@@ -15,7 +15,7 @@ spec:
     matchLabels:
       app: basic-auth-ref-app
   endpoints:
-    - port: basic-auth-metrics
+    - port: ba-metrics
       path: /httpsmetrics
       basicAuth:
         username:
