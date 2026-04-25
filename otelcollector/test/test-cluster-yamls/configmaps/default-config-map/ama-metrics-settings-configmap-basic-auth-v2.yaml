@@ -1,0 +1,91 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  schema-version:
+    v2
+  config-version:
+    ver1
+  cluster-metrics: |-
+    default-targets-scrape-enabled: |-
+      kubelet = true
+      coredns = true
+      cadvisor = true
+      kubeproxy = true
+      apiserver = false
+      kubestate = true
+      nodeexporter = true
+      windowsexporter = true
+      windowskubeproxy = true
+      kappiebasic = true
+      networkobservabilityRetina = true
+      networkobservabilityHubble = true
+      networkobservabilityCilium = true
+      acstor-capacity-provisioner = true
+      acstor-metrics-exporter = true
+      prometheuscollectorhealth = false
+      local-csi-driver = true
+    pod-annotation-based-scraping: |-
+      podannotationnamespaceregex = ".*"
+    default-targets-metrics-keep-list: |-
+      kubelet = ""
+      coredns = ""
+      cadvisor = ""
+      kubeproxy = ""
+      apiserver = ""
+      kubestate = ""
+      nodeexporter = ""
+      windowsexporter = ""
+      windowskubeproxy = ""
+      podannotations = ""
+      kappiebasic = ""
+      networkobservabilityRetina = ""
+      networkobservabilityHubble = ""
+      networkobservabilityCilium = ""
+      acstor-capacity-provisioner = ""
+      acstor-metrics-exporter = ""
+      local-csi-driver = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+    default-targets-scrape-interval-settings: |-
+      kubelet = "30s"
+      coredns = "30s"
+      cadvisor = "30s"
+      kubeproxy = "30s"
+      apiserver = "30s"
+      kubestate = "30s"
+      nodeexporter = "30s"
+      windowsexporter = "30s"
+      windowskubeproxy = "30s"
+      kappiebasic = "30s"
+      networkobservabilityRetina = "30s"
+      networkobservabilityHubble = "30s"
+      networkobservabilityCilium = "30s"
+      acstor-capacity-provisioner = "30s"
+      acstor-metrics-exporter = "30s"
+      prometheuscollectorhealth = "30s"
+      podannotations = "30s"
+      local-csi-driver = "30s"
+  controlplane-metrics: |-
+    default-targets-scrape-enabled: |-
+      apiserver = true
+      cluster-autoscaler = true
+      node-auto-provisioning = true
+      kube-scheduler = true
+      kube-controller-manager = true
+      etcd = true
+    default-targets-metrics-keep-list: |-
+      apiserver = ""
+      cluster-autoscaler = ""
+      node-auto-provisioning = ""
+      kube-scheduler = ""
+      kube-controller-manager = ""
+      etcd = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    debug-mode = "false"
+    secrets_access_namespaces = "basic-auth-test"
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
