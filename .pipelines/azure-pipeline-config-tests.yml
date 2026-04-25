@@ -491,7 +491,7 @@ stages:
               # Restore original settings configmap if it was changed (>= 1.36)
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
               if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
-                kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+                kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               fi
             displayName: "Create TestKube Results Summary and cleanup basic-auth resources"
             condition: always()
@@ -586,7 +586,7 @@ stages:
               kubectl delete namespace basic-auth-test --ignore-not-found
 
               # Restore original settings configmap
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
             displayName: "Create TestKube Results Summary and cleanup basic-auth v2 resources"
             condition: always()
 
