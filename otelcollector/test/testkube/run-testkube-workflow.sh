@@ -175,6 +175,18 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-mip-false-crs.yaml)
             workflows=(configprocessingmipfalse mipfalse)
             ;;
+        testkube-config-test-basic-auth-smon-crs.yaml)
+            workflows=(basicauthsmon)
+            ;;
+        testkube-config-test-basic-auth-secret-update-crs.yaml)
+            workflows=(basicauthsecretupdate)
+            ;;
+        testkube-config-test-basic-auth-smon-v2-crs.yaml)
+            workflows=(basicauthsmonv2)
+            ;;
+        testkube-config-test-basic-auth-secret-update-v2-crs.yaml)
+            workflows=(basicauthsecretupdatev2)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1

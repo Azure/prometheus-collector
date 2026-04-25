@@ -9,8 +9,10 @@ import (
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
 
 	"k8s.io/client-go/kubernetes"
@@ -546,4 +548,32 @@ func GetAndUpdateTokenConfig(K8sClient *kubernetes.Clientset, Cfg *rest.Config, 
 	}
 
 	return nil
+}
+
+/*
+ * Returns the Kubernetes server version info.
+ */
+func GetKubernetesVersion(clientset *kubernetes.Clientset) (*version.Info, error) {
+	return clientset.Discovery().ServerVersion()
+}
+
+/*
+ * Returns the specified ClusterRole.
+ */
+func GetClusterRole(clientset *kubernetes.Clientset, name string) (*rbacv1.ClusterRole, error) {
+	return clientset.RbacV1().ClusterRoles().Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+/*
+ * Returns the specified Role in the given namespace.
+ */
+func GetRole(clientset *kubernetes.Clientset, namespace string, name string) (*rbacv1.Role, error) {
+	return clientset.RbacV1().Roles(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+/*
+ * Returns the specified RoleBinding in the given namespace.
+ */
+func GetRoleBinding(clientset *kubernetes.Clientset, namespace string, name string) (*rbacv1.RoleBinding, error) {
+	return clientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }

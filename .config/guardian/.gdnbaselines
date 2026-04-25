@@ -11,6 +11,20 @@
     }
   },
   "results": {
+    "244581d2011c8595bd3d21ddae69813e22585558506370882b1b7f7e0fce970c": {
+      "signature": "244581d2011c8595bd3d21ddae69813e22585558506370882b1b7f7e0fce970c",
+      "alternativeSignatures": [],
+      "target": "otelcollector/test/test-cluster-yamls/basic-auth/secret.yaml",
+      "line": 9,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0030",
+      "createdDate": "2026-04-24 00:00:00Z",
+      "expirationDate": "2026-10-21 00:00:00Z",
+      "justification": "Test-only credentials (admin/pwd) for basic-auth E2E test. Not real secrets."
+    },
     "2bc159ebba334c55965b2ac505bdd4eb178d1a9ed6dc0abc640b7ffb7dcfafea": {
       "signature": "2bc159ebba334c55965b2ac505bdd4eb178d1a9ed6dc0abc640b7ffb7dcfafea",
       "alternativeSignatures": [
