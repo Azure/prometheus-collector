@@ -1,0 +1,21 @@
+$defs:
+  config:
+    type: object
+    properties:
+      enabled:
+        type: boolean
+        description: Enables the Prometheus API server when true.
+        default: false
+      lookback_delta:
+        type: string
+        format: duration
+        description: >-
+          Amount of time the query APIs look back when evaluating ranges.
+        default: 5m
+      max_connections:
+        type: integer
+        description: >-
+          Maximum number of simultaneous connections to the API server.
+        default: 512
+      server_config:
+        $ref: go.opentelemetry.io/collector/config/confighttp.server_config

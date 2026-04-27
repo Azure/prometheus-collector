@@ -40,6 +40,7 @@ type Manager struct {
 	initialScrapeConfigs []*promconfig.ScrapeConfig
 	scrapeManager        *scrape.Manager
 	discoveryManager     *discovery.Manager
+	cfgLock              *sync.RWMutex
 	wg                   sync.WaitGroup
 
 	// configUpdateCount tracks how many times the config has changed, for
@@ -49,13 +50,14 @@ type Manager struct {
 	configUpdated chan struct{}
 }
 
-func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config) *Manager {
+func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, cfgLock *sync.RWMutex) *Manager {
 	return &Manager{
 		shutdown:             make(chan struct{}),
 		settings:             set,
 		cfg:                  cfg,
 		promCfg:              promCfg,
 		initialScrapeConfigs: promCfg.ScrapeConfigs,
+		cfgLock:              cfgLock,
 		configUpdateCount:    &atomic.Int64{},
 		configUpdated:        make(chan struct{}, 10),
 	}
