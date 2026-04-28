@@ -11,17 +11,15 @@ import (
 	"os"
 	"time"
 
-	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
-	"k8s.io/client-go/metadata"
-
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
+	promMonitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
-	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
+	k8sutil "github.com/prometheus-operator/prometheus-operator/pkg/k8s"
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
@@ -34,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
@@ -61,15 +60,14 @@ func NewPrometheusCRWatcher(
 	if err != nil {
 		return nil, err
 	}
-
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 
-	// Scope the metadata informer factory to specific namespaces for secrets access.
-	// This avoids requiring cluster-wide secrets list/watch RBAC.
-	// If SecretsAccessNamespaces is not configured, no namespaces are watched for secrets.
-	secretsAllowList := cfg.PrometheusCR.GetSecretsAllowList()
+	// Scope the metadata informer factory to the collector namespace only.
+	// This is used for the secrets informer so that it only needs namespace-scoped RBAC
+	// (a Role in kube-system) rather than cluster-wide secrets list/watch access.
+	secretsAllowList := map[string]struct{}{cfg.CollectorNamespace: {}}
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
 
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
