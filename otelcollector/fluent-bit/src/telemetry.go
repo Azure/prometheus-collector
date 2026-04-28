@@ -535,16 +535,22 @@ type Container struct {
 
 // Send Cpu and Memory Usage for our containers to Application Insights periodically
 func SendContainersCpuMemoryToAppInsightsMetrics() {
-	var p CadvisorJson
-	err := json.Unmarshal(retrieveKsmData(), &p)
-	if err != nil {
-		message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
-		Log(message)
-		SendException(message)
-	}
-
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
+		var p CadvisorJson
+		data := retrieveKsmData()
+		if data == nil {
+			Log("No data returned from cadvisor, skipping this interval\n")
+			continue
+		}
+		err := json.Unmarshal(data, &p)
+		if err != nil {
+			message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
 		for podId := 0; podId < len(p.Pods); podId++ {
 			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
