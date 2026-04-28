@@ -738,8 +738,7 @@ func retrieveKsmData() []byte {
 		Timeout: time.Duration(5) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs:            caCertPool,
-				InsecureSkipVerify: true,
+				RootCAs: caCertPool,
 			},
 		},
 	}
