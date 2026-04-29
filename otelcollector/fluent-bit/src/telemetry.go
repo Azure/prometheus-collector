@@ -535,16 +535,22 @@ type Container struct {
 
 // Send Cpu and Memory Usage for our containers to Application Insights periodically
 func SendContainersCpuMemoryToAppInsightsMetrics() {
-	var p CadvisorJson
-	err := json.Unmarshal(retrieveKsmData(), &p)
-	if err != nil {
-		message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
-		Log(message)
-		SendException(message)
-	}
-
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
+		var p CadvisorJson
+		data := retrieveKsmData()
+		if data == nil {
+			Log("No data returned from cadvisor, skipping this interval\n")
+			continue
+		}
+		err := json.Unmarshal(data, &p)
+		if err != nil {
+			message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
 		for podId := 0; podId < len(p.Pods); podId++ {
 			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
@@ -577,6 +583,12 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, podRefName string) {
 	cpuUsageNanoCoresLinux := container.Cpu.UsageNanoCores
 	memoryRssBytesLinux := container.Memory.RssBytes
+
+	// Skip sending if both CPU and memory are zero (container just started, no data yet)
+	if cpuUsageNanoCoresLinux == 0 && memoryRssBytesLinux == 0 {
+		Log(fmt.Sprintf("Skipping zero CPU and Mem data for %s (pod: %s)\n", cpuMetricName, podRefName))
+		return
+	}
 
 	// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
 	metricTelemetryItem := appinsights.NewMetricTelemetry(cpuMetricName, cpuUsageNanoCoresLinux)
@@ -701,23 +713,24 @@ func getTargetAllocatorResponse(taEndpoint string) []byte {
 	}
 
 	resp, err := client.Get(taEndpoint)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		Log(fmt.Sprintf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint))
 		SendException(err)
 		return nil
-	} else {
-		Log(fmt.Sprintf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint))
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		Log(fmt.Sprintf("Non-OK status %d from Target Allocator endpoint - %s\n", resp.StatusCode, taEndpoint))
+		return nil
+	}
+	Log(fmt.Sprintf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		Log(fmt.Sprintf("Error reading response body: %v", err))
 		SendException(err)
 		return nil
-	}
-
-	if resp != nil && resp.Body != nil {
-		defer resp.Body.Close()
 	}
 
 	return body
@@ -730,6 +743,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error getting certificate - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -738,8 +752,7 @@ func retrieveKsmData() []byte {
 		Timeout: time.Duration(5) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs:            caCertPool,
-				InsecureSkipVerify: true,
+				RootCAs: caCertPool,
 			},
 		},
 	}
