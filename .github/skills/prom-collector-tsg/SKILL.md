@@ -469,6 +469,7 @@ Some ME internals are not documented in EngHub (e.g. the exact dimension count l
 |------------|----------|
 | AMW Quota increases | Geneva Monitoring/MDM-Support-Manageability-Tier2 |
 | Query throttling (429 in Grafana) | Azure Monitor Essentials/Sev3 and 4 CRI – Metrics |
+| Query failures (Portal 503 / PQS) | Azure Monitor Essentials/Sev 3 and 4 CRI – PQS |
 | Remote-write errors (500, 4xx) | Geneva Monitoring/Ingestion Gateway Support - Tier 2 |
 | ARC Kubernetes ingestion | Container Insights/AzureManagedPrometheusAgent |
 | Prometheus Recording rules & alerts | Azure Log Search Alerts/Prometheus Alerts |
@@ -531,6 +532,8 @@ Some ME internals are not documented in EngHub (e.g. the exact dimension count l
 | Customer exporter pods crashing | ICM attachment `pods-all-wide.txt` + `nodes.txt` | Missing Metrics (customer app issue, not addon) |
 | RS pods evicted during node drain | ICM attachment `pods-all-wide.txt` (RS pod age/restarts) | Missing Metrics (addon also disrupted by drain) |
 | KSM scrape timeout (large cluster) | KSM logs: "broken pipe" + `tsg_config` (labels allowlist `[*]`) | Missing Metrics (KSM payload too large for scrape_timeout) |
+| Portal PromQL 503 / Grafana works | `tsg_errors` + `tsg_workload` (quick health check) | Known Issues (PQS query path — not our addon) |
+| MDSD ODS health upload DNS errors | `tsg_errors` (benign — ignore) | Known Issues (HEALTH_ datatype, not metrics pipeline) |
 
 ---
 

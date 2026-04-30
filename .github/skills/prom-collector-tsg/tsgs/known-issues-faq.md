@@ -17,3 +17,11 @@ These are specific known behaviors and past incidents — not troubleshooting wo
 **Post-rollout minimal ingestion profile regression (Aug 2025)** — A past addon release broke minimal ingestion profile logic, causing clusters without ConfigMaps to ingest ALL metrics. Symptoms: sudden CPU spike + ingestion increase after addon update. Workaround: deploy `ama-metrics-settings-configmap` with explicit `minimal-ingestion-profile: true`. If a new version causes similar regression, file Sev2 to `Container Insights/AzureManagedPrometheusAgent`.
 
 **Tolerations blocking node drain** — Older addon versions had tolerations that prevented pod eviction during node drains/cluster upgrades. Fixed in recent releases. Workaround: manually delete the pod before draining. Fix: upgrade addon to latest.
+
+**PromQL query failures in Azure Portal but Grafana works (PQS 503)** — Customer reports PromQL queries returning HTTP 503 errors in the Azure Portal Metrics tab, but the same queries succeed in Grafana. This is a **query-path (PQS) issue, not an ingestion issue**. Our addon only handles scraping and ingesting metrics into MDM — the query path (Portal → PQS → MDM) is owned by a separate team.
+- **Key diagnostic signal**: If Grafana queries work but Portal queries fail, our ingestion pipeline is healthy. The issue is downstream of MDM on the query path
+- **How to confirm**: Run `tsg_triage` + `tsg_errors` + `tsg_workload` to verify addon health. If all show zero errors, zero drops, and steady ingestion — it's not us
+- **Do NOT deep-dive into ingestion pipeline** when this pattern is present. A quick health check (`tsg_errors` + `tsg_workload`) is sufficient to confirm we're clean
+- **Escalation**: Transfer ICM to `Azure Monitor Essentials/Sev 3 and 4 CRI – PQS` (or `– Metrics` for 429 query throttling)
+
+**Benign MDSD ODS health upload DNS errors** — `tsg_errors` may show MDSD errors like `Failed to upload to ODS: Error resolving address` for the `HEALTH_` datatype. This is MDSD attempting to upload its own health telemetry to the ODS endpoint — it is NOT the metrics ingestion pipeline. These errors are benign and do not affect Prometheus metric ingestion. The metrics pipeline uses gRPC to MDM (via MetricsExtension), not ODS. Do not investigate further unless you also see ME or OtelCollector errors.
