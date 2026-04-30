@@ -1,0 +1,34 @@
+prometheus/withAPIEnabled:
+  api_server:
+    enabled: true
+    server_config:
+      endpoint: "localhost:9090"
+  config:
+    scrape_configs:
+      - job_name: 'demo'
+        scrape_interval: 5s
+        fallback_scrape_protocol: "PrometheusText1.0.0"
+prometheus/withoutAPI:
+  config:
+    scrape_configs:
+      - job_name: 'demo'
+        scrape_interval: 5s
+        fallback_scrape_protocol: "PrometheusText1.0.0"
+prometheus/withAPIUsingDefaults:
+  api_server:
+    enabled: true
+  config:
+    scrape_configs:
+      - job_name: 'demo'
+        scrape_interval: 5s
+        fallback_scrape_protocol: "PrometheusText1.0.0"
+prometheus/withInvalidAPIConfig:
+  api_server:
+    enabled: true
+    server_config:
+      transport: "invalid"
+  config:
+    scrape_configs:
+      - job_name: 'demo'
+        scrape_interval: 5s
+        fallback_scrape_protocol: "PrometheusText1.0.0"
