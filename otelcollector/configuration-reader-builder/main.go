@@ -347,9 +347,10 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certificate,
 	caKey *rsa.PrivateKey) (string, string, error) {
 	log.Println("Creating server certificate")
+	namespace := shared.GetNamespace()
 	dnsNames := []string{
 		"localhost",
-		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
+		fmt.Sprintf("ama-metrics-operator-targets.%s.svc.cluster.local", namespace),
 	}
 	now := time.Now()
 	notAfter := now.AddDate(0, ServerValidityMonths, 0)
@@ -401,7 +402,7 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 	log.Println("Generating secret with server cert, server key and CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-server-tls-secret"
-	namespace := "kube-system"
+	namespace := shared.GetNamespace()
 
 	// Create the secret data
 	secretData := map[string][]byte{
@@ -456,7 +457,7 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-client-tls-secret"
-	namespace := "kube-system"
+	namespace := shared.GetNamespace()
 
 	// Create the secret data
 	secretData := map[string][]byte{

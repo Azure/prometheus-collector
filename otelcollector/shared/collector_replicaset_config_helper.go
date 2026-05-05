@@ -3,6 +3,7 @@ package shared
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,7 +31,8 @@ func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	if tlsSettings != nil {
 		delete(targetAllocatorConfig, "tls")
 	}
-	targetAllocatorConfig["endpoint"] = "http://ama-metrics-operator-targets.kube-system.svc.cluster.local"
+	namespace := GetNamespace()
+	targetAllocatorConfig["endpoint"] = fmt.Sprintf("http://ama-metrics-operator-targets.%s.svc.cluster.local", namespace)
 
 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
 	if err != nil {
@@ -109,7 +111,8 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 							},
 						},
 					}
-					resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+					namespace := GetNamespace()
+					resp, err = client.Get(fmt.Sprintf("https://ama-metrics-operator-targets.%s.svc.cluster.local:443/scrape_configs", namespace))
 					if err != nil || resp.StatusCode != http.StatusOK {
 						if i == retries_https {
 							log.Printf("Failed to reach Target Allocator endpoint with HTTPS after %d retries, exiting - %v\n", retries_https, err)
