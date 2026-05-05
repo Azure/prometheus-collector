@@ -15,5 +15,6 @@
     "managed-prometheus",
     "ama-metrics"
   ],
-  "category": "troubleshooting"
+  "category": "troubleshooting",
+  "mcpServers": ".mcp.json"
 }
