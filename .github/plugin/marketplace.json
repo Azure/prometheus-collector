@@ -1,0 +1,31 @@
+{
+  "name": "prometheus-collector",
+  "owner": {
+    "name": "Azure Container Insights",
+    "email": "containerinsights@microsoft.com"
+  },
+  "metadata": {
+    "description": "Plugins for Azure Managed Prometheus (prometheus-collector) SRE troubleshooting",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "prom-collector-tsg",
+      "source": "plugins/prom-collector-tsg",
+      "description": "Troubleshoot Azure Managed Prometheus ICMs by running diagnostic KQL queries against ADX and App Insights. Covers missing metrics, pod crashes, OOM, scrape config issues, MDM throttling, control plane metrics, private link, and more.",
+      "version": "1.0.0",
+      "skills": [
+        ".github/skills/prom-collector-tsg"
+      ]
+    },
+    {
+      "name": "troubleshooting-setup",
+      "source": "plugins/troubleshooting-setup",
+      "description": "Complete onboarding guide for setting up the Azure Managed Prometheus troubleshooting environment with Copilot CLI, MCP servers, and diagnostic tooling.",
+      "version": "1.0.0",
+      "skills": [
+        ".github/skills/troubleshooting-setup"
+      ]
+    }
+  ]
+}
