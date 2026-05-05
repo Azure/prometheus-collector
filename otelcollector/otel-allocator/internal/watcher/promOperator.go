@@ -60,14 +60,15 @@ func NewPrometheusCRWatcher(
 	if err != nil {
 		return nil, err
 	}
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, monitoringclient, allocatorconfig.DefaultResyncTime, nil)
 
-	// Scope the metadata informer factory to the collector namespace only.
-	// This is used for the secrets informer so that it only needs namespace-scoped RBAC
-	// (a Role in kube-system) rather than cluster-wide secrets list/watch access.
-	secretsAllowList := map[string]struct{}{cfg.CollectorNamespace: {}}
+	// Scope the metadata informer factory to specific namespaces for secrets access.
+	// This avoids requiring cluster-wide secrets list/watch RBAC.
+	// If SecretsAccessNamespaces is not configured, no namespaces are watched for secrets.
+	secretsAllowList := cfg.PrometheusCR.GetSecretsAllowList()
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
 
 	monitoringInformers, err := getInformers(monitoringInformerFactory, cfg.ClusterConfig, promLogger, metaDataInformerFactory)
