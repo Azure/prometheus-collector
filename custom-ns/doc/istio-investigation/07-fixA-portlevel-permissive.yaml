@@ -1,0 +1,12 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: allow-metrics-8080
+  namespace: app
+spec:
+  selector:
+    matchLabels:
+      app: prom-example
+  portLevelMtls:
+    "8080":
+      mode: PERMISSIVE

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  # Istio injection NOT enabled yet — we'll add the label later
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prom-example
+  namespace: app
+  labels:
+    app: prom-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-example
+  template:
+    metadata:
+      labels:
+        app: prom-example
+      annotations:
+        # ama-metrics pod-annotation-based scraping looks for these
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: app
+          # quay.io/brancz/prometheus-example-app exposes random metrics on :8080/metrics
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - name: http-metrics
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-example
+  namespace: app
+  labels:
+    app: prom-example
+spec:
+  selector:
+    app: prom-example
+  ports:
+    - name: http-metrics
+      port: 8080
+      targetPort: 8080

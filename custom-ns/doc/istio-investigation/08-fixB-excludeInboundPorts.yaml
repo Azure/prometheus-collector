@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prom-example
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-example
+  template:
+    metadata:
+      labels:
+        app: prom-example
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        # Fix B: exclude port 8080 from sidecar inbound interception entirely
+        traffic.sidecar.istio.io/excludeInboundPorts: "8080"
+    spec:
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - name: http-metrics
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
