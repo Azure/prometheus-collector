@@ -5,6 +5,7 @@ package apiserver // import "github.com/open-telemetry/opentelemetry-collector-c
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,10 +14,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
-	"time"
 
-	grafanaRegexp "github.com/grafana/regexp"
-	"github.com/mwitkow/go-conntrack"
+	"github.com/grafana/regexp"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promslog"
@@ -24,6 +23,7 @@ import (
 	"github.com/prometheus/common/version"
 	toolkit_web "github.com/prometheus/exporter-toolkit/web"
 	promconfig "github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/promql/parser"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/httputil"
@@ -36,12 +36,6 @@ import (
 	"golang.org/x/net/netutil"
 )
 
-// Use same settings as Prometheus web server
-const (
-	maxConnections     = 512
-	readTimeoutMinutes = 10
-)
-
 type Manager struct {
 	settings      receiver.Settings
 	shutdown      chan struct{}
@@ -51,6 +45,7 @@ type Manager struct {
 	registry      *prometheus.Registry
 	registerer    prometheus.Registerer
 	server        *http.Server
+	serverDone    chan struct{}
 	cfgLock       *sync.RWMutex
 }
 
@@ -73,34 +68,18 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 }
 
 func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager *scrape.Manager) error {
-	if m.cfg == nil {
-		return nil
-	}
-
 	m.settings.Logger.Info("Starting Prometheus API server")
 	m.scrapeManager = scrapeManager
 
 	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
-	var corsOriginRegexp *grafanaRegexp.Regexp
+	var corsOriginRegexp *regexp.Regexp
 	corsConfig := m.cfg.ServerConfig.CORS.Get()
 	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
-		var combinedOriginsBuilder strings.Builder
-		combinedOriginsBuilder.WriteString(corsConfig.AllowedOrigins[0])
-		for _, origin := range corsConfig.AllowedOrigins[1:] {
-			combinedOriginsBuilder.WriteString("|")
-			combinedOriginsBuilder.WriteString(origin)
-		}
-		combinedRegexp, err := grafanaRegexp.Compile(combinedOriginsBuilder.String())
+		combinedRegexp, err := regexp.Compile(strings.Join(corsConfig.AllowedOrigins, "|"))
 		if err != nil {
-			return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %s", err.Error())
+			return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %w", err)
 		}
 		corsOriginRegexp = combinedRegexp
-	}
-
-	// If read timeout is not set in the receiver config, use the default Prometheus value.
-	readTimeout := m.cfg.ServerConfig.ReadTimeout
-	if readTimeout == 0 {
-		readTimeout = time.Duration(readTimeoutMinutes) * time.Minute
 	}
 
 	// Set the options to keep similar code to the Prometheus repo.
@@ -114,14 +93,14 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 			Path:   "",
 		},
 		RoutePrefix:    "/",
-		ReadTimeout:    readTimeout,
+		ReadTimeout:    m.cfg.ServerConfig.ReadTimeout,
 		PageTitle:      "Prometheus Receiver",
-		Flags:          make(map[string]string),
-		MaxConnections: maxConnections,
+		MaxConnections: m.cfg.MaxConnections,
 		IsAgent:        true,
 		Registerer:     m.registerer,
 		Gatherer:       m.registry,
 		CORSOrigin:     corsOriginRegexp,
+		Flags:          map[string]string{},
 	}
 
 	// Creates the API object in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L314-L354
@@ -149,7 +128,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 			defer m.cfgLock.RUnlock()
 			return *m.promCfg
 		},
-		o.Flags, // nil
+		o.Flags,
 		api_v1.GlobalURLOptions{
 			ListenAddress: o.ListenAddresses[0],
 			Host:          o.ExternalURL.Host,
@@ -200,23 +179,21 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.ConvertOTLPDelta,
 		o.NativeOTLPDeltaIngestion,
 		o.STZeroIngestionEnabled,
-		5*time.Minute, // LookbackDelta - Using the default value of 5 minutes
+		m.cfg.LookbackDelta,
 		o.EnableTypeAndUnitLabels,
 		false, // appendMetadata from remote write
 		nil,   // OverrideErrorCode
 		nil,   // FeatureRegistry
 		api_v1.OpenAPIOptions{},
+		parser.NewParser(parser.Options{}),
 	)
 
-	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
+	// Create listener in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
 	listener, err := m.cfg.ServerConfig.ToListener(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create listener: %s", err.Error())
+		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	listener = netutil.LimitListener(listener, o.MaxConnections)
-	listener = conntrack.NewListener(listener,
-		conntrack.TrackWithName("http"),
-		conntrack.TrackWithTracing())
 
 	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 	mux := http.NewServeMux()
@@ -243,8 +220,10 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	}
 	webconfig := ""
 
+	m.serverDone = make(chan struct{})
 	go func() {
-		if err := toolkit_web.Serve(listener, m.server, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger); err != nil {
+		defer close(m.serverDone)
+		if err := toolkit_web.Serve(listener, m.server, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			m.settings.Logger.Error("API server failed", zap.Error(err))
 		}
 	}()
@@ -270,10 +249,28 @@ func (m *Manager) GetConfig() *promconfig.Config {
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
-	close(m.shutdown)
-	if m.server != nil {
-		return m.server.Shutdown(ctx)
+	select {
+	case <-m.shutdown:
+	default:
+		close(m.shutdown)
 	}
+
+	if m.server == nil {
+		return nil
+	}
+
+	if err := m.server.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	if m.serverDone != nil {
+		select {
+		case <-m.serverDone:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	return nil
 }
 

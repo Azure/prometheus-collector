@@ -53,7 +53,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "demo", r1.PrometheusConfig.ScrapeConfigs[0].JobName)
 	assert.Equal(t, 5*time.Second, time.Duration(r1.PrometheusConfig.ScrapeConfigs[0].ScrapeInterval))
 	assert.True(t, r1.TrimMetricSuffixes)
-	assert.True(t, r1.ReportExtraScrapeMetrics)
 
 	ta := r1.TargetAllocator.Get()
 	assert.Equal(t, "http://my-targetallocator-service", ta.Endpoint)
@@ -379,18 +378,9 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 
 	r0 := cfg.(*Config)
 	assert.NotNil(t, r0.PrometheusConfig)
-	assert.True(t, r0.APIServer.HasValue())
-	assert.NotNil(t, r0.APIServer.Get())
-	assert.Equal(t, "localhost:9090", r0.APIServer.Get().ServerConfig.NetAddr.Endpoint)
-
-	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withAPIDisabled").String())
-	require.NoError(t, err)
-	cfg = factory.CreateDefaultConfig()
-	require.NoError(t, sub.Unmarshal(cfg))
-	require.NoError(t, xconfmap.Validate(cfg))
-
-	r1 := cfg.(*Config)
-	assert.False(t, r1.APIServer.HasValue())
+	require.NotNil(t, r0.APIServer)
+	assert.True(t, r0.APIServer.IsEnabled())
+	assert.Equal(t, "localhost:9090", r0.APIServer.ServerConfig.NetAddr.Endpoint)
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withoutAPI").String())
 	require.NoError(t, err)
@@ -398,15 +388,25 @@ func TestLoadPrometheusAPIServerExtensionConfig(t *testing.T) {
 	require.NoError(t, sub.Unmarshal(cfg))
 	require.NoError(t, xconfmap.Validate(cfg))
 
+	r1 := cfg.(*Config)
+	assert.NotNil(t, r1.PrometheusConfig)
+	assert.False(t, r1.APIServer.IsEnabled())
+
+	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withAPIUsingDefaults").String())
+	require.NoError(t, err)
+	cfg = factory.CreateDefaultConfig()
+	require.NoError(t, sub.Unmarshal(cfg))
+	require.NoError(t, xconfmap.Validate(cfg))
+
 	r2 := cfg.(*Config)
-	assert.NotNil(t, r2.PrometheusConfig)
-	assert.False(t, r2.APIServer.HasValue())
+	require.NotNil(t, r2.APIServer)
+	assert.True(t, r2.APIServer.IsEnabled())
+	assert.Equal(t, "127.0.0.1:9090", r2.APIServer.ServerConfig.NetAddr.Endpoint)
 
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withInvalidAPIConfig").String())
 	require.NoError(t, err)
 	cfg = factory.CreateDefaultConfig()
-	require.NoError(t, sub.Unmarshal(cfg))
-	require.Error(t, xconfmap.Validate(cfg))
+	require.Error(t, sub.Unmarshal(cfg))
 }
 
 func TestReloadPromConfigSecretHandling(t *testing.T) {
