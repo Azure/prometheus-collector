@@ -19,3 +19,6 @@ CVE-2026-28389 #openssl - DoS vulnerability in CMS processing
 CVE-2026-28390 #openssl - DoS due to NULL pointer dereference in CMS
 CVE-2026-31789 #openssl - Heap buffer overflow on 32-bit systems from large X.509 certificate
 CVE-2026-31790 #openssl - Information disclosure from uninitialized memory via invalid RSA public key
+# os-pkgs - glibc in upstream kube-state-metrics image (azurelinux 3.0, 2.38-18.azl3 -> 2.38-19.azl3)
+CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS server response
+CVE-2026-4438 #glibc - Invalid DNS hostname returned via gethostbyaddr functions
