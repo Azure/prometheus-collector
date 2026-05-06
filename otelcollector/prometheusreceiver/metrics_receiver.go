@@ -66,13 +66,19 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 	registerer := prometheus.WrapRegistererWith(
 		prometheus.Labels{"receiver": set.ID.String()},
 		registry)
-
 	promCfgLock := &sync.RWMutex{}
-
-	var apiCfg *apiserver.Config
-	if cfg.APIServer.HasValue() {
-		c := cfg.APIServer.Get()
-		apiCfg = c
+	apiServerCfg := cfg.APIServer
+	var apiServerManager *apiserver.Manager
+	if apiServerCfg != nil && apiServerCfg.IsEnabled() {
+		apiServerCfg.ApplyDefaults()
+		apiServerManager = apiserver.NewManager(
+			set,
+			apiServerCfg,
+			&baseCfg,
+			registry,
+			registerer,
+			promCfgLock,
+		)
 	}
 
 	pr := &pReceiver{
@@ -88,14 +94,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 			&baseCfg,
 			promCfgLock,
 		),
-		apiServerManager: apiserver.NewManager(
-			set,
-			apiCfg,
-			&baseCfg,
-			registry,
-			registerer,
-			promCfgLock,
-		),
+		apiServerManager: apiServerManager,
 	}
 	return pr, nil
 }
@@ -123,16 +122,16 @@ func (r *pReceiver) start(ctx context.Context, host component.Host, opts prometh
 		return err
 	}
 
-	if r.apiServerManager != nil {
-		err = r.apiServerManager.Start(discoveryCtx, host, r.scrapeManager)
-		if err != nil {
-			r.settings.Logger.Error("Failed to start API server", zap.Error(err))
-		}
-	}
-
 	r.loadConfigOnce.Do(func() {
 		close(r.configLoaded)
 	})
+
+	if r.apiServerManager != nil {
+		err := r.apiServerManager.Start(ctx, host, r.scrapeManager)
+		if err != nil {
+			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
+		}
+	}
 
 	return nil
 }
@@ -141,11 +140,8 @@ func (r *pReceiver) initPrometheusComponents(
 	ctx context.Context, logger *slog.Logger, host component.Host,
 	opts prometheusComponentTestOptions,
 ) error {
-	// Some SD mechanisms use the "refresh" package, which has its own metrics.
-	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
-
-	// Register the metrics specific for each SD mechanism, and the ones for the refresh package.
-	sdMetrics, err := discovery.RegisterSDMetrics(r.registerer, refreshSdMetrics)
+	// Register the metrics needed by service discovery mechanisms.
+	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(r.registerer)
 	if err != nil {
 		return fmt.Errorf("failed to register service discovery metrics: %w", err)
 	}
@@ -185,7 +181,7 @@ func (r *pReceiver) initPrometheusComponents(
 	// for testing only
 	if r.cfg.skipOffsetting {
 		optsValue := reflect.ValueOf(scrapeOpts).Elem()
-		field := optsValue.FieldByName("skipOffsetting")
+		field := optsValue.FieldByName("skipJitterOffsetting")
 		reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
 			Elem().
 			Set(reflect.ValueOf(true))
@@ -198,8 +194,8 @@ func (r *pReceiver) initPrometheusComponents(
 	r.scrapeManager = scrapeManager
 
 	r.unregisterMetrics = func() {
-		refreshSdMetrics.Unregister()
-		for _, sdMetric := range sdMetrics {
+		sdMetrics.RefreshManager.Unregister()
+		for _, sdMetric := range sdMetrics.MechanismMetrics {
 			sdMetric.Unregister()
 		}
 		r.discoveryManager.UnregisterMetrics()
@@ -260,8 +256,7 @@ func (r *pReceiver) Shutdown(ctx context.Context) error {
 		r.unregisterMetrics()
 	}
 	if r.apiServerManager != nil {
-		err := r.apiServerManager.Shutdown(ctx)
-		if err != nil {
+		if err := r.apiServerManager.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
