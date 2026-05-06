@@ -61,3 +61,13 @@ Append these two steps before `"List Results Files"`. Replace `<scenario>` with 
 - **Pass `"ConfigTests"` as the 7th arg** to `run-testkube-workflow.sh`. That is what makes the script look up your template under `config-processing-test-crs/` and resolve workflows from the `case` block instead of auto-discovering them.
 - **The 5th arg `"false"`** tells the script not to apply the baseline settings configmap — config tests manage their own configmaps.
 - **`continueOnError: true`** on the run step is required, otherwise a single failure aborts the rest of the pipeline.
+
+## How to run the pipeline
+
+Pipeline: <https://github-private.visualstudio.com/azure/_build?definitionId=979>. Click **Run pipeline** and set two independent branch inputs:
+
+- **Branch/tag dropdown** — the ADO source branch the agent checks out (`checkout: self`). Controls the pipeline YAML, configmap files, TestWorkflow CR templates, and `run-testkube-workflow.sh` (i.e. files from steps 1, 4, 5, 6 of the recipe above).
+- **`branch` parameter** ("Branch to run tests from", default `main`) — exported as `BRANCH_NAME` and substituted into each CR's `spec.content.git.revision`. This is the branch TestKube clones **inside the cluster** to run the Ginkgo tests under `otelcollector/test/ginkgo-e2e/` (files from steps 2, 3).
+
+For a new scenario added via this recipe you typically set **both** to your feature branch.
+
