@@ -411,7 +411,7 @@ stages:
               # Detect K8s version and conditionally apply >= 1.37 resources
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
               echo "Kubernetes minor version: $KUBE_MINOR"
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
                 echo "K8s >= 1.37: applying RBAC and settings configmap with secrets_access_namespaces"
                 kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
                 kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth.yaml
@@ -490,7 +490,7 @@ stages:
 
               # Restore original settings configmap if it was changed (>= 1.37)
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
                 kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               fi
             displayName: "Create TestKube Results Summary and cleanup basic-auth resources"
@@ -507,7 +507,7 @@ stages:
               # Apply v2 configmap (contains secrets_access_namespaces for >= 1.37)
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
               echo "Kubernetes minor version: $KUBE_MINOR"
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
                 echo "K8s >= 1.37: applying RBAC and v2 settings configmap with secrets_access_namespaces"
                 kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
                 kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth-v2.yaml
