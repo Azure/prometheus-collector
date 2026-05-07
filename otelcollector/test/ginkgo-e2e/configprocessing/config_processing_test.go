@@ -909,13 +909,13 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			}
 		}
 
-		if parsedVersion.LessThan(utilversion.MustParseSemantic("v1.36.0")) {
-			GinkgoWriter.Printf("[BasicAuth] K8s < 1.36: expecting generic secrets rule in ClusterRole\n")
-			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.36, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
+		if parsedVersion.LessThan(utilversion.MustParseSemantic("v1.37.0")) {
+			GinkgoWriter.Printf("[BasicAuth] K8s < 1.37: expecting generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.37, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
 			GinkgoWriter.Printf("[BasicAuth] ClusterRole secrets rule check passed\n")
 		} else {
-			GinkgoWriter.Printf("[BasicAuth] K8s >= 1.36: expecting NO generic secrets rule in ClusterRole\n")
-			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.36, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
+			GinkgoWriter.Printf("[BasicAuth] K8s >= 1.37: expecting NO generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.37, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
 
 			// Verify namespaced Role and RoleBinding exist
 			GinkgoWriter.Printf("[BasicAuth] Checking namespaced Role and RoleBinding in basic-auth-test...\n")
@@ -1104,13 +1104,13 @@ var _ = Describe("Basic auth ServiceMonitor scraping (v2)", Label(utils.ConfigPr
 			}
 		}
 
-		if parsedVersion.LessThan(utilversion.MustParseSemantic("v1.36.0")) {
-			GinkgoWriter.Printf("[BasicAuthV2] K8s < 1.36: expecting generic secrets rule in ClusterRole\n")
-			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.36, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
+		if parsedVersion.LessThan(utilversion.MustParseSemantic("v1.37.0")) {
+			GinkgoWriter.Printf("[BasicAuthV2] K8s < 1.37: expecting generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeTrue(), "On K8s < 1.37, ClusterRole ama-metrics-reader should have a generic secrets get/list/watch rule")
 			GinkgoWriter.Printf("[BasicAuthV2] ClusterRole secrets rule check passed\n")
 		} else {
-			GinkgoWriter.Printf("[BasicAuthV2] K8s >= 1.36: expecting NO generic secrets rule in ClusterRole\n")
-			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.36, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
+			GinkgoWriter.Printf("[BasicAuthV2] K8s >= 1.37: expecting NO generic secrets rule in ClusterRole\n")
+			Expect(hasGenericSecretsRule).To(BeFalse(), "On K8s >= 1.37, ClusterRole ama-metrics-reader should NOT have a generic secrets get/list/watch rule")
 
 			GinkgoWriter.Printf("[BasicAuthV2] Checking namespaced Role and RoleBinding in basic-auth-test...\n")
 			role, err := utils.GetRole(K8sClient, "basic-auth-test", "ama-metrics-secrets-reader")

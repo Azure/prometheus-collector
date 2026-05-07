@@ -11,4 +11,8 @@ spec:
   selector:
     matchLabels:
       rsName: ama-metrics
+  # unhealthyPodEvictionPolicy is alpha in K8s 1.26 (feature gate off by default,
+  # rejected as unknown field), beta/default in 1.27, GA in 1.31. Only emit on >= 1.27.
+{{- if semverCompare ">=1.27.0" .Values.global.commonGlobals.Versions.Kubernetes }}
   unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}

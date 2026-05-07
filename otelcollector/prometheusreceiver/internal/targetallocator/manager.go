@@ -40,8 +40,8 @@ type Manager struct {
 	initialScrapeConfigs []*promconfig.ScrapeConfig
 	scrapeManager        *scrape.Manager
 	discoveryManager     *discovery.Manager
-	wg                   sync.WaitGroup
 	cfgLock              *sync.RWMutex
+	wg                   sync.WaitGroup
 
 	// configUpdateCount tracks how many times the config has changed, for
 	// testing.
@@ -51,15 +51,18 @@ type Manager struct {
 }
 
 func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, cfgLock *sync.RWMutex) *Manager {
+	if cfgLock == nil {
+		cfgLock = &sync.RWMutex{}
+	}
 	return &Manager{
 		shutdown:             make(chan struct{}),
 		settings:             set,
 		cfg:                  cfg,
 		promCfg:              promCfg,
 		initialScrapeConfigs: promCfg.ScrapeConfigs,
+		cfgLock:              cfgLock,
 		configUpdateCount:    &atomic.Int64{},
 		configUpdated:        make(chan struct{}, 10),
-		cfgLock:              cfgLock,
 	}
 }
 
@@ -97,9 +100,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Man
 	if err != nil {
 		return err
 	}
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
+	m.wg.Go(func() {
 		targetAllocatorIntervalTicker := time.NewTicker(m.cfg.Interval)
 		for {
 			select {
@@ -116,7 +117,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Man
 				return
 			}
 		}
-	}()
+	})
 	return nil
 }
 
@@ -145,22 +146,6 @@ func (m *Manager) sync(compareHash uint64, httpClient *http.Client) (uint64, err
 		return hash, nil
 	}
 
-	err = m.updatePrometheusConfig(scrapeConfigsResponse)
-	if err != nil {
-		return 0, err
-	}
-
-	if m.configUpdateCount != nil {
-		m.configUpdateCount.Add(1)
-		select {
-		case m.configUpdated <- struct{}{}:
-		default:
-		}
-	}
-	return hash, nil
-}
-
-func (m *Manager) updatePrometheusConfig(scrapeConfigsResponse map[string]*promconfig.ScrapeConfig) error {
 	m.cfgLock.Lock()
 	defer m.cfgLock.Unlock()
 
@@ -182,10 +167,10 @@ func (m *Manager) updatePrometheusConfig(scrapeConfigsResponse map[string]*promc
 		escapedJob := url.QueryEscape(jobName)
 		httpSD.URL = fmt.Sprintf("%s/jobs/%s/targets?collector_id=%s", m.cfg.Endpoint, escapedJob, m.cfg.CollectorID)
 
-		err := configureSDHTTPClientConfigFromTA(&httpSD, m.cfg)
+		err = configureSDHTTPClientConfigFromTA(&httpSD, m.cfg)
 		if err != nil {
 			m.settings.Logger.Error("Failed to configure http client config", zap.Error(err))
-			return err
+			return 0, err
 		}
 
 		httpSD.HTTPClientConfig.FollowRedirects = false
@@ -205,19 +190,26 @@ func (m *Manager) updatePrometheusConfig(scrapeConfigsResponse map[string]*promc
 		err = scrapeConfig.Validate(m.promCfg.GlobalConfig)
 		if err != nil {
 			m.settings.Logger.Error("Failed to validate the scrape configuration", zap.Error(err))
-			return err
+			return 0, err
 		}
 
 		m.promCfg.ScrapeConfigs = append(m.promCfg.ScrapeConfigs, scrapeConfig)
 	}
 
-	err := m.applyCfg()
+	err = m.applyCfg()
 	if err != nil {
 		m.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
-		return err
+		return 0, err
 	}
 
-	return nil
+	if m.configUpdateCount != nil {
+		m.configUpdateCount.Add(1)
+		select {
+		case m.configUpdated <- struct{}{}:
+		default:
+		}
+	}
+	return hash, nil
 }
 
 func (m *Manager) applyCfg() error {
