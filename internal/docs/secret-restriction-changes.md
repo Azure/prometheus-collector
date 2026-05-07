@@ -7,14 +7,14 @@ This change removes **cluster-wide secrets access** from the `ama-metrics` Clust
 
 | Area | Before | After |
 |------|--------|-------|
-| **ClusterRole** | Included `get`, `list`, `watch` on `secrets` cluster-wide | On Kubernetes >= 1.36, cluster-wide secrets verbs **removed**. On < 1.36, kept for backward compatibility. |
+| **ClusterRole** | Included `get`, `list`, `watch` on `secrets` cluster-wide | On Kubernetes >= 1.37, cluster-wide secrets verbs **removed**. On < 1.37, kept for backward compatibility. |
 | **Namespace RBAC** | N/A (cluster-wide) | User creates namespaced `Role` + `RoleBinding` in each namespace where secrets are needed |
 | **Target allocator config** | Metadata informer watched secrets in all namespaces | Metadata informer scoped to configured namespaces only |
 
 ### Default Behavior
 
-- **Kubernetes < 1.36:** Cluster-wide secrets access is retained in the ClusterRole for backward compatibility. No additional RBAC is needed.
-- **Kubernetes >= 1.36:** Cluster-wide secrets access is removed from the ClusterRole. By default (no configuration), the target allocator watches **no** namespaces for secrets. Users must configure `secrets_access_namespaces` and create the appropriate Role+RoleBinding in each namespace (see [User Instructions](#user-instructions-basic-auth-with-podservicemonitors) below).
+- **Kubernetes < 1.37:** Cluster-wide secrets access is retained in the ClusterRole for backward compatibility. No additional RBAC is needed.
+- **Kubernetes >= 1.37:** Cluster-wide secrets access is removed from the ClusterRole. By default (no configuration), the target allocator watches **no** namespaces for secrets. Users must configure `secrets_access_namespaces` and create the appropriate Role+RoleBinding in each namespace (see [User Instructions](#user-instructions-basic-auth-with-podservicemonitors) below).
 
 ---
 
@@ -22,7 +22,7 @@ This change removes **cluster-wide secrets access** from the `ama-metrics` Clust
 
 | File | Change |
 |------|--------|
-| `ama-metrics-clusterRole.yaml` | Cluster-wide `secrets` `get`/`list`/`watch` conditionally included only on Kubernetes < 1.36 via `semverCompare` |
+| `ama-metrics-clusterRole.yaml` | Cluster-wide `secrets` `get`/`list`/`watch` conditionally included only on Kubernetes < 1.37 via `semverCompare` |
 | `ama-metrics-settings-configmap*.yaml` (3 files) | Added `secrets_access_namespaces = ""` setting under `prometheus-collector-settings` |
 | `definitions.go` | Added `SecretsAccessNamespaces []string` to `ConfigProcessor` struct |
 | `tomlparser-prometheus-collector-settings.go` | Parses `secrets_access_namespaces` from configmap (comma-separated), writes `AZMON_SECRETS_ACCESS_NAMESPACES` env var |
@@ -142,11 +142,11 @@ data:
 
 > **Note:** Use a comma-separated list for multiple namespaces. Include `kube-system` if you also have secrets there. The setting takes effect after the next pod restart (the configmap is re-read on startup).
 
-### Step 4: Create RBAC in Each Namespace (Kubernetes >= 1.36)
+### Step 4: Create RBAC in Each Namespace (Kubernetes >= 1.37)
 
-On Kubernetes >= 1.36, the ClusterRole no longer grants cluster-wide secrets access. You must create a `Role` and `RoleBinding` in **every** namespace listed in `secrets_access_namespaces` (including `kube-system` if needed).
+On Kubernetes >= 1.37, the ClusterRole no longer grants cluster-wide secrets access. You must create a `Role` and `RoleBinding` in **every** namespace listed in `secrets_access_namespaces` (including `kube-system` if needed).
 
-> **Kubernetes < 1.36:** This step is **not required** — the ClusterRole still includes cluster-wide secrets access for backward compatibility.
+> **Kubernetes < 1.37:** This step is **not required** — the ClusterRole still includes cluster-wide secrets access for backward compatibility.
 
 Apply the following in each namespace. Replace `my-app` with the target namespace:
 
@@ -206,7 +206,7 @@ If you have secrets in `my-app`, `backend`, and `monitoring`:
    secrets_access_namespaces = "kube-system,my-app,backend,monitoring"
    ```
 
-2. **RBAC (>= 1.36 only):** Create the Role + RoleBinding (from Step 4) in each of `my-app`, `backend`, and `monitoring`.
+2. **RBAC (>= 1.37 only):** Create the Role + RoleBinding (from Step 4) in each of `my-app`, `backend`, and `monitoring`.
 
 ---
 
