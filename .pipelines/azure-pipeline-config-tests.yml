@@ -398,9 +398,9 @@ stages:
             condition: always()
 
           # --- Basic Auth ServiceMonitor Tests ---
-          # TODO: When AKS 1.36 becomes available, create a 1.36+ test cluster to validate
+          # TODO: When AKS 1.37 becomes available, create a 1.37+ test cluster to validate
           # the namespaced RBAC path (Role/RoleBinding + secrets_access_namespaces configmap setting)
-          # instead of the cluster-wide secrets access that is used on < 1.36.
+          # instead of the cluster-wide secrets access that is used on < 1.37.
           - bash: |
               # Deploy basic-auth test resources
               kubectl apply -f ./test-cluster-yamls/basic-auth/namespace.yaml
@@ -408,15 +408,15 @@ stages:
               kubectl apply -f ./test-cluster-yamls/basic-auth/deployment.yaml
               kubectl apply -f ./test-cluster-yamls/basic-auth/servicemonitor.yaml
 
-              # Detect K8s version and conditionally apply >= 1.36 resources
+              # Detect K8s version and conditionally apply >= 1.37 resources
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
               echo "Kubernetes minor version: $KUBE_MINOR"
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
-                echo "K8s >= 1.36: applying RBAC and settings configmap with secrets_access_namespaces"
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
+                echo "K8s >= 1.37: applying RBAC and settings configmap with secrets_access_namespaces"
                 kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
                 kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth.yaml
               else
-                echo "K8s < 1.36: skipping RBAC and settings configmap (cluster-wide secrets access is available)"
+                echo "K8s < 1.37: skipping RBAC and settings configmap (cluster-wide secrets access is available)"
               fi
 
               # Wait for the basic-auth reference app to be ready
@@ -488,9 +488,9 @@ stages:
               # Clean up basic-auth test resources
               kubectl delete namespace basic-auth-test --ignore-not-found
 
-              # Restore original settings configmap if it was changed (>= 1.36)
+              # Restore original settings configmap if it was changed (>= 1.37)
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
                 kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               fi
             displayName: "Create TestKube Results Summary and cleanup basic-auth resources"
@@ -504,15 +504,15 @@ stages:
               kubectl apply -f ./test-cluster-yamls/basic-auth/deployment.yaml
               kubectl apply -f ./test-cluster-yamls/basic-auth/servicemonitor.yaml
 
-              # Apply v2 configmap (contains secrets_access_namespaces for >= 1.36)
+              # Apply v2 configmap (contains secrets_access_namespaces for >= 1.37)
               KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
               echo "Kubernetes minor version: $KUBE_MINOR"
-              if [ "$KUBE_MINOR" -ge 36 ] 2>/dev/null; then
-                echo "K8s >= 1.36: applying RBAC and v2 settings configmap with secrets_access_namespaces"
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
+                echo "K8s >= 1.37: applying RBAC and v2 settings configmap with secrets_access_namespaces"
                 kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
                 kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth-v2.yaml
               else
-                echo "K8s < 1.36: applying v2 settings configmap (cluster-wide secrets access is available)"
+                echo "K8s < 1.37: applying v2 settings configmap (cluster-wide secrets access is available)"
                 kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth-v2.yaml
               fi
 

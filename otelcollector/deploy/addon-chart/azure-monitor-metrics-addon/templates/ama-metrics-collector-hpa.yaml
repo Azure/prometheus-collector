@@ -17,6 +17,7 @@ spec:
   minReplicas: {{ $amaMetricsHpa.amaMetricsMinReplicasFromHelper }}
   maxReplicas: {{ $amaMetricsHpa.amaMetricsMaxReplicasFromHelper }}
   metrics:
+{{- if semverCompare ">=1.27.0" .Values.global.commonGlobals.Versions.Kubernetes }}
     - type: ContainerResource
       containerResource:
         name: memory
@@ -24,6 +25,17 @@ spec:
         target:
           averageValue: 5Gi
           type: AverageValue
+{{- else }}
+    # ContainerResource metrics require the HPAContainerMetrics feature gate
+    # (alpha in K8s 1.20, beta/default in 1.27, GA in 1.30). For clusters on
+    # K8s < 1.27, fall back to a pod-level Resource metric.
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          averageValue: 5Gi
+          type: AverageValue
+{{- end }}
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
