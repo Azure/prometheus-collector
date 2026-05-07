@@ -1,5 +1,5 @@
-# RBAC for namespace-scoped secrets access (required on Kubernetes >= 1.36)
-# On < 1.36 these resources are not applied by the pipeline.
+# RBAC for namespace-scoped secrets access (required on Kubernetes >= 1.37)
+# On < 1.37 these resources are not applied by the pipeline.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
