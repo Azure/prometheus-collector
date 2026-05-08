@@ -75,15 +75,23 @@ common - related to both above
 
 ### 2 (aks istio) Investigate existing issues of AKS cluster with Istio
 - Create an AKS cluster with Istio and ama-metrics enabled, investigate and document all issues.
+- **Status: Goal I-B path validated end-to-end** against `zane-istio-test` (AKS 1.33.8, ASM `asm-1-27`, ama-metrics `6.27.0`). See [`./istio-investigation/REPORT.md`](./istio-investigation/REPORT.md) for the full investigation, evidence, and reproducible YAMLs.
+  - **Headline finding:** ama-metrics running in `kube-system` (no sidecar, no mesh identity) successfully scrapes user-app metrics in an Istio-meshed namespace **even under STRICT mTLS**, by default. Istio's mutating webhook automatically rewrites the pod's `prometheus.io/port` and `prometheus.io/path` annotations to point at the merged-metrics endpoint `:15020/stats/prometheus`, which is `Captured: No` in Istio's port table — i.e. the sidecar does not intercept it and `PeerAuthentication` mTLS rules do not apply.
+  - **Two customer-side failure modes** were identified, both fixable without product code changes:
+    - **Failure (a)** — customer disables `ISTIO_META_ENABLE_PROMETHEUS_MERGE`: the merged endpoint returns Envoy stats only, app metrics are missing. Fix: re-enable merge, or use one of the Failure (b) port-level fixes to scrape the app port directly.
+    - **Failure (b)** — customer's custom scrape config / `PodMonitor` / `ServiceMonitor` hardcodes the app port (e.g. `:8080`): under STRICT mTLS the scrape is rejected. Three verified fixes:
+      - **Fix C (recommended):** rewrite the scrape config to target `:15020/stats/prometheus`.
+      - **Fix A:** port-level PERMISSIVE `PeerAuthentication` for the app port.
+      - **Fix B:** pod annotation `traffic.sidecar.istio.io/excludeInboundPorts: "<port>"`.
 - **Sub-deliverables:**
   - **Confirm with customer/PM which Istio mode is required:**
     - **Goal I-A:** ama-metrics IS in the mesh (sidecar injected on ama-metrics pods, mTLS to other meshed services, subject to Istio AuthorizationPolicy).
-    - **Goal I-B:** ama-metrics is EXCLUDED from the mesh (`sidecar.istio.io/inject: false` annotation; behaves the same as in non-Istio clusters).
-  - **If Goal I-B is acceptable, the Istio half of this spike collapses to a single annotation** — namespace migration is not needed for Istio reasons. Document this as the simpler path.
-  - **If Goal I-A is required**, enumerate the sidecar compatibility issues:
+    - **Goal I-B:** ama-metrics is EXCLUDED from the mesh (`sidecar.istio.io/inject: false` annotation; behaves the same as in non-Istio clusters). **This is the current state in `kube-system` and the investigation confirms it works under STRICT mTLS.**
+  - **Goal I-B is acceptable → the Istio half of this spike collapses.** Namespace migration is **not** required for Istio support. The remaining work is documentation (publish the `:15020/stats/prometheus` rewrite guidance for custom scrape configs).
+  - **If Goal I-A is later required**, enumerate the sidecar compatibility issues — open, not yet investigated:
     - Token-adaptor + IMDS at `169.254.169.254` likely needs `traffic.sidecar.istio.io/excludeOutboundIPRanges: 169.254.169.254/32` annotation.
     - Mesh-to-non-mesh egress: ama-metrics scraping `kube-system` targets (CoreDNS, kube-proxy, kappie, retina, hubble, cilium, ACStor, local CSI driver) under STRICT mTLS will fail because `kube-system` pods have no sidecar. Mitigations to evaluate (any one): per-target `DestinationRule` with `tls.mode: DISABLE`, namespace-level `PeerAuthentication` of `PERMISSIVE` for `kube-system`, or AuthorizationPolicy carve-outs.
-- **Priority:** High (Phase 0 — gates Task 3)
+- **Priority:** High (Phase 0 — gates Task 3). **I-B sub-deliverable complete; I-A sub-deliverable open pending customer/PM confirmation that I-A is required.**
 
 ### 2.5 (common) Evaluate alternatives to namespace migration
 Take the catalog of failure modes produced by Tasks 1 and 2 and, for each failure mode, evaluate whether it can be solved **without** moving ama-metrics out of `kube-system`. Specifically evaluate:
@@ -92,6 +100,8 @@ Take the catalog of failure modes produced by Tasks 1 and 2 and, for each failur
 - **Cross-namespace ConfigMap watch:** Can ama-metrics remain in `kube-system` while watching ConfigMaps in customer namespaces, satisfying the AKS Automatic ConfigMap restriction without moving the pod?
 
 **Decision criterion:** Return "go for migration" unless alternatives can fully cover **both** AKS Automatic *and* AKS Istio support scenarios. Partial coverage = migrate (for whatever the alternatives don't cover).
+
+**Status (Istio half — resolved):** Task 2 confirmed that the I-B alternative (ama-metrics excluded from mesh, current `kube-system` posture) fully covers the AKS Istio scrape-meshed-app scenario under STRICT mTLS via Istio's `:15020/stats/prometheus` exemption. **Istio is no longer a forcing function for namespace migration.** AKS Automatic (Task 1) remains the open driver. If Task 1 also clears with non-migration alternatives, the migration may be reduced or deferred.
 
 - **Priority:** High (Phase 0 — gates Task 3). Depends on outputs of Tasks 1 and 2.
 
@@ -122,11 +132,16 @@ Similar as 4, we deploy ama-metrics in custom namespace to an AKS Automatic clus
 ### 6 (aks istio) Investigate issues of ama-metrics agent in custom namespace in AKS Cluster with Istio enabled
 Similar as Task 4, we deploy ama-metrics in custom namespace to an AKS cluster with Istio enabled through helm chart approach and investiate issues. We will need to research different configurations of Istio for AKS and investigate Istio scenarios both ama-metrics can support and can't support when it runs in custom namespace.
 
-For example, when ama-metrics agent runs outside `kube-system` namespace and its communication is managed by Istio, the agent may have permission issues when making calls to services in `kube-system` (e.g., Kubernetes API server) because Istio can't inject sidecar inside `kube-system`.
+**Scope reduced after Task 2.** The I-B variant (ama-metrics in custom namespace, *excluded* from mesh via `sidecar.istio.io/inject: false`) is mechanically identical to today's `kube-system` behavior — the Istio data path doesn't see ama-metrics, the `:15020` merged endpoint covers meshed-app scraping, and the only delta vs `kube-system` is the agent's pod namespace. Task 2's findings (see [`./istio-investigation/REPORT.md`](./istio-investigation/REPORT.md)) carry over. This sub-task collapses to a regression check on the new namespace.
 
-Another example, Istio injects a sidecar that intercepts all traffic. ama-metrics currently relies on token-adaptor for auth — there could be conflicts between token-adaptor and the Istio-injected sidecar.
+The I-A variant (ama-metrics injected with a sidecar in the custom namespace) is the new investigation surface — only feasible with namespace migration since `kube-system` cannot be meshed:
 
-- **Priority:** TBD. Depending on the proriot8y of aks istio support. If it has high priority, this task should be priotirized once Task 3 is done because we could encounter permission issues due to pod permissions are managed by Istio.
+- When ama-metrics agent runs outside `kube-system` namespace and its communication is managed by Istio, the agent may have permission issues when making calls to services in `kube-system` (e.g., Kubernetes API server) because Istio can't inject sidecar inside `kube-system`.
+- Istio injects a sidecar that intercepts all traffic. ama-metrics currently relies on token-adaptor for auth — there could be conflicts between token-adaptor and the Istio-injected sidecar.
+- IMDS at `169.254.169.254` likely needs `traffic.sidecar.istio.io/excludeOutboundIPRanges: 169.254.169.254/32`.
+- Mesh-to-non-mesh egress to `kube-system` scrape targets (see Cross-namespace concerns / Layer 3) needs a mitigation strategy.
+
+- **Priority:** TBD. Only triggered if customer/PM confirms Goal I-A is required. The I-B regression check is low-effort and folds into Task 4. The I-A investigation should be sequenced after Task 3 is done because we could encounter permission issues due to pod permissions being managed by Istio.
 
 
 ### 7 (common) AKS-RP Helm Chart Changes 
@@ -153,7 +168,7 @@ When ama-metrics moves from `kube-system` to `azure-monitoring-metrics`, it stil
 **Layer 2: Network reachability — verify in Task 1.** AKS standard does not enforce default-deny `NetworkPolicy`. AKS Automatic *may* enforce a default-deny baseline; if so, an explicit egress NetworkPolicy from `azure-monitoring-metrics` to `kube-system` (and possibly other namespaces) is required.
 
 **Layer 3: AKS Istio mTLS — gated on the Goal I-A vs I-B decision (Task 2).**
-- **If Goal I-B** (ama-metrics excluded from mesh): plain HTTP scraping, no Envoy interception, works exactly as today. No problem.
+- **If Goal I-B** (ama-metrics excluded from mesh): plain HTTP scraping, no Envoy interception, works exactly as today. **Validated** — see [`./istio-investigation/REPORT.md`](./istio-investigation/REPORT.md). Scraping a meshed app under STRICT mTLS works via Istio's `:15020/stats/prometheus` merged endpoint (annotation rewriting handles this automatically). For customers with custom scrape configs, the only gotcha is that the config must target `:15020/stats/prometheus`, not the app port — documentation fix only.
 - **If Goal I-A** (ama-metrics in mesh) with STRICT mTLS: ama-metrics's Envoy sidecar requires mTLS for outbound, but `kube-system` targets have no sidecar (Istio cannot inject into `kube-system`). Result: scrapes to those targets fail. Mitigations (any one): per-target `DestinationRule` with `tls.mode: DISABLE`; namespace-level `PeerAuthentication` of `PERMISSIVE` for `kube-system`; AuthorizationPolicy carve-outs.
 
 **Layer 4 (related): K8s ≥1.36 secrets access.** The existing ClusterRole already shifts to namespace-scoped Roles for K8s ≥1.36. After migration, ama-metrics still needs to read (a) `aad-msi-auth-token` in `kube-system` (gated on the AKS-RP coordination workstream), (b) `ama-metrics-mtls-secret`, and (c) customer-defined PodMonitor/ServiceMonitor `basicAuth` secrets in arbitrary namespaces. Verification is a sub-deliverable of Task 4.
@@ -167,9 +182,9 @@ When ama-metrics moves from `kube-system` to `azure-monitoring-metrics`, it stil
 
 2. **AKS Arc cluster** — Scope or not? Deferred. Working assumption: Arc remains in `kube-system` and the standalone helm chart at `otelcollector/deploy/chart/prometheus-collector/` is **not** parameterized in this spike unless this question flips to "in scope."
 
-3. **Istio mode (Goal I-A vs I-B)** — Open. To be answered in Task 2 by confirmation with customer/PM. Doc enumerates both paths so the cost difference is visible:
-   - **I-B (excluded from mesh):** single annotation, no other changes; namespace migration not needed for Istio reasons.
-   - **I-A (in mesh):** requires per-target mTLS exemptions for `kube-system` scrape targets, plus token-adaptor IMDS exemption.
+3. **Istio mode (Goal I-A vs I-B)** — **Partially resolved.** I-B has been investigated and validated end-to-end (see [`./istio-investigation/REPORT.md`](./istio-investigation/REPORT.md)): the current `kube-system` deployment scrapes meshed apps under STRICT mTLS via Istio's `:15020/stats/prometheus` merged endpoint, no product changes required. I-A remains open pending customer/PM confirmation that ama-metrics-in-mesh is actually required by any customer scenario. Cost difference:
+   - **I-B (excluded from mesh):** zero code change; one optional annotation if migrating to a meshable namespace; documentation fix for customers with custom scrape configs.
+   - **I-A (in mesh):** requires namespace migration (kube-system can't be meshed), per-target mTLS exemptions for `kube-system` scrape targets, token-adaptor IMDS exemption, and AuthorizationPolicy compatibility work.
 
 4. **Customer ConfigMap migration semantics (Task 8)** — Design deferred. Rollout blocker for Task 3. Options to reconsider: hard cutover (unacceptable), dual-watch with deprecation, auto-migrate at startup, cross-namespace watch.
 
