@@ -90,7 +90,7 @@ common - related to both above
   - **Goal I-B is acceptable → the Istio half of this spike collapses.** Namespace migration is **not** required for Istio support. The remaining work is documentation (publish the `:15020/stats/prometheus` rewrite guidance for custom scrape configs).
   - **If Goal I-A is later required**, enumerate the sidecar compatibility issues — open, not yet investigated:
     - Token-adaptor + IMDS at `169.254.169.254` likely needs `traffic.sidecar.istio.io/excludeOutboundIPRanges: 169.254.169.254/32` annotation.
-    - Mesh-to-non-mesh egress: ama-metrics scraping `kube-system` targets (CoreDNS, kube-proxy, kappie, retina, hubble, cilium, ACStor, local CSI driver) under STRICT mTLS will fail because `kube-system` pods have no sidecar. Mitigations to evaluate (any one): per-target `DestinationRule` with `tls.mode: DISABLE`, namespace-level `PeerAuthentication` of `PERMISSIVE` for `kube-system`, or AuthorizationPolicy carve-outs.
+    - Mesh-to-non-mesh egress: ama-metrics scraping `kube-system` targets (CoreDNS, kube-proxy, kube-state-metrics, node-exporter, kubelet, cAdvisor, kube-apiserver, kappie, retina, hubble, cilium, ACStor, local CSI driver) requires a per-target carve-out strategy because `kube-system` pods have no sidecar to terminate mTLS. **Mitigation strategy is fully characterized in [Cross-namespace concerns / Layer 3](#cross-namespace-concerns-after-migration)** — DestinationRule `tls.mode: DISABLE` for service-FQDN targets, `traffic.sidecar.istio.io/excludeOutboundPorts` for pod-IP / node-IP / hostNetwork targets.
 - **Priority:** High (Phase 0 — gates Task 3). **I-B sub-deliverable complete; I-A sub-deliverable open pending customer/PM confirmation that I-A is required.**
 
 ### 2.5 (common) Evaluate alternatives to namespace migration
@@ -169,7 +169,53 @@ When ama-metrics moves from `kube-system` to `azure-monitoring-metrics`, it stil
 
 **Layer 3: AKS Istio mTLS — gated on the Goal I-A vs I-B decision (Task 2).**
 - **If Goal I-B** (ama-metrics excluded from mesh): plain HTTP scraping, no Envoy interception, works exactly as today. **Validated** — see [`./istio-investigation/REPORT.md`](./istio-investigation/REPORT.md). Scraping a meshed app under STRICT mTLS works via Istio's `:15020/stats/prometheus` merged endpoint (annotation rewriting handles this automatically). For customers with custom scrape configs, the only gotcha is that the config must target `:15020/stats/prometheus`, not the app port — documentation fix only.
-- **If Goal I-A** (ama-metrics in mesh) with STRICT mTLS: ama-metrics's Envoy sidecar requires mTLS for outbound, but `kube-system` targets have no sidecar (Istio cannot inject into `kube-system`). Result: scrapes to those targets fail. Mitigations (any one): per-target `DestinationRule` with `tls.mode: DISABLE`; namespace-level `PeerAuthentication` of `PERMISSIVE` for `kube-system`; AuthorizationPolicy carve-outs.
+- **If Goal I-A** (ama-metrics in mesh) with STRICT mTLS: ama-metrics's Envoy sidecar will attempt mTLS for outbound traffic, but `kube-system` targets have no sidecar to terminate it. The detailed mitigation strategy depends on **how each target is discovered** and whether it's reachable through Istio's service registry. See **Layer 3a** below.
+
+**Layer 3a: I-A egress to `kube-system` scrape targets — detailed analysis.**
+
+*Default-install behavior: auto-mTLS often handles this without any explicit mitigation.* Istio's auto-mTLS (on by default) asks istiod about each destination; if the destination has no sidecar (no `security.istio.io/tlsMode: istio` label), Envoy automatically downgrades to plaintext. Explicit mitigations become necessary only when the customer (or platform operator) has done one of: (a) defined a wildcard `DestinationRule` with `tls.mode: ISTIO_MUTUAL` that overrides auto-mTLS, (b) enabled `outboundTrafficPolicy: REGISTRY_ONLY`, or (c) configured a `meshConfig.defaultDestinationRule` that forces mTLS origination.
+
+*Per-target verdict*, derived from the actual scrape configs in `otelcollector/configmapparser/default-prom-configs/`:
+
+| Target | Discovery | `__address__` after relabel | Recommended carve-out |
+|---|---|---|---|
+| CoreDNS (`kube-dns` job) | `role: pod` ns=kube-system | `<podIP>:9153` (HTTP) | DestinationRule on `kube-dns.kube-system.svc.cluster.local` (service-resolved path) **plus** `excludeOutboundPorts: "9153"` belt-and-braces (pod-IP path may bypass DR) |
+| kube-proxy | `role: pod` ns=kube-system | `<podIP>:10249` (HTTP, hostNetwork → pod IP == node IP) | `excludeOutboundPorts: "10249"` (no backing Service for DR to bind to) |
+| kube-state-metrics (`ama-metrics-ksm`) | `static_configs` FQDN | `$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080` | **None** — KSM moves with ama-metrics into `azure-monitoring-metrics` (deployed by same addon chart), both pods sidecar-injected, mTLS works natively |
+| node-exporter | `static_configs` node-IP | `$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$` (HTTP, hostNetwork) | Works under default `outboundTrafficPolicy: ALLOW_ANY` (passthrough). Add `excludeOutboundPorts: "9100"` for `REGISTRY_ONLY` resilience |
+| kubelet / cAdvisor | `static_configs` node-IP | `$$NODE_IP$$:10250` (HTTPS, Prometheus does its own TLS with SA bearer token) | **`excludeOutboundPorts: "10250"` required** — Envoy attempting mTLS over Prometheus's existing TLS will break the scrape |
+| kube-apiserver | `role: endpoints` ns=default | `<apiserverEP>:443` (HTTPS, Prometheus does its own TLS) | DestinationRule `tls.mode: DISABLE` on `kubernetes.default.svc.cluster.local` (registered service), OR `excludeOutboundPorts: "443"` |
+
+*Recommended package* (ship both with the addon chart, scoped to ama-metrics' namespace so the customer's mesh posture is untouched):
+
+1. **DestinationRules** for service-FQDN targets:
+   ```yaml
+   apiVersion: networking.istio.io/v1beta1
+   kind: DestinationRule
+   metadata: { name: ama-metrics-apiserver-no-mtls, namespace: azure-monitoring-metrics }
+   spec:
+     host: kubernetes.default.svc.cluster.local
+     trafficPolicy: { tls: { mode: DISABLE } }
+   ---
+   apiVersion: networking.istio.io/v1beta1
+   kind: DestinationRule
+   metadata: { name: ama-metrics-coredns-no-mtls, namespace: azure-monitoring-metrics }
+   spec:
+     host: kube-dns.kube-system.svc.cluster.local
+     trafficPolicy: { tls: { mode: DISABLE } }
+   ```
+
+2. **Sidecar exclusions** (pod template annotations on ama-metrics) for everything that bypasses the service registry — pod-IP scrapes, node-IP scrapes, hostNetwork pods, and TLS-on-TLS scrapes:
+   ```yaml
+   traffic.sidecar.istio.io/excludeOutboundPorts: "9153,10249,10250,9100"
+   ```
+   Rationale: CoreDNS `9153`, kube-proxy `10249`, kubelet/cAdvisor `10250`, node-exporter `9100`. Port `443` is intentionally **not** excluded — leaving the API server flowing through DestinationRule preserves mesh telemetry on that hop.
+
+*Mitigations explicitly ruled out (called out so future readers don't reintroduce them):*
+- **`PeerAuthentication mode: PERMISSIVE` on `kube-system`** — no-op. PeerAuthentication is server-side and `kube-system` pods have no Envoy to enforce it.
+- **`AuthorizationPolicy` carve-outs** — runs after TLS termination. The failure here is at the TLS handshake, so AuthZ is never reached.
+
+*Long-term maintenance debt:* `excludeOutboundPorts` is a port-list that must be kept in sync as AKS adds new `kube-system` add-ons with new metrics ports. Two fallback options if this proves brittle: (a) `excludeOutboundIPRanges` over the cluster pod CIDR (coarser, self-maintaining; loses telemetry on all kube-system flows), or (b) a `Sidecar` resource declaring ama-metrics' egress surface explicitly (most YAML, best documentation of intent).
 
 **Layer 4 (related): K8s ≥1.36 secrets access.** The existing ClusterRole already shifts to namespace-scoped Roles for K8s ≥1.36. After migration, ama-metrics still needs to read (a) `aad-msi-auth-token` in `kube-system` (gated on the AKS-RP coordination workstream), (b) `ama-metrics-mtls-secret`, and (c) customer-defined PodMonitor/ServiceMonitor `basicAuth` secrets in arbitrary namespaces. Verification is a sub-deliverable of Task 4.
 
