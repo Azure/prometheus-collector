@@ -1,5 +1,32 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 05-07-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images :
+  + Store all Current Toggle Documents for Metrics (https://github.com/Azure/prometheus-collector/pull/1490)
+  + Delos support for ama-metrics addon (https://github.com/Azure/prometheus-collector/pull/1529)
+  + Tidy and remove duplicate health metrics (https://github.com/Azure/prometheus-collector/pull/1532)
+  + Add tests for basic auth scenario (https://github.com/Azure/prometheus-collector/pull/1536)
+  + Fix code bug to remove insecure calls to cadvisor (https://github.com/Azure/prometheus-collector/pull/1540)
+  + build(deps): Upgrade otelcollector to v0.150.0 (https://github.com/Azure/prometheus-collector/pull/1539)
+  + build(deps): bump google.golang.org/grpc from 1.79.3 to 1.81.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1548)
+  + Update to 1.37 for secret access check instead of 1.36 (https://github.com/Azure/prometheus-collector/pull/1550)
+  + build(deps): bump github.com/moby/spdystream from 0.5.0 to 0.5.1 in /otelcollector/test/ginkgo-e2e/prometheusui (https://github.com/Azure/prometheus-collector/pull/1538)
+  + build(deps): bump github.com/moby/spdystream from 0.5.0 to 0.5.1 in /otelcollector/test/ginkgo-e2e/regionTests (https://github.com/Azure/prometheus-collector/pull/1546)
+
+* Pipeline/Docs/Templates Updates:
+  + Fix timeout for tests (https://github.com/Azure/prometheus-collector/pull/1517)
+  + Nicchambers/daemonset enablement (https://github.com/Azure/prometheus-collector/pull/1452)
+  + update testkube mongodb (https://github.com/Azure/prometheus-collector/pull/1519)
+  + update rel ntes with image (https://github.com/Azure/prometheus-collector/pull/1520)
+  + Update remote write release notes for 20260414.1 (https://github.com/Azure/prometheus-collector/pull/1521)
+  + doc: Update default configmap to v2 schema (https://github.com/Azure/prometheus-collector/pull/1543)
+  + test: Configmap tests readme (https://github.com/Azure/prometheus-collector/pull/1544)
+  + Fix for HPA and PDB for kubernetes version less than 1.27 (https://github.com/Azure/prometheus-collector/pull/1549)
+
 ## Release 04-09-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.27.0-main-04-10-2026-196e83aa-win`
