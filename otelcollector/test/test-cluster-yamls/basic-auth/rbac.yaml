@@ -1,0 +1,25 @@
+# RBAC for namespace-scoped secrets access (required on Kubernetes >= 1.37)
+# On < 1.37 these resources are not applied by the pipeline.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ama-metrics-secrets-reader
+  namespace: basic-auth-test
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ama-metrics-secrets-rolebinding
+  namespace: basic-auth-test
+subjects:
+  - kind: ServiceAccount
+    name: ama-metrics-serviceaccount
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: ama-metrics-secrets-reader
+  apiGroup: rbac.authorization.k8s.io

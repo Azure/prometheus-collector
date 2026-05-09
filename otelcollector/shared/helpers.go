@@ -243,6 +243,9 @@ func GetMcsEndpoints(customEnvironment string) (string, string) {
 	case "azurebleucloud":
 		mcsEndpoint = "https://monitor.sovcloud-api.fr/"
 		mcsGlobalEndpoint = "https://global.handler.control.monitor.sovcloud-api.fr"
+	case "azuredeloscloud":
+		mcsEndpoint = "https://monitor.sovcloud-api.de/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.sovcloud-api.de"
 	default:
 		log.Printf("Unknown customEnvironment: %s, setting mcs endpoint to default azurepubliccloud values\n", customEnvironment)
 		mcsEndpoint = "https://monitor.azure.com/"

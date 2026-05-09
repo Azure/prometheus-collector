@@ -397,6 +397,199 @@ stages:
             displayName: "Create TestKube Results Summary"
             condition: always()
 
+          # --- Basic Auth ServiceMonitor Tests ---
+          # TODO: When AKS 1.37 becomes available, create a 1.37+ test cluster to validate
+          # the namespaced RBAC path (Role/RoleBinding + secrets_access_namespaces configmap setting)
+          # instead of the cluster-wide secrets access that is used on < 1.37.
+          - bash: |
+              # Deploy basic-auth test resources
+              kubectl apply -f ./test-cluster-yamls/basic-auth/namespace.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/secret.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/deployment.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/servicemonitor.yaml
+
+              # Detect K8s version and conditionally apply >= 1.37 resources
+              KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
+              echo "Kubernetes minor version: $KUBE_MINOR"
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
+                echo "K8s >= 1.37: applying RBAC and settings configmap with secrets_access_namespaces"
+                kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
+                kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth.yaml
+              else
+                echo "K8s < 1.37: skipping RBAC and settings configmap (cluster-wide secrets access is available)"
+              fi
+
+              # Wait for the basic-auth reference app to be ready
+              kubectl rollout status deployment/basic-auth-ref-app -n basic-auth-test --timeout=120s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-basic-auth-smon-crs.yaml" \
+                "testkube-config-test-basic-auth-smon-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for basic auth ServiceMonitor"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="basic-auth-smon"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-basic-auth-smon.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
+          # --- Basic Auth Secret Update Test ---
+          - bash: |
+              # Update the secret username to newadmin
+              kubectl patch secret basic-auth-creds -n basic-auth-test \
+                -p "{\"data\":{\"username\":\"$(echo -n newadmin | base64)\"}}"
+              echo "Patched basic-auth-creds secret: username=newadmin"
+
+              # Wait for the target allocator to pick up the secret change
+              echo "Waiting 120s for config reload..."
+              sleep 120
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-basic-auth-secret-update-crs.yaml" \
+                "testkube-config-test-basic-auth-secret-update-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for basic auth secret update"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="basic-auth-secret-update"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-basic-auth-secret-update.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+
+              # Clean up basic-auth test resources
+              kubectl delete namespace basic-auth-test --ignore-not-found
+
+              # Restore original settings configmap if it was changed (>= 1.37)
+              KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
+                kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              fi
+            displayName: "Create TestKube Results Summary and cleanup basic-auth resources"
+            condition: always()
+
+          # --- Basic Auth v2 ConfigMap Tests ---
+          - bash: |
+              # Re-deploy basic-auth test resources for v2 test
+              kubectl apply -f ./test-cluster-yamls/basic-auth/namespace.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/secret.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/deployment.yaml
+              kubectl apply -f ./test-cluster-yamls/basic-auth/servicemonitor.yaml
+
+              # Apply v2 configmap (contains secrets_access_namespaces for >= 1.37)
+              KUBE_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor' | tr -d '+')
+              echo "Kubernetes minor version: $KUBE_MINOR"
+              if [ "$KUBE_MINOR" -ge 37 ] 2>/dev/null; then
+                echo "K8s >= 1.37: applying RBAC and v2 settings configmap with secrets_access_namespaces"
+                kubectl apply -f ./test-cluster-yamls/basic-auth/rbac.yaml
+                kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth-v2.yaml
+              else
+                echo "K8s < 1.37: applying v2 settings configmap (cluster-wide secrets access is available)"
+                kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-basic-auth-v2.yaml
+              fi
+
+              # Wait for the basic-auth reference app to be ready
+              kubectl rollout status deployment/basic-auth-ref-app -n basic-auth-test --timeout=120s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-basic-auth-smon-v2-crs.yaml" \
+                "testkube-config-test-basic-auth-smon-v2-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for basic auth ServiceMonitor (v2 configmap)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="basic-auth-smon-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-basic-auth-smon-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
+          # --- Basic Auth Secret Update Test (v2) ---
+          - bash: |
+              # Update the secret username to newadmin
+              kubectl patch secret basic-auth-creds -n basic-auth-test \
+                -p "{\"data\":{\"username\":\"$(echo -n newadmin | base64)\"}}"
+              echo "Patched basic-auth-creds secret: username=newadmin"
+
+              # Wait for the target allocator to pick up the secret change
+              echo "Waiting 120s for config reload..."
+              sleep 120
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-basic-auth-secret-update-v2-crs.yaml" \
+                "testkube-config-test-basic-auth-secret-update-v2-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for basic auth secret update (v2 configmap)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="basic-auth-secret-update-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-basic-auth-secret-update-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+
+              # Clean up basic-auth test resources
+              kubectl delete namespace basic-auth-test --ignore-not-found
+
+              # Restore original settings configmap
+              kubectl apply -f $(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+            displayName: "Create TestKube Results Summary and cleanup basic-auth v2 resources"
+            condition: always()
+
           - bash: |
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml

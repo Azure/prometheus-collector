@@ -1,0 +1,50 @@
+{
+  "Version": "1",
+  "ToggleName": "AzureMonitorMetrics.RsCpuLimit",
+  "Type": "int",
+  "LastUpdatedAt": null,
+  "ExtensionType": "microsoft.azuremonitor.containers.metrics",
+  "OwnerTeam": "container insights",
+  "Description": "This is AzureMonitorMetrics.RsCpuLimit toggle.",
+  "Rules": [
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "b9842c7c-1a38-4385-8f39-a51314758bcf"
+          ]
+        }
+      ],
+      "Value": "7.5"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "5a99906b-8fdd-41f9-84a7-bb4d8b909a57",
+            "1562a12a-0f05-45a8-b4db-7ee9c61e42f0",
+            "022f5da1-b1f3-472d-a806-90c974890eeb",
+            "01d57091-da44-4060-b7ed-e24cf10f85ad"
+          ]
+        }
+      ],
+      "Value": "10"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "subscriptionID",
+          "Operator": "equals",
+          "Values": [
+            "223ccf37-385d-4d03-a6a7-3c8921e298e9"
+          ]
+        }
+      ],
+      "Value": "12"
+    }
+  ]
+}

@@ -131,7 +131,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 
 	// Determine secrets access namespaces.
 	// Default: watch all namespaces for secrets (backward-compatible behavior).
-	// On Kubernetes >= 1.36: use the explicit configmap setting instead.
+	// On Kubernetes >= 1.37: use the explicit configmap setting instead.
 	secretsAccessNamespaces := []string{""}
 	log.Println("Defaulting to watch all namespaces for secrets")
 
@@ -140,8 +140,8 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 	if kubeVersion != "" && kubeVersionErr != nil {
 		log.Printf("Failed to parse Kubernetes version %q: %v, defaulting to watch all namespaces\n", kubeVersion, kubeVersionErr)
 	}
-	if kubeVersion != "" && kubeVersionErr == nil && !parsedKubeVersion.LessThan(utilversion.MustParseSemantic("v1.36.0")) {
-		// On >= 1.36, read the scoped namespace list from the configmap setting.
+	if kubeVersion != "" && kubeVersionErr == nil && !parsedKubeVersion.LessThan(utilversion.MustParseSemantic("v1.37.0")) {
+		// On >= 1.37, read the scoped namespace list from the configmap setting.
 		secretsAccessNamespaces = nil
 		if sns := os.Getenv("AZMON_SECRETS_ACCESS_NAMESPACES"); sns != "" {
 			for _, ns := range strings.Split(sns, ",") {
@@ -150,12 +150,12 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 					secretsAccessNamespaces = append(secretsAccessNamespaces, ns)
 				}
 			}
-			log.Printf("Kubernetes version %s >= 1.36: SecretsAccessNamespaces from configmap: %v\n", kubeVersion, secretsAccessNamespaces)
+			log.Printf("Kubernetes version %s >= 1.37: SecretsAccessNamespaces from configmap: %v\n", kubeVersion, secretsAccessNamespaces)
 		} else {
-			log.Printf("Kubernetes version %s >= 1.36: no secrets_access_namespaces configured, no namespaces will be watched for secrets\n", kubeVersion)
+			log.Printf("Kubernetes version %s >= 1.37: no secrets_access_namespaces configured, no namespaces will be watched for secrets\n", kubeVersion)
 		}
 	} else if kubeVersion != "" && kubeVersionErr == nil {
-		log.Printf("Kubernetes version %s < 1.36: watching all namespaces for secrets\n", kubeVersion)
+		log.Printf("Kubernetes version %s < 1.37: watching all namespaces for secrets\n", kubeVersion)
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {

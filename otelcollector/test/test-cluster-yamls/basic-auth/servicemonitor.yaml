@@ -1,0 +1,26 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: basic-auth-smon
+  namespace: basic-auth-test
+spec:
+  # The following limits ensure that metrics don't get dropped because labels/labelnames/labelvalues exceed the limits supported by the processing pipeline
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  namespaceSelector:
+    matchNames:
+      - basic-auth-test
+  selector:
+    matchLabels:
+      app: basic-auth-ref-app
+  endpoints:
+    - port: ba-metrics
+      path: /httpsmetrics
+      basicAuth:
+        username:
+          name: basic-auth-creds
+          key: username
+        password:
+          name: basic-auth-creds
+          key: password

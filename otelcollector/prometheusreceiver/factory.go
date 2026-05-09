@@ -9,7 +9,6 @@ import (
 	promconfig "github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/plugins" // init() of this package registers service discovery impl.
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
@@ -27,11 +26,12 @@ func NewFactory() receiver.Factory {
 }
 
 func createDefaultConfig() component.Config {
+	apiCfg := apiserver.DefaultConfig()
 	return &Config{
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
-		APIServer: configoptional.Default(apiserver.DefaultConfig()),
+		APIServer: &apiCfg,
 	}
 }
 
