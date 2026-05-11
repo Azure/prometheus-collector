@@ -11,6 +11,7 @@ var (
 		"get token from status error",
 		// Arc MSI adapter - transient API server errors
 		"Error in the Getting Config",
+		"Error getting the identity object",
 		// Arc node-exporter
 		"Failed to open directory, disabling udev device properties",
 		// KSM
