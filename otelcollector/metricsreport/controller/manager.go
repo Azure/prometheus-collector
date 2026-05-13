@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	healthv1alpha1 "prometheus-collector/metricsreport/api/v1alpha1"
 
@@ -12,6 +14,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+const defaultPrometheusAPIURL = "http://localhost:9092"
 
 // StartHealthSignalController starts the controller manager in a background goroutine.
 // It watches HealthCheckRequest CRs and creates/updates HealthSignal CRs based
@@ -28,10 +32,22 @@ func StartHealthSignalController(ctx context.Context) error {
 		return fmt.Errorf("creating controller manager: %w", err)
 	}
 
+	prometheusURL := os.Getenv("PROMETHEUS_API_URL")
+	if prometheusURL == "" {
+		prometheusURL = defaultPrometheusAPIURL
+	}
+	log.Printf("HealthSignal controller using Prometheus API at %s", prometheusURL)
+
+	// Metrics cache retains 1 hour of data points. The 15-second dedup TTL
+	// prevents redundant Prometheus API calls within the same reconciliation cycle.
+	metricsCache := NewMetricsCache(1*time.Hour, 15*time.Second)
+
 	reconciler := &HealthSignalReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
-		PrometheusAPIURL: "http://localhost:9092",
+		PrometheusAPIURL: prometheusURL,
+		Cache:            metricsCache,
+		UpgradeGate:      NewUpgradeGate(mgr.GetClient()),
 	}
 
 	if err := reconciler.SetupWithManager(mgr); err != nil {

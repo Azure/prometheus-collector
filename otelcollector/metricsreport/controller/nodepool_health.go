@@ -19,7 +19,7 @@ func (r *HealthSignalReconciler) evaluateNodePoolHealth(ctx context.Context, poo
 		`count(kube_node_status_condition{condition="NetworkUnavailable",status="true"} == 1 and on(node) kube_node_labels{label_kubernetes_azure_com_agentpool="%s"})`,
 		poolName,
 	)
-	netResult, err := r.queryPrometheus(ctx, netQuery)
+	netResult, err := r.queryHealthMetric(ctx, MetricPoolNetwork, poolName, netQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for pool NetworkUnavailable: %v", err)
 	}
@@ -34,7 +34,7 @@ func (r *HealthSignalReconciler) evaluateNodePoolHealth(ctx context.Context, poo
 		`count(kube_node_status_condition{condition="Ready",status="true"} == 0 and on(node) kube_node_labels{label_kubernetes_azure_com_agentpool="%s"})`,
 		poolName,
 	)
-	readyResult, err := r.queryPrometheus(ctx, readyQuery)
+	readyResult, err := r.queryHealthMetric(ctx, MetricPoolReady, poolName, readyQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for pool Ready: %v", err)
 	}

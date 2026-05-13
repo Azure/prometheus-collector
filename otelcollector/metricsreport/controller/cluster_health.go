@@ -12,7 +12,7 @@ import (
 func (r *HealthSignalReconciler) evaluateClusterHealth(ctx context.Context) (string, string, string) {
 	// Get total node count
 	totalQuery := `count(kube_node_status_condition{condition="Ready",status="true"})`
-	totalResult, err := r.queryPrometheus(ctx, totalQuery)
+	totalResult, err := r.queryHealthMetric(ctx, MetricClusterNodeCount, "", totalQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for total nodes: %v", err)
 	}
@@ -24,7 +24,7 @@ func (r *HealthSignalReconciler) evaluateClusterHealth(ctx context.Context) (str
 
 	// Count nodes with NetworkUnavailable=true
 	netQuery := `count(kube_node_status_condition{condition="NetworkUnavailable",status="true"} == 1)`
-	netResult, err := r.queryPrometheus(ctx, netQuery)
+	netResult, err := r.queryHealthMetric(ctx, MetricClusterNetUnavail, "", netQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for NetworkUnavailable: %v", err)
 	}
@@ -32,7 +32,7 @@ func (r *HealthSignalReconciler) evaluateClusterHealth(ctx context.Context) (str
 
 	// Count nodes that are NotReady
 	notReadyQuery := `count(kube_node_status_condition{condition="Ready",status="true"} == 0)`
-	notReadyResult, err := r.queryPrometheus(ctx, notReadyQuery)
+	notReadyResult, err := r.queryHealthMetric(ctx, MetricClusterNotReady, "", notReadyQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for Ready: %v", err)
 	}

@@ -15,7 +15,7 @@ import (
 func (r *HealthSignalReconciler) evaluateNodeHealth(ctx context.Context, nodeName string) (string, string, string) {
 	// 1. Check Ready condition
 	readyQuery := fmt.Sprintf(`kube_node_status_condition{node="%s",condition="Ready",status="true"}`, nodeName)
-	readyResult, err := r.queryPrometheus(ctx, readyQuery)
+	readyResult, err := r.queryHealthMetric(ctx, MetricNodeReady, nodeName, readyQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for Ready: %v", err)
 	}
@@ -26,7 +26,7 @@ func (r *HealthSignalReconciler) evaluateNodeHealth(ctx context.Context, nodeNam
 
 	// 2. Check NetworkUnavailable condition
 	netQuery := fmt.Sprintf(`kube_node_status_condition{node="%s",condition="NetworkUnavailable",status="true"}`, nodeName)
-	netResult, err := r.queryPrometheus(ctx, netQuery)
+	netResult, err := r.queryHealthMetric(ctx, MetricNetworkUnavailable, nodeName, netQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("Failed to query Prometheus for NetworkUnavailable: %v", err)
 	}
@@ -72,7 +72,7 @@ func (r *HealthSignalReconciler) evaluateNodeHealth(ctx context.Context, nodeNam
 func (r *HealthSignalReconciler) evaluatePodsOnNode(ctx context.Context, nodeName string) (string, string, string) {
 	// Total pods scheduled on the node
 	totalQuery := fmt.Sprintf(`count(kube_pod_info{node="%s"})`, nodeName)
-	totalResult, err := r.queryPrometheus(ctx, totalQuery)
+	totalResult, err := r.queryHealthMetric(ctx, MetricPodTotal, nodeName, totalQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("pod query error: %v", err)
 	}
@@ -82,7 +82,7 @@ func (r *HealthSignalReconciler) evaluatePodsOnNode(ctx context.Context, nodeNam
 		`count(kube_pod_info{node="%s"} * on(pod,namespace) group_left() (kube_pod_status_phase{phase=~"Failed|Unknown"} == 1))`,
 		nodeName,
 	)
-	unhealthyResult, err := r.queryPrometheus(ctx, unhealthyQuery)
+	unhealthyResult, err := r.queryHealthMetric(ctx, MetricPodHealth, nodeName, unhealthyQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("pod query error: %v", err)
 	}
@@ -113,7 +113,7 @@ func (r *HealthSignalReconciler) evaluatePDBsOnNode(ctx context.Context, nodeNam
 		`count(kube_poddisruptionbudget_status_pod_disruptions_allowed == 0 and on(namespace) kube_pod_info{node="%s"})`,
 		nodeName,
 	)
-	pdbResult, err := r.queryPrometheus(ctx, pdbQuery)
+	pdbResult, err := r.queryHealthMetric(ctx, MetricPDBRestriction, nodeName, pdbQuery)
 	if err != nil {
 		return healthv1alpha1.ConditionOngoing, "PrometheusQueryFailed", fmt.Sprintf("PDB query error: %v", err)
 	}
