@@ -8,7 +8,6 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
@@ -19,12 +18,12 @@ var componentType = component.MustNewType(typeStr)
 
 // upgradeHealthMetrics are always intercepted for built-in health checks.
 var builtinHealthMetrics = map[string]bool{
-	"kube_node_status_condition":                               true,
-	"kube_node_info":                                           true,
-	"kube_node_labels":                                         true,
-	"kube_pod_info":                                            true,
-	"kube_pod_status_phase":                                    true,
-	"kube_poddisruptionbudget_status_pod_disruptions_allowed":  true,
+	"kube_node_status_condition": true,
+	"kube_node_info":             true,
+	"kube_node_labels":           true,
+	"kube_pod_info":              true,
+	"kube_pod_status_phase":      true,
+	"kube_poddisruptionbudget_status_pod_disruptions_allowed": true,
 }
 
 // Config holds the exporter configuration.
@@ -35,8 +34,8 @@ func (c *Config) Validate() error { return nil }
 
 // healthCacheExporter writes upgrade-health metrics into a shared MetricsCache.
 type healthCacheExporter struct {
-	sink            *metricsreport.HealthMetricSink
-	upgradeGate     *metricsreport.UpgradeGate
+	sink              *metricsreport.HealthMetricSink
+	upgradeGate       *metricsreport.UpgradeGate
 	customMetricNames map[string]bool // metric names from customer rules
 }
 
