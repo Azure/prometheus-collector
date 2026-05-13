@@ -5,6 +5,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/vishiy/opentelemetry-collector-builder/healthcacheexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
@@ -24,14 +25,17 @@ func components() (otelcol.Factories, error) {
 	resourceProcessor := resourceprocessor.NewFactory()
 	filterProcessor := filterprocessor.NewFactory()
 
+	healthCacheExporter := healthcacheexporter.NewFactory()
+
 	factories := otelcol.Factories{
 		Extensions: map[component.Type]extension.Factory{},
 		Receivers: map[component.Type]receiver.Factory{
 			promReceiver.Type(): promReceiver,
 		},
 		Exporters: map[component.Type]exporter.Factory{
-			otlpExporter.Type(): otlpExporter,
-			promExporter.Type(): promExporter,
+			otlpExporter.Type():        otlpExporter,
+			promExporter.Type():        promExporter,
+			healthCacheExporter.Type(): healthCacheExporter,
 		},
 		Processors: map[component.Type]processor.Factory{
 			batchProcessor.Type():    batchProcessor,

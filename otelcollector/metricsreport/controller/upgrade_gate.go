@@ -172,12 +172,13 @@ func (g *UpgradeGate) LoadRules(ctx context.Context) ([]UpgradeRule, error) {
 //	windowCycles  = maxSnapshots / snapshotsPerCycle
 //	retention     = windowCycles × reconcileInterval
 //
-// Examples at retentionPercent=100 (50MB budget):
+// Examples at retentionPercent=100 (300MB budget):
 //
 //	10 nodes   → 1h (clamped)
-//	100 nodes  → ~50min
-//	500 nodes  → ~10min
-//	1000 nodes → ~5min
+//	100 nodes  → 1h (clamped)
+//	500 nodes  → ~1h (clamped)
+//	1000 nodes → ~30min
+//	5000 nodes → ~6min
 func (g *UpgradeGate) LoadRetentionWindow(ctx context.Context, nodeCount int) time.Duration {
 	logger := ctrllog.FromContext(ctx)
 
@@ -208,7 +209,7 @@ func (g *UpgradeGate) LoadRetentionWindow(ctx context.Context, nodeCount int) ti
 	}
 
 	const (
-		baseBudgetBytes    = 50 * 1024 * 1024 // 50MB
+		baseBudgetBytes    = 300 * 1024 * 1024 // 300MB
 		bytesPerSnapshot   = 500
 		metricTypesPerNode = 10
 		reconcileSeconds   = 30

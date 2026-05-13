@@ -17,10 +17,27 @@ import (
 
 const defaultPrometheusAPIURL = "http://localhost:9092"
 
-// StartHealthSignalController starts the controller manager in a background goroutine.
-// It watches HealthCheckRequest CRs and creates/updates HealthSignal CRs based
-// on Prometheus metrics from the local collector.
+// activeUpgradeGate holds a reference to the UpgradeGate created during
+// controller startup, so the collector exporter can access it for loading
+// customer-defined rule metric names.
+var activeUpgradeGate *UpgradeGate
+
+// GetUpgradeGate returns the UpgradeGate created during controller startup.
+func GetUpgradeGate() *UpgradeGate {
+	return activeUpgradeGate
+}
+
+// StartHealthSignalController starts the controller with a new internal cache.
+// Used when running in a separate process from the collector.
 func StartHealthSignalController(ctx context.Context) error {
+	cache := NewMetricsCache(1*time.Hour, 15*time.Second)
+	return StartHealthSignalControllerWithCache(ctx, cache)
+}
+
+// StartHealthSignalControllerWithCache starts the controller using a provided
+// MetricsCache. Used when the controller runs inside the collector process so
+// the cache can be shared with the health_cache exporter.
+func StartHealthSignalControllerWithCache(ctx context.Context, cache *MetricsCache) error {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(healthv1alpha1.AddToScheme(scheme))
@@ -38,16 +55,15 @@ func StartHealthSignalController(ctx context.Context) error {
 	}
 	log.Printf("HealthSignal controller using Prometheus API at %s", prometheusURL)
 
-	// Metrics cache retains 1 hour of data points. The 15-second dedup TTL
-	// prevents redundant Prometheus API calls within the same reconciliation cycle.
-	metricsCache := NewMetricsCache(1*time.Hour, 15*time.Second)
+	upgradeGate := NewUpgradeGate(mgr.GetClient())
+	activeUpgradeGate = upgradeGate
 
 	reconciler := &HealthSignalReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		PrometheusAPIURL: prometheusURL,
-		Cache:            metricsCache,
-		UpgradeGate:      NewUpgradeGate(mgr.GetClient()),
+		Cache:            cache,
+		UpgradeGate:      upgradeGate,
 	}
 
 	if err := reconciler.SetupWithManager(mgr); err != nil {
