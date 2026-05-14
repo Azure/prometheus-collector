@@ -6,6 +6,11 @@ allowed-tools:
   - read_file
   - edit_file
   - create_file
+  - playwright-browser_navigate
+  - playwright-browser_snapshot
+  - playwright-browser_click
+  - playwright-browser_close
+  - playwright-browser_type
 ---
 
 # Compare Cluster Helm Manifests
@@ -114,11 +119,47 @@ Display a concise summary to the user highlighting:
 - Any concerning gaps or issues
 - The path to the full report file
 
+### Phase 6: Verify Grafana Dashboards (Optional — requires Grafana URL)
+
+If the user provides a Grafana instance URL and a datasource name, verify that the key Kubernetes dashboards display data for each cluster. This phase uses **Playwright MCP** to navigate dashboards in a browser.
+
+1. **Identify dashboards to check.** Query all dashboards tagged with both `Microsoft-managed` and `kubernetes-mixin`:
+   ```powershell
+   az grafana dashboard list --name "<grafana-name>" --resource-group "<resource-group>" -o json
+   ```
+   Filter the results for dashboards whose tags include both `Microsoft-managed` and `kubernetes-mixin`.
+
+2. **Determine the datasource variable value.** The user must provide the Managed Prometheus datasource name (e.g., `Managed_Prometheus_<workspace-name>`). This is passed as `var-datasource` in the dashboard URL. The `az grafana` CLI resolves the datasource name internally — if it differs from the URL parameter, inspect the Grafana datasource list:
+   ```powershell
+   az grafana data-source list --name "<grafana-name>" --resource-group "<resource-group>" -o table
+   ```
+
+3. **For each cluster, navigate to each dashboard using Playwright MCP:**
+   - Use `playwright-browser_navigate` to open:
+     ```
+     https://<grafana-url>/d/<dashboard-uid>?var-datasource=<datasource>&var-cluster=<cluster-name>&from=now-1h&to=now
+     ```
+   - Wait for the page to load, then use `playwright-browser_snapshot` targeting `main` to capture the dashboard panel state.
+   - **Check for data:** Search the snapshot for `No data` text. Panels that display numeric values, tables with rows, or chart legends indicate data is present. Panels showing only `No data` indicate missing metrics.
+
+4. **Record results** for each dashboard:
+   - Dashboard title
+   - Data status: `yes` (all panels have data), `partial` (some panels show "No data"), `no` (all panels show "No data")
+   - Notes on which specific panels are missing data
+
+5. **Known Windows-specific gaps.** Some Windows dashboards may show "No data" for memory utilisation panels (e.g., Memory Utilisation, Memory Requests Commitment, Memory Limits Commitment on the Cluster (Windows) dashboard, and Memory Utilisation % on USE Method dashboards). This is a known limitation of Windows node metrics collection.
+
+6. **Sign-in handling.** Azure Managed Grafana uses Azure AD SSO. If the browser is redirected to a Microsoft login page, use `playwright-browser_snapshot` to identify the account picker and `playwright-browser_click` to select the appropriate account. The SSO login typically auto-completes if the user is already authenticated.
+
+7. **Include dashboard verification results** in the Phase 4 comparison report as an additional section:
+   - **Grafana Dashboard Verification** — table showing each dashboard title, data status per cluster, and any missing panels.
+
 ## Example Invocations
 
 - "Compare manifests between rashmi-ext-test-win and ci-prod-aks-mac-weu"
 - "Diff the helm deployment on my dev cluster vs the MIP prod cluster"
 - "What's different between cluster A and cluster B for azure-monitor-metrics?"
+- "Compare clusters and check dashboards in https://my-grafana.eus2e.grafana.azure.com with datasource Managed_Prometheus_my-amw"
 
 ## Notes
 
@@ -126,3 +167,5 @@ Display a concise summary to the user highlighting:
 - Cluster-specific values (resource IDs, DNS names, subscription IDs) are expected to differ and should be noted but not flagged as issues.
 - YAML formatting differences between Helm-rendered and Flux-processed manifests are expected and non-functional.
 - MCP clusters will have additional projected volumes for token authentication — this is expected infrastructure.
+- Dashboard verification (Phase 6) requires a Grafana instance URL and datasource name. If not provided, skip this phase.
+- When checking dashboards, the `var-datasource` URL parameter may use the internal datasource UID rather than the display name. Check the Grafana URL after navigation to see what value Grafana resolves it to.
