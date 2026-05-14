@@ -19,6 +19,7 @@ CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privi
 # gobinary - target-allocator, otelcollector, promconfigvalidator
 CVE-2026-40179 #github.com/prometheus/prometheus - Stored XSS via metric names and label values (v0.310.0 -> 0.311.2)
 GHSA-fw8g-cg8f-9j28 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (v0.310.0 -> 0.311.3)
+CVE-2026-44903 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (CVE alias of GHSA-fw8g-cg8f-9j28) (v0.311.2 -> 0.311.3)
 # gobinary - target-allocator, otelcollector, configurationreader, ccp-prometheus-collector
 CVE-2026-39823 #stdlib - net/url incomplete URL parsing fix (extends CVE-2026-27142) (v1.25.9 -> 1.25.10, 1.26.3)
 CVE-2026-39825 #stdlib - net/http/httputil ReverseProxy forwards hidden query parameters (v1.25.9 -> 1.25.10, 1.26.3)
