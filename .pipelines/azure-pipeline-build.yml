@@ -186,7 +186,7 @@ extends:
             # export HELM_SEMVER=$SETUP_SEMVER
             # export IMAGE_TAG=$SETUP_SEMVER
             # export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
-            export HELM_SEMVER=7.0.0-main-05-07-2026-dbf4ae51
+            export HELM_SEMVER=7.0.0-main-05-07-2026-dbf4ae51-arc-test
             export IMAGE_TAG=7.0.0-main-05-07-2026-dbf4ae51
             export IMAGE_TAG_WINDOWS=7.0.0-main-05-07-2026-dbf4ae51-win
             export INCLUDE_DEPENDENT_CHARTS=true
@@ -2063,11 +2063,11 @@ extends:
         - Image_Tags_and_Ev2_Artifacts
         #- Linux_Prometheus_Collector
         variables:
-          HELM_SEMVER: 7.0.0-main-05-07-2026-dbf4ae51
+          HELM_SEMVER: 7.0.0-main-05-07-2026-dbf4ae51-arc-test
           IMAGE_TAG: 7.0.0-main-05-07-2026-dbf4ae51
           IMAGE_TAG_WINDOWS: 7.0.0-main-05-07-2026-dbf4ae51-win
           # ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:7.0.0-main-05-07-2026-dbf4ae51
+          AKS_ARC_HELM_FULL_IMAGE_NAME: containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/ama-metrics:7.0.0-main-05-07-2026-dbf4ae51-arc-test
           #ARC_EXTENSION: false
           INCLUDE_DEPENDENT_CHARTS: true
           skipComponentGovernanceDetection: true
