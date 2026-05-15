@@ -1,7 +1,7 @@
 AzureMonitorMetrics:
   KubeStateMetrics:
 # Uncomment the below 2 settings if you want to pass in the labels and/or annotations or metrics
-    #MetricLabelsAllowlist: "testlabel=[.*]"
+    #MetricLabelsAllowList: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     #MetricAllowList: ""
     ImageRegistry: mcr.microsoft.com

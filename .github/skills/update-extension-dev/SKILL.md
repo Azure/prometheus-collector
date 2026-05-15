@@ -130,7 +130,7 @@ The following diffs are **expected and intentional** — they are part of the ex
 | `_arc-extension-helpers.tpl` | Dynamic ARC detection via `global.commonGlobals.Customer.AzureResourceID` instead of static `AzureMonitorMetrics.ArcExtension` flag | Same chart serves both AKS and Arc clusters |
 | `ama-metrics-daemonset.yaml` | `appMonitoring.autoInstrumentation.enabled` instead of `AppmonitoringAgent.enabled` (and similar renames) | Extension framework uses different values schema |
 | `ama-metrics-daemonset.yaml` | addon-token-adapter replaced with `tpl $.Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml` / `AADMsiTokenAdapterWindowsYaml` | Extension framework injects token adapter via values |
-| `ama-metrics-deployment.yaml` | `kubeStateMetrics.metricLabelsAllowlist` instead of `AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist` (and similar renames) | Extension values schema |
+| `ama-metrics-deployment.yaml` | `kubeStateMetrics.metricLabelsAllowlist` instead of `AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList` (and similar renames) | Extension values schema |
 | `ama-metrics-deployment.yaml` | addon-token-adapter replaced with `tpl .Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml` | Extension token adapter pattern |
 | `ama-metrics-deployment.yaml` | Removed `NoExecute` toleration from deployment | Extension compatibility |
 | `ama-metrics-ksm-deployment.yaml` | KSM values key renames (`kubeStateMetrics.*`), `MetricAllowList` → `MetricAllowlist` | Extension values schema + case fix |
