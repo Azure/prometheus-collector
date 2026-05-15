@@ -359,7 +359,7 @@ Write-Host "Querying with rule: $rule"
 Write-Host "and resourceId: $resourceId"
 
 Write-Host "Setting execute permissions on regionTests.exe..."
-chmod +x ./regionTests-linux.exe
+chmod +x ./regionTests-linux.test
 
 # Configure TLS certificates for AMW endpoint to prevent certificate verification errors
 Configure-TLSCertificates -AmwEndpoint $amwEndpoint
@@ -545,14 +545,14 @@ echo "AZURE_CLIENT_ID: `$AZURE_CLIENT_ID"
 echo "NO_PROXY: `$NO_PROXY"
 
 # Check if the test executable exists
-if [ ! -f "./regionTests-linux.exe" ]; then
-    echo "ERROR: Test executable not found: ./regionTests-linux.exe"
+if [ ! -f "./regionTests-linux.test" ]; then
+    echo "ERROR: Test executable not found: ./regionTests-linux.test"
     exit 1
 fi
 
 # Run the Ginkgo test suite with secure certificate configuration
 echo "Starting regionTests with secure TLS certificate validation..."
-./regionTests-linux.exe -parmRuleName '$rule' -parmAmwResourceId '$resourceId' -clientId '$clientId'
+./regionTests-linux.test -parmRuleName '$rule' -parmAmwResourceId '$resourceId' -clientId '$clientId'
 "@
 
 # Write execution script with Unix line endings
