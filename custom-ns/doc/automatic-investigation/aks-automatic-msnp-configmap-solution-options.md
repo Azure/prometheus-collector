@@ -30,9 +30,48 @@ So we need a different path. This doc lists 5 candidate paths.
 
 ## 2. Solution options (ranked by my current preference)
 
+> **Note on the volume mount inside ama-metrics pods**
+>
+> Today the 4 customer configmaps are surfaced to the agent via a **configmap volume mount** on the `ama-metrics` Deployment, the 7 sized `ama-metrics-node-*` DaemonSets, and `ama-metrics-ksm` / `ama-metrics-operator-targets`. The agent reads them off disk (`/etc/config/settings/*`, `/etc/config/prom-config/prometheus-config.yml`, …).
+>
+> Most options below have **two viable sub-variants** — one that keeps the volume mount and one that removes it. They behave the same from a customer's perspective but have very different blast radius on the agent's deployment specs and on API-server load:
+>
+> | Sub-variant | What changes inside the agent | Trade-off |
+> |---|---|---|
+> | **a — operator round-trips through a CM in `kube-system`** | The operator (SA in `kube-system`, exempt from the VAP) writes/mirrors the rendered configmap into `kube-system`. Existing volume mount + on-disk reader stay unchanged. | Minimal delta to the Deployment + 7 DaemonSets; the `kube-system` CM becomes an **internal implementation detail**, no longer the customer-facing surface. |
+> | **b — agent reads via the K8s API directly** | Each agent pod opens a `Watch` on the CRD / CM in the configured ns. Volume mount + on-disk reader removed. | Cleaner conceptually, but adds N watches per cluster (1 per DaemonSet pod) and changes the agent's startup sequence. |
+>
+> **Default assumption in this doc: sub-variant (a) — keep the volume mount.** It's the safer production landing for both Option 1 and Option 3, because it leaves the per-node DaemonSet hot path untouched. Sub-variant (b) is called out explicitly where it's worth considering.
+
 ### Option 1 — New CRD surface in customer namespaces *(preferred — Kubernetes-native)*
 
 Ship 1–4 CRDs (initial naming TBD; e.g. `monitoring.azure.com/v1`) that customers `kubectl apply` to **their own namespace** (or any namespace not in the VAP's protected list). `ama-metrics-operator-targets` already runs as a Kubernetes operator that watches CRDs cluster-wide — extend it to watch the new ones and translate them into the in-memory equivalent of the configmaps.
+
+**Data flow (default sub-variant 1a — keeps the volume mount):**
+
+```
+customer ── kubectl apply ──▶ AmaMetricsSettings CR  (customer's own ns, e.g. my-team-config)
+                                       │
+                                       │  watch
+                                       ▼
+                  ama-metrics-operator-targets  (SA in kube-system, exempt from VAP)
+                                       │
+                                       │  render + write
+                                       ▼
+                  ConfigMap/ama-metrics-settings-configmap  (kube-system)
+                                       │
+                                       │  volume mount (unchanged)
+                                       ▼
+                  ama-metrics pods (Deployment + 7 DaemonSets)
+                                       │
+                                       │  on-disk reader (unchanged)
+                                       ▼
+                                  agent runtime
+```
+
+In this variant the `kube-system` configmap **still exists and is still mounted**, but it becomes an *internal implementation detail* — the customer never touches it. The VAP doesn't fire because the writer is `ama-metrics-operator-targets` (a kube-system SA, exempt at Gate 4).
+
+Sub-variant **1b** would skip the round-trip through the CM and have the operator push rendered config into each agent pod directly (or have each agent open its own CRD watch). That removes the volume mount but materially changes the cluster-scope Deployment and every DaemonSet pod's startup path. Probably not worth it given the small savings.
 
 Sketch:
 
@@ -85,7 +124,29 @@ Existing state: `azureMonitorProfile.metrics` already covers some `ama-metrics-s
 
 ### Option 3 — Configmap moves to a customer-owned namespace *(smallest agent change)*
 
-Change the agent's config-reader to look up the 4 configmaps in a **configurable namespace**, defaulting to `kube-system` for back-compat. On MSNP the customer (or AKS, on the customer's behalf) sets a per-cluster annotation/env like `customConfigNamespace: my-team-config`, and the agent watches that namespace for the same 4 configmap names.
+Customer creates the same 4 configmaps (same names, same schema) but in a **customer-owned namespace** (e.g. `my-team-config`) instead of `kube-system`. Crucially, a pod can only volume-mount configmaps from **its own namespace** (Kubernetes restriction), so ama-metrics — which runs in `kube-system` — cannot mount the customer's CM directly. That leaves two sub-variants:
+
+**Sub-variant 3a (preferred — keeps the volume mount):**
+
+```
+customer ── kubectl apply ──▶ ConfigMap/ama-metrics-settings-configmap  (my-team-config)
+                                       │
+                                       │  watch
+                                       ▼
+                  ama-metrics-operator-targets  (SA in kube-system, exempt from VAP)
+                                       │
+                                       │  mirror (copy bytes 1:1)
+                                       ▼
+                  ConfigMap/ama-metrics-settings-configmap  (kube-system)
+                                       │
+                                       │  volume mount (unchanged)
+                                       ▼
+                  ama-metrics pods (Deployment + 7 DaemonSets)
+```
+
+This is functionally close to Option 1a, except the customer's source-of-truth is still a configmap (same shape they're documented to use) instead of a CRD.
+
+**Sub-variant 3b (no operator, but no volume mount):** Change the agent's config-reader to look up the 4 configmaps in a configurable namespace (env var, addon param, etc.), and have each agent pod open a `Watch` on those CMs via the K8s API. The `kube-system` CM and its volume mount disappear, but every DaemonSet pod now holds a long-lived API watch — adds N watches per cluster.
 
 | Pros | Cons |
 |---|---|
