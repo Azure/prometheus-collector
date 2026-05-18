@@ -1,11 +1,11 @@
 {
   "Version": "1",
-  "ToggleName": "AzureMonitorMetrics.ImageTagWindows",
+  "ToggleName": "AzureMonitorMetrics.ImageTag",
   "Type": "string",
   "LastUpdatedAt": null,
   "ExtensionType": "microsoft.azuremonitor.containers.metrics",
   "OwnerTeam": "container insights",
-  "Description": "This is AzureMonitorMetrics.ImageTagWindows toggle.",
+  "Description": "This is AzureMonitorMetrics.ImageTag toggle.",
   "Rules": [
     {
       "Matchers": [
@@ -17,7 +17,7 @@
           ]
         }
       ],
-      "Value": "6.7.5-main-09-12-2023-8fbde9ca-win"
+      "Value": "6.7.5-main-09-12-2023-8fbde9ca"
     },
     {
       "Matchers": [
@@ -25,11 +25,11 @@
           "Field": "armId",
           "Operator": "equals",
           "Values": [
-            "/subscriptions/37524548-5887-4df0-a359-38a687fdb3bc/resourcegroups/rashmi-gf-03/providers/Microsoft.ContainerService/managedClusters/rashmi-gf-03"
+            "/subscriptions/37524548-5887-4df0-a359-38a687fdb3bc/resourceGroups/rashmi-gf-03/providers/Microsoft.ContainerService/managedclusters/rashmi-gf-03"
           ]
         }
       ],
-      "Value": "6.24.1-main-11-14-2025-15146744-win"
+      "Value": "6.24.1-main-11-14-2025-15146744"
     }
   ]
 }
