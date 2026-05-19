@@ -143,6 +143,10 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+          {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+        - operator: "Exists"
+          effect: "NoExecute"
+          {{- end }}
       {{- end }}
       volumes:
         - name: settings-vol-config
