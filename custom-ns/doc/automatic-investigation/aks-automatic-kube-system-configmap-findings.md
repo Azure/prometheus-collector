@@ -1,12 +1,37 @@
 # AKS Automatic — Can a user create a ConfigMap in `kube-system`?
 
-> **Investigation date:** 2026-05-05
-> **Cluster under test:** `zane-auto` (RG `zane-rg-auto`, sub `9c17527c-af8f-4148-8019-27bada0845f7`)
+> **Investigation date:** 2026-05-05 (original) / **amended 2026-05-19** (see §0)
+> **Cluster under test:** `zane-auto` (RG `zane-rg-auto`, sub `9c17527c-af8f-4148-8019-27bada0845f7`) and `zane-auto-2` (RG `zane-auto-2`)
 > **Identity tested:** `zanejohnson@microsoft.com`
+> **Companion docs:**
+> - [`aks-automatic-msnp-kube-system-findings.md`](./aks-automatic-msnp-kube-system-findings.md) — what changes on the MSNP preview.
+> - [`aks-automatic-msnp-configmap-solution-options.md`](./aks-automatic-msnp-configmap-solution-options.md) — proposed paths forward.
 
 ---
 
-## TL;DR
+## 0. Amendment 2026-05-19 — there IS a VAP, it's just in Audit mode
+
+This doc's **original conclusion ("no admission policy blocks ConfigMap writes to `kube-system`") was incomplete**. Re-testing on 2026-05-19 shows:
+
+| Cluster | MSNP? | VAP `aks-managed-protect-system-namespaces` | Binding `validationActions` | `kubectl apply` to kube-system |
+|---|---|---|---|---|
+| `zane-auto` (this doc) | ❌ no | ✅ present (created `2026-05-05T22:57:00Z` — **14d old as of 2026-05-19**, i.e. was there during the original test, just not detected) | **`[Audit]`** | ✅ Succeeds (silently logged) |
+| `zane-auto-2` (created 2026-05-19) | ❌ no | ✅ present (created 2026-05-19) | **`[Audit]`** | ✅ Succeeds (silently logged) |
+| `zane-auto-msnp` | ✅ yes | ✅ present | **`[Deny]`** | ❌ Forbidden |
+
+**Revised model — corrects this doc and supersedes its TL;DR below:**
+
+1. The `aks-managed-protect-system-namespaces` `ValidatingAdmissionPolicy` is **present on every AKS Automatic cluster** today, not just MSNP ones.
+2. The only MSNP-specific bit is the binding's `validationActions`: **`[Deny]` on MSNP**, **`[Audit]` on classic AKS Automatic**.
+3. **Audit mode means: the policy still evaluates `expression: "false"` on every write, but the API server only records the result to the audit log** — it does NOT reject the request. So customer writes still succeed today on non-MSNP AKS Automatic.
+4. **This is fragile.** AKS could change `validationActions` from `[Audit]` to `[Deny]` on non-MSNP clusters at any time via the same managed channel that ships the VAP itself, and every customer flow that writes to `kube-system` would break immediately.
+5. Mechanism is still **not Deployment Safeguards** (Azure Policy / Gatekeeper). The denial pipeline is a native K8s 1.30+ `ValidatingAdmissionPolicy`. The Deployment Safeguards product has 10 policies — none of them targets `ConfigMap` in `kube-system`. See §5 of this doc for the Gatekeeper enumeration; the MSNP doc §3 has the full VAP teardown.
+
+The rest of this doc — RBAC behavior, role-scope analysis, deployment-safeguards enumeration — is still correct. The **only thing that changed** is point 3 of the original TL;DR (no admission policy blocks ConfigMap mutations): there IS an admission policy, it just doesn't currently *deny*.
+
+---
+
+## TL;DR (original 2026-05-05 — see §0 for the 2026-05-19 amendment)
 
 **Yes — a user CAN create a ConfigMap in `kube-system` on an AKS Automatic cluster, _provided their Azure role assignment is scoped at the cluster (or higher) and grants `Microsoft.ContainerService/managedClusters/configmaps/write`._**
 
@@ -14,8 +39,7 @@ The popular assumption "AKS Automatic blocks writes to `kube-system`" is **only 
 - The user has a **namespace-scoped** Azure RBAC for Kubernetes role assignment (e.g., scoped to `…/namespaces/<some-other-ns>`), **OR**
 - The user has only `Reader`-tier permissions, **OR**
 - A custom Gatekeeper / admission policy explicitly denies the resource (none exist by default on AKS Automatic for `ConfigMap`).
-
-There is no built-in deployment safeguard on AKS Automatic that blocks ConfigMap mutations in `kube-system`. The default Azure Policy / Gatekeeper constraints all target **pod/workload** concerns (privileged containers, host namespaces, image allow-lists, capabilities, etc.).
+- ~~There is no built-in deployment safeguard on AKS Automatic that blocks ConfigMap mutations in `kube-system`.~~ **Amended 2026-05-19:** Deployment Safeguards (Gatekeeper) still doesn't block it, but a `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces` is now present on every AKS Automatic cluster and evaluates every write to a 20-namespace list. On classic AKS Automatic the binding is in `[Audit]` mode → writes still succeed; on MSNP it's `[Deny]` → writes are rejected. See §0.
 
 ---
 
@@ -239,8 +263,9 @@ kubectl get constrainttemplates
 
 1. **AKS Automatic does not categorically prevent ConfigMap writes to `kube-system`.** The block — when present — is an Azure RBAC scoping decision, not a cluster admission rule.
 2. **A cluster-scoped `Azure Kubernetes Service RBAC Cluster Admin` (or higher) can write any resource in `kube-system`.** Verified end-to-end on `zane-auto`.
-3. **Default deployment safeguards (Gatekeeper) on AKS Automatic don't cover ConfigMaps in `kube-system`.** They cover pod/workload security.
+3. **Default deployment safeguards (Gatekeeper) on AKS Automatic don't cover ConfigMaps in `kube-system`.** They cover pod/workload security. **However (added 2026-05-19):** a `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces` is now present on every AKS Automatic cluster and evaluates every write to a 20-namespace list — on classic AKS Automatic it runs in `[Audit]` mode (writes succeed, audit log records them), on MSNP it runs in `[Deny]` mode (writes rejected). See §0 for the corrected model.
 4. **For ama-metrics specifically**, configuration should be done at the ARM/DCR layer, not by editing the ConfigMap, because the addon controller may reconcile the resource.
 5. **To actually restrict a user from writing to `kube-system` on Automatic**, either:
    - Don't grant them cluster-scoped Writer/Admin/Cluster-Admin (use namespace-scoped role assignments), and/or
    - Author a custom Gatekeeper / Azure Policy constraint that targets `ConfigMap` in `kube-system`.
+6. **Plan for the Audit→Deny flip (2026-05-19).** AKS could change `validationActions` from `[Audit]` to `[Deny]` on non-MSNP AKS Automatic at any point. Any workflow that depends on customers editing CMs in `kube-system` should be migrated off that path before then — see [`aks-automatic-msnp-configmap-solution-options.md`](./aks-automatic-msnp-configmap-solution-options.md) for the alternatives proposed for ama-metrics.

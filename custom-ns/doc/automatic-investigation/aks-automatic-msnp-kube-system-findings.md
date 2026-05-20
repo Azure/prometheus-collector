@@ -1,9 +1,30 @@
 # AKS Automatic with Managed System Node Pools (MSNP) — `kube-system` is locked down
 
-> **Investigation date:** 2026-05-15
+> **Investigation date:** 2026-05-15 (original) / **amended 2026-05-19** (see "What changed since the original investigation" below)
 > **Cluster under test:** `zane-auto-msnp` (RG `zane-rg-auto-msnp`, sub `9c17527c-af8f-4148-8019-27bada0845f7`, region `westus2`)
 > **Identity tested:** `zanejohnson@microsoft.com` (Owner @ subscription + `Azure Kubernetes Service RBAC Cluster Admin` @ cluster)
 > **Companion doc:** [`aks-automatic-kube-system-configmap-findings.md`](./aks-automatic-kube-system-configmap-findings.md) — original investigation on a *non-MSNP* AKS Automatic cluster.
+
+---
+
+## What changed since the original investigation (2026-05-19)
+
+The original 2026-05-15 framing of this doc said the VAP `aks-managed-protect-system-namespaces` is **MSNP-specific** (didn't exist on classic AKS Automatic). **That's wrong** — re-testing on 2026-05-19 shows:
+
+| Cluster | Created | MSNP? | VAP present? | Binding `validationActions` | Customer write to `kube-system` |
+|---|---|---|---|---|---|
+| `zane-auto` (original "no MSNP") | < 2026-05-05 | ❌ no | ✅ **yes**, since 2026-05-05 22:57 UTC | **`[Audit]`** | ✅ Succeeds (silently logged in audit) |
+| `zane-auto-2` (re-confirmation) | 2026-05-19 | ❌ no | ✅ yes, since 2026-05-19 21:58 UTC | **`[Audit]`** | ✅ Succeeds (silently logged) |
+| `zane-auto-msnp` (this doc) | 2026-05-15 | ✅ yes | ✅ yes, since 2026-05-15 21:07 UTC | **`[Deny]`** | ❌ Forbidden |
+
+**Corrected model:**
+
+- **The VAP itself is present on every AKS Automatic cluster** (not just MSNP). AKS has been rolling it out since at least 2026-05-05.
+- **The only MSNP-specific bit is `validationActions: [Deny]`** vs. `[Audit]` on classic AKS Automatic.
+- On classic AKS Automatic the policy still evaluates `expression: "false"` on every write to one of the 20 protected namespaces — the API server just records it instead of rejecting it. Customer writes still succeed today.
+- **This is fragile.** AKS could change non-MSNP from `[Audit]` to `[Deny]` at any time via the same managed channel that ships the VAP; the customer-visible effect would be instant and identical to what MSNP already does.
+
+The rest of this doc — the 5-gate evaluation pipeline, the 20-namespace list, the exempt callers, the doc-discrepancy about ama-metrics Deployments on system-surge, the inventory of pods, etc. — is **still correct**. The only thing changed is "VAP exists vs. doesn't" → "VAP exists everywhere; binding is `[Audit]` vs. `[Deny]`."
 
 ---
 
@@ -13,15 +34,15 @@
 
 The protection is **not `kube-system`-only**. The same VAP fires identically across all 20 namespaces in its `namespaceSelector` **protected-namespace list** (incl. `gatekeeper-system`, `app-routing-system`, `azuresecuritylinuxagent`, `aks-istio-system`, `flux-system`, `dapr-system`, `azureml`, …) — see §5.1 for the verified per-namespace test.
 
-This **overturns conclusion #1** of the [previous investigation](./aks-automatic-kube-system-configmap-findings.md), but **only for clusters that opt into MSNP** (`--enable-hosted-system` at create time, surfaced as `hostedSystemProfile.enabled: true` on the ARM resource).
-
 The block is enforced by an in-tree Kubernetes **`ValidatingAdmissionPolicy`** named `aks-managed-protect-system-namespaces`, not Gatekeeper. RBAC still says `yes` for the same operation; the deny happens at admission, *after* authorization succeeds.
 
-| Cluster mode | Cluster Admin → write `kube-system` configmap? | …also blocks 19 other ns? |
-|---|---|---|
-| AKS Standard | ✅ Yes | n/a |
-| AKS Automatic (no MSNP — e.g. `zane-auto`) | ✅ Yes (verified previously) | n/a |
-| **AKS Automatic + MSNP (e.g. `zane-auto-msnp`)** | ❌ **No — blocked at admission** | ❌ **Yes — same VAP, identical message** |
+**The VAP is present on classic AKS Automatic clusters too**, but its binding runs in `[Audit]` mode there — writes succeed but are silently logged. MSNP flips the binding to `[Deny]`. See "What changed since the original investigation" above and the [previous investigation doc](./aks-automatic-kube-system-configmap-findings.md) for the cross-cluster comparison.
+
+| Cluster mode | VAP present? | Binding `validationActions` | Cluster Admin → write `kube-system` configmap? |
+|---|---|---|---|
+| AKS Standard | ❌ no | n/a | ✅ Yes |
+| AKS Automatic (no MSNP — `zane-auto`, `zane-auto-2`) | ✅ yes | **`[Audit]`** | ✅ Yes (silently logged) |
+| **AKS Automatic + MSNP (`zane-auto-msnp`)** | ✅ yes | **`[Deny]`** | ❌ **No — blocked at admission** |
 
 ---
 

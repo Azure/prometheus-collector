@@ -24,6 +24,12 @@ On AKS Automatic + MSNP, **`kubectl apply` of any of these is denied at admissio
 
 The customer's identity (Entra ID + `Azure Kubernetes Service RBAC Cluster Admin`) is *not* exempt from the VAP. There is no escape hatch via "create your own SA in kube-system and run as it" because every dependency of that escape (Pod, ServiceAccount, RoleBinding in kube-system) is itself blocked by the same VAP.
 
+> **⚠️ Audit→Deny risk on classic AKS Automatic (added 2026-05-19)**
+>
+> Re-testing on 2026-05-19 confirmed the same `aks-managed-protect-system-namespaces` VAP is **already present on every classic (non-MSNP) AKS Automatic cluster** — its binding just runs in `[Audit]` mode there instead of `[Deny]`. AKS could flip the binding to `[Deny]` on classic AKS Automatic at any time via the same managed channel that ships the VAP itself. The customer-visible effect would be instant and identical to what MSNP already does.
+>
+> **Consequence:** treat this as a problem for *all* AKS Automatic customers on a soft countdown, not just MSNP customers. Options 1, 2, and 3 below all work identically on non-MSNP today and would survive the flip. Option 4 ("document the gap") only works while non-MSNP stays in Audit, and gives the team zero runway when the flip happens.
+
 So we need a different path. This doc lists 5 candidate paths.
 
 ---
@@ -153,7 +159,7 @@ This is functionally close to Option 1a, except the customer's source-of-truth i
 | ✅ Smallest code delta — reuses existing TOML/configmap parser | ❌ Customer has to remember a non-standard namespace name |
 | ✅ Customer keeps the *exact* configmap shape they're documented to use | ❌ Plumbing question: where does "which ns?" live? (env var on agent, addon param, ARM property, label on namespace) |
 | ✅ Multi-tenant works naturally — pick the namespace per cluster | ❌ Documentation churn — every existing customer doc says `kube-system` |
-| ✅ Backward-compatible: `kube-system` keeps working on non-MSNP clusters | ❌ The `aks-managed-protect-system-namespaces` VAP doesn't help us here, since we're trying to *avoid* it — risk of customer accidentally picking a protected namespace |
+| ✅ Survives the Audit→Deny flip on classic AKS Automatic (the CM is in a customer ns, never in `kube-system`) | ❌ The `aks-managed-protect-system-namespaces` VAP doesn't help us here, since we're trying to *avoid* it — risk of customer accidentally picking a protected namespace |
 
 **Open design questions:**
 - How does the agent discover the namespace at startup? (env var probably the simplest.)
@@ -172,6 +178,7 @@ Tell customers on MSNP:
 | ✅ Zero code change — ships today | ❌ Genuine functional regression vs. classic AKS Automatic |
 | ✅ Aligns with the prometheus-operator ecosystem | ❌ Bad doc story — "this configmap exists but you can't use it on MSNP" |
 | | ❌ Customer-visible breaking change for anyone migrating to MSNP |
+| | ❌ **Audit→Deny ticking clock** (2026-05-19): the same VAP is already in `[Audit]` on classic AKS Automatic. If AKS flips it to `[Deny]`, this option's "non-MSNP still works" backstop disappears overnight for *all* AKS Automatic customers, not just MSNP. |
 
 ### Option 5 — Petition AKS to add per-CM exemption to the VAP *(unlikely to land)*
 
@@ -204,9 +211,11 @@ Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` 
 
 - **Option 1 (CRD)** is fully in our team's control. Could land in 1–2 sprints. Becomes the official MSNP path. Works on every cluster (MSNP or not), so no version-skew gating.
 - **Option 2 (ARM)** is what Azure customers will eventually expect. Drive it as a longer-term ask with the AKS team and the Azure Monitor PG. Position it as the "Azure-native" path; the CRD remains the "Kubernetes-native" path.
-- **Option 4 (document the gap)** is the holding pattern — ship the docs immediately so customers piloting MSNP know what they're getting into.
+- **Option 4 (document the gap)** is the holding pattern — ship the docs immediately so customers piloting MSNP know what they're getting into. **But this is a soft-countdown holding pattern, not a permanent one — see the Audit→Deny callout in §1.**
 - **Option 3 (CM in customer ns)** is on the table as a small-delta alternative to Option 1, but loses to Option 1 on long-term cleanliness (CRDs > magic-namespace configmaps for an Azure-managed product).
 - **Option 5 (VAP exemption)** — non-starter; do not pursue.
+
+**Updated urgency (2026-05-19):** the VAP is already deployed in `[Audit]` mode on every classic AKS Automatic cluster. If AKS flips the binding to `[Deny]` (a one-line config change on their side), Option 4 stops being a viable interim for non-MSNP customers as well. Treat the design+ship of Option 1 as a deadline-driven workstream, not an open-ended one. Confirming AKS's flip timeline is now decision #7 below.
 
 ---
 
@@ -220,6 +229,7 @@ Before any of this can move, the team needs to agree on:
 4. **ARM property shape (if Option 2).** Embed YAML strings, reference a DCR resource, or model fields explicitly?
 5. **Back-compat policy.** How long do we keep `kube-system` configmaps as a supported input on non-MSNP clusters?
 6. **Doc plan.** Who owns the customer-facing migration guide? (ours, AKS docs, Azure Monitor docs?)
+7. **AKS's Audit→Deny rollout timeline (added 2026-05-19).** Reach out to the AKS team and ask: when do they plan to flip `validationActions: [Audit]` → `[Deny]` on non-MSNP AKS Automatic? That date is our hard deadline for Option 1.
 
 ---
 
