@@ -182,7 +182,11 @@ Tell customers on MSNP:
 
 ### Option 5 — Petition AKS to add per-CM exemption to the VAP *(no customer-facing API — internal AKS change only)*
 
-Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` for these specific CMs by name — e.g., a `matchConditions` carve-out: *"request is allowed if the resource is one of `ama-metrics-settings-configmap`, `ama-metrics-prometheus-config`, `ama-metrics-prometheus-config-node`, `ama-metrics-prometheus-config-node-windows` in `kube-system`, AND the operation is CREATE or UPDATE."*
+Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` for these specific CMs by name. **See the dedicated [`aks-msnp-vap-modification-asks.md`](./aks-msnp-vap-modification-asks.md)** doc for the experimentally-validated concrete ask, including:
+
+- The exact CEL clause to drop into the VAP's `spec.matchConditions[]` (Variant A — name-based resource carve-out, validated on `zane-auto-2`).
+- Two alternative shapes tested and rejected (identity exemption, namespace carve-out) with the test matrix for each.
+- A pre-emptive Q&A for the AKS meeting and the full reproduction recipe.
 
 **There is no API for this.** Tested 2026-05-19 on `zane-auto-msnp` as `Owner` + `Azure Kubernetes Service RBAC Cluster Admin`: although `kubectl auth can-i patch validatingadmissionpolicies` returns "yes" at the Kubernetes RBAC layer, an actual `patch`/`delete` of the VAP or its binding is rejected by an undocumented `(automatic-authz)` authorization webhook AKS layers on top. The protected-resource list inside that webhook covers **all `aks-managed-*` VAPs and VAPBs**, not just `protect-system-namespaces`. See findings doc §3 "Can a customer edit or delete the VAP/binding to escape it?" for the full deny transcripts. The change ships only through AKS's internal release pipeline.
 
@@ -190,7 +194,7 @@ Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` 
 |---|---|
 | ✅ Customer's existing `kubectl apply` workflow works unchanged | ❌ **Not a tenant-facing API call** — only AKS can edit the VAP; we'd have to convince them to ship a change through their internal pipeline. No way for us to drive this in our own release cadence. |
 | ✅ Zero agent code change | ❌ Almost certainly rejected — the entire point of the lock is that AKS controls the carve-outs. Every other AKS-managed addon would file the same request. |
-| | ❌ Brittle: hard-coded by name; breaks if we ever rename a CM |
+| ✅ The concrete ask is now experimentally validated and surgical — see [`aks-msnp-vap-modification-asks.md`](./aks-msnp-vap-modification-asks.md) | ❌ Brittle: hard-coded by name; breaks if we ever rename a CM |
 | | ❌ Doesn't generalize — every new customer-facing CM requires an AKS-side change |
 
 ---
