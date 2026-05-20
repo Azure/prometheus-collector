@@ -554,6 +554,79 @@ The protection is purely **name-based** — the VAP has no `kubernetes.azure.com
 - **"Petition AKS for a per-CM exemption" is not an API call.** Only AKS can edit the VAP, and the change ships through their internal release process (not through any tenant-facing surface).
 - This rules out any "we'll just ask cluster admins to disable it for ama-metrics CMs" workaround pattern. See solution-options doc for the architecturally viable paths.
 
+### Where does the `automatic-authz` webhook actually live?
+
+The webhook itself is **not a customer-visible Kubernetes resource** — it's part of the AKS-managed control plane. Three corroborating signals (all verified 2026-05-19):
+
+**1. There is no `ValidatingWebhookConfiguration` or `MutatingWebhookConfiguration` named `automatic-authz`.** The only ones present on MSNP are unrelated (Gatekeeper + Workload Identity). This is the expected shape for an *authorization* webhook: auth webhooks are configured on the API server's command line (`--authorization-config` / `--authorization-mode=Webhook,…`), not via a Kubernetes resource.
+
+**2. The `kube-apiserver` Pod is not visible to the customer.** `kubectl get pods -n kube-system -l component=kube-apiserver` returns "No resources found" — the API server runs in the AKS-managed hosted control plane (the same place `hcpService`, `aksService`, `acsService` and `aks-support` come from in the VAP's exempt list).
+
+**3. The lock surfaces in a raw `SubjectAccessReview`**, not just in `kubectl auth can-i`:
+
+```yaml
+spec:
+  resourceAttributes:
+    group: admissionregistration.k8s.io
+    name: aks-managed-protect-system-namespaces-binding   # name matters
+    resource: validatingadmissionpolicybindings
+    verb: patch
+  user: zanejohnson@microsoft.com
+status:
+  allowed: false
+  denied: true                                            # ACTIVE deny, not "no opinion"
+  reason: (automatic-authz) Modifications to protected ValidatingAdmissionPolicyBinding
+    'aks-managed-protect-system-namespaces-binding' are not allowed for user 'zanejohnson@microsoft.com'
+```
+
+The `(automatic-authz)` prefix is the webhook's own self-identification string in the `reason` field. `denied: true` (vs. just `allowed: false`) means the webhook short-circuits Kubernetes RBAC — even if RBAC would allow it, this webhook overrides.
+
+> **Why does `kubectl auth can-i patch validatingadmissionpolicybindings` return `yes`, then?** Because `auth can-i` issues a `SelfSubjectAccessReview` *without a resource name*. The lock is name-based — without a name, the webhook can't apply it and returns "no opinion", so RBAC's "yes" wins. The actual `patch <specific-name>` call, and any SAR with `name:` set, hits the lock.
+
+**Architecture diagram (inferred):**
+
+```text
+kubectl PATCH validatingadmissionpolicybindings/aks-managed-…
+        │
+        ▼
+┌────────────────────────────────────────────────────────────┐
+│ kube-apiserver                                             │
+│   (in hosted control plane — customer can't see the Pod)   │
+│   --authorization-mode=Node,RBAC,Webhook                   │
+│   --authorization-config=<webhook kubeconfig>              │
+└────────────────────────────────────────────────────────────┘
+        │  SubjectAccessReview {verb, resource, name, user, …}
+        ▼
+┌────────────────────────────────────────────────────────────┐
+│ Azure-managed authz webhook                                │
+│ (AKS-internal — no public endpoint, no K8s resource)       │
+│                                                            │
+│ Logic, in order:                                           │
+│  1. If user is exempt (acsService, aksService, hcpService, │
+│     aks-support, …)              → return "no opinion"     │
+│  2. If verb ∈ [patch, delete, update] AND                  │
+│     resource ∈ {VAP, VAPB, …} AND                          │
+│     name matches "aks-managed-*" protected list            │
+│                                  → return denied=true,     │
+│                                    reason="(automatic-authz)…"│
+│  3. Otherwise → check Azure RBAC dataActions               │
+│                                  → allow / no-opinion      │
+└────────────────────────────────────────────────────────────┘
+        │
+        ▼
+   apiserver enforces the deny → 403 Forbidden
+```
+
+**Side observation — Azure RBAC alone doesn't explain the lock.** All three clusters have `aadProfile.enableAzureRbac: true`, but only MSNP enforces it:
+
+| Cluster | `aadProfile.enableAzureRbac` | `(automatic-authz)` lock active? |
+|---|---|---|
+| `zane-auto` (no MSNP) | ✅ true | ❌ no |
+| `zane-auto-2` (no MSNP, fresh) | ✅ true | ❌ no — we successfully patched the VAP, then reverted |
+| `zane-auto-msnp` (MSNP) | ✅ true | ✅ yes |
+
+The webhook code is the same; what differs is a server-side flag (per-cluster config) telling the webhook to enforce the protected-resource list. **That flag is what will flip alongside `validationActions: [Audit]` → `[Deny]` when AKS eventually tightens classic AKS Automatic** — the two are paired (no point flipping to Deny if customers could just flip it back via a VAPB patch).
+
 ### Evaluation pipeline — the 5 gates a request walks
 
 A single API request has to clear **3 (sometimes 4) gates** before this VAP will deny it. If *any* gate fails, the VAP doesn't fire and the request continues through other policies / RBAC. Use this as a debugging walkthrough whenever a request gets unexpectedly denied (or unexpectedly allowed):
