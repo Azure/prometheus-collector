@@ -148,11 +148,13 @@ export LOCATION=<standalone-location>  # Must match standalone location
 
 2. Create the cluster:
 
+> **GA flow:** The `--subscription-features AzureMonitorMetricsControlPlanePreview` flag is **not** required for the GA create flow. Instead, the new `--enable-control-plane-metrics` flag (which requires `--enable-azure-monitor-metrics`) sets the GA API property `azureMonitorProfile.metrics.controlPlane.enabled=true`. This is what triggers CCP collector enablement when the `enable-azure-monitor-metrics-ccp-ga` toggle is on for the target deployment environment.
+
 ```bash
 ./bin/aksdev cluster create $CX_CLUSTER_NAME --location $LOCATION \
   --managedclustersubscription $MC_SUB --enableManagedIdentity \
   --enable-azure-monitor-metrics \
-  --subscription-features AzureMonitorMetricsControlPlanePreview \
+  --enable-control-plane-metrics \
   --node-provisioning-mode Auto
 
 ./bin/aksdev cluster kubeconfig $CX_CLUSTER_NAME --managedclustersubscription $MC_SUB > $CX_CLUSTER_NAME.kubeconfig
