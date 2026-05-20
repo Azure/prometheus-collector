@@ -678,6 +678,43 @@ kubectl PATCH validatingadmissionpolicybindings/aks-managed-…
 
 The webhook code is the same; what differs is a server-side flag (per-cluster config) telling the webhook to enforce the protected-resource list. **That flag is what will flip alongside `validationActions: [Audit]` → `[Deny]` when AKS eventually tightens classic AKS Automatic** — the two are paired (no point flipping to Deny if customers could just flip it back via a VAPB patch).
 
+### What "name-keyed" means (and why it matters)
+
+We use the phrase **name-keyed lock** repeatedly in the implications below. It's a short way of saying: **the webhook's authorization decision is based on the `name` field of the resource being modified, not on who is making the request**. The SSAR captures above prove this — they hold the user, role, verb, and resource type constant and vary only the `name`:
+
+| Held constant | Variable | Result |
+|---|---|---|
+| user = `zanejohnson@microsoft.com`<br>role = `b1ff04bb8a4e4dc48eb58693973ce19b` (Azure Kubernetes Service RBAC Cluster Admin)<br>verb = `patch`<br>resource = `validatingadmissionpolicybindings`<br>cluster = `zane-auto-msnp` | `name: aks-managed-protect-system-namespaces-binding` | `denied: true` |
+| (same as above) | *no `name` field* | `allowed: true` |
+
+The only input that flipped between "allowed" and "denied" is whether the SSAR's `name` field matched a protected pattern. So the **name is the key** that drives the decision.
+
+Inferred webhook logic:
+
+```text
+if request.verb     in {patch, update, delete} and
+   request.resource in {VAPs, VAPBs, …}        and
+   request.name     matches "aks-managed-*":
+       return denied = true
+else:
+       return no opinion (let RBAC decide)
+```
+
+Notice **the caller is never inspected** in that pseudocode. The decision input is purely the request's `name`.
+
+**Contrast with the alternative shapes of authorization** in Kubernetes-land:
+
+- **Principal-keyed** (standard Kubernetes RBAC, standard Azure RBAC): "What can *this user/group/role* do?" → you can change the answer by **granting or revoking permissions on the caller**.
+- **Name-keyed** (this webhook): "What can *anyone* do to *this specific named object*?" → no permission you can grant the caller changes the answer; the only thing that changes it is the **target** of the request.
+
+**Practical consequences of a name-keyed lock:**
+
+1. **No role grant can bypass it.** Even a custom Azure role with `Microsoft.ContainerService/managedClusters/admissionregistration.k8s.io/validatingadmissionpolicybindings/*` dataActions still gets denied. The webhook never looks at the role.
+2. **The customer can patch *unprotected* VAPBs of their own.** A `validatingadmissionpolicybinding` named `mycorp-foo` is freely patchable by any user with the right role — only names matching `aks-managed-*` are locked.
+3. **A rename would defeat it.** If AKS named the policy `mycorp-protect-system-namespaces` instead of `aks-managed-protect-system-namespaces`, the same customer with the same role would be allowed through — confirming again that it's the name, not anything about the caller, that drives the deny.
+
+In standard Kubernetes designs you usually have an escape valve via RBAC ("we'll just grant the customer the right role"). A name-keyed authz webhook has no such valve — that's what makes it especially closed-off, and that's what rules out an entire family of would-be workarounds.
+
 ### What this proves and what it rules out
 
 The three SSAR captures above aren't just better evidence than the patch attempt — they change the shape of the workaround design space. Four things follow:
