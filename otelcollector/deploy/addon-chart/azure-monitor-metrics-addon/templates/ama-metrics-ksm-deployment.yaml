@@ -113,6 +113,10 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
+      {{- if $arcExtensionSettings.isArcExtension }}
+      nodeSelector:
+        kubernetes.io/os: linux
+      {{- end }}
       {{- if not $arcExtensionSettings.isArcExtension }}
       affinity:
         nodeAffinity:
