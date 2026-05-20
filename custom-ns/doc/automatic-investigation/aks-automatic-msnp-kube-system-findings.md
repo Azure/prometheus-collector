@@ -30,19 +30,23 @@ The rest of this doc — the 5-gate evaluation pipeline, the 20-namespace list, 
 
 ## TL;DR
 
-**On AKS Automatic with the new managed system node pools (MSNP) preview, customer identities — including subscription `Owner` + cluster-scoped `Azure Kubernetes Service RBAC Cluster Admin` — can no longer create, update, or delete resources in `kube-system` *or in any of 19 other AKS-managed namespaces*.**
+**On AKS Automatic with the new managed system node pools (MSNP) preview, customer identities — including subscription `Owner` + cluster-scoped `Azure Kubernetes Service RBAC Cluster Admin` — can no longer create, update, or delete resources in `kube-system` *or in any of 19 other AKS-managed namespaces*, and they cannot escape the block by editing the policy that enforces it.**
 
 The protection is **not `kube-system`-only**. The same VAP fires identically across all 20 namespaces in its `namespaceSelector` **protected-namespace list** (incl. `gatekeeper-system`, `app-routing-system`, `azuresecuritylinuxagent`, `aks-istio-system`, `flux-system`, `dapr-system`, `azureml`, …) — see §5.1 for the verified per-namespace test.
 
 The block is enforced by an in-tree Kubernetes **`ValidatingAdmissionPolicy`** named `aks-managed-protect-system-namespaces`, not Gatekeeper. RBAC still says `yes` for the same operation; the deny happens at admission, *after* authorization succeeds.
 
-**The VAP is present on classic AKS Automatic clusters too**, but its binding runs in `[Audit]` mode there — writes succeed but are silently logged. MSNP flips the binding to `[Deny]`. See "What changed since the original investigation" above and the [previous investigation doc](./aks-automatic-kube-system-configmap-findings.md) for the cross-cluster comparison.
+**Two-layer protection on MSNP.** Beyond the VAP itself, there's a second AKS-managed `(automatic-authz)` **authorization webhook** in the hosted control plane that prevents even Cluster Admin from `patch`/`update`/`delete` on any `aks-managed-*` VAP or VAPB. So the customer can't disarm the policy by flipping its binding to `[Audit]`, can't delete it, and can't soften its match conditions — see §3 "Can a customer edit or delete the VAP/binding to escape it?" The lock is **name-keyed** (decides on the request's `name` field, not the caller's role) — so no Azure RBAC role grant, built-in or custom, can bypass it (see §3 "What 'name-keyed' means").
 
-| Cluster mode | VAP present? | Binding `validationActions` | Cluster Admin → write `kube-system` configmap? |
-|---|---|---|---|
-| AKS Standard | ❌ no | n/a | ✅ Yes |
-| AKS Automatic (no MSNP — `zane-auto`, `zane-auto-2`) | ✅ yes | **`[Audit]`** | ✅ Yes (silently logged) |
-| **AKS Automatic + MSNP (`zane-auto-msnp`)** | ✅ yes | **`[Deny]`** | ❌ **No — blocked at admission** |
+**The VAP is present on classic AKS Automatic clusters too**, but its binding runs in `[Audit]` mode there — writes succeed but are silently logged — and the `(automatic-authz)` lock is *inactive*, so a Cluster Admin can still flip the binding manually. MSNP enables both halves. AKS will almost certainly ship the two flips together when they tighten classic AKS Automatic to `[Deny]`, so any "have the cluster admin patch the VAPB" workaround on classic AKS Auto **has a deadline**.
+
+| Cluster mode | VAP present? | Binding `validationActions` | `(automatic-authz)` lock active? | Cluster Admin → write `kube-system` configmap? | Cluster Admin → patch the VAPB to escape? |
+|---|---|---|---|---|---|
+| AKS Standard | ❌ no | n/a | ❌ no | ✅ Yes | n/a |
+| AKS Automatic (no MSNP — `zane-auto`, `zane-auto-2`) | ✅ yes | **`[Audit]`** | ❌ no | ✅ Yes (silently logged) | ✅ Yes — but pointless while in Audit, and likely won't last |
+| **AKS Automatic + MSNP (`zane-auto-msnp`)** | ✅ yes | **`[Deny]`** | ✅ **yes** | ❌ **No — blocked at admission** | ❌ **No — `(automatic-authz)` deny on any patch/delete** |
+
+**Implication for managed Prometheus / `ama-metrics`.** Every customer-shippable workaround that tries to "let the customer edit the VAP/VAPB" or "give the customer the right RBAC role" is architecturally non-viable. The remaining viable solutions are all **agent-side** — they change `ama-metrics` itself so the customer no longer needs to write to `kube-system`. See the companion [solution-options doc](./aks-automatic-msnp-configmap-solution-options.md) for the four agent-side designs and the one (parallel-track) "raise with AKS for a per-CM exemption" path.
 
 ---
 
