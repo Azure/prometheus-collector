@@ -513,6 +513,47 @@ spec:
   validationActions: [Deny]    # no warn-only mode
 ```
 
+### Can a customer edit or delete the VAP/binding to escape it?
+
+**No** — and **not because of RBAC**. Tested live on `zane-auto-msnp` as subscription `Owner` + `Azure Kubernetes Service RBAC Cluster Admin`:
+
+```
+$ kubectl auth can-i patch validatingadmissionpolicies.admissionregistration.k8s.io
+yes
+$ kubectl auth can-i patch validatingadmissionpolicybindings.admissionregistration.k8s.io
+yes
+$ kubectl auth can-i delete validatingadmissionpolicies.admissionregistration.k8s.io
+yes
+```
+
+Kubernetes RBAC says yes. But the actual write is rejected by a **second authorization layer** that AKS layers on top — an internal authorization webhook the API server identifies as `(automatic-authz)`:
+
+```
+Error from server (Forbidden): validatingadmissionpolicybindings.admissionregistration.k8s.io
+"aks-managed-protect-system-namespaces-binding" is forbidden: User "zanejohnson@microsoft.com"
+cannot patch resource "validatingadmissionpolicybindings" in API group "admissionregistration.k8s.io"
+at the cluster scope: (automatic-authz) Modifications to protected
+ValidatingAdmissionPolicyBinding 'aks-managed-protect-system-namespaces-binding'
+are not allowed for user 'zanejohnson@microsoft.com'
+```
+
+| Verified test on `zane-auto-msnp` | Result | Notes |
+|---|---|---|
+| `patch validationActions: [Warn, Audit]` on the binding | ❌ `(automatic-authz)` deny | The mode flip is locked |
+| `delete` the VAP | ❌ `(automatic-authz)` deny | Server-side dry-run still denied |
+| `delete` the binding | ❌ `(automatic-authz)` deny | Same |
+| `patch validationActions` on an unrelated `aks-managed-*` VAPB (`aks-managed-baseline-apparmor-binding`) | ❌ `(automatic-authz)` deny | **The lock covers *all* `aks-managed-*` VAPs / VAPBs, not just protect-system-namespaces** |
+
+The protection is purely **name-based** — the VAP has no `kubernetes.azure.com/managedby` label or annotation; the protected-resource list is hardcoded inside the `automatic-authz` webhook on AKS's side.
+
+**The `(automatic-authz)` lock is MSNP-specific** (verified on `zane-auto-2`, classic AKS Automatic — patching the VAP succeeds there). When AKS flips classic AKS Automatic from `validationActions: [Audit]` → `[Deny]`, they will almost certainly ship the `automatic-authz` lock at the same time — the two are architecturally paired (no point flipping to Deny if customers could just flip it back).
+
+**Implications:**
+
+- **There is no self-service workaround** to allow customer writes to `kube-system` on MSNP. Modifying the VAP, modifying the binding, deleting either, or modifying any `aks-managed-*` VAP/VAPB — all blocked by the same authz lock, regardless of Azure RBAC tier.
+- **"Petition AKS for a per-CM exemption" is not an API call.** Only AKS can edit the VAP, and the change ships through their internal release process (not through any tenant-facing surface).
+- This rules out any "we'll just ask cluster admins to disable it for ama-metrics CMs" workaround pattern. See solution-options doc for the architecturally viable paths.
+
 ### Evaluation pipeline — the 5 gates a request walks
 
 A single API request has to clear **3 (sometimes 4) gates** before this VAP will deny it. If *any* gate fails, the VAP doesn't fire and the request continues through other policies / RBAC. Use this as a debugging walkthrough whenever a request gets unexpectedly denied (or unexpectedly allowed):

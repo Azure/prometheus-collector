@@ -180,14 +180,16 @@ Tell customers on MSNP:
 | | ❌ Customer-visible breaking change for anyone migrating to MSNP |
 | | ❌ **Audit→Deny ticking clock** (2026-05-19): the same VAP is already in `[Audit]` on classic AKS Automatic. If AKS flips it to `[Deny]`, this option's "non-MSNP still works" backstop disappears overnight for *all* AKS Automatic customers, not just MSNP. |
 
-### Option 5 — Petition AKS to add per-CM exemption to the VAP *(unlikely to land)*
+### Option 5 — Petition AKS to add per-CM exemption to the VAP *(no customer-facing API — internal AKS change only)*
 
 Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` for these specific CMs by name — e.g., a `matchConditions` carve-out: *"request is allowed if the resource is one of `ama-metrics-settings-configmap`, `ama-metrics-prometheus-config`, `ama-metrics-prometheus-config-node`, `ama-metrics-prometheus-config-node-windows` in `kube-system`, AND the operation is CREATE or UPDATE."*
 
+**There is no API for this.** Tested 2026-05-19 on `zane-auto-msnp` as `Owner` + `Azure Kubernetes Service RBAC Cluster Admin`: although `kubectl auth can-i patch validatingadmissionpolicies` returns "yes" at the Kubernetes RBAC layer, an actual `patch`/`delete` of the VAP or its binding is rejected by an undocumented `(automatic-authz)` authorization webhook AKS layers on top. The protected-resource list inside that webhook covers **all `aks-managed-*` VAPs and VAPBs**, not just `protect-system-namespaces`. See findings doc §3 "Can a customer edit or delete the VAP/binding to escape it?" for the full deny transcripts. The change ships only through AKS's internal release pipeline.
+
 | Pros | Cons |
 |---|---|
-| ✅ Customer's existing `kubectl apply` workflow works unchanged | ❌ Almost certainly rejected — the entire point of MSNP is to lock down `kube-system` |
-| ✅ Zero agent code change | ❌ Sets a precedent — every other AKS-managed addon will ask for the same |
+| ✅ Customer's existing `kubectl apply` workflow works unchanged | ❌ **Not a tenant-facing API call** — only AKS can edit the VAP; we'd have to convince them to ship a change through their internal pipeline. No way for us to drive this in our own release cadence. |
+| ✅ Zero agent code change | ❌ Almost certainly rejected — the entire point of the lock is that AKS controls the carve-outs. Every other AKS-managed addon would file the same request. |
 | | ❌ Brittle: hard-coded by name; breaks if we ever rename a CM |
 | | ❌ Doesn't generalize — every new customer-facing CM requires an AKS-side change |
 
@@ -201,7 +203,7 @@ Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` 
 | 2 — ARM `azureMonitorProfile.metrics` | AKS RP | Azure Portal / Bicep / Terraform | ✅ | High (multi-team, ARM contract) | Low (declarative IaC users), High (kubectl users) |
 | 3 — CM in customer-owned ns | prometheus-collector (config reader) | `kubectl apply` of CMs to a non-system ns | ✅ | Small | Small (rename namespace in CM) |
 | 4 — Document the gap | none | Use PodMonitor/ServiceMonitor + ARM, accept missing knobs | ✅ partial | Zero | n/a — features just don't work |
-| 5 — VAP exemption | AKS team | Unchanged | ✅ if accepted | Zero (us), unknown (AKS) | Zero |
+| 5 — VAP exemption | AKS team (no tenant API) | Unchanged | ✅ if accepted | Zero (us), unknown (AKS) — but no customer-driven path exists | Zero |
 
 ---
 
@@ -213,7 +215,7 @@ Ask the AKS team to add an exemption to `aks-managed-protect-system-namespaces` 
 - **Option 2 (ARM)** is what Azure customers will eventually expect. Drive it as a longer-term ask with the AKS team and the Azure Monitor PG. Position it as the "Azure-native" path; the CRD remains the "Kubernetes-native" path.
 - **Option 4 (document the gap)** is the holding pattern — ship the docs immediately so customers piloting MSNP know what they're getting into. **But this is a soft-countdown holding pattern, not a permanent one — see the Audit→Deny callout in §1.**
 - **Option 3 (CM in customer ns)** is on the table as a small-delta alternative to Option 1, but loses to Option 1 on long-term cleanliness (CRDs > magic-namespace configmaps for an Azure-managed product).
-- **Option 5 (VAP exemption)** — non-starter; do not pursue.
+- **Option 5 (VAP exemption)** — non-starter; do not pursue. Confirmed 2026-05-19 that there is no tenant-facing API to modify `aks-managed-*` VAPs (an `(automatic-authz)` lock denies even Cluster Admin patches/deletes). Any per-CM exemption would have to ship through AKS's own internal release pipeline — out of our control.
 
 **Updated urgency (2026-05-19):** the VAP is already deployed in `[Audit]` mode on every classic AKS Automatic cluster. If AKS flips the binding to `[Deny]` (a one-line config change on their side), Option 4 stops being a viable interim for non-MSNP customers as well. Treat the design+ship of Option 1 as a deadline-driven workstream, not an open-ended one. Confirming AKS's flip timeline is now decision #7 below.
 
