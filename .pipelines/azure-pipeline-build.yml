@@ -583,6 +583,7 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
           displayName: "Download, install Oras and run oras attach"
           condition: succeeded()
+      # backlog: work item: 36496906
       - job: Windows_Python_Reference_App
         displayName: "Build: windows python reference app image"
         pool:
@@ -685,9 +686,9 @@ extends:
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
             docker buildx inspect --bootstrap
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
+            docker buildx build . -f otelcollector/test/arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
             docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+          workingDirectory: $(Build.SourcesDirectory)/
           displayName: "Build: build and push Arc conformance test image to dev ACR"
       - job: SDL_Policheck_Scan
         displayName: "SDL: policheck scanning"
@@ -808,6 +809,9 @@ extends:
             # echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             # sudo apt-get update
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+            echo "=== Docker Version Info (ARM64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
@@ -843,6 +847,10 @@ extends:
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
+            echo "=== Docker Version Info (AMD64 Agent) ==="
+            docker version
+            echo "==========================================="
+            
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
             docker system prune --all -f
@@ -893,22 +901,71 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(LINUX_FULL_IMAGE_NAME)
+            docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
-              echo "Error: Docker build failed."
+              echo "Error: Docker buildx imagetools create failed."
               exit 1
             fi
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: build and push image to dev ACR'
         - bash: |
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            echo "=== Verifying multi-arch manifest list ==="
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw 2>&1)
+            echo "$MANIFEST_VERBOSE"
+            
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
+            
+            if [ "$HAS_MANIFESTS" != "true" ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
+              exit 1
+            fi
+            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            
+            # Count the number of manifests
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
+            echo "Number of manifests: $MANIFEST_COUNT"
+            
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
+              exit 1
+            fi
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            
+            # Extract architectures from manifest list
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
+            echo "Architectures found: $ARCHS"
+            
+            # Check for amd64
+            if ! echo "$ARCHS" | grep -q "amd64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
+              exit 1
+            fi
+            echo "amd64 architecture found ✓"
+            
+            # Check for arm64
+            if ! echo "$ARCHS" | grep -q "arm64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
+              exit 1
+            fi
+            echo "arm64 architecture found ✓"
+            
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+          displayName: 'Build: verify multi-arch manifest list'
+          condition: succeeded()
+        - bash: |
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
             {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
+            echo "Contents of payload.json:"
+            cat $(Build.ArtifactStagingDirectory)/linux/payload.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: Set values in payload.json for signing'
           condition: succeeded()
@@ -1235,6 +1292,11 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+
+            echo "=== Docker Version Info (AMD64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -1281,6 +1343,11 @@ extends:
             # echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             # sudo apt-get update
             # sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+            echo "=== Docker Version Info (ARM64 Agent) ==="
+            sudo docker version
+            echo "==========================================="
+
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
@@ -1322,17 +1389,71 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
-            docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-            MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+            
+            docker buildx imagetools create -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+            if [ $? -ne 0 ]; then
+              echo "Error: Docker buildx imagetools create failed."
+              exit 1
+            fi
+
+            # Get the manifest using docker buildx imagetools inspect with raw output
+            MANIFEST_RAW=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw)
+            MEDIA_TYPE=$(echo "$MANIFEST_RAW" | jq -r '.mediaType')
+            # Get digest from the image reference
+            DIGEST=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) 2>&1 | grep -oP 'Digest:\s+\K[^\s]+' | head -1)
+            SIZE=$(echo "$MANIFEST_RAW" | jq -c '.' | wc -c)
             cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
             {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
             EOF
+            echo "Contents of payload.json:"
+            cat $(Build.ArtifactStagingDirectory)/targetallocator/payload.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
           displayName: "Build: build and push target allocator image to dev ACR"
+          condition: succeeded()
+        - bash: |
+            echo "=== Verifying multi-arch manifest list ==="
+            MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw 2>&1)
+            echo "$MANIFEST_VERBOSE"
+            
+            # Check if it's a manifest list by looking for manifests array
+            HAS_MANIFESTS=$(echo "$MANIFEST_VERBOSE" | jq 'has("manifests")' -r)
+            
+            if [ "$HAS_MANIFESTS" != "true" ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
+              exit 1
+            fi
+            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            
+            # Count the number of manifests
+            MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
+            echo "Number of manifests: $MANIFEST_COUNT"
+            
+            if [ "$MANIFEST_COUNT" -lt 2 ]; then
+              echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
+              exit 1
+            fi
+            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            
+            # Extract architectures from manifest list
+            ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
+            echo "Architectures found: $ARCHS"
+            
+            # Check for amd64
+            if ! echo "$ARCHS" | grep -q "amd64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
+              exit 1
+            fi
+            echo "amd64 architecture found ✓"
+            
+            # Check for arm64
+            if ! echo "$ARCHS" | grep -q "arm64"; then
+              echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
+              exit 1
+            fi
+            echo "arm64 architecture found ✓"
+            
+            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+          displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - bash: |
             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -2270,7 +2391,6 @@ extends:
               - bash: |
                   export AKS_REGION="eastus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
-                  #export ARC_EXTENSION="false"
                   envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
                   ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2366,7 +2486,6 @@ extends:
               - bash: |
                   export AKS_REGION="centralus"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
-                  #export ARC_EXTENSION="false"
                   envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
                   ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2449,7 +2568,6 @@ extends:
               - bash: |
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-dev-aks-otlp/providers/Microsoft.ContainerService/managedClusters/ciprom-dev-aks-otlp"
-                  #export ARC_EXTENSION="false"
                   envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
                   ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
@@ -2544,7 +2662,6 @@ extends:
               - bash: |
                   export AKS_REGION="westus3"
                   export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ciprom-upgrade-bot/providers/Microsoft.ContainerService/managedClusters/ciprom-upgrade-bot"
-                  #export ARC_EXTENSION="false"
                   envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Pipeline.Workspace)/azure-monitor-metrics-addon/values-template.yaml > $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
                   ls $(Pipeline.Workspace)/azure-monitor-metrics-addon
                   cd $(Pipeline.Workspace)/azure-monitor-metrics-addon
