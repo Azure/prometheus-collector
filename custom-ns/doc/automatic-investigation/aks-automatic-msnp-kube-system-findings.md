@@ -562,26 +562,65 @@ The webhook itself is **not a customer-visible Kubernetes resource** — it's pa
 
 **2. The `kube-apiserver` Pod is not visible to the customer.** `kubectl get pods -n kube-system -l component=kube-apiserver` returns "No resources found" — the API server runs in the AKS-managed hosted control plane (the same place `hcpService`, `aksService`, `acsService` and `aks-support` come from in the VAP's exempt list).
 
-**3. The lock surfaces in a raw `SubjectAccessReview`**, not just in `kubectl auth can-i`:
+**3. The lock surfaces in a `SelfSubjectAccessReview` (SSAR)**, not just in `kubectl auth can-i`. The cleanest proof is two SSARs that differ only in whether the `name` field is set:
+
+`ssar-name.yaml`:
 
 ```yaml
+apiVersion: authorization.k8s.io/v1
+kind: SelfSubjectAccessReview
 spec:
   resourceAttributes:
     group: admissionregistration.k8s.io
-    name: aks-managed-protect-system-namespaces-binding   # name matters
+    resource: validatingadmissionpolicybindings
+    name: aks-managed-protect-system-namespaces-binding
+    verb: patch
+```
+
+Submitted with `kubectl create -f ssar-name.yaml -o yaml` on `zane-auto-msnp`, authenticated as `zanejohnson@microsoft.com` (Azure Kubernetes Service RBAC Cluster Admin), returns:
+
+```yaml
+apiVersion: authorization.k8s.io/v1
+kind: SelfSubjectAccessReview
+metadata: {}
+spec:
+  resourceAttributes:
+    group: admissionregistration.k8s.io
+    name: aks-managed-protect-system-namespaces-binding
     resource: validatingadmissionpolicybindings
     verb: patch
-  user: zanejohnson@microsoft.com
 status:
   allowed: false
-  denied: true                                            # ACTIVE deny, not "no opinion"
+  denied: true
   reason: (automatic-authz) Modifications to protected ValidatingAdmissionPolicyBinding
     'aks-managed-protect-system-namespaces-binding' are not allowed for user 'zanejohnson@microsoft.com'
 ```
 
-The `(automatic-authz)` prefix is the webhook's own self-identification string in the `reason` field. `denied: true` (vs. just `allowed: false`) means the webhook short-circuits Kubernetes RBAC — even if RBAC would allow it, this webhook overrides.
+The `(automatic-authz)` prefix is the webhook's own self-identification string in the `reason` field. `denied: true` (vs. just `allowed: false`) means the webhook short-circuits the K8s authorization chain — even though Azure RBAC would allow it, this webhook overrides.
 
-> **Why does `kubectl auth can-i patch validatingadmissionpolicybindings` return `yes`, then?** Because `auth can-i` issues a `SelfSubjectAccessReview` *without a resource name*. The lock is name-based — without a name, the webhook can't apply it and returns "no opinion", so RBAC's "yes" wins. The actual `patch <specific-name>` call, and any SAR with `name:` set, hits the lock.
+**Compare with the same SSAR but with the `name` field removed** (still on `zane-auto-msnp`):
+
+```yaml
+status:
+  allowed: true
+  reason: Access allowed by Azure RBAC Role Assignment 65b6803208ee4104a0bd7bb593550ff4
+    of Role b1ff04bb8a4e4dc48eb58693973ce19b to user zanejohnson@microsoft.com
+```
+
+Same user, same cluster, same verb/resource — only difference is no `name`. Azure RBAC now grants it. This proves the lock is **name-based** — when no name is supplied the webhook can't match its protected-list rule and falls through to Azure RBAC.
+
+**And as a final control, the same name-bearing SSAR on `zane-auto-2`** (classic AKS Automatic, no MSNP), as the same user, returns:
+
+```yaml
+status:
+  allowed: true
+  reason: Access allowed by Azure RBAC Role Assignment 1fd7f68832ebf69be341977bf31ed9be
+    of Role b1ff04bb8a4e4dc48eb58693973ce19b to user zanejohnson@microsoft.com
+```
+
+Note `Role b1ff04bb8a4e4dc48eb58693973ce19b` is the same role assignment template on both clusters (Azure Kubernetes Service RBAC Cluster Admin) — so the customer side of the auth chain is identical. The differentiator is purely server-side: on MSNP the webhook applies its protected-list rule, on classic AKS Auto it doesn't.
+
+> **Why does `kubectl auth can-i patch validatingadmissionpolicybindings` return `yes`, then?** Because `auth can-i` issues a `SelfSubjectAccessReview` *without a resource name* when you don't supply one, so it falls through to Azure RBAC's `yes`. The moment you add the name (`kubectl auth can-i patch validatingadmissionpolicybindings/aks-managed-protect-system-namespaces-binding`), the same `(automatic-authz)` deny surfaces and `can-i` returns `no`.
 
 **Architecture diagram (inferred):**
 
