@@ -564,6 +564,18 @@ The webhook itself is **not a customer-visible Kubernetes resource** — it's pa
 
 **3. The lock surfaces in a `SelfSubjectAccessReview` (SSAR)**, not just in `kubectl auth can-i`. The cleanest proof is two SSARs that differ only in whether the `name` field is set:
 
+> **What is a `SubjectAccessReview`?** It's a built-in Kubernetes API ([`authorization.k8s.io/v1`](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access)) for asking the API server *"would you allow this request?"* without actually performing it. You `POST` a YAML describing the would-be request (verb, resource, optional name, optional namespace) and the server runs it through the **entire authorization chain** — RBAC, ABAC, Node, any configured authorization webhooks — and replies with `status.allowed`, optionally `status.denied`, and a human-readable `status.reason`. Two flavors:
+>
+> - **`SubjectAccessReview`** — caller specifies `spec.user`. Requires admin (`system:masters`-like) permissions because you're asking "what would *that other user* be allowed to do?".
+> - **`SelfSubjectAccessReview`** — implicit "what am *I* allowed to do?". Any authenticated user can submit one. This is exactly what `kubectl auth can-i` builds and submits under the hood.
+>
+> Two status fields matter for our case:
+> - `allowed: true` — an authorizer in the chain explicitly granted it.
+> - `allowed: false, denied: true` — an authorizer **actively denied** it (overrides any other "allow" earlier in the chain).
+> - `allowed: false` (without `denied: true`) — nobody in the chain had an opinion either way; effectively a deny but a passive one.
+>
+> The `reason` field is free-form text the authorizer sets. AKS's Azure RBAC authorizer writes `Access allowed by Azure RBAC Role Assignment …`; the AKS-managed `automatic-authz` webhook writes its name in parentheses as a prefix: `(automatic-authz) …`. So the `reason` is how we tell *which* layer of the chain made the call.
+
 `ssar-name.yaml`:
 
 ```yaml
@@ -665,6 +677,22 @@ kubectl PATCH validatingadmissionpolicybindings/aks-managed-…
 | `zane-auto-msnp` (MSNP) | ✅ true | ✅ yes |
 
 The webhook code is the same; what differs is a server-side flag (per-cluster config) telling the webhook to enforce the protected-resource list. **That flag is what will flip alongside `validationActions: [Audit]` → `[Deny]` when AKS eventually tightens classic AKS Automatic** — the two are paired (no point flipping to Deny if customers could just flip it back via a VAPB patch).
+
+### What this proves and what it rules out
+
+The three SSAR captures above aren't just better evidence than the patch attempt — they change the shape of the workaround design space. Four things follow:
+
+**1. Any "give the customer a more powerful Azure RBAC role" workaround is dead.** The `allowed: true` capture shows Azure RBAC **explicitly grants** `patch validatingadmissionpolicybindings` on the protected name; the `denied: true` capture shows the webhook overrides that grant. The webhook keys off **the request's `name` field**, not the caller's role, group, or dataActions. So there is no role — built-in or custom — that lets a customer past it. Anyone proposing "we'll have the customer assume an elevated Azure role" can be refuted with these two SSAR captures back-to-back.
+
+**2. The Audit→Deny flip on classic AKS Automatic is paired with the webhook activation.** Same user, same role assignment template GUID (`b1ff04bb8a4e4dc48eb58693973ce19b` is `Azure Kubernetes Service RBAC Cluster Admin`), same SSAR payload — opposite results on MSNP vs. non-MSNP. The customer side of the auth chain is byte-identical across cluster types. The only difference is a server-side feature flag in AKS's webhook. That flag will almost certainly flip in the same release that flips `validationActions: [Audit] → [Deny]` on classic AKS Automatic, because the two are architecturally paired (no point flipping to Deny if customers can flip it back via a VAPB patch). **Every "let the cluster admin patch the VAPB" workaround on classic AKS Auto therefore has a deadline.**
+
+**3. We now have a tight, programmatic detection signal.** Posting an SSAR with `name: aks-managed-protect-system-namespaces-binding`, `verb: patch`, `resource: validatingadmissionpolicybindings` is a non-destructive two-second probe that returns either:
+   - `denied: true, reason: (automatic-authz) …` → the lock is active on this cluster (MSNP-class).
+   - `allowed: true, reason: Access allowed by Azure RBAC …` → the lock is inactive on this cluster (classic AKS Auto or non-Automatic).
+   
+   This is the **only** programmatic detection signal — there is no Kubernetes resource we can list to see it, and no ARM property exposing it (`hostedSystemProfile.enabled` is the nearest proxy and may not stay in sync forever). Useful for ama-metrics agent-side health telemetry, installer pre-flight checks, and customer-facing diagnostics — without ever needing to actually attempt a destructive patch.
+
+**4. Option 5 (petition AKS for a per-CM exemption) is the only customer-visible workaround path that can ever work — and "only" really does mean only.** Every other "ask the customer to do X" workaround either (a) edits the VAP/VAPB, which is webhook-locked, or (b) bypasses the VAP entirely, which requires the request to come from an exempt service account (and the VAP exempts SAs, not arbitrary resources). All of (1) RBAC engineering, (2) cluster-admin VAPB patches, and (3) any "self-service exception" UX are non-starters. Any change has to ship inside the AKS webhook's protected-list/exemption code, through AKS's release process. The remaining viable workaround designs (Options 1–4 in the solutions doc) are therefore all **agent-side** — they change ama-metrics's own behavior so the customer doesn't need to write to `kube-system` in the first place.
 
 ### Evaluation pipeline — the 5 gates a request walks
 
