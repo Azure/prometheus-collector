@@ -62,7 +62,7 @@ func TestTest(t *testing.T) {
 	RunSpecs(t, "Test Suite")
 
 	if testResultCode != 0 {
-		fmt.Printf("Test suite completed with failures. Result code: %d\r\n", testResultCode)
+		fmt.Printf("Test suite completed with failures. Result code: %d (0x%02X)\r\n", testResultCode, testResultCode)
 		os.Exit(int(testResultCode))
 	} else {
 		fmt.Println("Test suite completed successfully with no failures.")
@@ -227,7 +227,7 @@ var _ = Describe("Regions Suite", func() {
 
 		It("Test 1 - Check that there are no errors in /opt/microsoft/linuxmonagent/mdsd.err", func() {
 
-			// // testResultCode |= test1 // Assume failure first
+			fmt.Printf("DEBUG TEST 1 MARKER before bit-set: result=0x%02X\r\n", testResultCode)
 
 			numErrLines := writeLines(readFile(mdsdErrFileName, podName))
 			if numErrLines > 0 {
@@ -242,6 +242,8 @@ var _ = Describe("Regions Suite", func() {
 				writeLines(readFile(mdsdInfoFileName, podName))
 				writeLines(readFile(mdsdWarnFileName, podName))
 			}
+			//***************
+			fmt.Printf("DEBUG TEST 1 MARKER after bit-set: numErrLines=%d result=0x%02X\r\n", numErrLines, testResultCode)
 
 			Expect(numErrLines).To(Equal(0))
 
@@ -270,12 +272,15 @@ var _ = Describe("Regions Suite", func() {
 				}
 			}
 
+			fmt.Printf("DEBUG TEST 2 MARKER before bit-set: result=0x%02X\r\n", testResultCode)
 			if count > 0 {
 				testResultCode |= test2
 
 				fmt.Printf("Test 2 found %d 'error' or 'warning' records in %s\r\n", count, metricsExtDebugLogFileName)
 				////Fail(fmt.Sprintf("Test 2 found %d 'error' or 'warning' records in %s", count, metricsExtDebugLogFileName))
 			}
+			//*************
+			fmt.Printf("DEBUG TEST 2 MARKER after bit-set: count=%d result=0x%02X\r\n", count, testResultCode)
 
 			Expect(count).To(Equal(0))
 		})
