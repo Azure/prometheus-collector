@@ -227,18 +227,25 @@ var _ = Describe("Regions Suite", func() {
 
 		It("Test 1 - Check that there are no errors in /opt/microsoft/linuxmonagent/mdsd.err", func() {
 
-			testResultCode |= test1 // Assume failure first
+			// // testResultCode |= test1 // Assume failure first
 
 			numErrLines := writeLines(readFile(mdsdErrFileName, podName))
 			if numErrLines > 0 {
 				fmt.Printf("%s is not empty.\r\n", mdsdErrFileName)
+
+				testResultCode |= test1
+
+				fmt.Printf("Test 1 failed with %d error lines in %s\r\n", numErrLines, mdsdErrFileName)
+				// Fail the test immediately if there are errors in the log file
+				////Fail(fmt.Sprintf("Test 1 failed with %d error lines in %s", numErrLines, mdsdErrFileName))
+
 				writeLines(readFile(mdsdInfoFileName, podName))
 				writeLines(readFile(mdsdWarnFileName, podName))
 			}
 
 			Expect(numErrLines).To(Equal(0))
 
-			testResultCode &^= test1 // Clear failure bit if we got here without errors
+			////estResultCode &^= test1 // Clear failure bit if we got here without errors
 		})
 
 		It("Test 2 - Enumerate all the 'error' or 'warning' records in /MetricsExtensionConsoleDebugLog.log", func() {
@@ -261,6 +268,13 @@ var _ = Describe("Regions Suite", func() {
 						count++
 					}
 				}
+			}
+
+			if count > 0 {
+				testResultCode |= test2
+
+				fmt.Printf("Test 2 found %d 'error' or 'warning' records in %s\r\n", count, metricsExtDebugLogFileName)
+				////Fail(fmt.Sprintf("Test 2 found %d 'error' or 'warning' records in %s", count, metricsExtDebugLogFileName))
 			}
 
 			Expect(count).To(Equal(0))
