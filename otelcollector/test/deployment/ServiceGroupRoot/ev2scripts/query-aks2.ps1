@@ -565,6 +565,8 @@ chmod +x $execScript
 # Execute the test script
 Write-Host "Executing tests using script: $execScript"
 bash $execScript
+$testExitCode = $LASTEXITCODE
+Write-Host "regionTests exit code: $testExitCode"
 
 Write-Host "Done querying AKS cluster."
 
@@ -630,4 +632,9 @@ catch {
     if ($_.Exception.InnerException) {
         Write-Host "Inner exception: $($_.Exception.InnerException.Message)"
     }
+}
+
+if ($testExitCode -ne 0) {
+    Write-Host "Exiting query-aks2.ps1 with test exit code: $testExitCode"
+    exit $testExitCode
 }
