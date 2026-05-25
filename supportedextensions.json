@@ -1,0 +1,2988 @@
+[
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.openservicemesh",
+    "name": "microsoft.openservicemesh",
+    "properties": {
+      "description": "Microsoft Open Service Mesh",
+      "extensionType": "microsoft.openservicemesh",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "provisionedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "arc-osm-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azuredefender.kubernetes",
+    "name": "microsoft.azuredefender.kubernetes",
+    "properties": {
+      "description": "Extension for Microsoft Defender For Cloud",
+      "extensionType": "microsoft.azuredefender.kubernetes",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft.AzureDefender"
+      },
+      "publisher": "Microsoft.AzureDefender",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Provisionedclusters",
+        "Managedclusters",
+        "Provisionedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "mdc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azureml.kubernetes",
+    "name": "microsoft.azureml.kubernetes",
+    "properties": {
+      "description": "This extension is for enabling AzureML training and inferencing capabilities.",
+      "extensionType": "microsoft.azureml.kubernetes",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft AzureML"
+      },
+      "publisher": "Microsoft AzureML",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azureml",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azuremonitor.containers",
+    "name": "microsoft.azuremonitor.containers",
+    "properties": {
+      "description": "Microsoft Azure Monitor Containers Extension",
+      "extensionType": "microsoft.azuremonitor.containers",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Azure Monitor Containers"
+      },
+      "publisher": "Microsoft Azure Monitor Containers",
+      "supportedClusterTypes": [
+        "ConnectedClusters",
+        "ProvisionedClusters",
+        "ManagedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.policyinsights",
+    "name": "microsoft.policyinsights",
+    "properties": {
+      "description": "Extension for microsoft.policyinsights",
+      "extensionType": "microsoft.policyinsights",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft.PolicyInsights"
+      },
+      "publisher": "Microsoft.PolicyInsights",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azure.hybridnetwork",
+    "name": "microsoft.azure.hybridnetwork",
+    "properties": {
+      "description": "Azure Hybrid-Network Network Function Operator Extension",
+      "extensionType": "microsoft.azure.hybridnetwork",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "microsoft.azure.hybridnetwork"
+      },
+      "publisher": "microsoft.azure.hybridnetwork",
+      "supportedClusterTypes": [
+        "appliances",
+        "provisionedclusters",
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azurehybridnetwork",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.flux",
+    "name": "microsoft.flux",
+    "properties": {
+      "description": "Flux Extension for controllers and CRs from the Weaveworks team",
+      "extensionType": "microsoft.flux",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters",
+        "provisionedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "flux-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.containerregistry.connectedregistry",
+    "name": "microsoft.containerregistry.connectedregistry",
+    "properties": {
+      "description": "Deploys a connected registry for your Azure Container Registry on your Arc enabled Kubernetes cluster.",
+      "extensionType": "microsoft.containerregistry.connectedregistry",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedClusters",
+        "managedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "connected-registry",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.dapr",
+    "name": "microsoft.dapr",
+    "properties": {
+      "description": "Distributed Application Runtime Extension",
+      "extensionType": "microsoft.dapr",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedClusters",
+        "managedClusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "dapr-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azurekeyvaultsecretsprovider",
+    "name": "microsoft.azurekeyvaultsecretsprovider",
+    "properties": {
+      "description": "Microsoft Azure Key Vaults Secrets Provider",
+      "extensionType": "microsoft.azurekeyvaultsecretsprovider",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "provisionedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azure.mobilenetwork.packetcoremonitor",
+    "name": "microsoft.azure.mobilenetwork.packetcoremonitor",
+    "properties": {
+      "description": "Geneva monitoring agent for Azure P5GC Packet Core",
+      "extensionType": "microsoft.azure.mobilenetwork.packetcoremonitor",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Private 5G Core Packet Core Monitor"
+      },
+      "publisher": "Azure Private 5G Core Packet Core Monitor",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "packet-core-monitor",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.extensionsusage",
+    "name": "microsoft.extensionsusage",
+    "properties": {
+      "description": "Extension to measure the billing",
+      "extensionType": "microsoft.extensionsusage",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Extension Billing"
+      },
+      "publisher": "Microsoft Extension Billing",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-extensions-usage-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.appliance.management.operator",
+    "name": "microsoft.appliance.management.operator",
+    "properties": {
+      "description": "A cluster extension for managing Appliance (Kubernetes Virtual Appliance) upgrades.",
+      "extensionType": "microsoft.appliance.management.operator",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "MsK8s"
+      },
+      "publisher": "MsK8s",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kva-management",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/connectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.clusters",
+    "name": "microsoft.contoso.clusters",
+    "properties": {
+      "description": "Test Cluster Extension for Microsoft Contoso Clusters",
+      "extensionType": "microsoft.contoso.clusters",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Contoso Clusters"
+      },
+      "publisher": "Microsoft Contoso Clusters",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "contoso",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.towers",
+    "name": "microsoft.contoso.towers",
+    "properties": {
+      "description": "Test Cluster Extension for Microsoft Contoso Towers",
+      "extensionType": "microsoft.contoso.towers",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Contoso Towers"
+      },
+      "publisher": "Microsoft Contoso Towers",
+      "supportedClusterTypes": [
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "ansible",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/marketplace.test.01",
+    "name": "marketplace.test.01",
+    "properties": {
+      "description": "Test extension for integration tests and DVTs",
+      "extensionType": "marketplace.test.01",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "testOffer",
+        "planId": "testPlan",
+        "publisherId": "marketplacetest"
+      },
+      "publisher": "marketplacetest",
+      "supportedClusterTypes": [
+        "managedclusters",
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": null,
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/marketplace.test.02",
+    "name": "marketplace.test.02",
+    "properties": {
+      "description": "Test extension for marketplace integration tests and DVTs",
+      "extensionType": "marketplace.test.02",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "testOffer2",
+        "planId": "testPlan2",
+        "publisherId": "marketplacetest2"
+      },
+      "publisher": "marketplacetest2",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": null,
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/managedclusterscenariotest",
+    "name": "managedclusterscenariotest",
+    "properties": {
+      "description": "Test extension for scenario test",
+      "extensionType": "managedclusterscenariotest",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "RishikHombal"
+      },
+      "publisher": "RishikHombal",
+      "supportedClusterTypes": [
+        "connectedClusters",
+        "managedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.dataprotection.kubernetes",
+    "name": "microsoft.dataprotection.kubernetes",
+    "properties": {
+      "description": "The extension enables backup & restore capabilities for the applications and their persistent volumes running inside Kubernetes clusters",
+      "extensionType": "microsoft.dataprotection.kubernetes",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Azure Backup"
+      },
+      "publisher": "Microsoft Azure Backup",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "dataprotection-microsoft",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azuremonitor.containers.metrics",
+    "name": "microsoft.azuremonitor.containers.metrics",
+    "properties": {
+      "description": "Azure Monitor managed service for Prometheus",
+      "extensionType": "microsoft.azuremonitor.containers.metrics",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Metrics"
+      },
+      "publisher": "Azure Monitor Metrics",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "ProvisionedClusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.oraclediscovery",
+    "name": "microsoft.oraclediscovery",
+    "properties": {
+      "description": "Microsoft Oracle deep discovery",
+      "extensionType": "microsoft.oraclediscovery",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Data"
+      },
+      "publisher": "Microsoft Data",
+      "supportedClusterTypes": [
+        "ConnectedClusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-oraclediscoveryoperator",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.tests",
+    "name": "microsoft.contoso.tests",
+    "properties": {
+      "description": "Test Cluster Extension for Microsoft Contoso Tests",
+      "extensionType": "microsoft.contoso.tests",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Contoso Tests"
+      },
+      "publisher": "Microsoft Contoso Tests",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "contoso",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.policyinsightsev2test2",
+    "name": "microsoft.policyinsightsev2test2",
+    "properties": {
+      "description": "Dummy Extension for microsoft.policyinsights",
+      "extensionType": "microsoft.policyinsightsev2test2",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft.PolicyInsightsEv2Test2"
+      },
+      "publisher": "Microsoft.PolicyInsightsEv2Test2",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.samples",
+    "name": "microsoft.contoso.samples",
+    "properties": {
+      "description": "Extension for Testing only",
+      "extensionType": "microsoft.contoso.samples",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Contoso Samples"
+      },
+      "publisher": "Microsoft Contoso Samples",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": null,
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.noautoupgrade",
+    "name": "microsoft.contoso.noautoupgrade",
+    "properties": {
+      "description": "Test Cluster Extension for Microsoft Contoso NoAutoUpgrade",
+      "extensionType": "microsoft.contoso.noautoupgrade",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Contoso NoAutoUpgrade"
+      },
+      "publisher": "Microsoft Contoso NoAutoUpgrade",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "ansible",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/test.microsoft.extensionsusage",
+    "name": "test.microsoft.extensionsusage",
+    "properties": {
+      "description": "Extension to measure the billing",
+      "extensionType": "test.microsoft.extensionsusage",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Extension Billing for test in canary only"
+      },
+      "publisher": "Microsoft Extension Billing for test in canary only",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-extensions-usage-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.monitor.pipelinecontroller",
+    "name": "microsoft.monitor.pipelinecontroller",
+    "properties": {
+      "description": "Strato Operator as ARC K8s Extension",
+      "extensionType": "microsoft.monitor.pipelinecontroller",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contosojpk.connectedonly.azurevote.byol",
+    "name": "contosojpk.connectedonly.azurevote.byol",
+    "properties": {
+      "description": "test_test_mix3pptest0011614206850774",
+      "extensionType": "contosojpk.connectedonly.azurevote.byol",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "prasannatestcontaineroffer1",
+        "planId": "connectedonly-byol",
+        "publisherId": "test_test_mix3pptest0011614206850774"
+      },
+      "publisher": "test_test_mix3pptest0011614206850774",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "contoso",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contosojpk.connectedonly.azurevote.perpod",
+    "name": "contosojpk.connectedonly.azurevote.perpod",
+    "properties": {
+      "description": "test_test_mix3pptest0011614206850774",
+      "extensionType": "contosojpk.connectedonly.azurevote.perpod",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "prasannatestcontaineroffer1",
+        "planId": "connectedonly-perpod",
+        "publisherId": "test_test_mix3pptest0011614206850774"
+      },
+      "publisher": "test_test_mix3pptest0011614206850774",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "contoso",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.extensiondiagnostics",
+    "name": "microsoft.extensiondiagnostics",
+    "properties": {
+      "description": "Extension diagnostics for Microsoft Arc Extensions",
+      "extensionType": "microsoft.extensiondiagnostics",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.extensiondiagnostics.testextension",
+    "name": "microsoft.extensiondiagnostics.testextension",
+    "properties": {
+      "description": "Dummy extension depending on microsoft.extensiondiagnostics",
+      "extensionType": "microsoft.extensiondiagnostics.testextension",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.workloadidentitywebhookforarc",
+    "name": "microsoft.workloadidentitywebhookforarc",
+    "properties": {
+      "description": "Workload Identity Webhook for Arc extension for enabling the workload identity feature",
+      "extensionType": "microsoft.workloadidentitywebhookforarc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-workload-identity-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/marketplace.test.04",
+    "name": "marketplace.test.04",
+    "properties": {
+      "description": "Test extension for marketplace integration tests and DVTs",
+      "extensionType": "marketplace.test.04",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "testOffer4",
+        "planId": "testPlan4",
+        "publisherId": "marketplacetest4"
+      },
+      "publisher": "marketplacetest4",
+      "supportedClusterTypes": [
+        "managedclusters",
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "testnamespace",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.testextension.arif",
+    "name": "microsoft.testextension.arif",
+    "properties": {
+      "description": null,
+      "extensionType": "microsoft.testextension.arif",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Extension test"
+      },
+      "publisher": "Microsoft Extension test",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "test-extension",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.contoso.arcplatform.towers",
+    "name": "microsoft.contoso.arcplatform.towers",
+    "properties": {
+      "description": "Test Cluster Extension for Microsoft Azure Arc Platform",
+      "extensionType": "microsoft.contoso.arcplatform.towers",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft Azure Arc Platform"
+      },
+      "publisher": "Microsoft Azure Arc Platform",
+      "supportedClusterTypes": [
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "ansible",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azure.secretstore",
+    "name": "microsoft.azure.secretstore",
+    "properties": {
+      "description": "Adds the Azure Secret Store and Azure Secret Provider components to the cluster.",
+      "extensionType": "microsoft.azure.secretstore",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Secret Store extension"
+      },
+      "publisher": "Azure Secret Store extension",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-secret-store",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.extensiondiagnostics.test",
+    "name": "microsoft.extensiondiagnostics.test",
+    "properties": {
+      "description": "Extension diagnostics for Microsoft Arc Extensions",
+      "extensionType": "microsoft.extensiondiagnostics.test",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.extensiondiagnostics.dev",
+    "name": "microsoft.extensiondiagnostics.dev",
+    "properties": {
+      "description": "Extension diagnostics for Microsoft Arc Extensions",
+      "extensionType": "microsoft.extensiondiagnostics.dev",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.graytown.testextension",
+    "name": "microsoft.graytown.testextension",
+    "properties": {
+      "description": "Dummy extension depending on microsoft.extensiondiagnostics and microsoft.extensionsusage",
+      "extensionType": "microsoft.graytown.testextension",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Arc Graytown"
+      },
+      "publisher": "Azure Arc Graytown",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "graytowntest",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/catalogicsoftware.cloudcasaazurearc",
+    "name": "catalogicsoftware.cloudcasaazurearc",
+    "properties": {
+      "description": "catalogicsoftware1625626770507",
+      "extensionType": "catalogicsoftware.cloudcasaazurearc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "cloudcasa-arc-app",
+        "planId": "cc-azure-arc",
+        "publisherId": "catalogicsoftware1625626770507"
+      },
+      "publisher": "catalogicsoftware1625626770507",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "default",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.cloudoperator",
+    "name": "microsoft.cloudoperator",
+    "properties": {
+      "description": "Extension to manage cluster-api lifecycle",
+      "extensionType": "microsoft.cloudoperator",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Msk8s"
+      },
+      "publisher": "Msk8s",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "default",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.aksedge.imageoperator",
+    "name": "microsoft.aksedge.imageoperator",
+    "properties": {
+      "description": "Extension to provision image for onprem clusters",
+      "extensionType": "microsoft.aksedge.imageoperator",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Msk8s"
+      },
+      "publisher": "Msk8s",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "cloudop-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/portworx.px-enterprise-internal-test",
+    "name": "portworx.px-enterprise-internal-test",
+    "properties": {
+      "description": "purestoragemarketplaceadmin",
+      "extensionType": "portworx.px-enterprise-internal-test",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "portworx-enterprise",
+        "planId": "pxe-test",
+        "publisherId": "purestoragemarketplaceadmin"
+      },
+      "publisher": "purestoragemarketplaceadmin",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "portworx",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.cloud2edgeconnectivity",
+    "name": "microsoft.cloud2edgeconnectivity",
+    "properties": {
+      "description": "Extension to manage cloud to edge connectivity",
+      "extensionType": "microsoft.cloud2edgeconnectivity",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "platform-operator-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.kubernetesworkloadidfederation",
+    "name": "microsoft.kubernetesworkloadidfederation",
+    "properties": {
+      "description": "Extension to install mutating webhook and  to enable oidc issuer url sync",
+      "extensionType": "microsoft.kubernetesworkloadidfederation",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "arc-workload-identity",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.test.systemextension",
+    "name": "microsoft.test.systemextension",
+    "properties": {
+      "description": "Azure Arc test extension for system extensions",
+      "extensionType": "microsoft.test.systemextension",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "maubarnes"
+      },
+      "publisher": "maubarnes",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "test-system-extensions",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.test1pextension",
+    "name": "microsoft.test1pextension",
+    "properties": {
+      "description": "Azure Arc test extension for 1P extensions",
+      "extensionType": "microsoft.test1pextension",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "maubarnes"
+      },
+      "publisher": "maubarnes",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "test-1pextension",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/thomas.connectedcluster",
+    "name": "thomas.connectedcluster",
+    "properties": {
+      "description": "test_test_mix3pptest0011614206850774",
+      "extensionType": "thomas.connectedcluster",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "thomasconnectedonly",
+        "planId": "testplan",
+        "publisherId": "test_test_mix3pptest0011614206850774"
+      },
+      "publisher": "test_test_mix3pptest0011614206850774",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": null,
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/private.cloud2edgeconnectivity",
+    "name": "private.cloud2edgeconnectivity",
+    "properties": {
+      "description": "Private Extension to manage cloud to edge connectivity",
+      "extensionType": "private.cloud2edgeconnectivity",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters",
+        "Appliances"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "platform-operator-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/redis.redisenterpriseoperatorarcbyol",
+    "name": "redis.redisenterpriseoperatorarcbyol",
+    "properties": {
+      "description": "garantiadata",
+      "extensionType": "redis.redisenterpriseoperatorarcbyol",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "redis_enterprise_operator_arc",
+        "planId": "redis_enterprise_byol",
+        "publisherId": "garantiadata"
+      },
+      "publisher": "garantiadata",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "redis-enterprise",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.test.autoupgrade",
+    "name": "microsoft.test.autoupgrade",
+    "properties": {
+      "description": "Azure Arc test extension for autoupgrade extensions",
+      "extensionType": "microsoft.test.autoupgrade",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "maubarnes"
+      },
+      "publisher": "maubarnes",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "test-autoupgrade-extension",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/minio.operator.arc",
+    "name": "minio.operator.arc",
+    "properties": {
+      "description": "minio",
+      "extensionType": "minio.operator.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "minio-op-v1",
+        "planId": "minio-operator-for-arc-v1",
+        "publisherId": "minio"
+      },
+      "publisher": "minio",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "aistor-ext",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/redis.redisenterpriseoperatorarcbyoltest",
+    "name": "redis.redisenterpriseoperatorarcbyoltest",
+    "properties": {
+      "description": "garantiadata",
+      "extensionType": "redis.redisenterpriseoperatorarcbyoltest",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "redis_enterprise_operator_arc",
+        "planId": "redis_enterprise_byol_test",
+        "publisherId": "garantiadata"
+      },
+      "publisher": "garantiadata",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": true,
+          "defaultReleaseNamespace": "redis-enterprise",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/mongodb.enterprise",
+    "name": "mongodb.enterprise",
+    "properties": {
+      "description": "mongodb",
+      "extensionType": "mongodb.enterprise",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "mongodb_enterprise_kubernetes_operator",
+        "planId": "mongodbenterprise",
+        "publisherId": "mongodb"
+      },
+      "publisher": "mongodb",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "mongodb-enterprise",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/datastax.cluster-hcd-arc-pc",
+    "name": "datastax.cluster-hcd-arc-pc",
+    "properties": {
+      "description": "datastax",
+      "extensionType": "datastax.cluster-hcd-arc-pc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "datastax-hcd-for-azure-arc",
+        "planId": "hcd-per-cluster",
+        "publisherId": "datastax"
+      },
+      "publisher": "datastax",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "mission-control",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/datastax.cluster-hcd-arc-free",
+    "name": "datastax.cluster-hcd-arc-free",
+    "properties": {
+      "description": "datastax",
+      "extensionType": "datastax.cluster-hcd-arc-free",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "datastax-hcd-for-azure-arc",
+        "planId": "hcd-free-test",
+        "publisherId": "datastax"
+      },
+      "publisher": "datastax",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "mission-control",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.aksarc",
+    "name": "microsoft.aksarc",
+    "properties": {
+      "description": "Extension to create and manage provisioned clusters",
+      "extensionType": "microsoft.aksarc",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "Appliances",
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "aksarc-operator-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.certmanagement",
+    "name": "microsoft.certmanagement",
+    "properties": {
+      "description": "cert-manager for Azure Arc-enabled K8s automates TLS certificate lifecycle and trust management across Arc-enabled Kubernetes clusters using cert-manager and trust-manager. It is currently supported only on K3s, AKS Arc, and Tanzu TKGm platforms.",
+      "extensionType": "microsoft.certmanagement",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "cert-manager",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/minio.mkpl.operator.arc",
+    "name": "minio.mkpl.operator.arc",
+    "properties": {
+      "description": "minio",
+      "extensionType": "minio.mkpl.operator.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "minio-op-v1_1",
+        "planId": "minio-operator-for-arc-v1",
+        "publisherId": "minio"
+      },
+      "publisher": "minio",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "aistor-ext",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.argocd",
+    "name": "microsoft.argocd",
+    "properties": {
+      "description": "ArgoCD Extension for controllers and CRs from the argocd team",
+      "extensionType": "microsoft.argocd",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedclusters",
+        "managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "argocd",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.int.extensiondiagnostics",
+    "name": "microsoft.int.extensiondiagnostics",
+    "properties": {
+      "description": "Extension diagnostics system extension for Microsoft Arc Extensions (int)",
+      "extensionType": "microsoft.int.extensiondiagnostics",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.lab.extensiondiagnostics",
+    "name": "microsoft.lab.extensiondiagnostics",
+    "properties": {
+      "description": "Extension diagnostics system extension for Microsoft Arc Extensions (lab)",
+      "extensionType": "microsoft.lab.extensiondiagnostics",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": true,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "azure-arc",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.monitor.int.pipelinecontroller",
+    "name": "microsoft.monitor.int.pipelinecontroller",
+    "properties": {
+      "description": "3P Strato Operator Arc Extension (int)",
+      "extensionType": "microsoft.monitor.int.pipelinecontroller",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.monitor.lab.pipelinecontroller",
+    "name": "microsoft.monitor.lab.pipelinecontroller",
+    "properties": {
+      "description": "3P Strato Operator Arc Extension (lab)",
+      "extensionType": "microsoft.monitor.lab.pipelinecontroller",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.int.extensiondiagnostics.testextension",
+    "name": "microsoft.int.extensiondiagnostics.testextension",
+    "properties": {
+      "description": "Test extension for the Strato Operator System Extension (int)",
+      "extensionType": "microsoft.int.extensiondiagnostics.testextension",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.lab.extensiondiagnostics.testextension",
+    "name": "microsoft.lab.extensiondiagnostics.testextension",
+    "properties": {
+      "description": "Test extension for the Strato Operator System Extension (lab)",
+      "extensionType": "microsoft.lab.extensiondiagnostics.testextension",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/softingindustrial.edgeconnector.arc",
+    "name": "softingindustrial.edgeconnector.arc",
+    "properties": {
+      "description": "softingindustrialautomationgmbh1627396447249",
+      "extensionType": "softingindustrial.edgeconnector.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "softing-edgeconnector-arc",
+        "planId": "edgeconnector_licensing",
+        "publisherId": "softingindustrialautomationgmbh1627396447249"
+      },
+      "publisher": "softingindustrialautomationgmbh1627396447249",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "softing",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.fleetmember",
+    "name": "microsoft.fleetmember",
+    "properties": {
+      "description": "Extension runs on a member cluster of a fleet",
+      "extensionType": "microsoft.fleetmember",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Kubernetes Fleet Manager Member"
+      },
+      "publisher": "Azure Kubernetes Fleet Manager Member",
+      "supportedClusterTypes": [
+        "Connectedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "fleet-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotarc",
+    "name": "solo.io.istiotarc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotarc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1251-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.azurelocalnetworking",
+    "name": "microsoft.azurelocalnetworking",
+    "properties": {
+      "description": "Extension to handle networking resources for AksArc cloud management plane",
+      "extensionType": "microsoft.azurelocalnetworking",
+      "isManagedIdentityRequired": false,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Microsoft"
+      },
+      "publisher": "Microsoft",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "network-operator-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofiveone.arc",
+    "name": "solo.io.istiotwofiveone.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofiveone.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1252-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/traefiklabs.traefikproxyonarc",
+    "name": "traefiklabs.traefikproxyonarc",
+    "properties": {
+      "description": "containous",
+      "extensionType": "traefiklabs.traefikproxyonarc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "traefik-on-arc",
+        "planId": "traefik-byol",
+        "publisherId": "containous"
+      },
+      "publisher": "containous",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "traefik",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofivetwo.arc",
+    "name": "solo.io.istiotwofivetwo.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofivetwo.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "istio_by_solo_arc",
+        "planId": "istio-1252-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/traefiklabs.traefikhubonarc",
+    "name": "traefiklabs.traefikhubonarc",
+    "properties": {
+      "description": "containous",
+      "extensionType": "traefiklabs.traefikhubonarc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "traefik-on-arc",
+        "planId": "traefik-hub-byol",
+        "publisherId": "containous"
+      },
+      "publisher": "containous",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "traefik",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/dynatrace.azure.dto.arc.verification",
+    "name": "dynatrace.azure.dto.arc.verification",
+    "properties": {
+      "description": "dynatrace",
+      "extensionType": "dynatrace.azure.dto.arc.verification",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "azure-arc-dynatrace-operator",
+        "planId": "azure-arc-private-validation",
+        "publisherId": "dynatrace"
+      },
+      "publisher": "dynatrace",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "dynatrace",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosixzero.arc",
+    "name": "solo.io.istiotwosixzero.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosixzero.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1260-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/dynatrace.azurearcdynatraceoperator.one.x",
+    "name": "dynatrace.azurearcdynatraceoperator.one.x",
+    "properties": {
+      "description": "dynatrace",
+      "extensionType": "dynatrace.azurearcdynatraceoperator.one.x",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "azure-arc-dynatrace-operator",
+        "planId": "dynatrace-operator-arc-1-x",
+        "publisherId": "dynatrace"
+      },
+      "publisher": "dynatrace",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "dynatrace",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/hashicorp.vaultenterprisearc",
+    "name": "hashicorp.vaultenterprisearc",
+    "properties": {
+      "description": "hashicorp-4665790",
+      "extensionType": "hashicorp.vaultenterprisearc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "vault-k8s-arc",
+        "planId": "vault-ent-arc-byol",
+        "publisherId": "hashicorp-4665790"
+      },
+      "publisher": "hashicorp-4665790",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "vault",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofoursix.arc",
+    "name": "solo.io.istiotwofoursix.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofoursix.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1246-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofivethree.arc",
+    "name": "solo.io.istiotwofivethree.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofivethree.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1253-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.monitormonitor.edge.pipeline",
+    "name": "microsoft.monitormonitor.edge.pipeline",
+    "properties": {
+      "description": "Strato Operator as ARC K8s Extension test",
+      "extensionType": "microsoft.monitormonitor.edge.pipeline",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Azure Monitor Edge"
+      },
+      "publisher": "Azure Monitor Edge",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters",
+        "Appliances",
+        "ProvisionedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosixone.arc",
+    "name": "solo.io.istiotwosixone.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosixone.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1261-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosixtwo.arc",
+    "name": "solo.io.istiotwosixtwo.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosixtwo.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1262-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofivefour.arc",
+    "name": "solo.io.istiotwofivefour.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofivefour.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1254-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosixthree.arc",
+    "name": "solo.io.istiotwosixthree.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosixthree.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1263-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosevenzero.arc",
+    "name": "solo.io.istiotwosevenzero.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosevenzero.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1270-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwofivefive.arc",
+    "name": "solo.io.istiotwofivefive.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwofivefive.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1255-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosixfour.arc",
+    "name": "solo.io.istiotwosixfour.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosixfour.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1264-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/solo.io.istiotwosevenone.arc",
+    "name": "solo.io.istiotwosevenone.arc",
+    "properties": {
+      "description": "sologloo",
+      "extensionType": "solo.io.istiotwosevenone.arc",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": "isito_by_solo_io",
+        "planId": "istio-1271-ambient-arc",
+        "publisherId": "sologloo"
+      },
+      "publisher": "sologloo",
+      "supportedClusterTypes": [
+        "connectedClusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "istio-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contoso.test.autoupgradev2",
+    "name": "contoso.test.autoupgradev2",
+    "properties": {
+      "description": "Azure Arc extension for testing autoupgradeV2",
+      "extensionType": "contoso.test.autoupgradev2",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "japras"
+      },
+      "publisher": "japras",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "test-autoupgrade-extension",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contoso.test.autoupgradev2.nofilter",
+    "name": "contoso.test.autoupgradev2.nofilter",
+    "properties": {
+      "description": "Azure Arc extension for testing autoupgradeV2",
+      "extensionType": "contoso.test.autoupgradev2.nofilter",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "japras"
+      },
+      "publisher": "japras",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "test-autoupgrade-extension",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contoso.test.namespacescoped",
+    "name": "contoso.test.namespacescoped",
+    "properties": {
+      "description": "Test internal extension type for testing namespacescoped extension",
+      "extensionType": "contoso.test.namespacescoped",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": null
+      },
+      "publisher": null,
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": null,
+        "defaultScope": "namespace"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/contoso.test.fips",
+    "name": "contoso.test.fips",
+    "properties": {
+      "description": "Test internal extension type for testing fips validation",
+      "extensionType": "contoso.test.fips",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": null
+      },
+      "publisher": null,
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": {
+          "allowMultipleInstances": false,
+          "defaultReleaseNamespace": "kube-system",
+          "id": null,
+          "name": null,
+          "type": null
+        },
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  },
+  {
+    "id": "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-arc-1/providers/Microsoft.Kubernetes/ConnectedClusters/rashmi-arc-1/providers/Microsoft.KubernetesConfiguration/extensionTypes/microsoft.test.customhelmchartextension",
+    "name": "microsoft.test.customhelmchartextension",
+    "properties": {
+      "description": "Extension for Testing only",
+      "extensionType": "microsoft.test.customhelmchartextension",
+      "isManagedIdentityRequired": true,
+      "isSystemExtension": false,
+      "planInfo": {
+        "offerId": null,
+        "planId": null,
+        "publisherId": "Custom Helm Chart Extension"
+      },
+      "publisher": "Custom Helm Chart Extension",
+      "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+      ],
+      "supportedScopes": {
+        "clusterScopeSettings": null,
+        "defaultScope": "cluster"
+      }
+    },
+    "resourceGroup": "rashmi-arc-1",
+    "type": "Microsoft.KubernetesConfiguration/extensionTypes"
+  }
+]
