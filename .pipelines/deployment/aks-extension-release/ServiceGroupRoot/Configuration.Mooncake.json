@@ -2,7 +2,7 @@
 	"$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ConfigurationSpecification.json",
 	"Settings": {
 		"extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-		"packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks092625",
+		"packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052726",
 		"helmEndpoint": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
 		"isCustomerHidden": false,
 		"arcApiUrl": "https://chinaeast2.dp.kubernetesconfiguration.azure.cn",
