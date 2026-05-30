@@ -1,11 +1,11 @@
 {
   "Version": "1",
-  "ToggleName": "AzureMonitorMetrics.KsmCpuLimit",
-  "Type": "int",
+  "ToggleName": "AzureMonitorMetrics.DsCPULimitWindows",
+  "Type": "string",
   "LastUpdatedAt": null,
   "ExtensionType": "microsoft.azuremonitor.containers.metrics",
   "OwnerTeam": "container insights",
-  "Description": "This is AzureMonitorMetrics.KsmCpuLimit toggle.",
+  "Description": "This is AzureMonitorMetrics.DsCPULimitWindows toggle.",
   "Rules": [
     {
       "Matchers": [
@@ -13,11 +13,11 @@
           "Field": "subscriptionID",
           "Operator": "equals",
           "Values": [
-            "b9842c7c-1a38-4385-8f39-a51314758bcf"
+            "ce4d1293-71c0-4c72-bc55-133553ee9e50"
           ]
         }
       ],
-      "Value": "1.5"
+      "Value": "250m"
     }
   ]
 }

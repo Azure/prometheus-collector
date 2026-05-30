@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 05-07-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51-cfg`
 * AKS and Arc Container Images :
   + Store all Current Toggle Documents for Metrics (https://github.com/Azure/prometheus-collector/pull/1490)
   + Delos support for ama-metrics addon (https://github.com/Azure/prometheus-collector/pull/1529)

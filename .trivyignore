@@ -6,6 +6,12 @@ CVE-2026-34040 #github.com/docker/docker - Moby AuthZ plugin bypass with oversiz
 # gobinary - target-allocator, otelcollector, promconfigvalidator
 CVE-2026-42151 #github.com/prometheus/prometheus - Prometheus vulnerability (v0.310.0 -> 0.311.3)
 CVE-2026-42154 #github.com/prometheus/prometheus - Prometheus vulnerability (v0.310.0 -> 0.311.3)
+# gobinary - target-allocator, otelcollector, configurationreader, ccp-prometheus-collector
+CVE-2026-33811 #stdlib - net LookupCNAME with cgo DNS resolver may hang on very long CNAME (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-33814 #stdlib - net/http HTTP/2 SETTINGS frames cause infinite loop in transport (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-39820 #stdlib - net/mail ParseAddress/ParseAddressList input handling vulnerability (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-39836 #stdlib - net panic in Dial and LookupPort when handling NUL byte on Windows (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-42499 #stdlib - net/mail DoS via consumePhrase when parsing pathological inputs (v1.25.9 -> 1.25.10, 1.26.3)
 
 # MEDIUM
 # gobinary - target-allocator
@@ -13,6 +19,11 @@ CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privi
 # gobinary - target-allocator, otelcollector, promconfigvalidator
 CVE-2026-40179 #github.com/prometheus/prometheus - Stored XSS via metric names and label values (v0.310.0 -> 0.311.2)
 GHSA-fw8g-cg8f-9j28 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (v0.310.0 -> 0.311.3)
+CVE-2026-44903 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (CVE alias of GHSA-fw8g-cg8f-9j28) (v0.311.2 -> 0.311.3)
+# gobinary - target-allocator, otelcollector, configurationreader, ccp-prometheus-collector
+CVE-2026-39823 #stdlib - net/url incomplete URL parsing fix (extends CVE-2026-27142) (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-39825 #stdlib - net/http/httputil ReverseProxy forwards hidden query parameters (v1.25.9 -> 1.25.10, 1.26.3)
+CVE-2026-39826 #stdlib - html/template stored XSS via crafted script tag content (v1.25.9 -> 1.25.10, 1.26.3)
 # os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-4.azl3 -> 3.3.5-5.azl3)
 CVE-2026-28388 #openssl - DoS due to NULL pointer dereference in delta CRL processing
 CVE-2026-28389 #openssl - DoS vulnerability in CMS processing
