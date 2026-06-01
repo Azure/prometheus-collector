@@ -33,3 +33,5 @@ CVE-2026-31790 #openssl - Information disclosure from uninitialized memory via i
 # os-pkgs - glibc in upstream kube-state-metrics image (azurelinux 3.0, 2.38-18.azl3 -> 2.38-19.azl3)
 CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS server response
 CVE-2026-4438 #glibc - Invalid DNS hostname returned via gethostbyaddr functions
+# os-pkgs - glibc/glibc-iconv in ccp prometheus-collector image (azurelinux 3.0, 2.38-19.azl3 -> 2.38-20.azl3)
+CVE-2026-4046 #glibc - Denial of Service via iconv() function with specific character sets
