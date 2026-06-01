@@ -1,11 +1,11 @@
 {
   "Version": "1",
-  "ToggleName": "AzureMonitorMetrics.KsmMetricAllowlist",
+  "ToggleName": "AzureMonitorMetrics.KubeStateMetrics.MetricAllowList",
   "Type": "string",
   "LastUpdatedAt": null,
   "ExtensionType": "microsoft.azuremonitor.containers.metrics",
   "OwnerTeam": "container insights",
-  "Description": "This is AzureMonitorMetrics.KsmMetricAllowlist toggle.",
+  "Description": "This is AzureMonitorMetrics.KubeStateMetrics.MetricAllowList toggle.",
   "Rules": [
     {
       "Matchers": [
