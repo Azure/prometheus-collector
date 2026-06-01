@@ -55,6 +55,15 @@ parameters:
     type: number
     default: 0
 
+  # TEST-ONLY toggle. When true, switches the PROD stage's
+  # ob_release_environment from 'Production' to 'Test', which bypasses the
+  # OneBranch production approval workflow. Use ONLY for end-to-end pipeline
+  # testing against canary regions. NEVER set this true for a real release.
+  - name: 'skipApprovalsForTest'
+    displayName: 'Skip production approvals (TEST ONLY - do not use for real releases)'
+    type: boolean
+    default: false
+
 resources:
   repositories:
     - repository: templates
@@ -180,7 +189,10 @@ extends:
       - stage: PROD_Managed_SDP
         displayName: "PROD: Managed SDP"
         variables:
-          ob_release_environment: Production
+          ${{ if eq(parameters.skipApprovalsForTest, true) }}:
+            ob_release_environment: Test
+          ${{ if eq(parameters.skipApprovalsForTest, false) }}:
+            ob_release_environment: Production
         jobs:
           - job: PROD_Managed_SDP
             displayName: "PROD: Managed SDP"
