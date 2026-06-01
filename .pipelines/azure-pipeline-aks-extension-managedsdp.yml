@@ -112,35 +112,35 @@ variables:
         }
       }
 
-  - name: FairfaxConfigurationOverrides
-    value: |
-      {
-        "ConfigurationSpecification": {
-          "settings": {
-            "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
-            "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
-            "userAssignedIdentity": "REPLACE_WITH_FAIRFAX_MSI_ARM_ID",
-            "version": "$(extensionVersionValue)",
-            "releaseTrain": "${{ parameters.releaseTrain }}"
-          }
-        }
-      }
+  # - name: FairfaxConfigurationOverrides
+  #   value: |
+  #     {
+  #       "ConfigurationSpecification": {
+  #         "settings": {
+  #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
+  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+  #           "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
+  #           "userAssignedIdentity": "REPLACE_WITH_FAIRFAX_MSI_ARM_ID",
+  #           "version": "$(extensionVersionValue)",
+  #           "releaseTrain": "${{ parameters.releaseTrain }}"
+  #         }
+  #       }
+  #     }
 
-  - name: MooncakeConfigurationOverrides
-    value: |
-      {
-        "ConfigurationSpecification": {
-          "settings": {
-            "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
-            "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
-            "userAssignedIdentity": "REPLACE_WITH_MOONCAKE_MSI_ARM_ID",
-            "version": "$(extensionVersionValue)",
-            "releaseTrain": "${{ parameters.releaseTrain }}"
-          }
-        }
-      }
+  # - name: MooncakeConfigurationOverrides
+  #   value: |
+  #     {
+  #       "ConfigurationSpecification": {
+  #         "settings": {
+  #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
+  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+  #           "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
+  #           "userAssignedIdentity": "REPLACE_WITH_MOONCAKE_MSI_ARM_ID",
+  #           "version": "$(extensionVersionValue)",
+  #           "releaseTrain": "${{ parameters.releaseTrain }}"
+  #         }
+  #       }
+  #     }
 
   - name: LinuxContainerImage
     value: 'mcr.microsoft.com/oss/go/microsoft/golang:1.24.2-fips-azurelinux3.0'
@@ -200,57 +200,57 @@ extends:
                   #Select: regions(*)
                   ArtifactsVersionOverride: $(extensionVersionValue)
 
-      - stage: FF_Managed_SDP
-        displayName: "FF: Managed SDP"
-        dependsOn: PROD_Managed_SDP
-        variables:
-          ob_release_environment: Fairfax
-        templateContext:
-          cloud: Public
-          isProduction: true
-          approval:
-            workflow: approvalService
-        jobs:
-          - job: FF_Managed_SDP
-            displayName: "FF: Managed SDP"
-            pool:
-              type: release
-            steps:
-              - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-                displayName: "Ev2 Managed SDP Rollout (Fairfax)"
-                inputs:
-                  EndpointProviderType: ApprovalService
-                  ApprovalServiceEnvironment: Fairfax
-                  TaskAction: CentralArtifactsRollout
-                  CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
-                  CentralArtifactsPolicyName: CentralArtifactsPolicy
-                  ServiceIdentifier: $(serviceIdentifier)
-                  ServiceGroup: $(serviceGroup)
-                  ConfigurationOverrides: $(FairfaxConfigurationOverrides)
-                  Select: regions(*)
-                  ArtifactsVersionOverride: $(extensionVersionValue)
+      # - stage: FF_Managed_SDP
+      #   displayName: "FF: Managed SDP"
+      #   dependsOn: PROD_Managed_SDP
+      #   variables:
+      #     ob_release_environment: Fairfax
+      #   templateContext:
+      #     cloud: Public
+      #     isProduction: true
+      #     approval:
+      #       workflow: approvalService
+      #   jobs:
+      #     - job: FF_Managed_SDP
+      #       displayName: "FF: Managed SDP"
+      #       pool:
+      #         type: release
+      #       steps:
+      #         - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+      #           displayName: "Ev2 Managed SDP Rollout (Fairfax)"
+      #           inputs:
+      #             EndpointProviderType: ApprovalService
+      #             ApprovalServiceEnvironment: Fairfax
+      #             TaskAction: CentralArtifactsRollout
+      #             CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
+      #             CentralArtifactsPolicyName: CentralArtifactsPolicy
+      #             ServiceIdentifier: $(serviceIdentifier)
+      #             ServiceGroup: $(serviceGroup)
+      #             ConfigurationOverrides: $(FairfaxConfigurationOverrides)
+      #             Select: regions(*)
+      #             ArtifactsVersionOverride: $(extensionVersionValue)
 
-      - stage: MC_Managed_SDP
-        displayName: "MC: Managed SDP"
-        dependsOn: PROD_Managed_SDP
-        variables:
-          ob_release_environment: Mooncake
-        jobs:
-          - job: MC_Managed_SDP
-            displayName: "MC: Managed SDP"
-            pool:
-              type: release
-            steps:
-              - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-                displayName: "Ev2 Managed SDP Rollout (Mooncake)"
-                inputs:
-                  EndpointProviderType: ApprovalService
-                  ApprovalServiceEnvironment: Mooncake
-                  TaskAction: CentralArtifactsRollout
-                  CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
-                  CentralArtifactsPolicyName: CentralArtifactsPolicy
-                  ServiceIdentifier: $(serviceIdentifier)
-                  ServiceGroup: $(serviceGroup)
-                  ConfigurationOverrides: $(MooncakeConfigurationOverrides)
-                  Select: regions(*)
-                  ArtifactsVersionOverride: $(extensionVersionValue)
+      # - stage: MC_Managed_SDP
+      #   displayName: "MC: Managed SDP"
+      #   dependsOn: PROD_Managed_SDP
+      #   variables:
+      #     ob_release_environment: Mooncake
+      #   jobs:
+      #     - job: MC_Managed_SDP
+      #       displayName: "MC: Managed SDP"
+      #       pool:
+      #         type: release
+      #       steps:
+      #         - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+      #           displayName: "Ev2 Managed SDP Rollout (Mooncake)"
+      #           inputs:
+      #             EndpointProviderType: ApprovalService
+      #             ApprovalServiceEnvironment: Mooncake
+      #             TaskAction: CentralArtifactsRollout
+      #             CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
+      #             CentralArtifactsPolicyName: CentralArtifactsPolicy
+      #             ServiceIdentifier: $(serviceIdentifier)
+      #             ServiceGroup: $(serviceGroup)
+      #             ConfigurationOverrides: $(MooncakeConfigurationOverrides)
+      #             Select: regions(*)
+      #             ArtifactsVersionOverride: $(extensionVersionValue)
