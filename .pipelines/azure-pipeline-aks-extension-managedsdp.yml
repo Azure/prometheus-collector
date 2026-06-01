@@ -188,7 +188,15 @@ extends:
                   ServiceIdentifier: $(serviceIdentifier)
                   ServiceGroup: $(serviceGroup)
                   ConfigurationOverrides: $(ProdConfigurationOverrides)
-                  Select: regions(*)
+                  # For first-run / canary testing of the pipeline itself,
+                  # temporarily replace the line below with an explicit
+                  # region filter, e.g.:
+                  #   Select: regions(eastus2euap)
+                  # to roll out to the 2 EUAP regions only. Once validated,
+                  # restore `regions(*)` so the central SDP policy controls
+                  # the wave order (Canary -> Pilot -> ... -> HighAvailability).
+                  Select: regions(centraluseuap,eastus2euap)
+                  #Select: regions(*)
                   ArtifactsVersionOverride: $(extensionVersionValue)
 
       - stage: FF_Managed_SDP
