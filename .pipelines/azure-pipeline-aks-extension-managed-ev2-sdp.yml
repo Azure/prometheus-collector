@@ -19,9 +19,9 @@ trigger: none
 
 parameters:
   - name: 'overrideExtensionVersion'
-    displayName: 'Override Extension Version (leave blank to use upstream build runName)'
+    displayName: 'Override Extension Version (leave as "auto" to use upstream build runName)'
     type: string
-    default: ''
+    default: 'auto'
 
   - name: 'releaseTrain'
     displayName: 'Release Train'
@@ -83,10 +83,15 @@ variables:
     value: 'Microsoft.Azure.InfrastructureInsights.ContainerInsights.AzureMonitorMetrics'
 
   # ---- Version selection ---------------------------------------------------
-  - ${{ if ne(parameters.overrideExtensionVersion, '') }}:
+  # When `overrideExtensionVersion` is left at its default value of 'auto',
+  # the pipeline uses the runName of the latest upstream build pipeline run
+  # (resolved at runtime by the resources.pipelines reference). Any other
+  # value is taken as an explicit version override (e.g. for rollback or for
+  # pinning to a known-good build).
+  - ${{ if ne(parameters.overrideExtensionVersion, 'auto') }}:
       - name: extensionVersionValue
         value: '${{ parameters.overrideExtensionVersion }}'
-  - ${{ if eq(parameters.overrideExtensionVersion, '') }}:
+  - ${{ if eq(parameters.overrideExtensionVersion, 'auto') }}:
       - name: extensionVersionValue
         value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 

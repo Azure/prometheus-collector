@@ -19,9 +19,9 @@ trigger: none
 
 parameters:
   - name: 'overrideExtensionVersion'
-    displayName: 'Override Extension Version (leave blank to use upstream build runName)'
+    displayName: 'Override Extension Version (leave as "auto" to use upstream build runName)'
     type: string
-    default: ''
+    default: 'auto'
 
   - name: 'releaseTrain'
     displayName: 'Release Train'
@@ -90,10 +90,16 @@ variables:
   #   * <runName>-arc      -> consumed by THIS Arc rollout pipeline
   # See pushChartToAcr.sh and the "Build: push helm chart to dev ACR" step
   # in .pipelines/azure-pipeline-build.yml for the dual-tag push.
-  - ${{ if ne(parameters.overrideExtensionVersion, '') }}:
+  #
+  # When `overrideExtensionVersion` is left at its default value of 'auto',
+  # the pipeline uses the runName of the latest upstream build pipeline run
+  # (resolved at runtime by the resources.pipelines reference). Any other
+  # value is taken as an explicit version override (e.g. for rollback or for
+  # pinning to a known-good build). The '-arc' suffix is always appended.
+  - ${{ if ne(parameters.overrideExtensionVersion, 'auto') }}:
       - name: baseVersionValue
         value: '${{ parameters.overrideExtensionVersion }}'
-  - ${{ if eq(parameters.overrideExtensionVersion, '') }}:
+  - ${{ if eq(parameters.overrideExtensionVersion, 'auto') }}:
       - name: baseVersionValue
         value: '$(resources.pipeline._Azureprometheus-collector.runName)'
   - name: extensionVersionValue
