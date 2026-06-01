@@ -11,7 +11,8 @@
 # using packageConfig: Microsoft.AzureMonitor.Containers.Metrics-PromAks052926. #
 #                                                                               #
 # This replaces the custom Ev2 ServiceGroup approach previously used in         #
-# .pipelines/deployment/aks-extension-release/.                                 #
+# .pipelines/deployment/aks-extension-release/ (now removed in favor of the     #
+# central artifacts model documented in wiki page 671961).                      #
 #################################################################################
 
 trigger: none
@@ -90,11 +91,11 @@ variables:
         value: '$(resources.pipeline._Azureprometheus-collector.runName)'
 
   # ---- ConfigurationOverrides (per cloud) ---------------------------------
-  # extensionTypeName / packageConfig / helmChartUrl mirror
-  # .pipelines/deployment/aks-extension-release/ServiceGroupRoot/Configuration.*.json
-  # userAssignedIdentity must be the MSI registered in the *cloud-specific*
-  # extension type registration document (msiClientIds field). See:
-  # https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
+  # extensionTypeName / packageConfig / helmChartUrl values were sourced from
+  # the legacy .pipelines/deployment/aks-extension-release/Configuration.*.json
+  # files (now removed). MSI ARM IDs below must be the cloud-specific identity
+  # registered in the extension type registration document (msiClientIds field).
+  # See: https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
 
   - name: ProdConfigurationOverrides
     value: |
