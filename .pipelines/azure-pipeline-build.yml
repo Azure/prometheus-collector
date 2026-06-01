@@ -2204,15 +2204,22 @@ extends:
           displayName: "Build: update helm dependencies"
         - bash: |
             helm package ./azure-monitor-metrics-addon/
+            # Also package the SAME chart contents under <ver>-arc so the
+            # Arc extension central rollout pipeline can pull a distinct
+            # OCI tag from the same artifact. Chart.yaml version is
+            # overridden at package time so the embedded version matches
+            # the OCI tag.
+            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: package helm chart"
+          displayName: "Build: package helm chart (aks + arc-tagged variant)"
         - bash: |
             helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
             mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
             echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: push helm chart to dev ACR"
+          displayName: "Build: push helm chart to dev ACR (aks + arc tags)"
       - job: Tag_Github_Commit
         displayName: "CI/CD: Tag commit with semver"
         pool:

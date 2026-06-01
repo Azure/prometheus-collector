@@ -85,12 +85,19 @@ variables:
     value: 'Microsoft.Azure.InfrastructureInsights.ContainerInsights.AzureMonitorMetrics'
 
   # ---- Version selection ---------------------------------------------------
+  # The build pipeline packages and pushes the SAME helm chart twice:
+  #   * <runName>          -> consumed by the AKS rollout pipeline
+  #   * <runName>-arc      -> consumed by THIS Arc rollout pipeline
+  # See pushChartToAcr.sh and the "Build: push helm chart to dev ACR" step
+  # in .pipelines/azure-pipeline-build.yml for the dual-tag push.
   - ${{ if ne(parameters.overrideExtensionVersion, '') }}:
-      - name: extensionVersionValue
+      - name: baseVersionValue
         value: '${{ parameters.overrideExtensionVersion }}'
   - ${{ if eq(parameters.overrideExtensionVersion, '') }}:
-      - name: extensionVersionValue
+      - name: baseVersionValue
         value: '$(resources.pipeline._Azureprometheus-collector.runName)'
+  - name: extensionVersionValue
+    value: '$(baseVersionValue)-arc'
 
   # ---- ConfigurationOverrides (per cloud) ---------------------------------
   # extensionTypeName / packageConfig / helmChartUrl mirror
