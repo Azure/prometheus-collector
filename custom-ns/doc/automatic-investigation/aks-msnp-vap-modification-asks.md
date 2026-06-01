@@ -11,24 +11,35 @@
 
 ## TL;DR
 
-**The cleanest ask to bring to AKS is to add one new `matchCondition` to the `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces`.** That single CEL clause exempts exactly the four `ama-metrics-*` ConfigMaps in `kube-system` and **nothing else** — same user, same role, same protected namespace; only the four specifically named ConfigMaps become writable.
+**The cleanest ask to bring to AKS is to add one new `matchCondition` to the `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces`.** That single CEL clause exempts exactly the customer-facing `ama-metrics-*` objects the public docs tell customers to apply in `kube-system` — **4 ConfigMaps + 1 mTLS Secret + 1 Role + 1 RoleBinding**, all by fixed name — and **nothing else**. Same user, same role, same protected namespace; only the seven specifically named objects become writable.
+
+> The pattern was experimentally validated for the **ConfigMap branch** on `zane-auto-2` with a 4-test matrix (see §3 Variant A and Appendix A). The other three branches (Secret, Role, RoleBinding) are **additional `||` clauses of the same CEL idiom** — same `matchCondition` semantics, same `(group, resource, name)` shape, no new mechanism. See [§7.5](#75-beyond-configmaps-deriving-the-full-kube-system-inventory) for the per-resource derivation from the public docs.
 
 The drop-in YAML:
 
 ```yaml
 # In spec.matchConditions[], appended as the third entry (evaluated AND with the
 # existing two: apply-to-non-exempt-users, apply-to-non-exempt-groups).
-- name: exempt-ama-metrics-configmaps
+- name: exempt-ama-metrics-customer-resources
   expression: |
-    !(request.namespace == "kube-system" &&
-      request.resource.resource == "configmaps" &&
-      request.name in ["ama-metrics-prometheus-config",
-                       "ama-metrics-settings-configmap",
-                       "ama-metrics-prometheus-config-node",
-                       "ama-metrics-prometheus-config-windowsdaemonset"])
+    !(request.namespace == "kube-system" && (
+      (request.resource.group == "" && request.resource.resource == "configmaps" &&
+       request.name in ["ama-metrics-prometheus-config",
+                        "ama-metrics-settings-configmap",
+                        "ama-metrics-prometheus-config-node",
+                        "ama-metrics-prometheus-config-node-windows"]) ||
+      (request.resource.group == "" && request.resource.resource == "secrets" &&
+       request.name == "ama-metrics-mtls-secret") ||
+      (request.resource.group == "rbac.authorization.k8s.io" &&
+       request.resource.resource == "roles" &&
+       request.name == "ama-metrics-secrets-reader") ||
+      (request.resource.group == "rbac.authorization.k8s.io" &&
+       request.resource.resource == "rolebindings" &&
+       request.name == "ama-metrics-secrets-rolebinding")
+    ))
 ```
 
-Two alternative shapes were tested and rejected:
+Two alternative shapes were tested and rejected (rejections apply equally to the broader form):
 
 | Variant | Shape | Why rejected |
 |---|---|---|
@@ -109,7 +120,7 @@ Append a third `matchCondition` to `spec.matchConditions[]`:
       request.name in ["ama-metrics-prometheus-config",
                        "ama-metrics-settings-configmap",
                        "ama-metrics-prometheus-config-node",
-                       "ama-metrics-prometheus-config-windowsdaemonset"])
+                       "ama-metrics-prometheus-config-node-windows"])
 ```
 
 The expression is a negation of the "this is one of the protected ama-metrics CMs" check. Returning `false` makes the policy **skip** this request (per Kubernetes' `matchConditions` semantics: if any returns `false`, the policy does not fire). Returning `true` lets evaluation continue into the `validations` block, which then denies.
@@ -137,9 +148,10 @@ All four match expectations. The exemption is precisely shaped.
 - **Reviewable.** A reviewer can read the 4 names, look up what each is for, and decide. No "trust us" axis.
 
 ### Cons / open questions
-- The list of 4 names becomes a contract between us and AKS. Each new CM we add to ama-metrics is a new round of "petition AKS" and a new release.
-- This only carves out **CMs we already know about**. If a customer wants to *delete* one of these (e.g. roll back), they'd be exempt too — that's almost certainly fine but worth flagging to the AKS reviewer.
-- Doesn't help with ama-metrics needs in any other namespace (we're currently only writing to `kube-system`, so n/a today).
+- The list of names becomes a contract between us and AKS. Each new ama-metrics object (or rename) the public docs add to `kube-system` is a new round of "petition AKS" and a new release.
+- This only carves out **objects we already know about**. If a customer wants to *delete* one of these (e.g. roll back), they'd be exempt too — that's almost certainly fine but worth flagging to the AKS reviewer.
+- Doesn't help with ama-metrics needs in any other protected namespace (we're currently only writing to `kube-system`, so n/a today).
+- The 4-test matrix above was run against the **ConfigMap branch only**. The broader ask (see [§7](#7-the-exact-ask-to-take-to-aks) and [§7.5](#75-beyond-configmaps-deriving-the-full-kube-system-inventory)) extends the same `(group, resource, name)` shape to Secret + Role + RoleBinding — structurally identical, additional `||` branches of the same CEL idiom — but those branches are not empirically re-validated here. We can re-run the matrix per kind on `zane-auto-2` if AKS asks.
 
 ---
 
@@ -204,26 +216,95 @@ Remove `"kube-system"` from `spec.matchConstraints.namespaceSelector.matchExpres
 > Could you please add the following entry to the `spec.matchConditions[]` array of the `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces`?
 >
 > ```yaml
-> - name: exempt-ama-metrics-configmaps
+> - name: exempt-ama-metrics-customer-resources
 >   expression: |
->     !(request.namespace == "kube-system" &&
->       request.resource.resource == "configmaps" &&
->       request.name in ["ama-metrics-prometheus-config",
->                        "ama-metrics-settings-configmap",
->                        "ama-metrics-prometheus-config-node",
->                        "ama-metrics-prometheus-config-windowsdaemonset"])
+>     !(request.namespace == "kube-system" && (
+>       (request.resource.group == "" && request.resource.resource == "configmaps" &&
+>        request.name in ["ama-metrics-prometheus-config",
+>                         "ama-metrics-settings-configmap",
+>                         "ama-metrics-prometheus-config-node",
+>                         "ama-metrics-prometheus-config-node-windows"]) ||
+>       (request.resource.group == "" && request.resource.resource == "secrets" &&
+>        request.name == "ama-metrics-mtls-secret") ||
+>       (request.resource.group == "rbac.authorization.k8s.io" &&
+>        request.resource.resource == "roles" &&
+>        request.name == "ama-metrics-secrets-reader") ||
+>       (request.resource.group == "rbac.authorization.k8s.io" &&
+>        request.resource.resource == "rolebindings" &&
+>        request.name == "ama-metrics-secrets-rolebinding")
+>     ))
 > ```
 >
-> This carves out only the four `ama-metrics-*` ConfigMaps in `kube-system` from the protect-system-namespaces deny. All other writes to `kube-system` (other ConfigMaps, Secrets, RBAC, workloads, etc.) and all writes to the other 19 protected namespaces remain blocked. We verified this on a fresh `zane-auto-2` cluster (classic AKS Automatic, VAPB flipped to `[Deny]` to simulate MSNP behavior) with a 4-case test matrix; see [Appendix A](#appendix-a-full-reproduction).
+> This carves out the **seven** specific objects the public docs tell customers to apply in `kube-system`:
+>
+> - **4 ConfigMaps** — `ama-metrics-settings-configmap` (settings) + the three custom-scrape-config variants (`-prometheus-config` for replica, `-prometheus-config-node` for Linux daemonset, `-prometheus-config-node-windows` for Windows daemonset).
+> - **1 Secret** — `ama-metrics-mtls-secret` ([TLS/mTLS scraping certs](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#tls-based-scraping); docs explicitly require this Secret in `kube-system` with this exact name).
+> - **1 Role + 1 RoleBinding** — `ama-metrics-secrets-reader` / `ama-metrics-secrets-rolebinding`, required on K8s 1.37+ in every namespace listed in `secrets_access_namespaces` ([Step 4](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#step-4-create-rbac-in-each-namespace-kubernetes--137) — "including `kube-system` if needed").
+>
+> All other writes to `kube-system` (other ConfigMaps, other Secrets, other RBAC, workloads, etc.) and all writes to the other 19 protected namespaces remain blocked. We verified this on a fresh `zane-auto-2` cluster (classic AKS Automatic, VAPB flipped to `[Deny]` to simulate MSNP behavior) with a 4-case test matrix — see [Appendix A](#appendix-a-full-reproduction). The matrix was run against the ConfigMap branch; the other three branches are the same CEL idiom extended with additional `(group, resource, name)` triples (see [§7.5](#75-beyond-configmaps-deriving-the-full-kube-system-inventory) for the derivation).
 >
 > No change is required to the `(automatic-authz)` authorization webhook, the binding, or any other AKS-managed resource.
 
 ### Pre-emptive answers to likely AKS questions
 
-- **"Why can't ama-metrics use `ama-metrics-serviceaccount` instead?"** That SA *is* already exempt (it's in `matchConditions[0]`'s `userInfo.username` allowlist). But our customer-facing UX has customers `kubectl apply` these CMs themselves — that's the whole problem. We could change that UX (Options 1/2/3 in the solution-options doc), but Variant A is the cheapest fix.
-- **"Why hardcode the names instead of a `kubernetes.azure.com/created-by=ama-metrics` label?"** Because the CMs are customer-created — the customer doesn't always set such a label, and asking them to is a worse migration than just renaming on our side. We could ship Variant A *and* a label-based fallback if AKS prefers.
-- **"Will you add more names later?"** Each new ama-metrics CM means another AKS ask. We currently have 4. We'll commit to renames before adding to the list.
+- **"Why these seven names specifically?"** They are the complete set of `kube-system`-scoped customer-applied objects across the two public docs pages for managed Prometheus customization ([ConfigMap-based](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration) and [CRD-based with basic-auth / TLS](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd)). See §7.5 for the full inventory walk.
+- **"Why can't ama-metrics use `ama-metrics-serviceaccount` instead?"** That SA *is* already exempt (it's in `matchConditions[0]`'s `userInfo.username` allowlist). But our customer-facing UX has customers `kubectl apply` these objects themselves — that's the whole problem. We could change that UX (Options 1/2/3 in the solution-options doc), but the name carve-out is the cheapest fix.
+- **"Why hardcode names instead of a `kubernetes.azure.com/created-by=ama-metrics` label?"** Because the objects are customer-created — the customer doesn't always set such a label, and asking them to is a worse migration than enumerating the seven names. We could ship the name carve-out *and* a label-based fallback if AKS prefers.
+- **"Will you add more names later?"** Each new ama-metrics object the public docs add to `kube-system` (or any rename) is a new round of "petition AKS". We currently have 7. We'll commit to flagging docs changes that introduce new `kube-system` objects.
 - **"What about a new namespace?"** We'd come back with a new ask. The current `kube-system`-only carve-out is intentional.
+- **"Did you test the Secret / Role / RoleBinding branches too?"** No — the 4-test matrix in §3 / Appendix A only ran against the ConfigMap branch. The other three branches are structurally identical (`||` of the same `(group, resource, name)` shape evaluated under the same `matchCondition` semantics), so re-testing is a regression check, not a correctness check. We're happy to re-run the matrix per resource kind on `zane-auto-2` if AKS would like the additional reassurance before merging.
+- **"What about the customer's basic-auth Secret (e.g. `my-basic-auth`)?"** Its **name is customer-chosen**, so we can't allowlist it by name. The public docs already steer customers to put basic-auth Secrets in their app namespace (where the VAP doesn't fire) — that's the right default and we're not asking AKS to support `kube-system` placement for that case. See §7.5 footnote.
+
+---
+
+## 7.5 Beyond ConfigMaps: deriving the full kube-system inventory
+
+Variant A's 4-test matrix on `zane-auto-2` validated the **pattern** — a `(resource, name)`-keyed `matchCondition` skip applied to one resource kind in one namespace. The same pattern extends naturally to additional `(group, resource, name)` triples without re-testing the underlying mechanism. The remaining question is: **which triples**?
+
+We answered that by walking the two public docs pages for customer-configurable Prometheus collection on AKS — [`prometheus-metrics-scrape-configuration`](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration) (ConfigMap-based) and [`prometheus-metrics-scrape-crd`](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd) (CRD-based, basic-auth, TLS) — and noting every K8s object the customer is told to apply, plus its namespace:
+
+| Doc step | Kind | apiGroup | Namespace (per docs) | VAP-blocked? | In ask? |
+|---|---|---|---|---|---|
+| [Settings ConfigMap](https://aka.ms/azureprometheus-addon-settings-configmap) | ConfigMap (`ama-metrics-settings-configmap`) | `""` (core) | `kube-system` | ✅ blocked | ✅ in ask |
+| [Custom scrape config — replica](../../../otelcollector/configmaps/ama-metrics-prometheus-config-configmap.yaml) | ConfigMap (`ama-metrics-prometheus-config`) | `""` | `kube-system` | ✅ blocked | ✅ in ask |
+| [Custom scrape config — Linux daemonset](../../../otelcollector/configmaps/ama-metrics-prometheus-config-node-configmap.yaml) | ConfigMap (`ama-metrics-prometheus-config-node`) | `""` | `kube-system` | ✅ blocked | ✅ in ask |
+| [Custom scrape config — Windows daemonset](../../../otelcollector/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml) | ConfigMap (`ama-metrics-prometheus-config-node-windows`) | `""` | `kube-system` | ✅ blocked | ✅ in ask |
+| [TLS/mTLS scraping cert bundle](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#tls-based-scraping) | Secret (`ama-metrics-mtls-secret`) | `""` | `kube-system` (docs specify exactly this) | ✅ blocked | ✅ in ask |
+| [Basic-auth Secret access — Role](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#step-4-create-rbac-in-each-namespace-kubernetes--137) | Role (`ama-metrics-secrets-reader`) | `rbac.authorization.k8s.io` | each ns in `secrets_access_namespaces` — **including `kube-system` if used** | ✅ blocked (when placed in `kube-system`) | ✅ in ask |
+| [Basic-auth Secret access — RoleBinding](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#step-4-create-rbac-in-each-namespace-kubernetes--137) | RoleBinding (`ama-metrics-secrets-rolebinding`) | `rbac.authorization.k8s.io` | same as Role above | ✅ blocked (when placed in `kube-system`) | ✅ in ask |
+| [PodMonitor CR](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#example-pod-monitor) | PodMonitor | `azmonitoring.coreos.com` | **customer app namespace** (docs example: `app-namespace` / `my-app`) | ❌ not blocked (outside the 20 protected ns) | ❌ no ask needed |
+| [ServiceMonitor CR](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#example-service-monitor) | ServiceMonitor | `azmonitoring.coreos.com` | **customer app namespace** | ❌ not blocked | ❌ no ask needed |
+| [PodMonitor CRD](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-podmonitor-crd.yaml) | CustomResourceDefinition | `apiextensions.k8s.io` | cluster-scoped, **addon-installed** (not customer-applied) | ❌ not blocked (cluster-scoped, and ama-metrics SA is already exempt) | ❌ no ask needed |
+| [ServiceMonitor CRD](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-servicemonitor-crd.yaml) | CustomResourceDefinition | `apiextensions.k8s.io` | cluster-scoped, addon-installed | ❌ not blocked | ❌ no ask needed |
+| [Basic-auth Secret (customer-named)](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#step-1-create-the-basic-auth-secret) | Secret (customer-chosen name, e.g. `my-basic-auth`) | `""` | **customer app namespace** (docs example: `my-app`) | ❌ not blocked when in customer ns | ❌ no ask needed — see footnote |
+| [Basic-auth Role/RoleBinding in customer ns](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#step-4-create-rbac-in-each-namespace-kubernetes--137) | Role + RoleBinding | `rbac.authorization.k8s.io` | customer app namespace | ❌ not blocked | ❌ no ask needed |
+
+> **Footnote on the customer-named basic-auth Secret.** Step 4 of the basic-auth docs notes "(including `kube-system` if needed)" — so a customer *could* place the basic-auth Secret in `kube-system`. We deliberately exclude that from the ask because the Secret's name is **customer-chosen**: there is no fixed name we could allowlist. Our recommendation to customers is the docs' default — put basic-auth Secrets in your *app* namespace, where the VAP does not fire. If a customer insists on `kube-system`, that's an edge case AKS would need to handle through a different mechanism (e.g. a per-customer allowlist or an opt-in label) — out of scope for this ask.
+
+### Scope summary
+
+- **In the ask (7 named objects, all in `kube-system`, all with fixed names):** 4 ConfigMaps + 1 Secret + 1 Role + 1 RoleBinding.
+- **Out of scope, deliberately:** customer-named basic-auth Secret in `kube-system` (no fixed name to allowlist).
+- **Out of scope, naturally:** everything customers apply in their own app namespace (PodMonitor / ServiceMonitor CRs, basic-auth Secret, Role, RoleBinding) — the VAP doesn't cover those namespaces. Everything cluster-scoped (the two CRDs) — the VAP's `resourceRules` are `scope: Namespaced`.
+
+### Empirical coverage of the ask
+
+| Branch of the CEL | Tested on `zane-auto-2`? | Confidence |
+|---|---|---|
+| ConfigMaps (4 names) | ✅ Variant A 4-test matrix (§3, Appendix A) | High |
+| Secret (`ama-metrics-mtls-secret`) | ❌ not yet | High by analogy — same VAP, same `matchCondition` semantics, additional `(group, resource, name)` triple in the same `\|\|` chain. We recommend AKS apply the consolidated CEL in one shot; happy to re-run the matrix per kind if AKS asks. |
+| Role (`ama-metrics-secrets-reader`) | ❌ not yet | Same as above |
+| RoleBinding (`ama-metrics-secrets-rolebinding`) | ❌ not yet | Same as above |
+
+### Why we're confident the additional branches don't widen the blast radius
+
+The added branches each lock down to one fixed `name` in `kube-system`. The CEL operator semantics are:
+
+- `||` short-circuits — if any branch matches, the whole inner expression is `true`, and `!true == false` makes the `matchCondition` skip the policy (request allowed). Branches are independent; they don't cross-contaminate.
+- A request that doesn't match `request.namespace == "kube-system"` short-circuits the outer `&&` to `false`, so the entire negation evaluates to `true` and the policy still applies — i.e., the carve-out is strictly scoped to `kube-system`.
+- The existing `matchConditions[0]` and `matchConditions[1]` (user/group exempt lists) are unchanged; they still run first and are ANDed with our new condition, so the carve-out does nothing for callers who would already have been exempt.
+
+The net effect, formally: the set of admit-without-validation requests grows from `{kube-system, configmaps, ∈ 4-name list}` to `{kube-system, configmaps, ∈ 4-name list} ∪ {kube-system, secrets, ama-metrics-mtls-secret} ∪ {kube-system, roles, ama-metrics-secrets-reader} ∪ {kube-system, rolebindings, ama-metrics-secrets-rolebinding}`. No other set membership changes.
 
 ---
 
@@ -365,7 +446,7 @@ mcs = vap["spec"]["matchConditions"] + [{
         'request.name in ["ama-metrics-prometheus-config", '
         '"ama-metrics-settings-configmap", '
         '"ama-metrics-prometheus-config-node", '
-        '"ama-metrics-prometheus-config-windowsdaemonset"])'
+        '"ama-metrics-prometheus-config-node-windows"])'
     )
 }]
 json.dump({"spec": {"matchConditions": mcs}}, open("/tmp/zane-variantA-patch.json", "w"), indent=2)
