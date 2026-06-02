@@ -203,7 +203,7 @@ extends:
                   # the wave order (Canary -> Pilot -> ... -> HighAvailability).
                   Select: regions(centraluseuap,eastus2euap)
                   #Select: regions(*)
-                  ArtifactsVersionOverride: $(extensionVersionValue)
+                  # ArtifactsVersionOverride: $(extensionVersionValue)
 
       # - stage: FF_Managed_SDP
       #   displayName: "FF: Managed SDP"
@@ -233,7 +233,7 @@ extends:
       #             ServiceGroup: $(serviceGroup)
       #             ConfigurationOverrides: $(FairfaxConfigurationOverrides)
       #             Select: regions(*)
-      #             ArtifactsVersionOverride: $(extensionVersionValue)
+      # #             ArtifactsVersionOverride: $(extensionVersionValue)
 
       # - stage: MC_Managed_SDP
       #   displayName: "MC: Managed SDP"
@@ -258,4 +258,4 @@ extends:
       #             ServiceGroup: $(serviceGroup)
       #             ConfigurationOverrides: $(MooncakeConfigurationOverrides)
       #             Select: regions(*)
-      #             ArtifactsVersionOverride: $(extensionVersionValue)
+      # #             ArtifactsVersionOverride: $(extensionVersionValue)
