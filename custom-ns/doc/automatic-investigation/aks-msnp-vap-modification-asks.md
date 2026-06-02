@@ -263,7 +263,7 @@ Customer picks namespace N for the Monitor CR
     │   • per-target credential Secret(s)                 │ ← CRD schema forces same ns
     │     — basic-auth, TLS, bearer, OAuth2               │   (no `namespace:` field in
     │       (customer-chosen names)                       │   any SecretKeySelector)
-    │   • Role (ama-metrics-secrets-reader)               │ ← K8s 1.37+: must be where
+    │   • Role (ama-metrics-secrets-reader)               │ ← K8s 1.36+: must be where
     │   • RoleBinding (ama-metrics-secrets-rolebinding)   │   the Secret is readable
     └─────────────────────────────────────────────────────┘
               │
@@ -276,7 +276,7 @@ Customer picks namespace N for the Monitor CR
 The pinning is enforced at three levels:
 
 1. **CRD schema** — *every* Secret-reference field in the PodMonitor/ServiceMonitor schema is a `corev1.SecretKeySelector` (or `corev1.ConfigMapKeySelector` for the CA / cert variants) with only `name`, `key`, `optional` properties — **no `namespace` field exists**. This covers `basicAuth.{username,password}`, `bearerTokenSecret`, `authorization.credentials`, `oauth2.{clientId,clientSecret}`, and `tlsConfig.{ca.secret, cert.secret, keySecret}` — all five credential families share the same shape. Verified in the repo: [`ama-metrics-servicemonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-servicemonitor-crd.yaml) lines 64–92 and [`ama-metrics-podmonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-podmonitor-crd.yaml) lines 104–132 (`basicAuth` shape) plus the corresponding `tlsConfig` blocks (PodMonitor lines 285–376). A customer literally cannot type a namespace into any of these references; the API server rejects `namespace:` as an unknown field. The reference is always resolved against the Monitor's own namespace. **Important corollary:** the CRD `tlsConfig` deliberately omits the file-path fields (`caFile` / `certFile` / `keyFile`) that exist in raw Prometheus config — so the PodMonitor/ServiceMonitor path *cannot* reach into the shared `ama-metrics-mtls-secret` mounted at `/etc/prometheus/certs/`. CRD-based TLS is fully self-contained in the Monitor's ns.
-2. **RBAC scoping** — on K8s 1.37+ the addon's ClusterRole no longer grants cluster-wide Secret access. The target allocator (running as `system:serviceaccount:kube-system:ama-metrics-serviceaccount`) needs an explicit `Role` granting `get/list/watch` on `secrets` *in the Secret's namespace*, plus a `RoleBinding` in that namespace pointing back to the kube-system SA. The Role + RoleBinding therefore must co-locate with the Secret, which must co-locate with the Monitor.
+2. **RBAC scoping** — on K8s 1.36+ the addon's ClusterRole no longer grants cluster-wide Secret access (verified in [`ama-metrics-clusterRole.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-clusterRole.yaml) lines 28-33 — the cluster-wide `secrets get/list/watch` rule is gated by `{{- if semverCompare "<1.36.0" ... }}`). The target allocator (running as `system:serviceaccount:kube-system:ama-metrics-serviceaccount`) needs an explicit `Role` granting `get/list/watch` on `secrets` *in the Secret's namespace*, plus a `RoleBinding` in that namespace pointing back to the kube-system SA. The Role + RoleBinding therefore must co-locate with the Secret, which must co-locate with the Monitor.
 3. **Settings ConfigMap** — the customer must list every Secret's namespace in `secrets_access_namespaces` of `ama-metrics-settings-configmap`. This is the *only* link back into `kube-system`, and that ConfigMap is already in the ask.
 
 ### Why this matters for the VAP
@@ -305,7 +305,7 @@ The full inventory walk of [`prometheus-metrics-scrape-configuration`](https://l
 | PodMonitor CR | PodMonitor | Customer app ns (`namespace: app-namespace`) | ❌ No — CR can live anywhere; `namespaceSelector` decouples target ns from CR ns | ❌ |
 | ServiceMonitor CR | ServiceMonitor | Customer app ns | ❌ No — same | ❌ |
 | Per-target credential Secret for **CRD path** — basic-auth, TLS material, bearer token, OAuth2 (customer-named, e.g. `my-basic-auth`) | Secret | Customer app ns (`namespace: my-app`) | ❌ No — chained to the Monitor's ns by the CRD schema (every credential field is a `SecretKeySelector` with no `namespace:`); customer chooses both | ❌ |
-| `ama-metrics-secrets-reader` Role (K8s 1.37+) | Role | "each ns in `secrets_access_namespaces`" — default = customer app ns | ❌ No — chained to the Secret's ns | ❌ |
+| `ama-metrics-secrets-reader` Role (K8s 1.36+) | Role | "each ns in `secrets_access_namespaces`" — default = customer app ns | ❌ No — chained to the Secret's ns | ❌ |
 | `ama-metrics-secrets-rolebinding` RoleBinding | RoleBinding | same as Role | ❌ No — chained to the Role's ns | ❌ |
 | PodMonitor / ServiceMonitor **CRDs** (definitions) | CustomResourceDefinition | Cluster-scoped, addon-installed | ❌ No — cluster-scoped; VAP's `resourceRules` are `scope: Namespaced`, and the install is done by the ama-metrics SA which is already exempt | ❌ |
 
