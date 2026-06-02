@@ -11,9 +11,9 @@
 
 ## TL;DR
 
-**The ask to bring to AKS is to add one new `matchCondition` to the `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces`.** That single CEL clause exempts **only the 5 objects that are *structurally forced* into `kube-system`** — 4 ConfigMaps (the addon's customization surface) + 1 mTLS Secret (mounted into the ama-metrics pods themselves). Everything else customers apply for managed Prometheus (PodMonitor / ServiceMonitor CRs, basic-auth Secrets, supporting RBAC) is steered by our public docs into **the customer's own namespace**, where the VAP doesn't fire and no allowlist is needed.
+**The ask to bring to AKS is to add one new `matchCondition` to the `ValidatingAdmissionPolicy` named `aks-managed-protect-system-namespaces`.** That single CEL clause exempts **only the 5 objects that are *structurally forced* into `kube-system`** — 4 ConfigMaps (the addon's customization surface) + 1 mTLS Secret (the shared cert bundle for the **ConfigMap scrape-config path**, mounted into the ama-metrics pods themselves). Everything else customers apply for managed Prometheus (PodMonitor / ServiceMonitor CRs and **their own** per-target credential Secrets — basic-auth, TLS, bearer-token, OAuth2 — plus supporting RBAC) is steered by our public docs into **the customer's own namespace**, where the VAP doesn't fire and no allowlist is needed.
 
-> **Key finding driving this scoping:** The PodMonitor/ServiceMonitor CR's namespace is the **anchor** that determines where the basic-auth Secret, Role, and RoleBinding must live — they're all chained to it by the CRD schema (Secret-ref has no `namespace:` field) and by RBAC scoping. If the customer puts the Monitor outside `kube-system` (the documented default), the whole chain stays outside `kube-system`. See [§7.5](#75-the-monitors-namespace-anchors-everything) for the cascade map and [§7.6](#76-two-strategic-options-considered) for the Option 1 vs Option 2 trade-off behind the scoping.
+> **Key finding driving this scoping:** The PodMonitor/ServiceMonitor CR's namespace is the **anchor** that determines where its per-target credential Secrets (basic-auth, TLS, bearer, OAuth2), the Role, and the RoleBinding must live — they're all chained to it by the CRD schema (every credential field is a `SecretKeySelector` with no `namespace:`) and by RBAC scoping. If the customer puts the Monitor outside `kube-system` (the documented default), the whole chain stays outside `kube-system`. See [§7.5](#75-the-monitors-namespace-anchors-everything) for the cascade map and [§7.6](#76-two-strategic-options-considered) for the Option 1 vs Option 2 trade-off behind the scoping.
 
 The drop-in YAML:
 
@@ -226,7 +226,9 @@ Remove `"kube-system"` from `spec.matchConstraints.namespaceSelector.matchExpres
 > This carves out the **5** specific objects that are *structurally forced* into `kube-system`:
 >
 > - **4 ConfigMaps** — `ama-metrics-settings-configmap` (settings) + the three custom-scrape-config variants (`-prometheus-config` for replica, `-prometheus-config-node` for Linux daemonset, `-prometheus-config-node-windows` for Windows daemonset).
-> - **1 Secret** — `ama-metrics-mtls-secret`. This Secret is *mounted as a volume* on every ama-metrics scraper pod (daemonset, deployment, target allocator) via `secretName: ama-metrics-mtls-secret` baked into the addon's pod spec, and a Secret-volume can only mount Secrets from the same namespace as the pod. Since the pods live in `kube-system`, the Secret must too. Docs: [TLS-based scraping](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#tls-based-scraping).
+> - **1 Secret** — `ama-metrics-mtls-secret`. This is the shared TLS cert bundle used by the **ConfigMap scrape-config path** (where customers write raw Prometheus scrape config and reference cert file paths under `/etc/prometheus/certs/...`). It is *mounted as a volume* on every ama-metrics scraper pod (daemonset, deployment, target allocator) via `secretName: ama-metrics-mtls-secret` baked into the addon's pod spec, and a Secret-volume can only mount Secrets from the same namespace as the pod. Since the pods live in `kube-system`, the Secret must too. Docs: [TLS-based scraping](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd#tls-based-scraping).
+>
+> Note: the **PodMonitor / ServiceMonitor path does *not* use `ama-metrics-mtls-secret`.** Its CRD `tlsConfig` schema has no file-path fields (`caFile` / `certFile` / `keyFile` were removed upstream years ago); it only accepts `ca.{configMap,secret}` / `cert.{configMap,secret}` / `keySecret`, which are all `SecretKeySelector`s with no `namespace:` field — so they resolve to the Monitor's own namespace. That's why CRD-based TLS doesn't need a `kube-system` allowlist entry either; it follows the same anchor as basic-auth (see [§7.5](#75-the-monitors-namespace-anchors-everything)).
 >
 > All other writes to `kube-system` (other ConfigMaps, other Secrets, RBAC, workloads, etc.) and all writes to the other 19 protected namespaces remain blocked. We verified this on a fresh `zane-auto-2` cluster (classic AKS Automatic, VAPB flipped to `[Deny]` to simulate MSNP behavior) with a 4-case test matrix on the ConfigMap branch — see [Appendix A](#appendix-a-full-reproduction). The mTLS Secret branch is the same CEL idiom extended with one additional `(group, resource, name)` triple (see [§7.5](#75-the-monitors-namespace-anchors-everything) for why this is the complete list).
 >
@@ -234,7 +236,7 @@ Remove `"kube-system"` from `spec.matchConstraints.namespaceSelector.matchExpres
 
 ### Pre-emptive answers to likely AKS questions
 
-- **"Why only 5 names and not more?"** Customer-facing resources like PodMonitor / ServiceMonitor CRs, basic-auth Secrets, and supporting RBAC are steered by our public docs ([`prometheus-metrics-scrape-crd`](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd)) into the **customer's own app namespace** (every example uses `namespace: app-namespace` / `my-app`). When placed there — the documented default — the VAP doesn't fire at all because the customer's namespace isn't one of the 20 protected ones. See [§7.5](#75-the-monitors-namespace-anchors-everything) and [§7.6](#76-two-strategic-options-considered) for the full reasoning.
+- **"Why only 5 names and not more?"** Customer-facing resources like PodMonitor / ServiceMonitor CRs, per-target credential Secrets (basic-auth, TLS, bearer, OAuth2), and supporting RBAC are steered by our public docs ([`prometheus-metrics-scrape-crd`](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-crd)) into the **customer's own app namespace** (every example uses `namespace: app-namespace` / `my-app`). When placed there — the documented default — the VAP doesn't fire at all because the customer's namespace isn't one of the 20 protected ones. See [§7.5](#75-the-monitors-namespace-anchors-everything) and [§7.6](#76-two-strategic-options-considered) for the full reasoning.
 - **"Why can't ama-metrics use `ama-metrics-serviceaccount` instead?"** That SA *is* already exempt (it's in `matchConditions[0]`'s `userInfo.username` allowlist). But our customer-facing UX has customers `kubectl apply` these objects themselves — that's the whole problem. We could change that UX (Options 1/2/3 in the solution-options doc), but the name carve-out is the cheapest fix.
 - **"Why hardcode names instead of a `kubernetes.azure.com/created-by=ama-metrics` label?"** Because the objects are customer-created — the customer doesn't always set such a label, and asking them to is a worse migration than enumerating the 5 names. We could ship the name carve-out *and* a label-based fallback if AKS prefers.
 - **"Will you add more names later?"** Each new ama-metrics object the public docs add to `kube-system` (or any rename) is a new round of "petition AKS". We currently have 5. We'll commit to flagging docs changes that introduce new `kube-system` objects.
@@ -258,9 +260,9 @@ Customer picks namespace N for the Monitor CR
     │   N (the Monitor's namespace)                       │
     │                                                     │
     │   • PodMonitor / ServiceMonitor CR                  │
-    │   • basic-auth Secret                               │ ← CRD schema forces same ns
-    │     (customer-chosen name, e.g. "my-basic-auth")    │   (no `namespace:` field in
-    │                                                     │   basicAuth.{username,password})
+    │   • per-target credential Secret(s)                 │ ← CRD schema forces same ns
+    │     — basic-auth, TLS, bearer, OAuth2               │   (no `namespace:` field in
+    │       (customer-chosen names)                       │   any SecretKeySelector)
     │   • Role (ama-metrics-secrets-reader)               │ ← K8s 1.37+: must be where
     │   • RoleBinding (ama-metrics-secrets-rolebinding)   │   the Secret is readable
     └─────────────────────────────────────────────────────┘
@@ -273,7 +275,7 @@ Customer picks namespace N for the Monitor CR
 
 The pinning is enforced at three levels:
 
-1. **CRD schema** — the `basicAuth.username` / `basicAuth.password` / `bearerTokenSecret` fields are `corev1.SecretKeySelector` objects with only `name`, `key`, `optional` properties — **no `namespace` field exists**. Verified in the repo: [`ama-metrics-servicemonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-servicemonitor-crd.yaml) lines 64–92 and [`ama-metrics-podmonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-podmonitor-crd.yaml) lines 104–132. A customer literally cannot type a namespace into the Secret reference; the API server rejects it as an unknown field. The reference is always resolved against the Monitor's own namespace.
+1. **CRD schema** — *every* Secret-reference field in the PodMonitor/ServiceMonitor schema is a `corev1.SecretKeySelector` (or `corev1.ConfigMapKeySelector` for the CA / cert variants) with only `name`, `key`, `optional` properties — **no `namespace` field exists**. This covers `basicAuth.{username,password}`, `bearerTokenSecret`, `authorization.credentials`, `oauth2.{clientId,clientSecret}`, and `tlsConfig.{ca.secret, cert.secret, keySecret}` — all five credential families share the same shape. Verified in the repo: [`ama-metrics-servicemonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-servicemonitor-crd.yaml) lines 64–92 and [`ama-metrics-podmonitor-crd.yaml`](../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-podmonitor-crd.yaml) lines 104–132 (`basicAuth` shape) plus the corresponding `tlsConfig` blocks (PodMonitor lines 285–376). A customer literally cannot type a namespace into any of these references; the API server rejects `namespace:` as an unknown field. The reference is always resolved against the Monitor's own namespace. **Important corollary:** the CRD `tlsConfig` deliberately omits the file-path fields (`caFile` / `certFile` / `keyFile`) that exist in raw Prometheus config — so the PodMonitor/ServiceMonitor path *cannot* reach into the shared `ama-metrics-mtls-secret` mounted at `/etc/prometheus/certs/`. CRD-based TLS is fully self-contained in the Monitor's ns.
 2. **RBAC scoping** — on K8s 1.37+ the addon's ClusterRole no longer grants cluster-wide Secret access. The target allocator (running as `system:serviceaccount:kube-system:ama-metrics-serviceaccount`) needs an explicit `Role` granting `get/list/watch` on `secrets` *in the Secret's namespace*, plus a `RoleBinding` in that namespace pointing back to the kube-system SA. The Role + RoleBinding therefore must co-locate with the Secret, which must co-locate with the Monitor.
 3. **Settings ConfigMap** — the customer must list every Secret's namespace in `secrets_access_namespaces` of `ama-metrics-settings-configmap`. This is the *only* link back into `kube-system`, and that ConfigMap is already in the ask.
 
@@ -286,7 +288,7 @@ Because of the cascade, **the customer's single choice of `N` decides whether th
 | App namespace (docs default, e.g. `my-app`) | ❌ No | — |
 | Centralized monitoring namespace (e.g. `monitoring-config`) | ❌ No | — |
 | Any other non-protected ns | ❌ No | — |
-| `kube-system` | ✅ Yes | PodMonitor/ServiceMonitor CR (customer-named), basic-auth Secret (customer-named), Role + RoleBinding (fixed-named) |
+| `kube-system` | ✅ Yes | PodMonitor/ServiceMonitor CR (customer-named), per-target credential Secret (customer-named), Role + RoleBinding (fixed-named) |
 | Any other VAP-protected ns (e.g. `gatekeeper-system`) | ✅ Yes | same |
 
 The docs' examples and defaults uniformly use the app namespace. The docs *do* acknowledge `kube-system` as a valid alternative in two places (the `secrets_access_namespaces` note and Step 4's "(including `kube-system` if needed)" parenthetical), but never as the recommended path.
@@ -299,31 +301,31 @@ The full inventory walk of [`prometheus-metrics-scrape-configuration`](https://l
 |---|---|---|---|---|
 | Settings ConfigMap | ConfigMap | `kube-system` | ✅ Yes — agent reads it from `kube-system` only | ✅ |
 | Custom scrape-config CMs (3 variants) | ConfigMap | `kube-system` | ✅ Yes — same | ✅ |
-| mTLS Secret (`ama-metrics-mtls-secret`) | Secret | `kube-system` | ✅ Yes — mounted on the ama-metrics pods, which live in `kube-system` | ✅ |
+| mTLS cert bundle for **ConfigMap path** (`ama-metrics-mtls-secret`) | Secret | `kube-system` | ✅ Yes — mounted on the ama-metrics pods, which live in `kube-system` | ✅ |
 | PodMonitor CR | PodMonitor | Customer app ns (`namespace: app-namespace`) | ❌ No — CR can live anywhere; `namespaceSelector` decouples target ns from CR ns | ❌ |
 | ServiceMonitor CR | ServiceMonitor | Customer app ns | ❌ No — same | ❌ |
-| Basic-auth Secret (customer-named, e.g. `my-basic-auth`) | Secret | Customer app ns (`namespace: my-app`) | ❌ No — chained to the Monitor's ns; customer chooses both | ❌ |
+| Per-target credential Secret for **CRD path** — basic-auth, TLS material, bearer token, OAuth2 (customer-named, e.g. `my-basic-auth`) | Secret | Customer app ns (`namespace: my-app`) | ❌ No — chained to the Monitor's ns by the CRD schema (every credential field is a `SecretKeySelector` with no `namespace:`); customer chooses both | ❌ |
 | `ama-metrics-secrets-reader` Role (K8s 1.37+) | Role | "each ns in `secrets_access_namespaces`" — default = customer app ns | ❌ No — chained to the Secret's ns | ❌ |
 | `ama-metrics-secrets-rolebinding` RoleBinding | RoleBinding | same as Role | ❌ No — chained to the Role's ns | ❌ |
 | PodMonitor / ServiceMonitor **CRDs** (definitions) | CustomResourceDefinition | Cluster-scoped, addon-installed | ❌ No — cluster-scoped; VAP's `resourceRules` are `scope: Namespaced`, and the install is done by the ama-metrics SA which is already exempt | ❌ |
 
 ### Scope summary
 
-- **In the ask (5 named objects, all in `kube-system`, all with fixed names, all structurally forced):** 4 ConfigMaps + 1 mTLS Secret.
-- **Out of scope, by design:** PodMonitor / ServiceMonitor CRs, basic-auth Secrets, and supporting RBAC — they all chain to the Monitor, and the documented default places the Monitor outside `kube-system`. See [§7.6](#76-two-strategic-options-considered) for why we made this design choice.
+- **In the ask (5 named objects, all in `kube-system`, all with fixed names, all structurally forced):** 4 ConfigMaps + 1 mTLS Secret (the latter for the ConfigMap scrape-config path only).
+- **Out of scope, by design:** PodMonitor / ServiceMonitor CRs, their per-target credential Secrets (basic-auth, TLS, bearer, OAuth2), and supporting RBAC — they all chain to the Monitor, and the documented default places the Monitor outside `kube-system`. See [§7.6](#76-two-strategic-options-considered) for why we made this design choice.
 - **Out of scope, naturally:** customer-applied resources in any non-protected namespace (the VAP doesn't fire there), and cluster-scoped resources like the two CRDs (the VAP's `resourceRules` are `scope: Namespaced`).
 
 ---
 
 ## 7.6 Two strategic options considered
 
-There were two clean strategies for handling the customer-applied side of the scrape path (PodMonitor / ServiceMonitor / basic-auth Secret / RBAC). We picked **Option 1** as the basis for [§7](#7-the-exact-ask-to-take-to-aks); Option 2 was evaluated and rejected as structurally infeasible.
+There were two clean strategies for handling the customer-applied side of the scrape path (PodMonitor / ServiceMonitor CRs, their per-target credential Secrets — basic-auth, TLS, bearer, OAuth2 — and the supporting RBAC). We picked **Option 1** as the basis for [§7](#7-the-exact-ask-to-take-to-aks); Option 2 was evaluated and rejected as structurally infeasible.
 
 ### Option 1 — Force customer CRs outside `kube-system` (recommended, the basis for §7)
 
-**Mechanism:** Strengthen our public docs to make "deploy in your app namespace (or any non-protected namespace)" the *only supported* placement for PodMonitor / ServiceMonitor / basic-auth Secret / RBAC. A customer who tries `kube-system` hits the VAP block and is steered by docs + support to pick a different namespace.
+**Mechanism:** Strengthen our public docs to make "deploy in your app namespace (or any non-protected namespace)" the *only supported* placement for PodMonitor / ServiceMonitor / their credential Secrets / RBAC. A customer who tries `kube-system` hits the VAP block and is steered by docs + support to pick a different namespace.
 
-**Allowlist ask:** Only the 5 structurally-forced objects (4 ConfigMaps + mTLS Secret). The Role + RoleBinding are not needed because they only end up in `kube-system` if the Monitor does.
+**Allowlist ask:** Only the 5 structurally-forced objects (4 ConfigMaps + mTLS Secret for the ConfigMap path). The Role + RoleBinding are not needed because they only end up in `kube-system` if the Monitor does.
 
 **Pros:**
 - Minimal ask. Easy AKS conversation.
@@ -346,7 +348,7 @@ There were two clean strategies for handling the customer-applied side of the sc
 |---|---|---|
 | PodMonitor CR | customer-chosen (e.g. `my-app-monitor`, `frontend-scraper`, …) | ❌ unknowable in advance |
 | ServiceMonitor CR | customer-chosen | ❌ unknowable |
-| Basic-auth Secret | customer-chosen (e.g. `my-basic-auth`, `nginx-creds`, …) | ❌ unknowable |
+| Per-target credential Secret (basic-auth / TLS / bearer / OAuth2) | customer-chosen (e.g. `my-basic-auth`, `nginx-tls`, …) | ❌ unknowable |
 | Role | Fixed: `ama-metrics-secrets-reader` (per docs) | ✅ |
 | RoleBinding | Fixed: `ama-metrics-secrets-rolebinding` (per docs) | ✅ |
 
@@ -369,7 +371,7 @@ To handle the unbounded cases, the VAP would need a *non-name* allowlist mechani
 
 ### What Option 1 requires from us (besides the ask)
 
-1. **Docs change in `prometheus-metrics-scrape-crd`:** remove the "(including `kube-system` if needed)" parenthetical from Step 4 of the basic-auth section; add an explicit "do not place PodMonitor, ServiceMonitor, basic-auth Secrets, or their RBAC in `kube-system` — use your app namespace or a dedicated monitoring namespace" guidance line.
+1. **Docs change in `prometheus-metrics-scrape-crd`:** remove the "(including `kube-system` if needed)" parenthetical from Step 4 of the basic-auth section; add an explicit "do not place PodMonitor, ServiceMonitor, per-target credential Secrets (basic-auth, TLS, bearer, OAuth2), or their RBAC in `kube-system` — use your app namespace or a dedicated monitoring namespace" guidance line.
 2. **Migration guidance for existing customers:** a short note in the MSNP onboarding docs telling customers who currently use `kube-system` placement to move before enabling MSNP, plus a `kubectl get podmonitors,servicemonitors -n kube-system -A` audit command.
 3. **Support runbook entry:** "Customer hit VAP deny when applying PodMonitor in `kube-system`" → "Please move to your app namespace per docs."
 
@@ -378,7 +380,7 @@ To handle the unbounded cases, the VAP would need a *non-name* allowlist mechani
 ## 8. Open questions for the AKS meeting
 
 1. **Is AKS willing to ship per-customer-app exemptions to the protect-system-namespaces VAP at all?** If the answer is "no, file Options 1/2/3", that's the end of this conversation.
-2. **Does AKS agree with the Option 1 framing in [§7.6](#76-two-strategic-options-considered)?** Specifically: do they accept that we'll tighten the public docs to forbid `kube-system` placement of PodMonitor / ServiceMonitor / basic-auth Secret / RBAC (currently the recommended-but-not-only path), in exchange for keeping the allowlist at 5 fixed names? If they want to support `kube-system` placement for those resources, we'd need Option 2's label-based or wildcard mechanism — both of which weaken the VAP.
+2. **Does AKS agree with the Option 1 framing in [§7.6](#76-two-strategic-options-considered)?** Specifically: do they accept that we'll tighten the public docs to forbid `kube-system` placement of PodMonitor / ServiceMonitor / per-target credential Secrets (basic-auth, TLS, bearer, OAuth2) / RBAC (currently the recommended-but-not-only path), in exchange for keeping the allowlist at 5 fixed names? If they want to support `kube-system` placement for those resources, we'd need Option 2's label-based or wildcard mechanism — both of which weaken the VAP.
 3. **What's AKS's process for adding to the exemption list?** Quarterly release? Per-ask? Bound to ama-metrics's release cadence or AKS's?
 4. **If we keep adding entries over time, at what count do they prefer we move to a more scalable mechanism** (e.g. a label-based exemption, or an annotation on the CM that ama-metrics could co-sign)?
 5. **Does the `(automatic-authz)` webhook have its own exemption mechanism we should know about?** (For future asks where we'd need customer modifications to *other* aks-managed resources — out of scope today, but worth knowing.)
