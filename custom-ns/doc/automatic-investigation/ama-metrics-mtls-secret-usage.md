@@ -297,6 +297,69 @@ The two routes have very different implications for the MSNP allowlist ask:
 
 - **Public docs need an MSNP-specific clarification.** Something like: "If you are running on a cluster where `kube-system` writes are restricted (e.g., MSNP / AKS Automatic), create a Secret in your own namespace (any name) and reference it from a PodMonitor in the same namespace. The kube-system `ama-metrics-mtls-secret` is only required for the raw scrape-config path."
 
+> See also [§6](#6-does-any-use-case-force-a-cr-into-kube-system) — even setting aside the mTLS Secret topic, no scrape pattern technically requires a CR to live in `kube-system`. This is what makes Option 1 (no CR allowlist) viable.
+
+---
+
+## 6. Does any use case force a CR into `kube-system`?
+
+**No — there is no technical use case that requires a PodMonitor/ServiceMonitor to live in `kube-system`.** Every scraping pattern has a kube-system-free equivalent. This is the key reason Option 1 of the MSNP allowlist ask (do not allowlist CRs in kube-system) is technically complete.
+
+This section enumerates the scenarios customers *might* think require a kube-system Monitor, and shows the alternative in each case.
+
+### 6.1 Pod-annotation auto-discovery is *not* a CRD feature
+
+A common misconception: the `prometheus.io/scrape: "true"` annotation pattern doesn't apply to PodMonitor/ServiceMonitor. It's part of the *raw scrape config* path:
+
+```yaml
+# In ama-metrics-prometheus-config ConfigMap — raw Prometheus YAML, NOT a CR
+scrape_configs:
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+```
+
+This is the ConfigMap path, which *does* require a kube-system ConfigMap (`ama-metrics-prometheus-config` — already one of the 5 names in the Option 1 allowlist ask). PodMonitor/ServiceMonitor CRs use **label-based selectors**, not annotations. So annotation-driven discovery creates no pull toward putting CRs in kube-system — it's served entirely by the ConfigMap path.
+
+### 6.2 Every plausible "CR must live in kube-system" scenario, with the kube-system-free alternative
+
+| Scenario | Does the CR need to be in kube-system? | kube-system-free alternative |
+|---|---|---|
+| **Scrape pods that live in kube-system** (kube-proxy, coredns, metrics-server, etc.) | No | Put the Monitor in any customer ns + `namespaceSelector.matchNames: [kube-system]`. TA already has cluster-wide pod/endpoints list/watch RBAC (this was *not* tightened at 1.36 — that change only affected Secret access). |
+| **Scrape pods across many namespaces from one central Monitor** | No | Put the Monitor in any customer ns (e.g., `monitoring`) + `namespaceSelector.any: true`. |
+| **Scrape ama-metrics' own metrics endpoint** | No | Same — Monitor in any ns + label selector matching ama-metrics pods. |
+| **Use the addon's hardcoded `ama-metrics-mtls-secret` cert bundle directly for mTLS scraping** | No (convenience only) | Duplicate the cert material into a Secret in the Monitor's own ns (see [§2.1](#21-customer-creates-the-secret-in-app-ns)). The name doesn't need to be `ama-metrics-mtls-secret` anywhere outside kube-system. |
+| **Centralize credentials with a central monitoring team** | No | Put Monitor + Secret + Role + RoleBinding together in any customer-owned ns. |
+| **Annotation-based auto-discovery** | N/A — this is the ConfigMap path, not the CRD path (see [§6.1](#61-pod-annotation-auto-discovery-is-not-a-crd-feature)) | Raw scrape config in `ama-metrics-prometheus-config` (separate mechanism). |
+| **Probe CRs (blackbox monitoring)** | N/A | ama-metrics doesn't support the `Probe` CR — only PodMonitor + ServiceMonitor. |
+| **PrometheusRule CRs (recording/alerting rules)** | N/A | ama-metrics doesn't support `PrometheusRule` — recording rules are configured on the Azure Monitor side. |
+| **Default scraping (kubelet, cAdvisor, node-exporter, etc.)** | N/A | These are built into the addon's default config; no customer CR needed at all. |
+
+### 6.3 The genuine (non-technical) pulls toward kube-system
+
+There are real reasons customers *end up* with Monitors in kube-system, but none are technical requirements:
+
+1. **Public-docs inertia.** Microsoft Learn's TLS section instructs customers to create their PodMonitor/ServiceMonitor in `kube-system` (verbatim: *"the ConfigMap, PodMonitor, or ServiceMonitor should be created in `kube-system` namespace"*). This is a doc convention based on the mTLS-bundle-reuse pattern, not a technical requirement. The public docs need to be fixed for MSNP customers regardless.
+
+2. **3rd-party Helm chart defaults.** Some charts (e.g., kube-prometheus-stack, various exporter charts) install their `ServiceMonitor` into the namespace where the chart deploys. If a customer installs such a chart into kube-system, the chart's hardcoded `ServiceMonitor` lands there too. Most well-designed charts let you override the Monitor namespace via Helm values, but not all.
+
+3. **Migration of existing kube-system CRs.** Customers who set up Monitors in kube-system on a classic AKS cluster *before* getting MSNP-flipped will need to migrate them. Operationally annoying, but not a technical requirement.
+
+4. **Mental-model habit.** Many K8s admins reach for kube-system out of "this is monitoring infrastructure, infrastructure goes in kube-system" reflex.
+
+### 6.4 Implication for the Option 1 vs Option 1.5 decision
+
+| Option | Customer experience |
+|---|---|
+| **Option 1** (no CR allowlist) | Technically complete — every workload monitorable today can still be monitored. Customers must place Monitors in their own namespaces. The four pulls in [§6.3](#63-the-genuine-non-technical-pulls-toward-kube-system) become hard cliffs: docs are wrong, some charts need overrides, existing kube-system CRs need migration, mental-model retraining. |
+| **Option 1.5** (CR allowlist for no-credential Monitors only) | Soft on the four pulls — at least the "central monitoring team with kube-system CRs scraping cluster-wide unauthenticated targets" pattern keeps working. But the moment a customer adds auth, they hit a wall (Option 1.5 excludes credentialed Monitors from kube-system because the RBAC for credentials cannot be granted without further allowlist expansion). |
+
+**So when AKS pushes back on Option 1.5 with "do we really need to allowlist CRs?", the honest answer is:** no, Option 1 alone preserves all scraping functionality. The Option 1.5 ask is about *softening the customer-experience cliff* (docs, charts, migration, habits) for the narrow subset of customers running unauthenticated centralized monitoring — not about preserving lost functionality.
+
 ---
 
 ## Appendix: Code references
