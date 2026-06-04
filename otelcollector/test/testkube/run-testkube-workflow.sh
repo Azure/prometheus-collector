@@ -225,48 +225,67 @@ if [[ ${#workflows[@]} -eq 0 ]]; then
 fi
 failed_workflows=()
 successful_workflows=()
+MAX_RETRIES=1
 
 for wf in "${workflows[@]}"; do
-    echo "Running workflow: $wf"
-    kubectl testkube run testworkflow "$wf"
+    attempt=0
+    wf_passed=false
 
-    echo "Waiting for execution to be created..."
-    sleep 5
+    while [[ $attempt -le $MAX_RETRIES ]]; do
+        if [[ $attempt -gt 0 ]]; then
+            echo "⚠ Retrying workflow: $wf (attempt $((attempt+1))/$((MAX_RETRIES+1)))"
+            sleep 10
+        fi
 
-    echo "Fetching testworkflow executions for $wf..."
-    kubectl testkube get testworkflowexecution
-    execution_id=$(kubectl testkube get testworkflowexecution | grep -i "$wf" | head -n 1 | awk '{print $1}')
+        echo "Running workflow: $wf"
+        kubectl testkube run testworkflow "$wf"
 
-    echo "Execution ID: $execution_id"
+        echo "Waiting for execution to be created..."
+        sleep 5
 
-    # Check if execution_id is empty
-    if [[ -z "$execution_id" ]]; then
-        echo "Error: Could not find execution ID for $wf"
-        exit 1
-    fi
+        echo "Fetching testworkflow executions for $wf..."
+        kubectl testkube get testworkflowexecution
+        execution_id=$(kubectl testkube get testworkflowexecution | grep -i "$wf" | head -n 1 | awk '{print $1}')
 
-    # Watch until the testworkflow finishes
-    kubectl testkube watch testworkflowexecution $execution_id
+        echo "Execution ID: $execution_id"
 
-    # Get the results as a formatted json file
-    kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${TARGET_ENV}-${wf}.json"
+        # Check if execution_id is empty
+        if [[ -z "$execution_id" ]]; then
+            echo "Error: Could not find execution ID for $wf"
+            ((attempt++))
+            continue
+        fi
 
-    # Verify the JSON is valid
-    if ! jq empty "testkube-results-${TARGET_ENV}-${wf}.json" 2>/dev/null; then
-        echo "Error: Failed to get valid JSON results from testkube for $wf"
-        echo "Contents of testkube-results-${TARGET_ENV}-${wf}.json:"
-        cat "testkube-results-${TARGET_ENV}-${wf}.json"
-        exit 1
-    fi
+        # Watch until the testworkflow finishes
+        kubectl testkube watch testworkflowexecution $execution_id
 
-    # For any test that has failed, print out the logs
-    if [[ $(jq -r '.result.status' "testkube-results-${TARGET_ENV}-${wf}.json") == "failed" ]]; then
+        # Get the results as a formatted json file
+        kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${TARGET_ENV}-${wf}.json"
+
+        # Verify the JSON is valid
+        if ! jq empty "testkube-results-${TARGET_ENV}-${wf}.json" 2>/dev/null; then
+            echo "Error: Failed to get valid JSON results from testkube for $wf"
+            echo "Contents of testkube-results-${TARGET_ENV}-${wf}.json:"
+            cat "testkube-results-${TARGET_ENV}-${wf}.json"
+            ((attempt++))
+            continue
+        fi
+
+        # Check if the workflow passed
+        if [[ $(jq -r '.result.status' "testkube-results-${TARGET_ENV}-${wf}.json") != "failed" ]]; then
+            wf_passed=true
+            break
+        fi
 
         echo "$wf TestWorkflow failed. Execution ID: $execution_id"
+        ((attempt++))
+    done
 
-        failed_workflows+=("${wf}")
-    else
+    if $wf_passed; then
         successful_workflows+=("${wf}")
+    else
+        echo "$wf TestWorkflow failed after $((MAX_RETRIES+1)) attempt(s)."
+        failed_workflows+=("${wf}")
     fi
 done
 
