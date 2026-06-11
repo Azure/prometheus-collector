@@ -55,8 +55,8 @@ spec:
         {{-  end  }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist | join "," }}
+            {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList }}
+        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList | join "," }}
             {{- end }}
           {{- end }}
         {{- end }}
@@ -113,8 +113,10 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
+      {{- if $arcExtensionSettings.isArcExtension }}
       nodeSelector:
         kubernetes.io/os: linux
+      {{- end }}
       {{- if not $arcExtensionSettings.isArcExtension }}
       affinity:
         nodeAffinity:
@@ -145,8 +147,10 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+          {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoExecute"
+          {{- end }}
       {{- end }}
       volumes:
         - name: settings-vol-config

@@ -7,12 +7,12 @@
 #                                                                               #
 # Purpose: Roll out new versions of the extension type                          #
 #   microsoft.azuremonitor.containers.metrics                                   #
-# to AKS (Managed) clusters via the central Ev2 extension rollout artifacts,    #
-# using packageConfig: Microsoft.AzureMonitor.Containers.Metrics-PromAks052926. #
+# to Arc-enabled (Connected) clusters via the central Ev2 extension rollout    #
+# artifacts, using packageConfig:                                               #
+#   Microsoft.AzureMonitor.Containers.Metrics-Prom092625                        #
 #                                                                               #
 # This replaces the custom Ev2 ServiceGroup approach previously used in         #
-# .pipelines/deployment/aks-extension-release/ (now removed in favor of the     #
-# central artifacts model documented in wiki page 671961).                      #
+# .pipelines/deployment/arc-extension-release/.                                 #
 #################################################################################
 
 trigger: none
@@ -75,32 +75,42 @@ variables:
   - name: serviceIdentifier
     value: '3170cdd2-19f0-4027-912b-1027311691a2'
 
-  # Ev2 ServiceGroup registered with the extension platform team for AKS
-  # Managed central rollout of microsoft.azuremonitor.containers.metrics.
+  # Ev2 ServiceGroup registered with the extension platform team for central
+  # rollout of microsoft.azuremonitor.containers.metrics. Same SG is used by
+  # the AKS pipeline; PackageConfigName below scopes this rollout to Arc
+  # (Connected) clusters.
   # TODO: confirm exact name with ClusterConfig/Extensions partner team
   # (modelled on the argo example: Microsoft.Azure.ClusterConfig.ExtensionRollout.ArgoCd).
   - name: serviceGroup
     value: 'Microsoft.Azure.InfrastructureInsights.ContainerInsights.AzureMonitorMetrics'
 
   # ---- Version selection ---------------------------------------------------
+  # The build pipeline packages and pushes the SAME helm chart twice:
+  #   * <runName>          -> consumed by the AKS rollout pipeline
+  #   * <runName>-arc      -> consumed by THIS Arc rollout pipeline
+  # See pushChartToAcr.sh and the "Build: push helm chart to dev ACR" step
+  # in .pipelines/azure-pipeline-build.yml for the dual-tag push.
+  #
   # When `overrideExtensionVersion` is left at its default value of 'auto',
   # the pipeline uses the runName of the latest upstream build pipeline run
   # (resolved at runtime by the resources.pipelines reference). Any other
   # value is taken as an explicit version override (e.g. for rollback or for
-  # pinning to a known-good build).
+  # pinning to a known-good build). The '-arc' suffix is always appended.
   - ${{ if ne(parameters.overrideExtensionVersion, 'auto') }}:
-      - name: extensionVersionValue
+      - name: baseVersionValue
         value: '${{ parameters.overrideExtensionVersion }}'
   - ${{ if eq(parameters.overrideExtensionVersion, 'auto') }}:
-      - name: extensionVersionValue
+      - name: baseVersionValue
         value: '$(resources.pipeline._Azureprometheus-collector.runName)'
+  - name: extensionVersionValue
+    value: '$(baseVersionValue)-arc'
 
   # ---- ConfigurationOverrides (per cloud) ---------------------------------
-  # extensionTypeName / packageConfig / helmChartUrl values were sourced from
-  # the legacy .pipelines/deployment/aks-extension-release/Configuration.*.json
-  # files (now removed). MSI ARM IDs below must be the cloud-specific identity
-  # registered in the extension type registration document (msiClientIds field).
-  # See: https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
+  # extensionTypeName / packageConfig / helmChartUrl mirror
+  # .pipelines/deployment/arc-extension-release/ServiceGroupRoot/Configuration.*.json
+  # userAssignedIdentity must be the MSI registered in the *cloud-specific*
+  # extension type registration document (msiClientIds field). See:
+  # https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
 
   - name: ProdConfigurationOverrides
     value: |
@@ -108,7 +118,7 @@ variables:
         "ConfigurationSpecification": {
           "settings": {
             "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625",
             "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
             "userAssignedIdentity": "/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release",
             "version": "$(extensionVersionValue)",
@@ -123,7 +133,7 @@ variables:
   #       "ConfigurationSpecification": {
   #         "settings": {
   #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625",
   #           "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
   #           "userAssignedIdentity": "REPLACE_WITH_FAIRFAX_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
@@ -138,7 +148,7 @@ variables:
   #       "ConfigurationSpecification": {
   #         "settings": {
   #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625",
   #           "helmChartUrl": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
   #           "userAssignedIdentity": "REPLACE_WITH_MOONCAKE_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
@@ -203,7 +213,7 @@ extends:
                   # the wave order (Canary -> Pilot -> ... -> HighAvailability).
                   Select: regions(centraluseuap,eastus2euap)
                   #Select: regions(*)
-                  # ArtifactsVersionOverride: $(extensionVersionValue)
+                  ArtifactsVersionOverride: $(extensionVersionValue)
 
       # - stage: FF_Managed_SDP
       #   displayName: "FF: Managed SDP"
@@ -233,7 +243,7 @@ extends:
       #             ServiceGroup: $(serviceGroup)
       #             ConfigurationOverrides: $(FairfaxConfigurationOverrides)
       #             Select: regions(*)
-      # #             ArtifactsVersionOverride: $(extensionVersionValue)
+      #             ArtifactsVersionOverride: $(extensionVersionValue)
 
       # - stage: MC_Managed_SDP
       #   displayName: "MC: Managed SDP"
@@ -258,4 +268,4 @@ extends:
       #             ServiceGroup: $(serviceGroup)
       #             ConfigurationOverrides: $(MooncakeConfigurationOverrides)
       #             Select: regions(*)
-      # #             ArtifactsVersionOverride: $(extensionVersionValue)
+      #             ArtifactsVersionOverride: $(extensionVersionValue)
