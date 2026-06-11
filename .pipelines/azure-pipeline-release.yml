@@ -15,6 +15,9 @@ parameters:
 - name: 'ExtensionChartTag'
   displayName: 'Extension Chart Tag'
   type: string
+- name: 'ImageTag'
+  displayName: 'Image Tag'
+  type: string
 
 variables:
 - name: ServiceTreeGUID
@@ -86,12 +89,12 @@ extends:
             forceRegistration: true
             configurationOverrides:
               settings:
-                linuxTag: "$(resources.pipeline._Azureprometheus-collector.runName)"
-                linuxCCPTag: "$(resources.pipeline._Azureprometheus-collector.runName)-ccp"
-                windowsTag: "$(resources.pipeline._Azureprometheus-collector.runName)-win"
+                linuxTag: "${{ parameters.ImageTag }}"
+                linuxCCPTag: "${{ parameters.ImageTag }}-ccp"
+                windowsTag: "${{ parameters.ImageTag }}-win"
                 chartTag: "${{ parameters.ExtensionChartTag }}"
-                targetAllocatorTag: "$(resources.pipeline._Azureprometheus-collector.runName)-targetallocator"
-                configReaderTag: "$(resources.pipeline._Azureprometheus-collector.runName)-cfg"
+                targetAllocatorTag: "${{ parameters.ImageTag }}-targetallocator"
+                configReaderTag: "${{ parameters.ImageTag }}-cfg"
                 pushNewNEChart: "${{ lower(parameters.pushNewNEChart) }}"
                 NEChartTag: "${{ parameters.NEChartTag }}"
                 onlyCCPRelease: "${{ lower(parameters.onlyCCPRelease) }}"

@@ -33,6 +33,10 @@
       "targetType": "ServiceResourceDefinition",
       "targetName": "ShellExtension",
       "actions": [
+        "shell/PushLinuxImage",
+        "shell/PushWindowsImage",
+        "shell/PushTargetAllocatorImage",
+        "shell/PushConfigReaderImage",
         "shell/PushArcHelmChart"
       ],
       "dependsOn": []
