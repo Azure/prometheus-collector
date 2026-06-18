@@ -42,17 +42,21 @@
                     "replaceWith": "$config(shellExtSubnetNameBase)"
                 },
                 {
-                    "find": "$_CLIENT_ID_$",
+                    "find": "$_CLIENT_ID_OLD_$",
                     "replaceWith": "$config(clientId)"
-                },                
-                {
-                    "find": "$_PRINCIPAL_ID_$",
-                    "replaceWith": "$serviceResourceDefinition(FetchMSIClientId).action(deploy).outputs(principalId.value)"
                 },
                 {
                     "find": "$_PRINCIPAL_ID_OLD_$",
                     "replaceWith": "$config(principalId)"
-                },                
+                },                  
+                {
+                    "find": "$_CLIENT_ID_$",
+                    "replaceWith": "$serviceResourceDefinition(FetchMSIClientId).action(deploy).outputs(clientId.value)"
+                },
+                {
+                    "find": "$_PRINCIPAL_ID_$",
+                    "replaceWith": "$serviceResourceDefinition(FetchMSIClientId).action(deploy).outputs(principalId.value)"
+                },
                 {
                     "find": "$_MANAGED_IDENTITY_NAME_$",
                     "replaceWith": "$config(managedIdentityName)"
@@ -75,6 +79,10 @@
                 },
                 {
                     "find": "\"$_ENABLE_DEFENDER_$\"",
+                    "replaceWith": "true"
+                },
+                {
+                    "find": "\"$_ASSIGN_ROLES_$\"",
                     "replaceWith": "true"
                 },
                 {
