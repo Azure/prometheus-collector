@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -164,10 +163,8 @@ func readFile(fileName string, podName string) []string {
 func writeLines(lines []string) int {
 	count := 0
 	for _, rawLine := range lines {
-		//fmt.Printf("raw line #%d: %s\r\n", i, rawLine)
 		line := strings.Trim(rawLine, " ")
 		if len(line) > 0 {
-			//fmt.Printf("line #%d: %s\r\n", i, line)
 			fmt.Printf("%s\r\n", line)
 			count++
 		} else {
@@ -227,27 +224,18 @@ var _ = Describe("Regions Suite", func() {
 
 		It("Test 1 - Check that there are no errors in /opt/microsoft/linuxmonagent/mdsd.err", func() {
 
-			fmt.Printf("DEBUG TEST 1 MARKER before bit-set: result=0x%02X\r\n", testResultCode)
-
 			numErrLines := writeLines(readFile(mdsdErrFileName, podName))
 			if numErrLines > 0 {
 				fmt.Printf("%s is not empty.\r\n", mdsdErrFileName)
 
 				testResultCode |= test1
-
 				fmt.Printf("Test 1 failed with %d error lines in %s\r\n", numErrLines, mdsdErrFileName)
-				// Fail the test immediately if there are errors in the log file
-				////Fail(fmt.Sprintf("Test 1 failed with %d error lines in %s", numErrLines, mdsdErrFileName))
 
 				writeLines(readFile(mdsdInfoFileName, podName))
 				writeLines(readFile(mdsdWarnFileName, podName))
 			}
-			//***************
-			fmt.Printf("DEBUG TEST 1 MARKER after bit-set: numErrLines=%d result=0x%02X\r\n", numErrLines, testResultCode)
 
 			Expect(numErrLines).To(Equal(0))
-
-			////estResultCode &^= test1 // Clear failure bit if we got here without errors
 		})
 
 		It("Test 2 - Enumerate all the 'error' or 'warning' records in /MetricsExtensionConsoleDebugLog.log", func() {
@@ -255,15 +243,11 @@ var _ = Describe("Regions Suite", func() {
 			var lines []string = readFile(metricsExtDebugLogFileName, podName)
 			count := 0
 
-			// for i := 0; i < 10; i++ {
-			// 	line := lines[i]
 			for _, line := range lines {
-				//fmt.Printf("#line: %d, %s \r\n", i, line)
 
 				var fields []string = strings.Fields(line)
 				if len(fields) > 2 {
 					metricExt := metricExtConsoleLine{line: line, dt: fields[0], status: fields[1], data: fields[2]}
-					//fmt.Println(metricExt.status)
 					status := strings.ToLower(metricExt.status)
 					if strings.Contains(status, ERROR) || strings.Contains(status, WARN) {
 						fmt.Println(line)
@@ -272,20 +256,19 @@ var _ = Describe("Regions Suite", func() {
 				}
 			}
 
-			fmt.Printf("DEBUG TEST 2 MARKER before bit-set: result=0x%02X\r\n", testResultCode)
 			if count > 0 {
 				testResultCode |= test2
-
 				fmt.Printf("Test 2 found %d 'error' or 'warning' records in %s\r\n", count, metricsExtDebugLogFileName)
-				////Fail(fmt.Sprintf("Test 2 found %d 'error' or 'warning' records in %s", count, metricsExtDebugLogFileName))
 			}
-			//*************
-			fmt.Printf("DEBUG TEST 2 MARKER after bit-set: count=%d result=0x%02X\r\n", count, testResultCode)
 
 			Expect(count).To(Equal(0))
 		})
 
 		It("Test 3 - Check that /etc/mdsd.d/config-cache/metricsextension exists", func() {
+
+			const metricsextension string = "metricsextension"
+
+			fmt.Printf("Checking whether or not /etc/mdsd.d/config-cache/'%s' exists\r\n", metricsextension)
 
 			var cmd []string = []string{"ls", "/etc/mdsd.d/config-cache/"}
 			stdout, _, err := utils.ExecCmd(K8sClient, Cfg, podName, containerName, namespace, cmd)
@@ -297,12 +280,15 @@ var _ = Describe("Regions Suite", func() {
 			for i := 0; i < len(list) && !metricsExtExists; i++ {
 				s := list[i]
 				fmt.Println(s)
-				metricsExtExists = (strings.Compare(s, "metricsextension") == 0)
+				metricsExtExists = (strings.Compare(s, metricsextension) == 0)
+			}
+
+			if !metricsExtExists {
+				testResultCode |= test3
+				fmt.Printf("Test 3 failed: %s does not exist.\r\n", metricsextension)
 			}
 
 			Expect(metricsExtExists).To(BeTrue())
-
-			fmt.Printf("%s exists.\r\n", metricsextension)
 		})
 	})
 
@@ -321,6 +307,11 @@ var _ = Describe("Regions Suite", func() {
 			Expect(ok).To(BeTrue(), "Result should be of type model.Vector")
 			Expect(vectorResult).NotTo(BeEmpty(), "Result should not be empty")
 
+			if !ok || vectorResult.Len() == 0 {
+				testResultCode |= test4
+				fmt.Printf("Test 4 failed: Query '%s' returned no results or was not of type model.Vector.\r\n", query)
+			}
+
 			fmt.Printf("%d metrics were returned from the query.\r\n", vectorResult.Len())
 		})
 
@@ -337,6 +328,11 @@ var _ = Describe("Regions Suite", func() {
 			Expect(ok).To(BeTrue(), "Result should be of type model.Vector")
 			Expect(vectorResult).NotTo(BeEmpty(), "Result should not be empty")
 
+			if !ok || vectorResult.Len() == 0 {
+				testResultCode |= test5
+				fmt.Printf("Test 5 failed: Recording rule '%s' returned no results or was not of type model.Vector.\r\n", parmRuleName)
+			}
+
 			fmt.Printf("%d metrics were returned from the recording rule.\r\n", vectorResult.Len())
 		})
 
@@ -348,7 +344,13 @@ var _ = Describe("Regions Suite", func() {
 			fmt.Println(warnings)
 			Expect(err).NotTo(HaveOccurred())
 
-			fmt.Println(result)
+			_, ok := result.(model.Value)
+
+			if !ok {
+				testResultCode |= test6
+				fmt.Printf("Test 6 failed: results was not of type model.Value.\r\n")
+			}
+
 			fmt.Printf("Instant query results: %+v\r\n", result.(model.Value).String())
 		})
 
@@ -361,24 +363,8 @@ var _ = Describe("Regions Suite", func() {
 			envConfig, err := cloudConfig.ReadCloudConfig()
 			Expect(err).NotTo(HaveOccurred())
 
-			// Create a credential using the specified client ID
-			// // cred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
-			// // 	ID: azidentity.ClientID(azureClientId),
-			// // 	ClientOptions: azcore.ClientOptions{
-			// // 		Cloud: *envConfig,
-			// // 	},
-			// // })
-			// // cred, err := utils.CreateDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
-			// // 	////ID: azidentity.ClientID(azureClientId),
-			// // 	ClientOptions: azcore.ClientOptions{
-			// // 		Cloud: *envConfig,
-			// // 	},
-			// // })
+			// Create a credential using the specified client ID (see AZURE_CLIENT_ID environment variable).
 			cred, err := utils.CreateDefaultAzureCredential(nil)
-			if err != nil {
-				log.Fatalf("failed to create managed identity credential: %v", err)
-			}
-
 			Expect(err).NotTo(HaveOccurred())
 
 			// Options need to be passed to the "credential" and the "client" outside of the public cloud.
@@ -391,6 +377,11 @@ var _ = Describe("Regions Suite", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client).ToNot(BeNil())
+
+			if err != nil {
+				testResultCode |= test7
+				fmt.Printf("Test 7 failed to create MetricsClient: %v\r\n", err)
+			}
 
 			var response azquery.MetricsClientQueryResourceResponse
 			timespan := azquery.TimeInterval("PT30M")
@@ -410,6 +401,11 @@ var _ = Describe("Regions Suite", func() {
 				})
 
 			Expect(err).NotTo(HaveOccurred())
+
+			if err != nil || len(response.Response.Value) == 0 {
+				testResultCode |= test7
+				fmt.Printf("Test 7 failed to query metrics: %v\r\n", err)
+			}
 
 			fmt.Printf("%d Metrics returned\r\n", len(response.Response.Value))
 			for i, v := range response.Response.Value {
