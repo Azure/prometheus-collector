@@ -208,6 +208,21 @@ Error from server (Forbidden): error when creating "...": admission webhook / Va
 
 ---
 
+## 6A. Follow-up: ama-logs ConfigMaps
+
+The same `container-azm-ms-` prefix exception (`apply-to-non-azure-monitor-configmap`, §3) also covers the **ama-logs (Container Insights)** customer-facing ConfigMaps. Validated on 2026-06-19 using the **real** Docker-Provider manifests (`Docker-Provider/kubernetes/container-azm-ms-*config.yaml`), applied as a customer (identity `zanejohnson@microsoft.com`) and deleted afterward to restore baseline.
+
+> Note: there is also a third file, `container-azm-ms-osmconfig.yaml` (`metadata.name: container-azm-ms-osmconfig`), not tested here but covered by the same prefix.
+
+| # | Resource (real file) | `metadata.name` | Expected | Actual | Notes |
+|---|---|---|---|---|---|
+| AL1 | `container-azm-ms-agentconfig.yaml` | `container-azm-ms-agentconfig` | ALLOW | ✅ ALLOW | created (8 data keys), verified, deleted |
+| AL2 | `container-azm-ms-vpaconfig.yaml` | `container-azm-ms-vpaconfig` | ALLOW | ✅ ALLOW | created (1 data key), verified, deleted |
+
+**Result:** both ama-logs customer ConfigMaps are admitted to `kube-system` via the shared `container-azm-ms-` prefix exception, confirming a single rule covers both the ama-metrics and ama-logs ConfigMap surfaces. Raw traces in [Appendix C](#appendix-c-raw-terminal-output-execution-trace).
+
+---
+
 ## 7. Cleanup
 
 ```powershell
@@ -614,6 +629,47 @@ configmap "ama-metrics-vap-extra" deleted from kube-system namespace
 ```
 
 **E1 + E2 conclusion:** the VAP exception matches strictly on the object's `metadata.name` (surfaced as `request.name`). The local file name has no bearing on admission in either direction.
+
+### AL1 — ama-logs `container-azm-ms-agentconfig` (real file, expect ALLOW) → **ALLOW ✅**
+
+```text
+$ kubectl apply -f Docker-Provider/kubernetes/container-azm-ms-agentconfig.yaml
+configmap/container-azm-ms-agentconfig created
+
+$ kubectl get configmap container-azm-ms-agentconfig -n kube-system
+NAME                           DATA   AGE
+container-azm-ms-agentconfig   8      3s
+
+$ kubectl get configmap container-azm-ms-agentconfig -n kube-system -o jsonpath="{.data}"   # keys:
+agent-settings
+alertable-metrics-configuration-settings
+config-version
+integrations
+log-data-collection-settings
+metric_collection_settings
+prometheus-data-collection-settings
+schema-version
+
+$ kubectl delete configmap container-azm-ms-agentconfig -n kube-system
+configmap "container-azm-ms-agentconfig" deleted from kube-system namespace
+```
+
+### AL2 — ama-logs `container-azm-ms-vpaconfig` (real file, expect ALLOW) → **ALLOW ✅**
+
+```text
+$ kubectl apply -f Docker-Provider/kubernetes/container-azm-ms-vpaconfig.yaml
+configmap/container-azm-ms-vpaconfig created
+
+$ kubectl get configmap container-azm-ms-vpaconfig -n kube-system
+NAME                         DATA   AGE
+container-azm-ms-vpaconfig   1      3s
+
+$ kubectl get configmap container-azm-ms-vpaconfig -n kube-system -o jsonpath="{.data}"   # keys:
+NannyConfiguration
+
+$ kubectl delete configmap container-azm-ms-vpaconfig -n kube-system
+configmap "container-azm-ms-vpaconfig" deleted from kube-system namespace
+```
 
 
 
