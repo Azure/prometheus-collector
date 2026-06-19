@@ -1,5 +1,10 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 06-19-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260619.1`
+* Change log -
+  * Fix Azure China (Mooncake) authentication: pin the modern Microsoft Entra authority host (`login.partner.microsoftonline.cn`) for `CLOUD=AzureChina` so `ClientCertificateCredential` OIDC issuer validation succeeds with the updated azidentity/MSAL SDK.
+
 ## Release 04-14-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260414.1`
 * Change log -
