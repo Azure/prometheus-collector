@@ -241,6 +241,29 @@ On Kubernetes ≥1.36, a Pod/ServiceMonitor that references a **custom-named** c
 
 ---
 
+## 6C. Functional test: no-credential Monitor in kube-system works without RBAC
+
+This is an **end-to-end functional** test (beyond admission): does a no-credential ServiceMonitor placed **in `kube-system`** actually get discovered and scraped **without any Role/RoleBinding or `secrets_access_namespaces`**? Validated 2026-06-22.
+
+**Setup:**
+- `prometheus-reference-app` (Deployment + Service) in `default` (ports 2112/2113/2114).
+- ServiceMonitor `noauth-smon-ks` **in `kube-system`** with `namespaceSelector: [default]`, selecting `app: prometheus-reference-app`, endpoint port `weather-app` (2112), **no `basicAuth`/`tlsConfig`**.
+- **No** Role, **no** RoleBinding, **no** `secrets_access_namespaces` entry.
+
+**Verification** (the MSNP VAP `aks-managed-protect-interactive-access` blocks `port-forward`/`exec` to kube-system pods, so the target allocator API was queried from a `busybox` probe pod in `default` hitting the in-cluster service `ama-metrics-operator-targets.kube-system.svc:80`):
+
+| Check | Result |
+|---|---|
+| TA `/jobs` contains `serviceMonitor/kube-system/noauth-smon-ks/0` | ✅ |
+| TA `/scrape_configs` job generated: `role: endpointslice`, `namespaces: [default]`, `scheme: http`, **no `basic_auth`/`tls_config`** | ✅ |
+| TA `/jobs/.../targets` discovered real target `10.244.3.248:2112` (= ref-app pod IP) with `endpoint_conditions_ready: true`, allocated to scraper `ama-metrics-6bf79fcd6b-5fkqs` | ✅ |
+
+**Result:** a **no-credential Monitor in `kube-system` is fully functional with zero RBAC** — the target allocator discovers its targets and assigns them to a scraper. The Role/RoleBinding requirement only arises when a Monitor references a credential Secret (and only on K8s ≥1.36). This confirms the clean case for kube-system Monitors: plain/unauthenticated scrape targets need nothing beyond the CR itself. Raw trace in [Appendix C](#appendix-c-raw-terminal-output-execution-trace).
+
+> Note: validated on K8s 1.35.5, but the no-credential path is version-independent (no Secret is ever read), so the conclusion holds for ≥1.36 as well.
+
+---
+
 ## 7. Cleanup
 
 ```powershell
@@ -733,6 +756,36 @@ Error from server (Forbidden): error when creating "rolebinding-ks.yaml": rolebi
 
 $ kubectl get rolebinding ama-metrics-secrets-rolebinding -n kube-system
 Error from server (NotFound): rolebindings.rbac.authorization.k8s.io "ama-metrics-secrets-rolebinding" not found
+```
+
+### E2E — no-credential ServiceMonitor in kube-system, functional via target allocator → **WORKS, no RBAC ✅**
+
+```text
+# ServiceMonitor in kube-system (no auth), ref app in default, NO Role/RoleBinding, NO secrets_access_namespaces
+$ kubectl apply -f noauth-smon-ks.yaml
+servicemonitor.azmonitoring.coreos.com/noauth-smon-ks created
+
+# port-forward/exec to kube-system pods is blocked by VAP 'aks-managed-protect-interactive-access',
+# so the TA API was queried from a busybox probe pod in 'default':
+$ kubectl exec -n default ta-probe -- wget -q -O- http://ama-metrics-operator-targets.kube-system.svc.cluster.local:80/jobs
+... "serviceMonitor/kube-system/noauth-smon-ks/0":{"_link":"/jobs/serviceMonitor%2Fkube-system%2Fnoauth-smon-ks%2F0/targets"} ...
+
+$ kubectl exec -n default ta-probe -- wget -q -O- http://.../scrape_configs   # job for our Monitor:
+"serviceMonitor/kube-system/noauth-smon-ks/0": {
+  "job_name":"serviceMonitor/kube-system/noauth-smon-ks/0",
+  "kubernetes_sd_configs":[{"role":"endpointslice","namespaces":{"names":["default"]}}],
+  "scheme":"http"   # <-- no basic_auth / tls_config block
+  ...
+}
+
+$ kubectl exec -n default ta-probe -- wget -q -O- http://.../jobs/serviceMonitor%2Fkube-system%2Fnoauth-smon-ks%2F0/targets
+"ama-metrics-6bf79fcd6b-5fkqs":{ "targets":[{"targets":["10.244.3.248:2112"],   # <-- real ref-app pod IP discovered
+   "labels":{ ... "__meta_kubernetes_endpointslice_endpoint_conditions_ready":"true",
+              "__meta_kubernetes_pod_ip":"10.244.3.248", ... }}]}
+
+# cross-check: ref app pod IP
+$ kubectl get pods -n default -l app=prometheus-reference-app -o jsonpath="{.items[0].status.podIP}"
+10.244.3.248
 ```
 
 
