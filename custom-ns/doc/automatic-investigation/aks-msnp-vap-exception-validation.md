@@ -223,6 +223,24 @@ The same `container-azm-ms-` prefix exception (`apply-to-non-azure-monitor-confi
 
 ---
 
+## 6B. Follow-up: RBAC (Role/RoleBinding) placement for credentialed Monitors
+
+On Kubernetes ≥1.36, a Pod/ServiceMonitor that references a **custom-named** credential Secret (basicAuth/bearer/oauth/custom-TLS) requires a namespaced `Role`+`RoleBinding` granting `kube-system:ama-metrics-serviceaccount` read access to that Secret (see PRs [#1493](https://github.com/Azure/prometheus-collector/pull/1493) / [#1536](https://github.com/Azure/prometheus-collector/pull/1536) and `internal/docs/secret-restriction-changes.md`). This sub-test checks **where** that RBAC can be created under the MSNP VAP.
+
+> Note: `Role`/`RoleBinding` are **not** in the VAP exception list (only `ama-metrics-*`/`container-azm-ms-` ConfigMaps, `ama-metrics-mtls-secret`, and the Monitor CRs are). Validated 2026-06-22.
+
+| # | Resource | Namespace | Expected | Actual | Notes |
+|---|---|---|---|---|---|
+| R1 | Secret + Role + RoleBinding + ServiceMonitor (full credentialed stack) | customer ns `vap-ext-validation` | ALLOW | ✅ ALLOW | all 4 + namespace created; VAP never fires outside protected namespaces |
+| R2 | Role `ama-metrics-secrets-reader` | `kube-system` | DENY | ✅ DENY | RBAC not in exception list → blocked |
+| R3 | RoleBinding `ama-metrics-secrets-rolebinding` | `kube-system` | DENY | ✅ DENY | RBAC not in exception list → blocked |
+
+**Result — the asymmetry that drives the guidance:** Role/RoleBinding creation is **allowed in a customer namespace** but **denied in `kube-system`**. Therefore a credentialed Monitor that needs RBAC (custom-named secret, K8s ≥1.36) **cannot be fully configured inside `kube-system`** on an MSNP cluster — the Secret-reader Role+RoleBinding step is blocked. Such Monitors must live in a customer namespace, where the Secret, Role, RoleBinding, and Monitor all sit outside the VAP's scope; only the `secrets_access_namespaces` edit to `ama-metrics-settings-configmap` touches `kube-system`, and that is already allowlisted.
+
+> Caveat (unverified): a kube-system Monitor referencing the pre-named `ama-metrics-mtls-secret` *may* avoid the Role/RoleBinding requirement because the ClusterRole `ama-metrics-reader` already grants `get,watch` on that exact name cluster-wide (`ama-metrics-clusterRole.yaml:25-28`, bound via ClusterRoleBinding `ama-metrics-clusterrolebinding`). However that rule grants `get,watch` but **not `list`**, and the target allocator's secret informer typically needs `list`; this case was not tested here.
+
+---
+
 ## 7. Cleanup
 
 ```powershell
@@ -669,6 +687,52 @@ NannyConfiguration
 
 $ kubectl delete configmap container-azm-ms-vpaconfig -n kube-system
 configmap "container-azm-ms-vpaconfig" deleted from kube-system namespace
+```
+
+### R1 — full credentialed stack in a customer namespace (expect ALLOW) → **ALLOW ✅**
+
+Secret + Role + RoleBinding + ServiceMonitor (with `basicAuth`) in non-protected namespace `vap-ext-validation`. The VAP does not apply outside protected namespaces.
+
+```text
+$ kubectl apply -f 00-namespace.yaml
+namespace/vap-ext-validation created
+$ kubectl apply -f 01-secret.yaml
+secret/basic-auth-creds created
+$ kubectl apply -f 02-role.yaml
+role.rbac.authorization.k8s.io/ama-metrics-secrets-reader created
+$ kubectl apply -f 03-rolebinding.yaml
+rolebinding.rbac.authorization.k8s.io/ama-metrics-secrets-rolebinding created
+$ kubectl apply -f 04-servicemonitor.yaml
+servicemonitor.azmonitoring.coreos.com/basic-auth-smon created
+
+$ kubectl describe rolebinding ama-metrics-secrets-rolebinding -n vap-ext-validation
+Role:
+  Kind:  Role
+  Name:  ama-metrics-secrets-reader
+Subjects:
+  Kind            Name                        Namespace
+  ----            ----                        ---------
+  ServiceAccount  ama-metrics-serviceaccount  kube-system
+```
+
+### R2 — Role in `kube-system` (expect DENY) → **DENY ✅**
+
+```text
+$ kubectl apply -f role-ks.yaml
+Error from server (Forbidden): error when creating "role-ks.yaml": roles.rbac.authorization.k8s.io "ama-metrics-secrets-reader" is forbidden: ValidatingAdmissionPolicy 'aks-managed-protect-system-namespaces' with binding 'aks-managed-protect-system-namespaces-binding' denied request: Modification of resources in managed system namespaces is not allowed
+
+$ kubectl get role ama-metrics-secrets-reader -n kube-system
+Error from server (NotFound): roles.rbac.authorization.k8s.io "ama-metrics-secrets-reader" not found
+```
+
+### R3 — RoleBinding in `kube-system` (expect DENY) → **DENY ✅**
+
+```text
+$ kubectl apply -f rolebinding-ks.yaml
+Error from server (Forbidden): error when creating "rolebinding-ks.yaml": rolebindings.rbac.authorization.k8s.io "ama-metrics-secrets-rolebinding" is forbidden: ValidatingAdmissionPolicy 'aks-managed-protect-system-namespaces' with binding 'aks-managed-protect-system-namespaces-binding' denied request: Modification of resources in managed system namespaces is not allowed
+
+$ kubectl get rolebinding ama-metrics-secrets-rolebinding -n kube-system
+Error from server (NotFound): rolebindings.rbac.authorization.k8s.io "ama-metrics-secrets-rolebinding" not found
 ```
 
 
