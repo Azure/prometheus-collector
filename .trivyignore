@@ -1,5 +1,9 @@
 # This file contains CVEs to be ignored by Trivy
 
+# CRITICAL
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-2.azl3)
+CVE-2026-34182 #openssl - CMS AuthEnvelopedData Processing May Accept Forged Messages
+
 # HIGH
 # gobinary - target-allocator
 CVE-2026-34040 #github.com/docker/docker - Moby AuthZ plugin bypass with oversized request bodies (v28.5.2 -> 29.3.1)
