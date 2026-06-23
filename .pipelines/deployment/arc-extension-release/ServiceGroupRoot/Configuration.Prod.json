@@ -3,7 +3,7 @@
   "Settings": {
     "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
     "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-Prom092625",
-    "helmEndpoint": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
+    "helmEndpoint": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
     "isCustomerHidden": false,
     "arcApiUrl": "https://eastus2euap.dp.kubernetesconfiguration.azure.com",
     "arcApiVersion": "2021-11-01",
