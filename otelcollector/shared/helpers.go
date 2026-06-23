@@ -264,74 +264,103 @@ func RemoveQuotes(s string) string {
 }
 
 // ParseMetricsFiles parses multiple metrics configuration files into a nested map structure.
+//
+// Each configmap section (e.g. cluster-metrics, controlplane-metrics,
+// prometheus-collector-settings) is projected by Kubernetes as its own file under
+// /etc/config/settings. A v2 configmap is allowed to be partial - a user may omit
+// any optional section. When a section is omitted, its file simply does not exist.
+//
+// A missing file is therefore NOT an error: the section is skipped and downstream
+// parsers fall back to their defaults for that section. Returning an error here would
+// discard the entire (correctly parsed) configuration, silently dropping every other
+// section the user did provide. Only non-NotExist open errors (e.g. permissions) and
+// read errors are treated as fatal.
 func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
 	metricsConfigBySection := make(map[string]map[string]string)
 
 	for _, filePath := range filePaths {
-		file, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
-		}
-		defer func() {
-			if cerr := file.Close(); cerr != nil {
-				log.Printf("warning: failed to close file %s: %v", filePath, cerr)
-			}
-		}()
-
-		scanner := bufio.NewScanner(file)
-		var currentSection string
-
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines and comments
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-
-			// Detect section headers (supports top-level keys)
-			if strings.HasSuffix(line, ": |-") {
-				currentSection = strings.TrimSuffix(line, ": |-")
-				if _, exists := metricsConfigBySection[currentSection]; !exists {
-					metricsConfigBySection[currentSection] = make(map[string]string)
-				}
-				continue
-			}
-
-			// Process key-value pairs within sections
-			if strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) != 2 {
-					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
-					continue
-				}
-
-				key := strings.TrimSpace(parts[0])
-				value := RemoveQuotes(strings.TrimSpace(parts[1]))
-
-				if key == "" {
-					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
-					continue
-				}
-
-				// Handle top-level keys in a separate section
-				if currentSection == "" {
-					currentSection = "prometheus-collector-settings"
-					if _, exists := metricsConfigBySection[currentSection]; !exists {
-						metricsConfigBySection[currentSection] = make(map[string]string)
-					}
-				}
-
-				metricsConfigBySection[currentSection][key] = value
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
+		if err := parseMetricsFileInto(filePath, metricsConfigBySection); err != nil {
+			return nil, err
 		}
 	}
 
 	return metricsConfigBySection, nil
+}
+
+// parseMetricsFileInto parses a single metrics configuration file into the provided
+// section map. A file that does not exist is treated as an omitted optional section
+// and is skipped (no error). Keeping this in its own function ensures the file handle
+// is closed promptly after each file instead of leaking until the enclosing function
+// returns (the previous defer-in-loop behavior).
+func parseMetricsFileInto(filePath string, metricsConfigBySection map[string]map[string]string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Optional section not provided in a partial configmap; use defaults for it.
+			log.Printf("info: settings file %s not present; skipping (using defaults for this section)", filePath)
+			return nil
+		}
+		return fmt.Errorf("failed to open file %s: %w", filePath, err)
+	}
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			log.Printf("warning: failed to close file %s: %v", filePath, cerr)
+		}
+	}()
+
+	scanner := bufio.NewScanner(file)
+	var currentSection string
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Detect section headers (supports top-level keys)
+		if strings.HasSuffix(line, ": |-") {
+			currentSection = strings.TrimSuffix(line, ": |-")
+			if _, exists := metricsConfigBySection[currentSection]; !exists {
+				metricsConfigBySection[currentSection] = make(map[string]string)
+			}
+			continue
+		}
+
+		// Process key-value pairs within sections
+		if strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
+				continue
+			}
+
+			key := strings.TrimSpace(parts[0])
+			value := RemoveQuotes(strings.TrimSpace(parts[1]))
+
+			if key == "" {
+				log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
+				continue
+			}
+
+			// Handle top-level keys in a separate section
+			if currentSection == "" {
+				currentSection = "prometheus-collector-settings"
+				if _, exists := metricsConfigBySection[currentSection]; !exists {
+					metricsConfigBySection[currentSection] = make(map[string]string)
+				}
+			}
+
+			metricsConfigBySection[currentSection][key] = value
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to read file %s: %w", filePath, err)
+	}
+
+	return nil
 }
 
 // ParseV1Config parses the v1 configuration from individual files into a nested map structure.
