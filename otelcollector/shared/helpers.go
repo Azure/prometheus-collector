@@ -284,7 +284,7 @@ func parseMetricsFileInto(filePath string, metricsConfigBySection map[string]map
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("info: settings file %s not present; skipping (using defaults)", filePath)
+			log.Printf("info: optional settings section %q not provided (file %s); using defaults", filepath.Base(filePath), filePath)
 			return nil
 		}
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
