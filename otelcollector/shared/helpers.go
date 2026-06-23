@@ -264,17 +264,8 @@ func RemoveQuotes(s string) string {
 }
 
 // ParseMetricsFiles parses multiple metrics configuration files into a nested map structure.
-//
-// Each configmap section (e.g. cluster-metrics, controlplane-metrics,
-// prometheus-collector-settings) is projected by Kubernetes as its own file under
-// /etc/config/settings. A v2 configmap is allowed to be partial - a user may omit
-// any optional section. When a section is omitted, its file simply does not exist.
-//
-// A missing file is therefore NOT an error: the section is skipped and downstream
-// parsers fall back to their defaults for that section. Returning an error here would
-// discard the entire (correctly parsed) configuration, silently dropping every other
-// section the user did provide. Only non-NotExist open errors (e.g. permissions) and
-// read errors are treated as fatal.
+// Configmaps may be partial: a missing file is a skipped (optional) section, not an error,
+// so downstream parsers default it. See parseMetricsFileInto.
 func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
 	metricsConfigBySection := make(map[string]map[string]string)
 
@@ -287,17 +278,13 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 	return metricsConfigBySection, nil
 }
 
-// parseMetricsFileInto parses a single metrics configuration file into the provided
-// section map. A file that does not exist is treated as an omitted optional section
-// and is skipped (no error). Keeping this in its own function ensures the file handle
-// is closed promptly after each file instead of leaking until the enclosing function
-// returns (the previous defer-in-loop behavior).
+// parseMetricsFileInto parses one config file into the section map. A missing file is
+// skipped (omitted optional section); only other open/read errors are fatal.
 func parseMetricsFileInto(filePath string, metricsConfigBySection map[string]map[string]string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Optional section not provided in a partial configmap; use defaults for it.
-			log.Printf("info: settings file %s not present; skipping (using defaults for this section)", filePath)
+			log.Printf("info: settings file %s not present; skipping (using defaults)", filePath)
 			return nil
 		}
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
