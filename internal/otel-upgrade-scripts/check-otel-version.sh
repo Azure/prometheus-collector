@@ -22,9 +22,18 @@ fi
 # GitHub API URL for the repository releases
 API_URL="https://api.github.com/repos/open-telemetry/opentelemetry-operator/releases/latest"
 
+# Build authenticated curl args when a token is available, to avoid hitting the
+# 60 req/hour anonymous rate limit on shared GitHub-hosted runner egress IPs.
+GH_AUTH_ARGS=()
+if [ -n "${GH_TOKEN:-}" ]; then
+    GH_AUTH_ARGS=(-H "Authorization: Bearer $GH_TOKEN")
+elif [ -n "${GITHUB_TOKEN:-}" ]; then
+    GH_AUTH_ARGS=(-H "Authorization: Bearer $GITHUB_TOKEN")
+fi
+
 # Fetch the latest release information
 echo "Fetching the latest release of opentelemetry-collector-operator..."
-RESPONSE=$(curl -s $API_URL)
+RESPONSE=$(curl -s "${GH_AUTH_ARGS[@]}" "$API_URL")
 
 # Check if curl command was successful
 if [ $? -ne 0 ]; then
@@ -55,7 +64,7 @@ echo -e "\nChecking for matching release in opentelemetry-collector repository..
 COLLECTOR_API_URL="https://api.github.com/repos/open-telemetry/opentelemetry-collector/releases"
 
 # Fetch releases for the collector repository
-COLLECTOR_RESPONSE=$(curl -s "$COLLECTOR_API_URL")
+COLLECTOR_RESPONSE=$(curl -s "${GH_AUTH_ARGS[@]}" "$COLLECTOR_API_URL")
 
 # Check if curl command was successful
 if [ $? -ne 0 ]; then
