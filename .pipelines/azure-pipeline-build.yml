@@ -4,7 +4,6 @@ trigger:
     - main
     - bot/otelcollector-upgrade-*
     - dependabot*
-    - aks/* 
     
 pr:
   autoCancel: true
@@ -200,7 +199,6 @@ extends:
 
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
             echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
-            # echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/aksarc-extension-release/ServiceGroupRoot/buildver.txt"
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - task: HelmInstaller@1
           displayName: 'CI/CD: Install Helm version for linting'
@@ -228,9 +226,7 @@ extends:
           displayName: "CI/CD: Lint Helm charts"
           condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
-            # cd $(Build.SourcesDirectory)/.pipelines/deployment/aks-arc-extension-release/ServiceGroupRoot/Scripts
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-            # tar -czvf ../extension-artifacts.tar.gz aksArcExtensionRelease.sh
             tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
         - task: CredScan@3
