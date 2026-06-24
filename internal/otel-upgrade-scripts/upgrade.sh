@@ -218,6 +218,18 @@ rm -rf otelcollector/otel-allocator
 mkdir -p otelcollector/otel-allocator
 cp -r opentelemetry-operator/cmd/otel-allocator/* otelcollector/otel-allocator/
 
+# Upstream opentelemetry-operator (>= v0.151.0) split the `apis` package into its
+# own go sub-module and the root go.mod references it via:
+#     replace github.com/open-telemetry/opentelemetry-operator/apis v0.0.0-unpublished => ./apis
+# Since we vendor only cmd/otel-allocator/* plus the root go.mod, we must also
+# carry the sibling apis/ sub-module so the relative replace path resolves and
+# `go mod tidy` doesn't fail with "reading apis/go.mod: no such file or directory".
+if [ -f "opentelemetry-operator/apis/go.mod" ]; then
+	echo "Copying opentelemetry-operator/apis sub-module into otel-allocator/apis"
+	mkdir -p otelcollector/otel-allocator/apis
+	cp -r opentelemetry-operator/apis/. otelcollector/otel-allocator/apis/
+fi
+
 echo "Restoring custom Dockerfile and Makefile"
 cp otelcollector/Dockerfile.backup otelcollector/otel-allocator/Dockerfile
 rm otelcollector/Dockerfile.backup
@@ -235,7 +247,10 @@ fi
 cd otelcollector/otel-allocator
 cp "$CURRENT_DIR/opentelemetry-operator/go.mod" .
 sed -i '1s#.*#module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator#' go.mod
-go mod tidy
+if ! go mod tidy; then
+	echo "ERROR: go mod tidy failed in otelcollector/otel-allocator. This usually means upstream opentelemetry-operator restructured its modules (e.g. split out apis/ or another sub-module). Inspect the operator root go.mod for new relative './<path>' replace directives and update upgrade.sh to vendor those directories too." >&2
+	exit 1
+fi
 #make
 #rm -f targetallocator
 cd "$CURRENT_DIR"
