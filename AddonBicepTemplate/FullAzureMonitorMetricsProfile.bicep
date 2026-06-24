@@ -10,6 +10,9 @@ param grafanaLocation string
 param grafanaSku string
 param grafanaAdminObjectId string
 
+@description('Enable collection of Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled on the cluster.')
+param enableControlPlaneMetrics bool = false
+
 @description('A new GUID used to identify the role assignment')
 param roleNameGuid string = newGuid()
 
@@ -108,6 +111,7 @@ module azuremonitormetrics_profile_clusterResourceId './nested_azuremonitormetri
     clusterLocation: clusterLocation
     metricLabelsAllowlist: metricLabelsAllowlist
     metricAnnotationsAllowList: metricAnnotationsAllowList
+    enableControlPlaneMetrics: enableControlPlaneMetrics
   }
   dependsOn: [
     azuremonitormetrics_dcra_clusterResourceId

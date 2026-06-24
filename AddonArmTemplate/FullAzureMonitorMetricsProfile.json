@@ -27,6 +27,13 @@
       "type": "bool",
       "defaultValue": false
     },
+    "enableControlPlaneMetrics": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable collection of Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled on the cluster."
+      }
+    },
     "grafanaResourceId": {
       "type": "string",
       "defaultValue": ""
@@ -178,7 +185,7 @@
               "name": "[variables('clusterName')]",
               "type": "Microsoft.ContainerService/managedClusters",
               "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
+              "apiVersion": "2024-09-01",
               "properties": {
                 "mode": "Incremental",
                 "id": "[parameters('clusterResourceId')]",
@@ -188,6 +195,9 @@
                     "kubeStateMetrics": {
                       "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
                       "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+                    },
+                    "controlPlane": {
+                      "enabled": "[parameters('enableControlPlaneMetrics')]"
                     }
                   }
                 }

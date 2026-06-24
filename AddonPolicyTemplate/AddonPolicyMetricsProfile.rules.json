@@ -40,6 +40,10 @@
 							"enableWindowsRecordingRules": {
 								"type": "bool"
 							},
+							"enableControlPlaneMetrics": {
+								"type": "bool",
+								"defaultValue": false
+							},
 							"clusterResourceId": {
 								"type": "string"
 							},
@@ -177,7 +181,7 @@
 												"name": "[variables('clusterName')]",
 												"type": "Microsoft.ContainerService/managedClusters",
 												"location": "[parameters('clusterLocation')]",
-												"apiVersion": "2023-01-01",
+												"apiVersion": "2024-09-01",
 												"properties": {
 													"mode": "Incremental",
 													"id": "[parameters('clusterResourceId')]",
@@ -187,6 +191,9 @@
 															"kubeStateMetrics": {
 																"metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
 																"metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+															},
+															"controlPlane": {
+																"enabled": "[parameters('enableControlPlaneMetrics')]"
 															}
 														}
 													}
@@ -683,6 +690,9 @@
 						},
 						"enableWindowsRecordingRules": {
 							"value": "[parameters('enableWindowsRecordingRules')]"
+						},
+						"enableControlPlaneMetrics": {
+							"value": "[parameters('enableControlPlaneMetrics')]"
 						},
 						"clusterResourceId": {
 							"value": "[field('id')]"

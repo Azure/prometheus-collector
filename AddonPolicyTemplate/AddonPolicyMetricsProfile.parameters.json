@@ -36,5 +36,13 @@
         "displayName": "Enable recording rule group for windows metrics",
         "description": "Enable recording rule group for windows metrics"
       }
+    },
+    "enableControlPlaneMetrics": {
+      "type": "boolean",
+      "defaultValue": false,
+      "metadata": {
+        "displayName": "Enable Azure Monitor managed Prometheus control plane metrics",
+        "description": "Enable collection of Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled on the cluster."
+      }
     }
 }

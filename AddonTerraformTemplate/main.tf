@@ -117,6 +117,32 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
   ]
 }
 
+# The azurerm monitor_metrics block does not expose control plane metrics, so
+# azureMonitorProfile.metrics.controlPlane.enabled is set via the azapi provider.
+# This runs after the DCRA is created so the control-plane-metrics (CCP) collection
+# pod is not scheduled before its DCRA exists (which would crash-loop until reconcile).
+resource "azapi_update_resource" "control_plane_metrics" {
+  count       = var.enable_control_plane_metrics ? 1 : 0
+  type        = "Microsoft.ContainerService/managedClusters@2024-09-01"
+  resource_id = azurerm_kubernetes_cluster.k8s.id
+
+  body = jsonencode({
+    properties = {
+      azureMonitorProfile = {
+        metrics = {
+          controlPlane = {
+            enabled = true
+          }
+        }
+      }
+    }
+  })
+
+  depends_on = [
+    azurerm_monitor_data_collection_rule_association.dcra
+  ]
+}
+
 resource "azurerm_dashboard_grafana" "grafana" {
   name                = var.grafana_name
   resource_group_name = azurerm_resource_group.rg.name
