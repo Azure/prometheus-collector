@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 )
 
@@ -52,9 +51,8 @@ func TestFactoryCanParseServiceDiscoveryConfigs(t *testing.T) {
 func TestMultipleCreateWithAPIServer(t *testing.T) {
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig().(*Config)
-	apiEnabled := true
-	cfg.APIServer = &apiserver.Config{
-		Enabled: &apiEnabled,
+	cfg.APIServer = APIServer{
+		Enabled: true,
 		ServerConfig: confighttp.ServerConfig{
 			NetAddr: confignet.AddrConfig{
 				Transport: "tcp",

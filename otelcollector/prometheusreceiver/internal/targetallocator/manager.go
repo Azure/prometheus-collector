@@ -40,7 +40,6 @@ type Manager struct {
 	initialScrapeConfigs []*promconfig.ScrapeConfig
 	scrapeManager        *scrape.Manager
 	discoveryManager     *discovery.Manager
-	cfgLock              *sync.RWMutex
 	wg                   sync.WaitGroup
 
 	// configUpdateCount tracks how many times the config has changed, for
@@ -50,17 +49,13 @@ type Manager struct {
 	configUpdated chan struct{}
 }
 
-func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, cfgLock *sync.RWMutex) *Manager {
-	if cfgLock == nil {
-		cfgLock = &sync.RWMutex{}
-	}
+func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config) *Manager {
 	return &Manager{
 		shutdown:             make(chan struct{}),
 		settings:             set,
 		cfg:                  cfg,
 		promCfg:              promCfg,
 		initialScrapeConfigs: promCfg.ScrapeConfigs,
-		cfgLock:              cfgLock,
 		configUpdateCount:    &atomic.Int64{},
 		configUpdated:        make(chan struct{}, 10),
 	}
@@ -69,7 +64,7 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager) error {
 	m.scrapeManager = sm
 	m.discoveryManager = dm
-	err := m.applyCfgWithLock()
+	err := m.applyCfg()
 	if err != nil {
 		m.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
 		return err
@@ -145,9 +140,6 @@ func (m *Manager) sync(compareHash uint64, httpClient *http.Client) (uint64, err
 		// no update needed
 		return hash, nil
 	}
-
-	m.cfgLock.Lock()
-	defer m.cfgLock.Unlock()
 
 	// Copy initial scrape configurations
 	initialConfig := make([]*promconfig.ScrapeConfig, len(m.initialScrapeConfigs))
@@ -228,12 +220,6 @@ func (m *Manager) applyCfg() error {
 		m.settings.Logger.Info("Scrape job added", zap.String("jobName", scrapeConfig.JobName))
 	}
 	return m.discoveryManager.ApplyConfig(discoveryCfg)
-}
-
-func (m *Manager) applyCfgWithLock() error {
-	m.cfgLock.RLock()
-	defer m.cfgLock.RUnlock()
-	return m.applyCfg()
 }
 
 func getScrapeConfigsResponse(httpClient *http.Client, baseURL string) (map[string]*promconfig.ScrapeConfig, error) {

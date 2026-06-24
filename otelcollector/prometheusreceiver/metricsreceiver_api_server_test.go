@@ -18,8 +18,6 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/confignet"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
 )
 
 type apiResponse struct {
@@ -62,11 +60,10 @@ func TestPrometheusAPIServer(t *testing.T) {
 			require.Nil(t, response)
 		})
 
-		apiEnabled := true
 		receiver, _ := newTestReceiver(t, &Config{
 			PrometheusConfig: cfg,
-			APIServer: &apiserver.Config{
-				Enabled: &apiEnabled,
+			APIServer: APIServer{
+				Enabled: true,
 				ServerConfig: confighttp.ServerConfig{
 					NetAddr: confignet.AddrConfig{
 						Transport: "tcp",
