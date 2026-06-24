@@ -100,7 +100,7 @@ All updates below replace the OLD tag with the NEW tag. There are 4 components t
 - `azure-monitor-metrics-cfg-reader`: tag = `{NEW_TAG}-cfg`
 - `azure-monitor-metrics-target-allocator`: tag = `{NEW_TAG}-targetallocator`
 
-**KSM (`azure-monitor-metrics-ksm`)**: Do NOT update unless the user explicitly provides a new KSM version. KSM uses a separate versioning scheme (e.g., `v2.18.0-1`).
+**KSM (`azure-monitor-metrics-ksm`)**: Do NOT update unless the user explicitly provides a new KSM version. KSM uses a separate versioning scheme (e.g., `v2.18.0-3`).
 
 #### 2a. `_addon-images.tpl`
 
@@ -264,7 +264,7 @@ foreach ($f in $files) {
 | windows | `-win` | `7.0.0-main-05-07-2026-dbf4ae51-win` |
 | cfg-reader | `-cfg` | `7.0.0-main-05-07-2026-dbf4ae51-cfg` |
 | target-allocator | `-targetallocator` | `7.0.0-main-05-07-2026-dbf4ae51-targetallocator` |
-| ksm | separate version | `v2.18.0-1` (rarely changes) |
+| ksm | separate version | `v2.18.0-3` (rarely changes) |
 
 ### Image tag format
 
