@@ -175,6 +175,9 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-mip-false-crs.yaml)
             workflows=(configprocessingmipfalse mipfalse)
             ;;
+        testkube-config-test-partial-no-pcs-crs.yaml)
+            workflows=(partialnopcs)
+            ;;
         testkube-config-test-basic-auth-smon-crs.yaml)
             workflows=(basicauthsmon)
             ;;
