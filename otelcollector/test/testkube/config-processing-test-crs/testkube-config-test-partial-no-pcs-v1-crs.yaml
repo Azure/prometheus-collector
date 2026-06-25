@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: partialnopcs
+  name: partialnopcsv1
   namespace: testkube
   labels:
     executor: ginkgo-executor
@@ -26,7 +26,7 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r -p --label-filter "(config-processing-common, config-processing-partial-no-pcs)" ./configprocessing
+        ginkgo run -r -p --label-filter "(config-processing-common, config-processing-partial-no-pcs-v1)" ./configprocessing
   pod:
     nodeSelector:
       kubernetes.io/os: linux
