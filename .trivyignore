@@ -2,71 +2,30 @@
 
 # CRITICAL
 # os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-2.azl3, suppress pending base image rebuild)
-# CVE-2026-34182 #openssl - CMS AuthEnvelopedData processing may accept forged messages
+CVE-2026-34182 #openssl - CMS AuthEnvelopedData processing may accept forged messages
 
 # HIGH
-# gobinary - target-allocator
-# CVE-2026-34040 #github.com/docker/docker - Moby AuthZ plugin bypass with oversized request bodies (v28.5.2 -> 29.3.1)
-# gobinary - target-allocator, otelcollector, promconfigvalidator
-# CVE-2026-42151 #github.com/prometheus/prometheus - Prometheus vulnerability (v0.310.0 -> 0.311.3)
-# CVE-2026-42154 #github.com/prometheus/prometheus - Prometheus vulnerability (v0.310.0 -> 0.311.3)
-# gobinary - target-allocator, otelcollector, configurationreader, ccp-prometheus-collector
-# CVE-2026-33811 #stdlib - net LookupCNAME with cgo DNS resolver may hang on very long CNAME (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-33814 #stdlib - net/http HTTP/2 SETTINGS frames cause infinite loop in transport (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-39820 #stdlib - net/mail ParseAddress/ParseAddressList input handling vulnerability (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-39836 #stdlib - net panic in Dial and LookupPort when handling NUL byte on Windows (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-42499 #stdlib - net/mail DoS via consumePhrase when parsing pathological inputs (v1.25.9 -> 1.25.10, 1.26.3)
-# gobinary - golang.org/x/net (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2026-25680 #golang.org/x/net - excessive CPU parsing arbitrary HTML (v0.48.0 -> 0.55.0)
-# CVE-2026-25681 #golang.org/x/net - HTML parsed then rendered via Render (v0.48.0 -> 0.55.0)
-# CVE-2026-27136 #golang.org/x/net - HTML parsed then rendered via Render (v0.48.0 -> 0.55.0)
-# CVE-2026-39821 #golang.org/x/net/idna - input handling vulnerability (v0.48.0 -> 0.55.0)
-# CVE-2026-42502 #golang.org/x/net - HTML parsed then rendered via Render (v0.48.0 -> 0.55.0)
-# CVE-2026-42506 #golang.org/x/net - HTML parsed then rendered via Render (v0.48.0 -> 0.55.0)
-# gobinary - golang.org/x/crypto (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2026-39827 #golang.org/x/crypto/ssh - DoS via repeatedly opened channels (v0.49.0 -> 0.52.0)
-# CVE-2026-39828 #golang.org/x/crypto/ssh - DoS (v0.49.0 -> 0.52.0)
-# CVE-2026-39829 #golang.org/x/crypto/ssh - DoS (v0.49.0 -> 0.52.0)
-# CVE-2026-39830 #golang.org/x/crypto/ssh - DoS (v0.49.0 -> 0.52.0)
-# CVE-2026-39835 #golang.org/x/crypto/ssh - CertChecker used as public key callback (v0.49.0 -> 0.52.0)
-# CVE-2026-42508 #golang.org/x/crypto/ssh/knownhosts (v0.49.0 -> 0.52.0)
-# CVE-2026-46595 #golang.org/x/crypto/ssh (v0.49.0 -> 0.52.0)
-# CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to int (v0.49.0 -> 0.52.0)
-# gobinary - stdlib (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2026-27145 #stdlib - crypto/x509 (*Certificate).VerifyHostname matching regression (v1.25.9 -> 1.25.11, 1.26.4)
-# CVE-2026-42504 #stdlib - net/textproto DoS decoding crafted MIME header (v1.25.9 -> 1.25.11, 1.26.4)
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-3.azl3, suppress pending base image rebuild)
+CVE-2026-34180 #openssl - Heap buffer over-read in ASN.1 decoding can lead to DoS
+CVE-2026-45445 #openssl - AES-OCB IV ignored on EVP_Cipher() path
+CVE-2026-7383  #openssl - Heap buffer overflow due to signed integer overflow in Unicode
+CVE-2026-9076  #openssl - DoS due to heap out-of-bounds read in CMS
+# gobinary - golang.org/x/net (ccpmain) (v0.38.0 -> 0.55.0)
+CVE-2026-25680 #golang.org/x/net - excessive CPU parsing arbitrary HTML
+CVE-2026-25681 #golang.org/x/net - HTML parsed then rendered via Render
+CVE-2026-27136 #golang.org/x/net - HTML parsed then rendered via Render
+CVE-2026-33814 #golang.org/x/net - HTTP/2 SETTINGS_MAX_FRAME_SIZE DoS
+CVE-2026-39821 #golang.org/x/net/idna - Privilege escalation via incorrect Punycode label processing
+CVE-2026-42502 #golang.org/x/net - HTML parsed then rendered via Render
+CVE-2026-42506 #golang.org/x/net - HTML parsed then rendered via Render
 
 # MEDIUM
-# gobinary - target-allocator
-# CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privilege validation (v28.5.2 -> 29.3.1)
-# gobinary - target-allocator, otelcollector, promconfigvalidator
-# CVE-2026-40179 #github.com/prometheus/prometheus - Stored XSS via metric names and label values (v0.310.0 -> 0.311.2)
-# GHSA-fw8g-cg8f-9j28 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (v0.310.0 -> 0.311.3)
-# CVE-2026-44903 #github.com/prometheus/prometheus - Stored XSS via crafted histogram bucket label values (CVE alias of GHSA-fw8g-cg8f-9j28) (v0.311.2 -> 0.311.3)
-# gobinary - target-allocator, otelcollector, configurationreader, ccp-prometheus-collector
-# CVE-2026-39823 #stdlib - net/url incomplete URL parsing fix (extends CVE-2026-27142) (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-39825 #stdlib - net/http/httputil ReverseProxy forwards hidden query parameters (v1.25.9 -> 1.25.10, 1.26.3)
-# CVE-2026-39826 #stdlib - html/template stored XSS via crafted script tag content (v1.25.9 -> 1.25.10, 1.26.3)
-# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-4.azl3 -> 3.3.5-5.azl3)
-# CVE-2026-28388 #openssl - DoS due to NULL pointer dereference in delta CRL processing
-# CVE-2026-28389 #openssl - DoS vulnerability in CMS processing
-# CVE-2026-28390 #openssl - DoS due to NULL pointer dereference in CMS
-# CVE-2026-31789 #openssl - Heap buffer overflow on 32-bit systems from large X.509 certificate
-# CVE-2026-31790 #openssl - Information disclosure from uninitialized memory via invalid RSA public key
-# os-pkgs - glibc in upstream kube-state-metrics image (azurelinux 3.0, 2.38-18.azl3 -> 2.38-19.azl3)
-# CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS server response
-# CVE-2026-4438 #glibc - Invalid DNS hostname returned via gethostbyaddr functions
-# os-pkgs - glibc/glibc-iconv in ccp prometheus-collector image (azurelinux 3.0, 2.38-19.azl3 -> 2.38-20.azl3)
-# CVE-2026-4046 #glibc - Denial of Service via iconv() function with specific character sets
-# CVE-2026-40898 #github.com/quic-go/quic-go
-# gobinary - golang.org/x/crypto (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2026-39831 #golang.org/x/crypto/ssh (v0.49.0 -> 0.52.0)
-# CVE-2026-39832 #golang.org/x/crypto/ssh (v0.49.0 -> 0.52.0)
-# CVE-2026-39833 #golang.org/x/crypto/ssh (v0.49.0 -> 0.52.0)
-# CVE-2026-39834 #golang.org/x/crypto/ssh (v0.49.0 -> 0.52.0)
-# CVE-2026-46598 #golang.org/x/crypto/ssh/agent (v0.49.0 -> 0.52.0)
-# gobinary - golang.org/x/net/html (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2025-47911 #golang.org/x/net/html - quadratic parsing complexity (-> 0.45.0)
-# CVE-2025-58190 #golang.org/x/net/html - infinite parsing loop (-> 0.45.0)
-# gobinary - stdlib (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
-# CVE-2026-42507 #stdlib - net/textproto misleading error messages via input injection (v1.25.9 -> 1.25.11, 1.26.4) 
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, suppress pending base image rebuild)
+CVE-2026-34183 #openssl - Unbounded memory growth in QUIC PATH_CHALLENGE handler
+CVE-2026-42766 #openssl - Possible NULL dereference in password-based CMS decryption
+CVE-2026-42767 #openssl - NULL pointer dereference in CRMF EncryptedValue decryption
+CVE-2026-45446 #openssl - Incorrect tag processing for empty messages in AES-GCM-SIV/AES-SIV
+# gobinary - golang.org/x/net/html (ccpmain) (v0.38.0 -> 0.45.0)
+CVE-2025-47911 #golang.org/x/net/html - quadratic parsing complexity
+CVE-2025-58190 #golang.org/x/net/html - infinite parsing loop
+
