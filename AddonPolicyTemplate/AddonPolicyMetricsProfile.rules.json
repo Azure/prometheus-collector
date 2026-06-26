@@ -181,7 +181,7 @@
 												"name": "[variables('clusterName')]",
 												"type": "Microsoft.ContainerService/managedClusters",
 												"location": "[parameters('clusterLocation')]",
-												"apiVersion": "2024-09-01",
+												"apiVersion": "2026-04-01",
 												"properties": {
 													"mode": "Incremental",
 													"id": "[parameters('clusterResourceId')]",

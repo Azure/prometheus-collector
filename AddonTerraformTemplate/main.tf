@@ -123,7 +123,7 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
 # pod is not scheduled before its DCRA exists (which would crash-loop until reconcile).
 resource "azapi_update_resource" "control_plane_metrics" {
   count       = var.enable_control_plane_metrics ? 1 : 0
-  type        = "Microsoft.ContainerService/managedClusters@2024-09-01"
+  type        = "Microsoft.ContainerService/managedClusters@2026-04-01"
   resource_id = azurerm_kubernetes_cluster.k8s.id
 
   body = jsonencode({
