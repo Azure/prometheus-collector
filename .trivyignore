@@ -35,6 +35,11 @@ CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to 
 # gobinary - stdlib (target-allocator, otelcollector, promconfigvalidator, configurationreader, ccp-prometheus-collector)
 CVE-2026-27145 #stdlib - crypto/x509 (*Certificate).VerifyHostname matching regression (v1.25.9 -> 1.25.11, 1.26.4)
 CVE-2026-42504 #stdlib - net/textproto DoS decoding crafted MIME header (v1.25.9 -> 1.25.11, 1.26.4)
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-3.azl3, suppress pending base image rebuild)
+CVE-2026-34180 #openssl - Heap buffer over-read in ASN.1 decoding
+CVE-2026-45445 #openssl - AES-OCB IV ignored on EVP_Cipher() path
+CVE-2026-7383 #openssl - Heap buffer overflow due to signed integer handling
+CVE-2026-9076 #openssl - Denial of Service due to heap corruption
 
 # MEDIUM
 # gobinary - target-allocator
@@ -53,6 +58,11 @@ CVE-2026-28389 #openssl - DoS vulnerability in CMS processing
 CVE-2026-28390 #openssl - DoS due to NULL pointer dereference in CMS
 CVE-2026-31789 #openssl - Heap buffer overflow on 32-bit systems from large X.509 certificate
 CVE-2026-31790 #openssl - Information disclosure from uninitialized memory via invalid RSA public key
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-3.azl3, suppress pending base image rebuild)
+CVE-2026-34183 #openssl - Unbounded memory growth in the QUIC PATH_CHALLENGE handler
+CVE-2026-42766 #openssl - Possible NULL dereference in password-based CMS decryption
+CVE-2026-42767 #openssl - NULL pointer dereference in CRMF EncryptedValue decryption
+CVE-2026-45446 #openssl - Incorrect tag processing for empty messages in AES-GCM-SIV and AES-SIV modes
 # os-pkgs - glibc in upstream kube-state-metrics image (azurelinux 3.0, 2.38-18.azl3 -> 2.38-19.azl3)
 CVE-2026-4437 #glibc - Incorrect DNS response parsing via crafted DNS server response
 CVE-2026-4438 #glibc - Invalid DNS hostname returned via gethostbyaddr functions
