@@ -10,6 +10,9 @@
     },
     "resourceGroupName": {
       "value": "$_RESOURCE_GROUP_NAME_$"
+    },
+    "assignRoles": {
+      "value": "$_ASSIGN_ROLES_$"
     }
   }
 }
