@@ -8,8 +8,8 @@ AzureMonitorMetrics:
     ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
     CPULimit: 1
     MemoryLimit: 5Gi
-# Kube-state-metrics ImageTag - 2.18.0, corresponds to chart version - 7.1.0
-    ImageTag: "v2.18.0-1"
+# Kube-state-metrics ImageTag - 2.19.0, corresponds to chart version - 7.5.1
+    ImageTag: "v2.19.0-4"
     Collectors:
       - certificatesigningrequests
       - configmaps

@@ -26,12 +26,11 @@ func NewFactory() receiver.Factory {
 }
 
 func createDefaultConfig() component.Config {
-	apiCfg := apiserver.DefaultConfig()
 	return &Config{
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
-		APIServer: &apiCfg,
+		APIServer: apiserver.DefaultConfig(),
 	}
 }
 
