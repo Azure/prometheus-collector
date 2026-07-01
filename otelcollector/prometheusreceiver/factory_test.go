@@ -52,9 +52,8 @@ func TestFactoryCanParseServiceDiscoveryConfigs(t *testing.T) {
 func TestMultipleCreateWithAPIServer(t *testing.T) {
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig().(*Config)
-	apiEnabled := true
-	cfg.APIServer = &apiserver.Config{
-		Enabled: &apiEnabled,
+	cfg.APIServer = apiserver.Config{
+		Enabled: true,
 		ServerConfig: confighttp.ServerConfig{
 			NetAddr: confignet.AddrConfig{
 				Transport: "tcp",

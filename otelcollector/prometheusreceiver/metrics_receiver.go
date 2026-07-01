@@ -29,6 +29,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/sharedpromconfig"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/targetallocator"
 )
 
@@ -66,18 +67,15 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 	registerer := prometheus.WrapRegistererWith(
 		prometheus.Labels{"receiver": set.ID.String()},
 		registry)
-	promCfgLock := &sync.RWMutex{}
-	apiServerCfg := cfg.APIServer
+	sharedCfg := sharedpromconfig.NewConfig(&baseCfg)
 	var apiServerManager *apiserver.Manager
-	if apiServerCfg != nil && apiServerCfg.IsEnabled() {
-		apiServerCfg.ApplyDefaults()
+	if cfg.APIServer.Enabled {
 		apiServerManager = apiserver.NewManager(
 			set,
-			apiServerCfg,
-			&baseCfg,
+			&cfg.APIServer,
+			sharedCfg,
 			registry,
 			registerer,
-			promCfgLock,
 		)
 	}
 
@@ -91,8 +89,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		targetAllocatorManager: targetallocator.NewManager(
 			set,
 			cfg.TargetAllocator.Get(),
-			&baseCfg,
-			promCfgLock,
+			sharedCfg,
 		),
 		apiServerManager: apiServerManager,
 	}
@@ -187,7 +184,7 @@ func (r *pReceiver) initPrometheusComponents(
 			Set(reflect.ValueOf(true))
 	}
 
-	scrapeManager, err := scrape.NewManager(scrapeOpts, logger, nil, store, nil, r.registerer)
+	scrapeManager, err := scrape.NewManager(scrapeOpts, logger, nil, nil, store, r.registerer)
 	if err != nil {
 		return err
 	}

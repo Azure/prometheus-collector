@@ -62,11 +62,10 @@ func TestPrometheusAPIServer(t *testing.T) {
 			require.Nil(t, response)
 		})
 
-		apiEnabled := true
 		receiver, _ := newTestReceiver(t, &Config{
 			PrometheusConfig: cfg,
-			APIServer: &apiserver.Config{
-				Enabled: &apiEnabled,
+			APIServer: apiserver.Config{
+				Enabled: true,
 				ServerConfig: confighttp.ServerConfig{
 					NetAddr: confignet.AddrConfig{
 						Transport: "tcp",

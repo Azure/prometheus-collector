@@ -14,8 +14,10 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/grafana/regexp"
+	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promslog"
@@ -34,28 +36,30 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/net/netutil"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/sharedpromconfig"
 )
+
+// defaultLookbackDelta is the Prometheus default. PromQL queries are not
+// supported by this receiver so the value has no practical effect; it is
+// only passed to satisfy the API v1 constructor signature.
+const defaultLookbackDelta = 5 * time.Minute
 
 type Manager struct {
 	settings      receiver.Settings
 	shutdown      chan struct{}
+	shutdownOnce  sync.Once
 	cfg           *Config
-	promCfg       *promconfig.Config
+	promCfg       *sharedpromconfig.Config
 	scrapeManager *scrape.Manager
 	registry      *prometheus.Registry
 	registerer    prometheus.Registerer
 	server        *http.Server
-	serverDone    chan struct{}
-	cfgLock       *sync.RWMutex
+	serverGroup   *errgroup.Group
 }
 
-func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, registry *prometheus.Registry, registerer prometheus.Registerer, cfgLock *sync.RWMutex) *Manager {
-	if cfg == nil {
-		return nil
-	}
-	if cfgLock == nil {
-		cfgLock = &sync.RWMutex{}
-	}
+func NewManager(set receiver.Settings, cfg *Config, promCfg *sharedpromconfig.Config, registry *prometheus.Registry, registerer prometheus.Registerer) *Manager {
 	return &Manager{
 		shutdown:   make(chan struct{}),
 		settings:   set,
@@ -63,7 +67,6 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 		promCfg:    promCfg,
 		registry:   registry,
 		registerer: registerer,
-		cfgLock:    cfgLock,
 	}
 }
 
@@ -73,9 +76,14 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
 	var corsOriginRegexp *regexp.Regexp
-	corsConfig := m.cfg.ServerConfig.CORS.Get()
-	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
-		combinedRegexp, err := regexp.Compile(strings.Join(corsConfig.AllowedOrigins, "|"))
+	if m.cfg.ServerConfig.CORS.HasValue() && len(m.cfg.ServerConfig.CORS.Get().AllowedOrigins) > 0 {
+		var combinedOriginsBuilder strings.Builder
+		combinedOriginsBuilder.WriteString(m.cfg.ServerConfig.CORS.Get().AllowedOrigins[0])
+		for _, origin := range m.cfg.ServerConfig.CORS.Get().AllowedOrigins[1:] {
+			combinedOriginsBuilder.WriteString("|")
+			combinedOriginsBuilder.WriteString(origin)
+		}
+		combinedRegexp, err := regexp.Compile(combinedOriginsBuilder.String())
 		if err != nil {
 			return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %w", err)
 		}
@@ -113,22 +121,13 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	var appV2 storage.AppendableV2
 	logger := promslog.NewNopLogger()
 
-	apiV1 := api_v1.NewAPI(
-		o.QueryEngine,
-		o.Storage,
-		app,
-		appV2,
-		o.ExemplarStorage,
-		factorySPr,
-		factoryTr,
-		factoryAr,
+	apiV1 := api_v1.NewAPI(o.QueryEngine, o.Storage, app, appV2, o.ExemplarStorage, factorySPr, factoryTr, factoryAr,
+
 		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
 		func() promconfig.Config {
-			m.cfgLock.RLock()
-			defer m.cfgLock.RUnlock()
-			return *m.promCfg
+			return m.promCfg.Get()
 		},
-		o.Flags,
+		o.Flags, // nil
 		api_v1.GlobalURLOptions{
 			ListenAddress: o.ListenAddresses[0],
 			Host:          o.ExternalURL.Host,
@@ -139,14 +138,14 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 				f(w, r)
 			}
 		},
-		o.LocalStorage,   // nil
-		o.TSDBDir,        // nil
-		o.EnableAdminAPI, // nil
+		nil,              // TSDBAdminStats
+		o.TSDBDir,        // ""
+		o.EnableAdminAPI, // false
 		logger,
 		factoryRr,
-		o.RemoteReadSampleLimit,      // nil
-		o.RemoteReadConcurrencyLimit, // nil
-		o.RemoteReadBytesInFrame,     // nil
+		o.RemoteReadSampleLimit,      // 0
+		o.RemoteReadConcurrencyLimit, // 0
+		o.RemoteReadBytesInFrame,     // 0
 		o.IsAgent,
 		o.CORSOrigin,
 		func() (api_v1.RuntimeInfo, error) {
@@ -179,7 +178,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.ConvertOTLPDelta,
 		o.NativeOTLPDeltaIngestion,
 		o.STZeroIngestionEnabled,
-		m.cfg.LookbackDelta,
+		defaultLookbackDelta,
 		o.EnableTypeAndUnitLabels,
 		false, // appendMetadata from remote write
 		nil,   // OverrideErrorCode
@@ -188,12 +187,15 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		parser.NewParser(parser.Options{}),
 	)
 
-	// Create listener in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
+	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
 	listener, err := m.cfg.ServerConfig.ToListener(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	listener = netutil.LimitListener(listener, o.MaxConnections)
+	listener = conntrack.NewListener(listener,
+		conntrack.TrackWithName("http"),
+		conntrack.TrackWithTracing())
 
 	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 	mux := http.NewServeMux()
@@ -220,40 +222,22 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	}
 	webconfig := ""
 
-	m.serverDone = make(chan struct{})
-	go func() {
-		defer close(m.serverDone)
+	m.serverGroup = &errgroup.Group{}
+	m.serverGroup.Go(func() error {
 		if err := toolkit_web.Serve(listener, m.server, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			m.settings.Logger.Error("API server failed", zap.Error(err))
+			return err
 		}
-	}()
+		return nil
+	})
 
 	return nil
-}
-
-// ApplyConfig updates the config field of the Manager struct.
-func (m *Manager) ApplyConfig(cfg *promconfig.Config) error {
-	m.cfgLock.Lock()
-	defer m.cfgLock.Unlock()
-
-	m.promCfg = cfg
-
-	return nil
-}
-
-func (m *Manager) GetConfig() *promconfig.Config {
-	m.cfgLock.RLock()
-	defer m.cfgLock.RUnlock()
-
-	return m.promCfg
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
-	select {
-	case <-m.shutdown:
-	default:
+	m.shutdownOnce.Do(func() {
 		close(m.shutdown)
-	}
+	})
 
 	if m.server == nil {
 		return nil
@@ -263,9 +247,12 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 		return err
 	}
 
-	if m.serverDone != nil {
+	if m.serverGroup != nil {
+		errCh := make(chan error, 1)
+		go func() { errCh <- m.serverGroup.Wait() }()
 		select {
-		case <-m.serverDone:
+		case err := <-errCh:
+			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		}
