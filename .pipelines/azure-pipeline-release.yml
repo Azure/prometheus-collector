@@ -285,6 +285,12 @@ extends:
                   inlineScript: |
                     # Enable dynamic extension installation
                     az config set extension.use_dynamic_install=yes_without_prompt
+                    # Pin k8s-extension to 1.6.7, the last release without pypi-hosted
+                    # dependencies. k8s-extension >=1.7.0 declares kubernetes/oras deps
+                    # (for its preview 'troubleshoot' command) that pip must fetch from
+                    # pypi.org, which is not reachable from the hosted build agents, so the
+                    # dynamic auto-install fails. Only show/update are used, both in 1.6.7.
+                    az extension add --name k8s-extension --version 1.6.7 --only-show-errors
                     
                     # Update Arc extension with new version
                     echo "Updating azuremonitor-metrics extension to version: $CHART_TAG"
