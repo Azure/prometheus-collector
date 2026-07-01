@@ -142,12 +142,11 @@ spec:
                       - virtual-kubelet
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+      {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-      {{- end }}
       {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
-      tolerations:
         - operator: "Exists"
           effect: "NoExecute"
       {{- end }}
