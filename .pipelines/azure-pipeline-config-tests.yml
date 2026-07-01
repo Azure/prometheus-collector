@@ -821,6 +821,92 @@ stages:
             displayName: "Create TestKube Results Summary"
             condition: always()
 
+          # --- Partial ConfigMap Tests (no prometheus-collector-settings section) ---
+          # v1 control + v2 regression test for the partial-configmap bug. A configmap that
+          # omits the optional prometheus-collector-settings section must still have its
+          # customizations honored instead of the whole configmap being discarded. v1 was never
+          # affected (directory-based parser); v2 is the regression test for the ParseMetricsFiles fix.
+
+          # v1 (control)
+          - bash: |
+              # Delete the existing settings configmap first so the partial fixture is applied
+              # cleanly without leaving a stale prometheus-collector-settings key behind.
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-partial-no-pcs-v1.yaml
+
+              # Force a clean re-parse of the partial configmap on startup.
+              kubectl rollout restart deployment/ama-metrics -n kube-system
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-partial-no-pcs-v1-crs.yaml" \
+                "testkube-config-test-partial-no-pcs-v1-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for partial v1 configmap (no prometheus-collector-settings)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="partial-no-pcs-v1"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-partial-no-pcs-v1.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary (partial v1)"
+            condition: always()
+
+          # v2 (regression test for the ParseMetricsFiles fix)
+          - bash: |
+              # Delete the existing settings configmap first so the partial fixture is applied
+              # cleanly without leaving a stale prometheus-collector-settings key behind.
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-partial-no-pcs-v2.yaml
+
+              # Force a clean re-parse of the partial configmap on startup.
+              kubectl rollout restart deployment/ama-metrics -n kube-system
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-partial-no-pcs-v2-crs.yaml" \
+                "testkube-config-test-partial-no-pcs-v2-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for partial v2 configmap (no prometheus-collector-settings)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="partial-no-pcs-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-partial-no-pcs-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+
+              # Restore the default settings configmap for subsequent runs.
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary and restore default settings configmap"
+            condition: always()
+
           # List created files
           - bash: |
               echo "Results files created:"
