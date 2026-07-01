@@ -44,14 +44,14 @@ extends:
         ArtifactToDeploy: ${{ parameters.artifactToDeploy }}
         CvrpManifestRelativePath: ${{ parameters.cvrpPath }}
       jobs:
-        - job: ReleaseJob
+        - job: USNatReleaseJob
           pool:
             type: release
           steps:
             - download: source_pipeline
               artifact: ${{ parameters.artifactToDeploy }}             
             - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-              displayName: USNat_Deploy
+              displayName: Test_Deploy_Buildout01
               inputs:
                 EnableStrictValidation: false
                 EndpointProviderType: ApprovalService
@@ -61,7 +61,19 @@ extends:
                 ForceRegistration: true
                 TaskAction: RegisterAndRollout
                 SkipRegistrationIfExists: true
-                ServiceRootPath: '$(Pipeline.Workspace)/source_pipeline/${{ parameters.artifactToDeploy }}/ServiceGroupRoot'
-                RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/${{ parameters.artifactToDeploy }}/ServiceGroupRoot/Rolloutspecs/Rolloutspec.json'
+                ServiceRootPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot'
+                RolloutSpecPath: '$(Pipeline.Workspace)/source_pipeline/drop-prometheus-collector-signed/ServiceGroupRoot/Rolloutspecs/RolloutSpec.json'
                 StageMapName: "Microsoft.Azure.SDP.Standard"
                 Select: regions(${{ parameters.deployToRegions }}) 
+        - job: SovereignReleaseMonitoring
+          displayName: 'Sovereign Release Monitoring'
+          dependsOn: USNatReleaseJob
+          pool:
+            type: server
+          cancelTimeoutInMinutes: 5
+          timeoutInMinutes: 14400 # 10 days is the max timeout for a job
+          steps:
+            - task: SovereignReleaseMonitoring@1
+              displayName: 'Sovereign Release Monitoring'
+              inputs:
+                requestedMonitorTimeout: 14400                

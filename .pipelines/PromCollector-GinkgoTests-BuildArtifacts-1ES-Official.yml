@@ -22,7 +22,7 @@ variables:
   GOPATH: 'C:\Users\cloudtest\go'
   GOMODCACHE: '$(GOPATH)\pkg\mod'
   GOPROXY: 'https://goproxy.microsoft.com,direct'
-  GONOSUMDB: 'github.com/Azure/*,github.com/Microsoft/*'
+  GONOSUMDB: 'github.com/Azure/*,github.com/Microsoft/*'  
   ManifestGeneratorTaskTimeoutInMinutes: 30
   1espt.codesignvalidation.enforced: true
 
@@ -51,14 +51,15 @@ resources:
     type: github
     endpoint: github.com_wtdoble
     name: azure/prometheus-collector
+    ##name: wtdoble/prometheus-collector 
     ref: refs/heads/williamd/agc
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
-    featureFlags:   # https://aka.ms/goproxy
+    featureFlags:
       golang:
         internalModuleProxy:
-          enabled: true
+          enabled: true  
     pool:
       name: 1ESPieminiBuildLarge
       image: 1ESPTGen2Large-ipie-prometheuscollector    ## https://aka.ms/1eshub
@@ -74,7 +75,7 @@ extends:
         enabled: true
         timeoutInMinutes: 30
         itemPattern: '**/*.ps1'
-        rootPaths: '$(System.DefaultWorkingDirectory)/../promrepo'
+        rootPaths: '$(Build.ArtifactStagingDirectory)'
       sourceRepositoriesToScan:
         exclude:
         - repository: prometheus-collector
@@ -107,34 +108,41 @@ extends:
               set | findstr /i "go"
               dir "$(Agent.ToolsDirectory)\\go"
             displayName: 'Check Go Version'
-
+                         
           - task: PowerShell@2
             displayName: go install ginkgo
             env:
               GOPATH: "$(GOPATH)"
               GOMODCACHE: "$(GOMODCACHE)"
+              # # GOPROXY: "$(GOPROXY)"
+              # # GONOSUMDB: "$(GONOSUMDB)"              
             inputs:
+              # command: 'install' # 'get' | 'build' | 'test' | 'custom'. Required. Command. Default: get.
+              # arguments: github.com/onsi/ginkgo/v2/ginkgo@latest # string. Arguments. 
               targetType: 'inline'
               script: |
                 Write-Host "GOPROXY: $env:GOPROXY"
                 Write-Host "GONOSUMDB: $env:GONOSUMDB"
                 go env GOPROXY
-                go install github.com/onsi/ginkgo/v2/ginkgo@latest
+                go install github.com/onsi/ginkgo/v2/ginkgo@latest          
 
           - task: PowerShell@2
             displayName: Go pkg cleanup
             env:
               GOPATH: "$(GOPATH)"
               GOMODCACHE: "$(GOMODCACHE)"
+              # # GOPROXY: "$(GOPROXY)"
+              # # GONOSUMDB: "$(GONOSUMDB)"              
             inputs:
-              targetType: 'inline'
-              script: |
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              script: | # string. Required when targetType = inline. Script. 
                 go clean -modcache
 
           - checkout: self
             persistCredentials: true          
             path: selfrepo
           - checkout: prometheus-collector
+            ##sparseCheckoutDirectories: otelcollector/test/ci-cd otelcollector/test/ginkgo-e2e
             sparseCheckoutDirectories: otelcollector/test
             persistCredentials: true
             path: promrepo
@@ -151,9 +159,11 @@ extends:
             env:
               GOPATH: "$(GOPATH)"
               GOMODCACHE: "$(GOMODCACHE)"
+              # # GOPROXY: "$(GOPROXY)"
+              # # GONOSUMDB: "$(GONOSUMDB)"              
             inputs:
-              targetType: 'inline'
-              script: |
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              script: | # string. Required when targetType = inline. Script.
                 $goPathDir = "$(GOPATH)"
 
                 $pkgs = @("k8s.io/client-go",
@@ -237,24 +247,24 @@ extends:
             env:
               GOPATH: "$(GOPATH)"
               GOMODCACHE: "$(GOMODCACHE)"
-              PATH: "$(GOPATH)\\bin;$(PATH)"   # Ensure ginkgo is in PATH
+              # # GOPROXY: "$(GOPROXY)"
+              # # GONOSUMDB: "$(GONOSUMDB)"              
+              PATH: "$(GOPATH)\\bin;$(PATH)" # Ensure ginkgo is in the PATH  
               GOOS: "linux"
               GOARCH: "amd64"
               CGO_ENABLED: 0
             inputs:
-              targetType: 'inline'
-              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests"
+              targetType: 'inline' # 'filePath' | 'inline'. Type. Default: filePath.
+              workingDirectory: "$(System.DefaultWorkingDirectory)\\..\\promrepo\\otelcollector\\test\\ginkgo-e2e\\regionTests" # string. Optional. Working directory.
               script: |
                 ginkgo build
-                Rename-Item regionTests.test regionTests-linux.exe
+                Rename-Item regionTests.test regionTests-linux.test
 
           - task: CopyFiles@2
             displayName: Copy ginkgo-e2e tests (.EXEs) to build staging directory
             inputs:
-            ## *****************************************
               SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ginkgo-e2e/regionTests'
-              Contents: '**/*.exe'
-              ##TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests'              
+              Contents: '**/*.test'
               TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ev2scripts'              
 
           - task: CopyFiles@2
@@ -262,17 +272,114 @@ extends:
             inputs:
               SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/ginkgo-e2e/configuration'
               Contents: '**'
-              ##TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/scripts/ginkgo-e2e/regionTests' 
               TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot/ev2scripts' 
 
           - task: CopyFiles@2
             displayName: Copy ev2 artifacts to staging directory
             inputs:
-            ## *****************************************            
-              ##SourceFolder: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
               SourceFolder: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/deployment/ServiceGroupRoot'
               Contents: '**'
               TargetFolder: '$(OB_OutputDirectory)/ServiceGroupRoot'
+
+          # - task: EsrpCodeSigning@5
+          #   displayName: "ESRP CodeSigning - Sign staged PS1 files"
+          #   inputs:
+          #     ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+          #     UseMSIAuthentication: true
+          #     AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
+          #     AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+          #     EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+          #     AuthAKVName: 'ESRPPrometheusKVProd'
+          #     AuthCertName: 'ESRPContainerImageSignCert'
+          #     AuthSignCertName: ESRPReqPrometheusProdCert
+          #     FolderPath: '$(Build.ArtifactStagingDirectory)/ServiceGroupRoot/ev2scripts'
+          #     Pattern: '*.ps1'
+          #     signConfigType: inlineSignParams
+          #     inlineOperation: |
+          #       [
+          #         {
+          #           "keyCode": "CP-230012",
+          #           "operationSetCode": "SigntoolSign",
+          #           "parameters": [
+          #             {
+          #               "parameterName": "OpusName",
+          #               "parameterValue": "Microsoft"
+          #             },
+          #             {
+          #               "parameterName": "OpusInfo",
+          #               "parameterValue": "http://www.microsoft.com"
+          #             },
+          #             {
+          #               "parameterName": "FileDigest",
+          #               "parameterValue": "/fd \"SHA256\""
+          #             },
+          #             {
+          #               "parameterName": "PageHash",
+          #               "parameterValue": "/NPH"
+          #             },
+          #             {
+          #               "parameterName": "TimeStamp",
+          #               "parameterValue": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+          #             }
+          #           ],
+          #           "toolName": "sign",
+          #           "toolVersion": "1.0"
+          #         }
+          #       ]
+          #     SessionTimeout: '60'
+          #     MaxConcurrency: '50'
+          #     MaxRetryAttempts: '5'
+          #     PendingAnalysisWaitTimeoutMinutes: '5'
+
+          # - task: EsrpCodeSigning@5
+          #   displayName: "ESRP CodeSigning - Sign EXE binaries"
+          #   inputs:
+          #     ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+          #     UseMSIAuthentication: true
+          #     AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
+          #     AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+          #     EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+          #     AuthAKVName: 'ESRPPrometheusKVProd'
+          #     AuthCertName: 'ESRPContainerImageSignCert'
+          #     AuthSignCertName: ESRPReqPrometheusProdCert
+          #     FolderPath: '$(Build.ArtifactStagingDirectory)/ServiceGroupRoot/ev2scripts'
+          #     Pattern: '*.exe'
+          #     signConfigType: inlineSignParams
+          #     inlineOperation: |
+          #       [
+          #         {
+          #           "keyCode": "CP-230012",
+          #           "operationSetCode": "SigntoolSign",
+          #           "parameters": [
+          #             {
+          #               "parameterName": "OpusName",
+          #               "parameterValue": "Microsoft"
+          #             },
+          #             {
+          #               "parameterName": "OpusInfo",
+          #               "parameterValue": "http://www.microsoft.com"
+          #             },
+          #             {
+          #               "parameterName": "FileDigest",
+          #               "parameterValue": "/fd \"SHA256\""
+          #             },
+          #             {
+          #               "parameterName": "PageHash",
+          #               "parameterValue": "/NPH"
+          #             },
+          #             {
+          #               "parameterName": "TimeStamp",
+          #               "parameterValue": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+          #             }
+          #           ],
+          #           "toolName": "sign",
+          #           "toolVersion": "1.0"
+          #         }
+          #       ]
+          #     SessionTimeout: '60'
+          #     MaxConcurrency: '50'
+          #     MaxRetryAttempts: '5'
+          #     PendingAnalysisWaitTimeoutMinutes: '5'
 
           - task: PowerShell@2
             displayName: Generate CVRP Manifest       
@@ -310,29 +417,28 @@ extends:
                 Write-Host "CVRP manifest generated at: $ManifestPath"
 
           templateContext:
-            signing:
-              configurations:
-                - name: SignTestBinaries
-                  description: Sign .test files with test certificate
-                  signType: esrp
-                  certificateId: CP-466278
-                  pattern: '**/*.test'
-                  directory: '$(System.DefaultWorkingDirectory)'
-                  operations:
-                    - SigntoolSign
-                  clientId: '$(system.identity.clientId)'
-                  tenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+            # signing:
+            #   configurations:
+            #     - name: SignTestBinaries
+            #       description: Sign .exe files
+            #       signType: esrp
+            #       certificateId: CP-230012
+            #       pattern: '**/*.exe'
+            #       directory: '$(OB_OutputDirectory)'
+            #       operations:
+            #         - SigntoolSign
+            #       clientId: '$(system.identity.clientId)'
+            #       tenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
 
-                - name: SignPowerShellScripts
-                  signType: esrp
-                  certificateId: CP-466278
-                  pattern: '**/*.ps1'
-                  ##directory: '$(System.DefaultWorkingDirectory)/../selfrepo/Deployment/ServiceGroupRoot'
-                  directory: '$(System.DefaultWorkingDirectory)/../promrepo/otelcollector/test/deployment/ServiceGroupRoot'
-                  operations: 
-                    - SigntoolSign
-                  clientId: $(system.identity.clientId)
-                  tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
+            #     - name: SignPowerShellScripts
+            #       signType: esrp
+            #       certificateId: CP-230012
+            #       pattern: '**/*.ps1'
+            #       directory: '$(OB_OutputDirectory)'
+            #       operations: 
+            #         - SigntoolSign
+            #       clientId: '$(system.identity.clientId)'
+            #       tenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
 
             outputs:
             - output: pipelineArtifact
