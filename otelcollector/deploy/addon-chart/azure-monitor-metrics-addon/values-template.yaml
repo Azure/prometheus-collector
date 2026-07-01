@@ -158,17 +158,17 @@ AzureMonitorMetrics:
     ImageRepositoryWin: "/aks/msi/addon-token-adapter"
     ImageTagWin: "master.260209.2"
 
-msiTokenAdapterLinux:
-  cpuLimit: "500m"
-  memoryLimit: "500Mi"
-  cpuRequest: "20m"
-  memoryRequest: "30Mi"
+  msiTokenAdapterLinux:
+    cpuLimit: "500m"
+    memoryLimit: "500Mi"
+    cpuRequest: "20m"
+    memoryRequest: "30Mi"
 
-msiTokenAdapterWin:
-  cpuLimit: "250m"
-  memoryLimit: "500Mi"
-  cpuRequest: "100m"
-  memoryRequest: "100Mi"
+  msiTokenAdapterWin:
+    cpuLimit: "250m"
+    memoryLimit: "500Mi"
+    cpuRequest: "100m"
+    memoryRequest: "100Mi"
 
   #ArcExtension: ${ARC_EXTENSION}
   IncludeDependentCharts: ${INCLUDE_DEPENDENT_CHARTS}
@@ -234,11 +234,11 @@ Azure:
           periodSeconds: 60
         resources:
           limits:
-            cpu: {{ ((.Values.msiTokenAdapterLinux | default dict).cpuLimit) | default "500m" }}
-            memory: {{ ((.Values.msiTokenAdapterLinux | default dict).memoryLimit) | default "500Mi" }}
+            cpu: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterLinux | default dict).cpuLimit) | default "500m" }}
+            memory: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterLinux | default dict).memoryLimit) | default "500Mi" }}
           requests:
-            cpu: {{ ((.Values.msiTokenAdapterLinux | default dict).cpuRequest) | default "20m" }}
-            memory: {{ ((.Values.msiTokenAdapterLinux | default dict).memoryRequest) | default "30Mi" }}
+            cpu: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterLinux | default dict).cpuRequest) | default "20m" }}
+            memory: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterLinux | default dict).memoryRequest) | default "30Mi" }}
         securityContext:
           capabilities:
             drop:
@@ -265,11 +265,11 @@ Azure:
           periodSeconds: 60
         resources:
           limits:
-            cpu: {{ ((.Values.msiTokenAdapterWin | default dict).cpuLimit) | default "250m" }}
-            memory: {{ ((.Values.msiTokenAdapterWin | default dict).memoryLimit) | default "500Mi" }}
+            cpu: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterWin | default dict).cpuLimit) | default "250m" }}
+            memory: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterWin | default dict).memoryLimit) | default "500Mi" }}
           requests:
-            cpu: {{ ((.Values.msiTokenAdapterWin | default dict).cpuRequest) | default "100m" }}
-            memory: {{ ((.Values.msiTokenAdapterWin | default dict).memoryRequest) | default "100Mi" }}
+            cpu: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterWin | default dict).cpuRequest) | default "100m" }}
+            memory: {{ ((.Values.AzureMonitorMetrics.msiTokenAdapterWin | default dict).memoryRequest) | default "100Mi" }}
         securityContext:
           capabilities:
             drop:
