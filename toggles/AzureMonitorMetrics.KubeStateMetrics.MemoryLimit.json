@@ -18,6 +18,23 @@
         }
       ],
       "Value": "5.5Gi"
+    },
+    {
+      "Matchers": [
+        {
+          "Field": "armId",
+          "Operator": "equals",
+          "Values": [
+            "/subscriptions/4e80f01b-fe6b-41fd-860b-36a21e3b0469/resourceGroups/AT51756_CPP_DEV_NEU_RUNNER_GF01/providers/Microsoft.ContainerService/managedClusters/kd4e8051756gf01",
+            "/subscriptions/74481903-a46a-47a7-b0ed-d4767343a239/resourceGroups/AT51756_CPP_DEV_NEU_RUNNER_WP01/providers/Microsoft.ContainerService/managedClusters/kd744851756wp01",
+            "/subscriptions/3a640cea-bd36-4796-bc2d-29079e0c65c0/resourceGroups/AT51756_CPP_DEV_NEU_RUNNER_IB01/providers/Microsoft.ContainerService/managedClusters/kd3a6451756ib01",
+            "/subscriptions/4fcdc6e0-ac2d-4398-922d-849c5ffbbfef/resourceGroups/AT51756_CPP_DEV_NEU_RUNNER_TS01/providers/Microsoft.ContainerService/managedClusters/kd4fcd51756ts01",
+            "/subscriptions/eddaafa8-ae05-40fd-b351-74a13599577f/resourceGroups/AT51756_CPP_DEV_EUS2_RUNNER_WA01/providers/Microsoft.ContainerService/managedClusters/kdedda51756wa01",
+            "/subscriptions/ad2eab05-d479-44c8-90a6-d654e8b816d9/resourceGroups/AT51756_CPP_DEV_SAS_RUNNER_WP03/providers/Microsoft.ContainerService/managedClusters/kdad2e51756wp03"
+          ]
+        }
+      ],
+      "Value": "10Gi"
     }
   ]
 }

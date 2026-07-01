@@ -1,0 +1,81 @@
+kind: ConfigMap
+apiVersion: v1
+# Control fixture for the partial-configmap parity test (schema-version v1).
+#
+# This is a schema-version v1 ama-metrics-settings-configmap that intentionally OMITS the
+# optional prometheus-collector-settings key. v1 is parsed by ParseV1Config, which reads
+# the settings directory independently and was NEVER affected by the v2 partial-configmap
+# bug, so this fixture is expected to be honored on every agent version (it is the control
+# that demonstrates the bug was v2-specific).
+#
+# As with the v2 fixture, the custom kube-state-metrics scrape interval (59s) and keep-list
+# (PV/PVC metrics, which are NOT part of the minimal-ingestion-profile baseline) are the
+# observable signals checked by the test.
+data:
+  schema-version:
+    #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+    v1
+  config-version:
+    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+    ver1
+  default-scrape-settings-enabled: |-
+    kubelet = true
+    coredns = true
+    cadvisor = true
+    kubeproxy = true
+    apiserver = true
+    kubestate = true
+    nodeexporter = true
+    windowsexporter = true
+    windowskubeproxy = true
+    kappiebasic = true
+    networkobservabilityRetina = true
+    networkobservabilityHubble = true
+    networkobservabilityCilium = true
+    prometheuscollectorhealth = false
+    acstor-capacity-provisioner = true
+    acstor-metrics-exporter = true
+    local-csi-driver = true
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = ""
+  default-targets-metrics-keep-list: |-
+    kubelet = ""
+    coredns = ""
+    cadvisor = ""
+    kubeproxy = ""
+    apiserver = ""
+    kubestate = "kube_persistentvolumeclaim_info|kube_persistentvolume_capacity_bytes"
+    nodeexporter = ""
+    windowsexporter = ""
+    windowskubeproxy = ""
+    podannotations = ""
+    kappiebasic = ""
+    networkobservabilityRetina = ""
+    networkobservabilityHubble = ""
+    networkobservabilityCilium = ""
+    acstor-capacity-provisioner = ""
+    acstor-metrics-exporter = ""
+    local-csi-driver = ""
+    minimalingestionprofile = true
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubeproxy = "30s"
+    apiserver = "30s"
+    kubestate = "59s"
+    nodeexporter = "30s"
+    windowsexporter = "30s"
+    windowskubeproxy = "30s"
+    kappiebasic = "30s"
+    networkobservabilityRetina = "30s"
+    networkobservabilityHubble = "30s"
+    networkobservabilityCilium = "30s"
+    prometheuscollectorhealth = "30s"
+    podannotations = "30s"
+    acstor-capacity-provisioner = "30s"
+    acstor-metrics-exporter = "30s"
+    local-csi-driver = "30s"
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
