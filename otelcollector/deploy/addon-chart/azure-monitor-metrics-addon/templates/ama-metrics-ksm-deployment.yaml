@@ -129,7 +129,6 @@ spec:
                 operator: In
                 values:
                 - system
-          {{- if not $arcExtensionSettings.isArcExtension }}
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
@@ -143,14 +142,14 @@ spec:
                       - virtual-kubelet
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
-          {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-          {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+      {{- end }}
+      {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
+      tolerations:
         - operator: "Exists"
           effect: "NoExecute"
-          {{- end }}
       {{- end }}
       volumes:
         - name: settings-vol-config
