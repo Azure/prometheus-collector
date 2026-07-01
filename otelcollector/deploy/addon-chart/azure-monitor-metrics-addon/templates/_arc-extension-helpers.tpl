@@ -1,7 +1,17 @@
 {{ define "arc-extension-settings" }}
 
 # overriding setting here so that it can be set dynamically based on cluster id (needed because the same chart can be used for both Aks and Arc clusters)
-{{- if and .Values.global.commonGlobals.Customer.AzureResourceID (contains "microsoft.containerservice/managedclusters" (lower .Values.global.commonGlobals.Customer.AzureResourceID)) }}
+{{- $azureResourceID := "" }}
+{{- if .Values.global }}
+{{- if .Values.global.commonGlobals }}
+{{- if .Values.global.commonGlobals.Customer }}
+{{- if .Values.global.commonGlobals.Customer.AzureResourceID }}
+{{- $azureResourceID = .Values.global.commonGlobals.Customer.AzureResourceID }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if and (ne $azureResourceID "") (contains "microsoft.containerservice/managedclusters" (lower $azureResourceID)) }}
 isArcExtension: false
 {{- else }}
 isArcExtension: true
