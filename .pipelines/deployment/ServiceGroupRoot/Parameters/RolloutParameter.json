@@ -339,7 +339,7 @@
           },
           {
             "name": "HELM_CHART_NAME",
-            "value": "__ARC_HELM_CHART_NAME__"
+            "value": "__HELM_CHART_NAME__"
           },
           {
             "name": "PROD_MCR_NE_REPOSITORY",
