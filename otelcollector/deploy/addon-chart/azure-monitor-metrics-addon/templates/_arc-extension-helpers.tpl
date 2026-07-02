@@ -11,11 +11,11 @@
 {{- end }}
 {{- end }}
 {{- end }}
-{{- if and (ne $azureResourceID "") (contains "microsoft.containerservice/managedclusters" (lower $azureResourceID)) }}
-isArcExtension: false
-{{- else }}
-isArcExtension: true
+{{- $isArcExtension := false }}
+{{- if or (eq $azureResourceID "") (not (contains "microsoft.containerservice/managedclusters" (lower $azureResourceID))) }}
+{{- $isArcExtension = true }}
 {{- end }}
+isArcExtension: {{ $isArcExtension }}
 
 
 resourceId: {{.Values.Azure.Cluster.ResourceId }}
