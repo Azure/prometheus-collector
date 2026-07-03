@@ -24,7 +24,6 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/sharedpromconfig"
 )
 
 func TestNewManager(t *testing.T) {
@@ -37,15 +36,15 @@ func TestNewManager(t *testing.T) {
 			{JobName: "test-job"},
 		},
 	}
-	sharedCfg := sharedpromconfig.NewConfig(promCfg)
 
-	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, sharedCfg)
+	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg)
 
 	assert.NotNil(t, manager)
 	assert.Equal(t, cfg, manager.cfg)
-	assert.Equal(t, sharedCfg, manager.promCfg)
+	assert.Equal(t, promCfg, manager.promCfg)
 	assert.NotNil(t, manager.shutdown)
 	assert.NotNil(t, manager.configUpdateCount)
+	assert.Len(t, manager.initialScrapeConfigs, 1)
 }
 
 func TestManagerShutdown(t *testing.T) {
@@ -65,7 +64,6 @@ func TestManagerShutdown(t *testing.T) {
 	cfg.Endpoint = server.URL
 	promCfg, err := promconfig.Load("", nil)
 	require.NoError(t, err)
-	sharedCfg := sharedpromconfig.NewConfig(promCfg)
 
 	// Create a logger with observer to capture logs
 	core, logs := observer.New(zapcore.InfoLevel)
@@ -73,7 +71,7 @@ func TestManagerShutdown(t *testing.T) {
 	settings := receivertest.NewNopSettings(metadata.Type)
 	settings.Logger = logger
 
-	manager := NewManager(settings, cfg, sharedCfg)
+	manager := NewManager(settings, cfg, promCfg)
 
 	// Start the manager so the goroutine is running
 	ctx := t.Context()
