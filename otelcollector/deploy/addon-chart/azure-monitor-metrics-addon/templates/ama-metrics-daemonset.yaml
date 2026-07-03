@@ -301,40 +301,7 @@ spec:
           {{- end }}
         {{- else }}
         - name: addon-token-adapter
-          command:
-            - /addon-token-adapter
-          args:
-            - --secret-namespace=kube-system
-            - --secret-name=aad-msi-auth-token
-            - --token-server-listening-port=7777
-            - --health-server-listening-port=9999
-            - --restart-pod-waiting-minutes-on-broken-connection=240
-          image: "{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9999
-            initialDelaySeconds: 10
-            periodSeconds: 60
-          resources:
-            limits:
-              {{- $containerResources := index $size.containers "addon-token-adapter" }}
-              cpu: {{ $containerResources.cpuLimit }}
-              memory: {{ $containerResources.memoryLimit }}
-            requests:
-              cpu: {{ $containerResources.cpuRequest }}
-              memory: {{ $containerResources.memoryRequest }}
-          securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
-                - NET_RAW
+{{ tpl $.Values.Azure.Identity.AADMsiTokenAdapterLinuxYaml $ | nindent 10 }}
         {{- end }}
       affinity:
         nodeAffinity:
@@ -610,34 +577,7 @@ spec:
             timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
-          command:
-           - addon-token-adapter-win
-          args:
-           - --secret-namespace=kube-system
-           - --secret-name=aad-msi-auth-token
-           - --token-server-listening-port=7777
-           - --health-server-listening-port=9999
-           - --restart-pod-waiting-minutes-on-broken-connection=240
-          image: "{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ $.Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-           httpGet:
-             path: /healthz
-             port: 9999
-           initialDelaySeconds: 10
-           periodSeconds: 60
-          resources:
-           limits:
-             memory: 500Mi
-           requests:
-             cpu: 100m
-             memory: 100Mi
-          securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
+{{ tpl $.Values.Azure.Identity.AADMsiTokenAdapterWindowsYaml $ | nindent 10 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -1,3 +1,5 @@
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if .Values.prometheus.podMonitor.enabled }}
 apiVersion: {{ .Values.prometheus.podMonitor.apiVersion | default "monitoring.coreos.com/v1" }}
 kind: PodMonitor
@@ -88,4 +90,5 @@ spec:
       params:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
 {{- end }}

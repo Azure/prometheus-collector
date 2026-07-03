@@ -90,8 +90,8 @@
           "replaceWith": "$config(NEChartTag)"
         },
         {
-          "find": "__ARC_HELM_CHART_NAME__",
-          "replaceWith": "$config(arcHelmChartName)"
+          "find": "__HELM_CHART_NAME__",
+          "replaceWith": "$config(helmChartName)"
         },
         {
           "find": "__ONLY_CCP_RELEASE__",

@@ -268,7 +268,7 @@ spec:
         {{- end }}
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+        {{- if and $arcExtensionSettings.isArcExtension (eq (default .Values.tolerationsOnlyForControlPlane false) false) }}
         - operator: "Exists"
           effect: "PreferNoSchedule" 
         {{- end }}
