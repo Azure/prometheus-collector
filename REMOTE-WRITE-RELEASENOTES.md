@@ -1,5 +1,12 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 07-06-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260706.1`
+* Change log -
+  * Bump `golang.org/x/net` from v0.38.0 to v0.55.0 to fix CVE-2026-25680.
+* Fixed CVEs:
+    - [CVE-2026-25680](https://avd.aquasec.com/nvd/cve-2026-25680) — `golang.org/x/net` HTML parsing can consume excessive CPU time, leading to denial of service.
+
 ## Release 06-19-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260619.1`
 * Change log -
