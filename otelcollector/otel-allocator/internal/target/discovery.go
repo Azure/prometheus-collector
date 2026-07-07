@@ -217,7 +217,7 @@ func (m *Discoverer) Reload() {
 	m.processTargetsCallBack(targets)
 }
 
-// processTargetGroups processes the target groups and returns a map of targets.
+// processTargetGroups processes target groups into the provided items slice.
 func (m *Discoverer) processTargetGroups(jobName string, groups []*targetgroup.Group, intoTargets []*Item) {
 	// the builder for group labels
 	groupBuilder := labels.NewScratchBuilder(labelBuilderPreallocSize)
