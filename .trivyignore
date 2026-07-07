@@ -1,4 +1,4 @@
-# This file contains CVEs to be ignored by Trivy
+<!-- # This file contains CVEs to be ignored by Trivy
 
 # CRITICAL
 # os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-2.azl3, suppress pending base image rebuild)
@@ -47,4 +47,4 @@ CVE-2026-39834 #golang.org/x/crypto/ssh - writing data larger than 4GB in a sing
 CVE-2026-46598 #golang.org/x/crypto/ssh/agent
 # gobinary - github.com/docker/docker (target-allocator) (v28.5.2 -> 29.3.1)
 CVE-2026-33997 #github.com/docker/docker - Moby off-by-one error in plugin privilege validation
-
+ -->
