@@ -19,6 +19,11 @@ jobs:
 
       - name: Upgrade otel
         id: upgrade
+        env:
+          # Forward an authenticated token to the script's curl calls so we don't
+          # hit the 60 req/hour anonymous GitHub API rate limit on shared
+          # GitHub-hosted runner egress IPs.
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           CURRENT_VERSION=$(cat OPENTELEMETRY_VERSION)
           bash -x ./internal/otel-upgrade-scripts/check-otel-version.sh
