@@ -1,0 +1,46 @@
+# This file contains CVEs to be ignored by Trivy
+
+# CRITICAL
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-2.azl3, suppress pending base image rebuild)
+CVE-2026-34182 #openssl - CMS AuthEnvelopedData processing may accept forged messages
+
+# HIGH
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-3.azl3, suppress pending base image rebuild)
+CVE-2026-34180 #openssl - Heap buffer over-read in ASN.1 decoding can lead to DoS
+CVE-2026-45445 #openssl - AES-OCB IV ignored on EVP_Cipher() path
+CVE-2026-7383  #openssl - Heap buffer overflow due to signed integer overflow in Unicode
+CVE-2026-9076  #openssl - DoS due to heap out-of-bounds read in CMS
+# gobinary - golang.org/x/net (ccpmain) (v0.38.0 -> 0.55.0)
+CVE-2026-25680 #golang.org/x/net - excessive CPU parsing arbitrary HTML
+CVE-2026-25681 #golang.org/x/net - HTML parsed then rendered via Render
+CVE-2026-27136 #golang.org/x/net - HTML parsed then rendered via Render
+CVE-2026-33814 #golang.org/x/net - HTTP/2 SETTINGS_MAX_FRAME_SIZE DoS
+CVE-2026-39821 #golang.org/x/net/idna - Privilege escalation via incorrect Punycode label processing
+CVE-2026-42502 #golang.org/x/net - HTML parsed then rendered via Render
+# gobinary - golang.org/x/crypto (prometheusui) (v0.49.0 -> 0.52.0)
+CVE-2026-39827 #golang.org/x/crypto/ssh - DoS via repeatedly opened channels
+CVE-2026-39828 #golang.org/x/crypto/ssh - DoS
+CVE-2026-39829 #golang.org/x/crypto/ssh - DoS
+CVE-2026-39830 #golang.org/x/crypto/ssh - DoS
+CVE-2026-39832 #golang.org/x/crypto/ssh/agent - DoS
+CVE-2026-39835 #golang.org/x/crypto/ssh - CertChecker used as public key callback
+CVE-2026-42508 #golang.org/x/crypto/ssh/knownhosts
+CVE-2026-46595 #golang.org/x/crypto/ssh
+CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to int
+
+# MEDIUM
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, suppress pending base image rebuild)
+CVE-2026-34183 #openssl - Unbounded memory growth in QUIC PATH_CHALLENGE handler
+CVE-2026-42766 #openssl - Possible NULL dereference in password-based CMS decryption
+CVE-2026-42767 #openssl - NULL pointer dereference in CRMF EncryptedValue decryption
+CVE-2026-45446 #openssl - Incorrect tag processing for empty messages in AES-GCM-SIV/AES-SIV
+# gobinary - golang.org/x/net/html (ccpmain) (v0.38.0 -> 0.45.0)
+CVE-2025-47911 #golang.org/x/net/html - quadratic parsing complexity
+CVE-2025-58190 #golang.org/x/net/html - infinite parsing loop
+# gobinary - golang.org/x/net (prometheusui) (v0.52.0 -> 0.55.0)
+CVE-2026-42506 #golang.org/x/net - HTML parsed then rendered via Render
+# gobinary - golang.org/x/crypto (prometheusui) (v0.49.0 -> 0.52.0)
+CVE-2026-39831 #golang.org/x/crypto/ssh - FIDO/U2F Verify() issue
+CVE-2026-39833 #golang.org/x/crypto/ssh - in-memory keyring silent failure
+CVE-2026-39834 #golang.org/x/crypto/ssh - writing data larger than 4GB in a single Write call
+CVE-2026-46598 #golang.org/x/crypto/ssh/agent
