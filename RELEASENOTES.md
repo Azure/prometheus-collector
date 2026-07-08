@@ -1,5 +1,38 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 07-07-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-cfg`
+* AKS and Arc Container Images :
+  + Toggle File Name Fixes (https://github.com/Azure/prometheus-collector/pull/1558)
+  + Additional Toggle Naming Fixes (https://github.com/Azure/prometheus-collector/pull/1566)
+  + Sync prom toggles (https://github.com/Azure/prometheus-collector/pull/1572)
+  + fix: don't drop entire v2 config when an optional section file is missing (https://github.com/Azure/prometheus-collector/pull/1582)
+  + Merge extension chart to main (https://github.com/Azure/prometheus-collector/pull/1563)
+  + build(deps): Upgrade otelcollector to v0.153.0 (https://github.com/Azure/prometheus-collector/pull/1589)
+  + build(deps): Upgrade otelcollector to v0.154.0 (https://github.com/Azure/prometheus-collector/pull/1597)
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.26.3 to 4.26.6 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1595)
+  + build(deps): bump go.opentelemetry.io/otel/sdk from 1.43.0 to 1.44.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1586)
+  + build(deps): bump github.com/moby/spdystream from 0.5.0 to 0.5.1 in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1592)
+  + build(deps): bump golang.org/x/net from 0.52.0 to 0.55.0 in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1598)
+  + build(deps): bump golang.org/x/net from 0.43.0 to 0.55.0 in /otelcollector/test/ginkgo-e2e/regionTests (https://github.com/Azure/prometheus-collector/pull/1596)
+  + build(deps): bump golang.org/x/net from 0.43.0 to 0.55.0 in /otelcollector/test/ginkgo-e2e/containerstatus (https://github.com/Azure/prometheus-collector/pull/1601)
+  + build(deps): bump google.golang.org/grpc from 1.81.0 to 1.82.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1599)
+
+* Pipeline/Docs/Templates Updates:
+  + Skills for dev and prod image release validation (https://github.com/Azure/prometheus-collector/pull/1545)
+  + Update May 2026 release notes with image tag 7.0.0-main-05-07-2026-dbf4ae51 (https://github.com/Azure/prometheus-collector/pull/1554)
+  + skill for extension validaiton (https://github.com/Azure/prometheus-collector/pull/1556)
+  + add pipeline for testing aks extension release (https://github.com/Azure/prometheus-collector/pull/1567)
+  + Update remote write release notes for 20260619.1 (Azure China auth fix) (https://github.com/Azure/prometheus-collector/pull/1579)
+  + ci: unblock build gate — update .trivyignore + disable linux python ref app (https://github.com/Azure/prometheus-collector/pull/1583)
+  + Fix upgrade bot where auto creation of upgrade prs are failing due to go mod restructuring (https://github.com/Azure/prometheus-collector/pull/1587)
+  + fix(otel-upgrade): authenticate GitHub API calls to avoid rate-limit for curl calls (https://github.com/Azure/prometheus-collector/pull/1588)
+  + ci: pin k8s-extension to 1.6.7 to unblock Arc dev/prod deploy (https://github.com/Azure/prometheus-collector/pull/1594)
+  + Update remote write release notes for 20260706.1 (CVE-2026-25680) (https://github.com/Azure/prometheus-collector/pull/1600)
+
 ## Release 05-07-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51-win`
