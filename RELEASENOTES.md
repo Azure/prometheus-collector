@@ -33,6 +33,7 @@
   + fix(otel-upgrade): authenticate GitHub API calls to avoid rate-limit for curl calls (https://github.com/Azure/prometheus-collector/pull/1588)
   + ci: pin k8s-extension to 1.6.7 to unblock Arc dev/prod deploy (https://github.com/Azure/prometheus-collector/pull/1594)
   + Update remote write release notes for 20260706.1 (CVE-2026-25680) (https://github.com/Azure/prometheus-collector/pull/1600)
+  + Update tag and chart paths (https://github.com/Azure/prometheus-collector/pull/1609)
 
 ## Release 05-07-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51`
