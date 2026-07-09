@@ -1,16 +1,17 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 07-07-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-<TBD>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc-cfg`
 * AKS and Arc Container Images :
   + Toggle File Name Fixes (https://github.com/Azure/prometheus-collector/pull/1558)
   + Additional Toggle Naming Fixes (https://github.com/Azure/prometheus-collector/pull/1566)
   + Sync prom toggles (https://github.com/Azure/prometheus-collector/pull/1572)
   + fix: don't drop entire v2 config when an optional section file is missing (https://github.com/Azure/prometheus-collector/pull/1582)
   + Merge extension chart to main (https://github.com/Azure/prometheus-collector/pull/1563)
+  + Upgrade kube-state-metrics from v2.18.0-1 to v2.19.0-4 (https://github.com/Azure/prometheus-collector/pull/1563)
   + build(deps): Upgrade otelcollector to v0.153.0 (https://github.com/Azure/prometheus-collector/pull/1589)
   + build(deps): Upgrade otelcollector to v0.154.0 (https://github.com/Azure/prometheus-collector/pull/1597)
   + build(deps): bump github.com/shirou/gopsutil/v4 from 4.26.3 to 4.26.6 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1595)
@@ -32,6 +33,7 @@
   + fix(otel-upgrade): authenticate GitHub API calls to avoid rate-limit for curl calls (https://github.com/Azure/prometheus-collector/pull/1588)
   + ci: pin k8s-extension to 1.6.7 to unblock Arc dev/prod deploy (https://github.com/Azure/prometheus-collector/pull/1594)
   + Update remote write release notes for 20260706.1 (CVE-2026-25680) (https://github.com/Azure/prometheus-collector/pull/1600)
+  + Update tag and chart paths (https://github.com/Azure/prometheus-collector/pull/1609)
 
 ## Release 05-07-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51`

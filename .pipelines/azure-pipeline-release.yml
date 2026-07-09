@@ -179,8 +179,8 @@ extends:
                   SLEEP_INTERVAL: 30
                   MCR_REGISTRY: "mcr.microsoft.com"
                   PROD_MCR_AGENT_REPO: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
-                  PROD_MCR_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
-                  PROD_MCR_ARC_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
+                  PROD_MCR_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics"
+                  PROD_MCR_ARC_CHART_REPO: "/azuremonitor/containerinsights/ciprod/ama-metrics"
                 target:
                   container: host
                 displayName: Check images and ARC chart are pushed to MCR
@@ -202,7 +202,10 @@ extends:
                 displayName: Deploy to ci-prod-aks-mac-weu
               - task: AzureCLI@2
                 env:
-                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                  # Arc consumes the chart pushed under the '-arc' OCI tag
+                  # (the build packages the same chart as <runName> for AKS
+                  # and <runName>-arc for Arc). See azure-pipeline-build.yml.
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)-arc"
                 inputs:
                   connectedServiceNameARM: prometheus-arc-dev-release-mi
                   scriptType: bash
@@ -219,7 +222,7 @@ extends:
                               "Releasetrains": [
                                   "pipeline","staging"
                               ],
-                              "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
+                              "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics",
                               "ExtensionUpdateFrequencyInMinutes": 5,
                               "IsCustomerHidden": true,
                               "ReadyforRollout": true,
@@ -302,7 +305,8 @@ extends:
                       --version $CHART_TAG \
                       --release-train staging
                 env:
-                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)"
+                  # Arc consumes the chart pushed under the '-arc' OCI tag.
+                  CHART_TAG: "$(resources.pipeline._Azureprometheus-collector.runName)-arc"
                 target:
                   container: host
                 displayName: Install extension on ci-prod-arc-wcus
