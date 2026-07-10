@@ -44,3 +44,5 @@ CVE-2026-39831 #golang.org/x/crypto/ssh - FIDO/U2F Verify() issue
 CVE-2026-39833 #golang.org/x/crypto/ssh - in-memory keyring silent failure
 CVE-2026-39834 #golang.org/x/crypto/ssh - writing data larger than 4GB in a single Write call
 CVE-2026-46598 #golang.org/x/crypto/ssh/agent
+# gobinary - stdlib / Go crypto/tls (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
+CVE-2026-42505 #stdlib crypto/tls - Information disclosure in Encrypted Client Hello
