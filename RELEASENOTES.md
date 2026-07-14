@@ -1,5 +1,17 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 07-14-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-14-2026-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-14-2026-<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-14-2026-<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-14-2026-<TBD>-cfg`
+* AKS and Arc Container Images :
+  + otelcollector: allow to fetch metrics from etcd metrics port (https://github.com/Azure/prometheus-collector/pull/1616)
+
+* Pipeline/Docs/Templates Updates:
+  + Update tag and chart paths (https://github.com/Azure/prometheus-collector/pull/1609)
+  + ci: fix size-label workflow for fork PRs (https://github.com/Azure/prometheus-collector/pull/1610)
+
 ## Release 07-07-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.0-main-07-07-2026-548e23dc-win`
