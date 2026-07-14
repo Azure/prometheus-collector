@@ -1,0 +1,30 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+{{- if and (or .Values.AzureMonitorMetrics.TargetAllocatorEnabled $arcExtensionSettings.operatorEnabled) .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    component: ama-metrics-operator-targets
+    kubernetes.azure.com/managedby: aks
+  name: ama-metrics-operator-targets
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      rsName: ama-metrics-operator-targets
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow mTLS traffic from collector pods only
+  - from:
+    - podSelector:
+        matchLabels:
+          rsName: ama-metrics
+    ports:
+    - protocol: TCP
+      port: 8443
+  # Allow health probe traffic from kubelet (port 8081)
+  - ports:
+    - protocol: TCP
+      port: 8081
+{{- end }}
