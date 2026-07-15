@@ -32,20 +32,20 @@ func TestNewManager(t *testing.T) {
 		Interval:    30 * time.Second,
 		CollectorID: "test-collector",
 	}
-	promCfg := &promconfig.Config{
+	promCfg := sharedpromconfig.NewConfig(&promconfig.Config{
 		ScrapeConfigs: []*promconfig.ScrapeConfig{
 			{JobName: "test-job"},
 		},
-	}
-	sharedCfg := sharedpromconfig.NewConfig(promCfg)
+	})
 
-	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, sharedCfg)
+	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg)
 
 	assert.NotNil(t, manager)
 	assert.Equal(t, cfg, manager.cfg)
-	assert.Equal(t, sharedCfg, manager.promCfg)
+	assert.Equal(t, promCfg, manager.promCfg)
 	assert.NotNil(t, manager.shutdown)
 	assert.NotNil(t, manager.configUpdateCount)
+	assert.Len(t, manager.initialScrapeConfigs, 1)
 }
 
 func TestManagerShutdown(t *testing.T) {
@@ -65,7 +65,6 @@ func TestManagerShutdown(t *testing.T) {
 	cfg.Endpoint = server.URL
 	promCfg, err := promconfig.Load("", nil)
 	require.NoError(t, err)
-	sharedCfg := sharedpromconfig.NewConfig(promCfg)
 
 	// Create a logger with observer to capture logs
 	core, logs := observer.New(zapcore.InfoLevel)
@@ -73,7 +72,7 @@ func TestManagerShutdown(t *testing.T) {
 	settings := receivertest.NewNopSettings(metadata.Type)
 	settings.Logger = logger
 
-	manager := NewManager(settings, cfg, sharedCfg)
+	manager := NewManager(settings, cfg, sharedpromconfig.NewConfig(promCfg))
 
 	// Start the manager so the goroutine is running
 	ctx := t.Context()
