@@ -1,9 +1,11 @@
 # Demo diagrams: the AKS `kube-system` lockdown story
 
-> Visual companion to `aks-vap-demo-script.md`. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers). One line of speaker cue under each — talk over the picture, don't read it.
+> **This is the demo doc — drive the talk straight from here.** Each diagram has a one-line **`Say:`** cue beneath it: that's your talk-track. Walk top to bottom (0 → 9) and talk over each picture; don't read the cue verbatim. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers).
 >
-> **Suggested order (built for an audience new to ama-metrics):**
-> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (reframe) → 5 (money diagram) → 6 (fix) → 7 (reproduce) → 8 (validation).
+> `aks-vap-demo-script.md` is optional backup only — deeper wording, the verbatim error message, and the Q&A appendix if someone digs in. You don't need it open during the demo.
+>
+> **Order (built for an audience new to ama-metrics):**
+> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (reframe) → 5 (money diagram) → 6 (fix) → 7 (reproduce) → 8 (validation) → 9 (lessons).
 >
 > **Color legend (consistent across every diagram):** blue = context/input · yellow = investigation/decision · green = success · red = deny/break · orange = the policy itself.
 
@@ -238,8 +240,31 @@ flowchart TD
 
 ---
 
+## 9. Lessons — what I'd want you to take away
+
+```mermaid
+flowchart TB
+    L1["<b>1 · Work backwards from the problem</b><br/>'Migrate the addon' was a solution<br/>in disguise — ask <i>what problem<br/>does this solve?</i> until you hit one"]
+    L2["<b>2 · AI is a superpower outside your domain</b><br/>I'd never heard of a VAP — AI collapsed<br/>the time to become dangerous in<br/>admission-control, someone else's turf"]
+    L3["<b>3 · Less code — or no code — wins</b><br/>Zero ama-metrics lines changed.<br/>Code you don't write can't break,<br/>rot, or page you at 2am"]
+    L4["<b>4 · Reproduce before you fix</b><br/>The Audit→Deny lab turned a theory<br/>into proof — walked into AKS with a<br/>working demo, not an opinion"]
+    L5["<b>5 · A narrow ask gets a fast yes</b><br/>One CEL clause over ~5 named objects,<br/>not 'open kube-system' — small,<br/>auditable asks clear review in a week"]
+
+    L1 --- L2 --- L3 --- L4 --- L5
+
+    style L1 fill:#e6f0ff,stroke:#4472c4
+    style L2 fill:#e6f0ff,stroke:#4472c4
+    style L3 fill:#d5e8d4,stroke:#82b366
+    style L4 fill:#fff2cc,stroke:#d6b656
+    style L5 fill:#fff2cc,stroke:#d6b656
+```
+
+> **Say:** "If you forget everything else: the cheapest fix we ever ship is the one we talk ourselves out of building. RCA first, reproduce to prove it, then make the ask small enough that the answer is yes."
+
+---
+
 ## Appendix — quick render tips
 
 - **GitHub / VS Code**: renders inline automatically. In VS Code use the built-in Markdown preview (`Ctrl+Shift+V`).
 - **Export to image** (for a slide, if ever needed): paste a block into <https://mermaid.live> → export SVG/PNG.
-- **Colors** use the classic Mermaid palette (blue = context/input, yellow = investigation/decision, green = success, red = deny/break, orange = the policy) — consistent across all nine diagrams so the audience learns the legend once.
+- **Colors** use the classic Mermaid palette (blue = context/input, yellow = investigation/decision, green = success, red = deny/break, orange = the policy) — consistent across all ten diagrams so the audience learns the legend once.
