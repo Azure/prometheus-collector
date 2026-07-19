@@ -34,7 +34,7 @@ flowchart LR
     style USE fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "ama-metrics is Azure's managed Prometheus agent. It runs *inside* the customer's cluster — in `kube-system` — scrapes their pods, and ships metrics to an Azure Monitor Workspace. Customers steer it with ConfigMaps, a Secret, and a couple of custom resources. Remember that last part: **all of that config lives in `kube-system`.**"
+> **Say:** "Before the story makes sense, one thing about ama-metrics: it's Azure's *managed* Prometheus agent — we run it for the customer, inside their AKS cluster, in the `kube-system` namespace. Its job is simple: scrape the `/metrics` endpoints on their pods and remote-write everything to an Azure Monitor Workspace, which feeds Grafana, alerts, and dashboards. The important part for today is *how customers configure it*: they hand us ConfigMaps, one Secret, and a couple of custom resources — PodMonitors and ServiceMonitors. And every bit of that config lives in `kube-system`, right next to the agent. Hold onto that fact — it's the whole reason this problem is hard."
 
 ---
 
@@ -144,7 +144,7 @@ flowchart LR
     style MSG fill:#ffcccc,stroke:#c00
 ```
 
-> **Say:** "This is the whole insight. **RBAC says YES.** The deny happens *later*, at admission. So no Azure role — not even a custom one — can bypass it. The fix has to live in the policy."
+> **Say:** "This one diagram is the whole insight, so let me slow down. When a customer runs `kubectl apply`, the request goes through two gates. First **authentication** — who are you — then **authorization**, Azure RBAC — are you allowed. And here's the twist: **RBAC says YES.** The customer is Cluster Admin; by every permission check, they're allowed to write this ConfigMap. But there's a *third* gate they don't see — **admission** — and that's where a Validating Admission Policy steps in and says *no, not in a protected namespace*. Because the deny lives at admission, **not** authorization, there is no Azure role — not even a hand-crafted custom one — that can grant your way past it. That's the key realization: the fix cannot be a permissions change. It has to live in the policy itself. And that completely changes what the right solution is."
 
 ---
 
