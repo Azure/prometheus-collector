@@ -151,7 +151,7 @@ Modification of resources in managed system namespaces is not allowed  ✅ (corr
 
 ---
 
-## Act 3 — Lessons to share (~2 min)
+## Act 3 — Lessons to share (~2–3 min)
 
 **Lesson 1 — Work backwards from the problem, not forward from a solution.**
 
