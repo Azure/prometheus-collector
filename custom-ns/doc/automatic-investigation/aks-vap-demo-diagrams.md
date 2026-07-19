@@ -2,11 +2,82 @@
 
 > Visual companion to `aks-vap-demo-script.md`. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers). One line of speaker cue under each — talk over the picture, don't read it.
 >
-> **Suggested order:** 1 (spine) → 2 (reframe) → 3 (money diagram) → 4 (fix) → 5 (reproduce) → 6 (results).
+> **Suggested order (built for an audience new to ama-metrics):**
+> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (reframe) → 5 (money diagram) → 6 (fix) → 7 (reproduce) → 8 (validation).
+>
+> **Color legend (consistent across every diagram):** blue = context/input · yellow = investigation/decision · green = success · red = deny/break · orange = the policy itself.
 
 ---
 
-## 1. The story spine — how I approached it
+## 0. What is ama-metrics? (set the stage)
+
+```mermaid
+flowchart LR
+    subgraph Cluster["Customer's AKS cluster"]
+        direction TB
+        APP["Customer pods<br/>expose <b>/metrics</b>"]
+        subgraph KS["namespace: kube-system"]
+            AMA["<b>ama-metrics</b><br/>Azure Managed Prometheus agent"]
+            CFG["configured by:<br/>ConfigMaps · a Secret ·<br/>PodMonitor / ServiceMonitor CRs"]
+            CFG -.-> AMA
+        end
+        APP -->|scrape| AMA
+    end
+    AMA ==>|remote-write| AMW["<b>Azure Monitor</b><br/>Workspace"]
+    AMW --> USE["Grafana ·<br/>alerts ·<br/>dashboards"]
+
+    style KS fill:#e6f0ff,stroke:#4472c4
+    style AMA fill:#fff2cc,stroke:#d6b656
+    style AMW fill:#d5e8d4,stroke:#82b366
+    style USE fill:#d5e8d4,stroke:#82b366
+```
+
+> **Say:** "ama-metrics is Azure's managed Prometheus agent. It runs *inside* the customer's cluster — in `kube-system` — scrapes their pods, and ships metrics to an Azure Monitor Workspace. Customers steer it with ConfigMaps, a Secret, and a couple of custom resources. Remember that last part: **all of that config lives in `kube-system`.**"
+
+---
+
+## 1. The project — as it was handed to me
+
+```mermaid
+flowchart LR
+    NEW["New AKS security feature:<br/><b>MSNP</b> — managed system<br/>namespaces are locked down"] --> BROKE["Customers can no longer<br/>write ama-metrics config<br/>to <b>kube-system</b>"]
+    BROKE ==> ASK["<b>The ask:</b><br/>migrate ama-metrics<br/>OUT of kube-system"]
+
+    style NEW fill:#e6f0ff,stroke:#4472c4
+    style BROKE fill:#ffcccc,stroke:#c00
+    style ASK fill:#ffe6cc,stroke:#d79b00
+```
+
+> **Say:** "AKS shipped a lockdown on system namespaces. Overnight, customers couldn't apply ama-metrics config to `kube-system`. The project landed on my desk as a *solution*: **move ama-metrics to a different namespace.** Sounds reasonable — until you look at what that actually costs."
+
+---
+
+## 2. Why "just migrate it" is a mountain
+
+```mermaid
+flowchart TB
+    ASK["<b>Move ama-metrics<br/>out of kube-system</b>"]
+
+    ASK --> UP["<b>Upstream</b> we own<br/>helm charts · ARM/Bicep ·<br/>3 deploy modes:<br/>AKS addon · Arc · CCP"]
+    ASK --> DOWN["<b>Downstream</b> customers own<br/>every ConfigMap, the Secret &<br/>every PodMonitor/ServiceMonitor<br/>references <b>kube-system</b>"]
+
+    DOWN --> BREAK["<b>Breaking change</b><br/>all existing customer config<br/>stops working"]
+
+    UP --> COST["Multi-month · high-risk ·<br/>coordinated migration<br/><b>for every customer</b>"]
+    BREAK --> COST
+
+    style ASK fill:#ffe6cc,stroke:#d79b00
+    style UP fill:#e6f0ff,stroke:#4472c4
+    style DOWN fill:#e6f0ff,stroke:#4472c4
+    style BREAK fill:#ffcccc,stroke:#c00
+    style COST fill:#ffcccc,stroke:#c00
+```
+
+> **Say:** "It touches everything we ship — three deploy modes, helm, ARM. Worse, it's a **breaking change for customers**: every ConfigMap, Secret, and CR they've ever written points at `kube-system`. Migrating the agent means migrating *all of them*. That's a multi-month, high-risk fire drill. So before building any of it, I stopped and asked one question."
+
+---
+
+## 3. The story spine — how I approached it
 
 ```mermaid
 flowchart LR
@@ -24,11 +95,11 @@ flowchart LR
     style F fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "Six steps. The whole thing turned on step 2 — finding the *actual* mechanism — which made steps 3–6 cheap."
+> **Say:** "Six steps. The whole thing turned on step 2 — finding the *actual* mechanism — which made steps 3–6 cheap. Instead of a quarter of migration, it became a month."
 
 ---
 
-## 2. The reframe — solution vs problem
+## 4. The reframe — solution vs problem
 
 ```mermaid
 flowchart TB
@@ -55,7 +126,7 @@ flowchart TB
 
 ---
 
-## 3. The money diagram — WHERE the block happens
+## 5. The money diagram — WHERE the block happens
 
 ```mermaid
 flowchart LR
@@ -75,7 +146,7 @@ flowchart LR
 
 ---
 
-## 4. The fix — VAP decision tree, before vs after
+## 6. The fix — VAP decision tree, before vs after
 
 ```mermaid
 flowchart TD
@@ -120,7 +191,7 @@ flowchart LR
 
 ---
 
-## 5. How I reproduced it safely (the PoC lever)
+## 7. How I reproduced it safely (the PoC lever)
 
 ```mermaid
 flowchart LR
@@ -143,7 +214,7 @@ flowchart LR
 
 ---
 
-## 6. Validation of what AKS shipped
+## 8. Validation of what AKS shipped
 
 ```mermaid
 flowchart TD
@@ -171,4 +242,4 @@ flowchart TD
 
 - **GitHub / VS Code**: renders inline automatically. In VS Code use the built-in Markdown preview (`Ctrl+Shift+V`).
 - **Export to image** (for a slide, if ever needed): paste a block into <https://mermaid.live> → export SVG/PNG.
-- **Colors** use the classic Mermaid palette (blue = input/context, yellow = investigation/decision, green = success, red = deny) — consistent across all six diagrams so the audience learns the legend once.
+- **Colors** use the classic Mermaid palette (blue = context/input, yellow = investigation/decision, green = success, red = deny/break, orange = the policy) — consistent across all nine diagrams so the audience learns the legend once.

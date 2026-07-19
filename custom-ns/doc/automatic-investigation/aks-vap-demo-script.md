@@ -7,7 +7,7 @@
 **Three acts:**
 1. The Problem (~2 min) — the reframe
 2. My Approach (~5–6 min) — RCA → reproduce → fix → buy-in
-3. Lessons (~2 min)
+3. Lessons (~2–3 min)
 
 ---
 
@@ -15,6 +15,7 @@
 
 **Say this:**
 
+- **Quick context first — what is ama-metrics?** It's Azure's **managed Prometheus agent**. It runs *inside* the customer's AKS cluster — in the `kube-system` namespace — scrapes their pods' `/metrics` endpoints, and remote-writes to an Azure Monitor Workspace for Grafana, alerts, and dashboards. Customers configure it with **ConfigMaps, a Secret, and PodMonitor/ServiceMonitor custom resources** — and today *all of that lives in `kube-system`*. Hold onto that last fact; it's why this whole thing is hard.
 - The project landed on my plate as: *"migrate ama-metrics to another namespace."*
 - That's a **big** lift — the addon is deeply wired into `kube-system`: DaemonSet + ReplicaSet + target allocator, hardcoded Secret volume mounts, a ClusterRole, an addon-managed service account. Moving it is a multi-month, high-risk migration touching every deployment mode (AKS addon / Arc / CCP).
 - So the first question I asked wasn't *"how do I move it?"* It was **"why do we think we need to move it at all?"**
@@ -163,6 +164,22 @@ Modification of resources in managed system namespaces is not allowed  ✅ (corr
 - I'm a monitoring/agent engineer. Before this, I had **no idea what a Validating Admission Policy was** — CEL expressions, admission vs authorization, VAP bindings, none of it.
 - With AI as a research partner, I didn't just *learn* the domain fast enough to hold my own with the AKS admission-control experts — I **solved** a problem squarely in their domain (prototyped the exact CEL clause, reproduced the deny, built the validation matrix).
 - The leverage isn't "AI writes my code." It's **"AI collapses the time to become dangerous in an unfamiliar domain,"** which is exactly what cross-team problems like this one demand.
+
+**Lesson 3 — The best fix is often *less* code, or no code at all.**
+
+- We shipped this with **zero lines of ama-metrics code changed** — one negated CEL clause in someone else's policy. No migration, no new deploy path, nothing new to maintain.
+- Almost every incident and regression we fire-fight traces back to code someone wrote earlier. Code you *don't* write can't break, can't rot, and can't page you at 2am. Deleting the need for code is a feature.
+- When the instinct is "let's build X," it's worth asking whether a config, a policy, or a one-line exception gets the same outcome with a fraction of the surface area.
+
+**Lesson 4 — Reproduce before you fix.**
+
+- The safe, disposable repro (flipping the classic-Automatic VAP binding from `Audit` to `Deny`) turned *"I think this is the mechanism"* into *proof*. That's what let me walk into the AKS conversation with a working demo instead of a theory.
+- A repro you control also de-risks the fix: I could validate the exact CEL clause against a real deny before ever asking AKS to change production.
+
+**Lesson 5 — A narrowly-scoped ask gets a "yes" fast.**
+
+- I didn't ask AKS to "open up `kube-system`." I asked for one negated clause exempting ~5 named objects, inside the existing protected-namespace guardrail. Small, auditable asks clear security review in a week; broad ones stall for quarters.
+- Cross-team engineering is as much about *framing the ask* as writing the fix. Make the reviewer's yes cheap.
 
 ---
 
