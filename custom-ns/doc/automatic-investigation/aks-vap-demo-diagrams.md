@@ -1,11 +1,11 @@
 # Demo diagrams: the AKS `kube-system` lockdown story
 
-> **This is the demo doc — drive the talk straight from here.** Each diagram has a one-line **`Say:`** cue beneath it: that's your talk-track. Walk top to bottom (0 → 9) and talk over each picture; don't read the cue verbatim. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers).
+> **This is the demo doc — drive the talk straight from here.** Each diagram has a one-line **`Say:`** cue beneath it: that's your talk-track. Walk top to bottom (0 → 7) and talk over each picture; don't read the cue verbatim. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers).
 >
 > `aks-vap-demo-script.md` is optional backup only — deeper wording, the verbatim error message, and the Q&A appendix if someone digs in. You don't need it open during the demo.
 >
 > **Order (built for an audience new to ama-metrics):**
-> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (reframe) → 5 (money diagram) → 6 (fix) → 7 (reproduce) → 8 (validation) → 9 (lessons).
+> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (RCA — proving it's the VAP) → 5 (fix) → 6 (validation) → 7 (lessons).
 >
 > **Color legend (consistent across every diagram):** blue = context/input · yellow = investigation/decision · green = success · red = deny/break · orange = the policy itself.
 
@@ -25,7 +25,7 @@ flowchart LR
         end
         APP -->|scrape| AMA
     end
-    AMA ==>|remote-write| AMW["<b>Azure Monitor</b><br/>Workspace"]
+    AMA ==> AMW["<b>Azure Monitor</b><br/>Workspace"]
     AMW --> USE["Grafana ·<br/>alerts ·<br/>dashboards"]
 
     style KS fill:#e6f0ff,stroke:#4472c4
@@ -34,7 +34,7 @@ flowchart LR
     style USE fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "Before the story makes sense, one thing about ama-metrics: it's Azure's *managed* Prometheus agent — we run it for the customer, inside their AKS cluster, in the `kube-system` namespace. Its job is simple: scrape the `/metrics` endpoints on their pods and remote-write everything to an Azure Monitor Workspace, which feeds Grafana, alerts, and dashboards. The important part for today is *how customers configure it*: they hand us ConfigMaps, one Secret, and a couple of custom resources — PodMonitors and ServiceMonitors. And every bit of that config lives in `kube-system`, right next to the agent. Hold onto that fact — it's the whole reason this problem is hard."
+> **Say:** "Before the story makes sense, one thing about ama-metrics: it's Azure's *managed* Prometheus agent — we run it for the customer, inside their AKS cluster, in the `kube-system` namespace. Its job: scrape the `/metrics` endpoints on their pods and send everything to an Azure Monitor Workspace, which feeds Grafana, alerts, and dashboards. The important part for today is *how customers configure it*: they can deploy their ConfigMaps in kube-system, secrets, and a couple of custom resources — PodMonitors and ServiceMonitors. And Configmaps must lives in `kube-system`, right next to the agent. Hold onto that fact — it's one of the most important reasons that this project was initiated."
 
 ---
 
@@ -42,7 +42,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    NEW["New AKS security feature:<br/><b>MSNP</b> — managed system<br/>namespaces are locked down"] --> BROKE["Customers can no longer<br/>write ama-metrics config<br/>to <b>kube-system</b>"]
+    NEW["New AKS security feature:kube-system namespace is locked down"] --> BROKE["Customers can no longer<br/>deploy configmaps<br/>to <b>kube-system</b>"]
     BROKE ==> ASK["<b>The ask:</b><br/>migrate ama-metrics<br/>OUT of kube-system"]
 
     style NEW fill:#e6f0ff,stroke:#4472c4
@@ -50,7 +50,7 @@ flowchart LR
     style ASK fill:#ffe6cc,stroke:#d79b00
 ```
 
-> **Say:** "AKS shipped a lockdown on system namespaces. Overnight, customers couldn't apply ama-metrics config to `kube-system`. The project landed on my desk as a *solution*: **move ama-metrics to a different namespace.** Sounds reasonable — until you look at what that actually costs."
+> **Say:** "AKS shipped a lockdown on system namespaces; customers couldn't apply ama-metrics used configmaps to `kube-system`. The project landed on my desk as a *solution*: **move ama-metrics to a different namespace.**"
 
 ---
 
@@ -60,22 +60,43 @@ flowchart LR
 flowchart TB
     ASK["<b>Move ama-metrics<br/>out of kube-system</b>"]
 
-    ASK --> UP["<b>Upstream</b> we own<br/>helm charts · ARM/Bicep ·<br/>3 deploy modes:<br/>AKS addon · Arc · CCP"]
-    ASK --> DOWN["<b>Downstream</b> customers own<br/>every ConfigMap, the Secret &<br/>every PodMonitor/ServiceMonitor<br/>references <b>kube-system</b>"]
+    subgraph OURS["1 · Our code — refactor across every deploy mode"]
+        direction TB
+        O1["helm charts · ARM/Bicep<br/>AKS addon · Arc · CCP config-ref"]
+        O2["Go code: make POD_NAMESPACE required<br/>OTel + fluent-bit configs · TA URLs / TLS SANs"]
+        O3["mixins · dashboards ·<br/>recording &amp; alert rules"]
+    end
 
-    DOWN --> BREAK["<b>Breaking change</b><br/>all existing customer config<br/>stops working"]
+    subgraph EXT["2 · Dependencies we DON'T own — AKS-RP &amp; others"]
+        direction TB
+        E1["aad-msi-auth-token secret<br/>(AKS-RP must dual-provision)"]
+        E2["token-adaptor image<br/>(different for AKS vs Arc) · retina"]
+        E3["priority class · default-deny NetworkPolicy ·<br/>Pod Security (NET_ADMIN/NET_RAW) ·<br/>Deployment-Safeguards allowlist"]
+        E4["CCP configmap-watcher<br/>(Overlay → Underlay name)"]
+    end
 
-    UP --> COST["Multi-month · high-risk ·<br/>coordinated migration<br/><b>for every customer</b>"]
-    BREAK --> COST
+    subgraph CX["3 · Breaking change for every customer"]
+        direction TB
+        C1["existing ConfigMaps in kube-system<br/>(settings · prometheus-config · node · node-windows)"]
+        C2["PodMonitor / ServiceMonitor CRs ·<br/>recording &amp; alert rules"]
+    end
+
+    ASK --> OURS
+    ASK --> EXT
+    ASK --> CX
+
+    OURS --> COST["<b>Multi-month · cross-team · high blast radius</b><br/>— and still just a <i>hypothesis</i> until<br/>Phase-0 validation says migration is even needed"]
+    EXT --> COST
+    CX --> COST
 
     style ASK fill:#ffe6cc,stroke:#d79b00
-    style UP fill:#e6f0ff,stroke:#4472c4
-    style DOWN fill:#e6f0ff,stroke:#4472c4
-    style BREAK fill:#ffcccc,stroke:#c00
+    style OURS fill:#e6f0ff,stroke:#4472c4
+    style EXT fill:#fff2cc,stroke:#d6b656
+    style CX fill:#ffe6e6,stroke:#c00
     style COST fill:#ffcccc,stroke:#c00
 ```
 
-> **Say:** "It touches everything we ship — three deploy modes, helm, ARM. Worse, it's a **breaking change for customers**: every ConfigMap, Secret, and CR they've ever written points at `kube-system`. Migrating the agent means migrating *all of them*. That's a multi-month, high-risk fire drill. So before building any of it, I stopped and asked one question."
+> **Say:** "Migration isn't one change — it's three problems stacked. **One:** we refactor our own code across every deploy mode — helm, ARM, Go, the OTel and fluent-bit configs, plus dashboards and recording/alert rules that filter on the agent's namespace. **Two:** a pile of things we *don't* own — the `aad-msi-auth-token` secret AKS-RP provisions, the token-adaptor image (which differs between AKS and Arc), retina, priority classes, network policy, pod-security capabilities, the CCP config watcher — every one needs another team to move in lockstep. **Three:** it's a breaking change for *every* customer — all their existing ConfigMaps, CRs, and rules point at `kube-system`. Multi-month, cross-team, high blast radius. And the kicker: migration was still only a *hypothesis* — nobody had confirmed we even needed it. So before building any of it, I stopped and asked one question."
 
 ---
 
@@ -83,72 +104,99 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    A["Ask AKS<br/><b>why is kube-system<br/>locked down?</b>"] --> B["RCA<br/><b>it's a native VAP</b><br/>not Deployment Safeguards"]
-    B --> C["Reproduce<br/><b>flip binding</b><br/>Audit → Deny"]
-    C --> D["Prototype fix<br/><b>one CEL clause</b><br/>no code, no migration"]
+    A["Ask AKS<br/><b>why is kube-system<br/>locked down?</b>"] --> B["RCA<br/><b>it's a native VAP</b>"]
+    B --> D["Prototype fix<br/><b>one CEL clause</b><br/>no code, no migration"]
     D --> E["AKS buy-in"]
     E --> F["Rollout ✅"]
 
     style A fill:#e6f0ff,stroke:#4472c4
     style B fill:#fff2cc,stroke:#d6b656
-    style C fill:#fff2cc,stroke:#d6b656
     style D fill:#d5e8d4,stroke:#82b366
     style E fill:#d5e8d4,stroke:#82b366
     style F fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "Six steps. The whole thing turned on step 2 — finding the *actual* mechanism — which made steps 3–6 cheap. Instead of a quarter of migration, it became a month."
+> **Say:** "The whole thing turned on step 2 — finding the *actual* mechanism — which made the rest cheap. Instead of a quarter of migration, it became a month."
 
 ---
 
-## 4. The reframe — solution vs problem
+## 4. RCA — how I proved it was the VAP
 
-```mermaid
-flowchart TB
-    subgraph Proposed["❌ How it was handed to me (a solution)"]
-        direction TB
-        P1["<b>Migrate ama-metrics<br/>out of kube-system</b>"]
-        P2["Multi-month effort · high risk"]
-        P3["Touches every deploy mode:<br/>AKS addon · Arc · CCP"]
-        P1 --> P2 --> P3
-    end
-
-    subgraph Real["✅ The actual problem (one sentence)"]
-        direction TB
-        R1["<b>Customer can't write</b><br/>ama-metrics ConfigMaps / Secret / CRs<br/>to kube-system on MSNP clusters"]
-    end
-
-    Proposed == "ask: what problem<br/>does this solve?" ==> Real
-
-    style Proposed fill:#ffe6e6,stroke:#c00
-    style Real fill:#e6ffe6,stroke:#080
-```
-
-> **Say:** "'Migrate the addon' *felt* like the problem. It was a solution in disguise. The real problem is one sentence — and it has cheaper answers."
-
----
-
-## 5. The money diagram — WHERE the block happens
+**Part 1 — the error names the culprit.** On an MSNP AKS Automatic cluster, applying an ama-metrics ConfigMap to `kube-system` fails — and the error body itself points the finger:
 
 ```mermaid
 flowchart LR
-    U["Customer<br/>kubectl apply configmap<br/>-n kube-system"] --> N["AuthN<br/>Entra ID"]
-    N --> Z{"AuthZ<br/>Azure RBAC"}
-    Z -->|"❌ no"| RJ["403 — role problem"]
-    Z ==>|"✅ YES<br/>(Cluster Admin)"| ADM{"<b>Admission</b><br/>VAP<br/>aks-managed-protect-<br/>system-namespaces"}
-    ADM ==>|"❌ DENY"| MSG["<b>Forbidden</b><br/>'Modification of resources in<br/>managed system namespaces<br/>is not allowed'"]
-    ADM -->|allow| OK["Written to etcd"]
+    U["kubectl apply<br/>ama-metrics ConfigMap<br/>-n kube-system<br/><i>(MSNP AKS Automatic)</i>"] --> Z{"Azure RBAC<br/>authorization"}
+    Z -->|"❌ no"| RB["plain 403 —<br/>NO policy named<br/>= a role problem"]
+    Z ==>|"✅ YES<br/>(Cluster Admin)"| ADM{"<b>Admission</b>"}
+    ADM ==>|"❌ DENY"| ERR["<b>Forbidden</b> — body NAMES the policy:<br/>ValidatingAdmissionPolicy<br/>'aks-managed-protect-system-namespaces'<br/>denied request: 'Modification of resources in<br/>managed system namespaces is not allowed'"]
 
     style Z fill:#d5e8d4,stroke:#82b366
     style ADM fill:#ffe6cc,stroke:#d79b00
-    style MSG fill:#ffcccc,stroke:#c00
+    style ERR fill:#ffcccc,stroke:#c00
+    style RB fill:#f2f2f2,stroke:#999
 ```
 
-> **Say:** "This one diagram is the whole insight, so let me slow down. When a customer runs `kubectl apply`, the request goes through two gates. First **authentication** — who are you — then **authorization**, Azure RBAC — are you allowed. And here's the twist: **RBAC says YES.** The customer is Cluster Admin; by every permission check, they're allowed to write this ConfigMap. But there's a *third* gate they don't see — **admission** — and that's where a Validating Admission Policy steps in and says *no, not in a protected namespace*. Because the deny lives at admission, **not** authorization, there is no Azure role — not even a hand-crafted custom one — that can grant your way past it. That's the key realization: the fix cannot be a permissions change. It has to live in the policy itself. And that completely changes what the right solution is."
+> **Say (Part 1):** "Read the failure. It's a 403 Forbidden — but look at the body: it literally names a `ValidatingAdmissionPolicy`, `aks-managed-protect-system-namespaces`. That's the fingerprint. A *role* denial — an RBAC 403 — never mentions a policy. So authorization actually **passed** — the customer is Cluster Admin — and the block happens one gate later, at **admission**. That already tells me two things: it's a VAP, and no Azure role can ever bypass it."
+
+**Part 2 — confirm it by flipping the switch.** The same VAP ships on *classic* AKS Automatic, but in `[Audit]` mode (writes still succeed). On a cluster I could modify, I flipped one field and the failure reproduced exactly:
+
+```mermaid
+flowchart LR
+    subgraph Before["Classic AKS Automatic — VAP present, [Audit]"]
+        V1["binding<br/>validationActions: <b>[Audit]</b>"] --> OK["apply ConfigMap<br/>→ ✅ succeeds<br/>(deny only logged)"]
+    end
+
+    OK == "kubectl patch<br/>[Audit] → [Deny]" ==> After
+
+    subgraph After["after the flip — [Deny]"]
+        FLIP["binding<br/>validationActions: <b>[Deny]</b>"] --> SAME["apply the SAME ConfigMap<br/>→ ❌ identical Forbidden error"]
+    end
+
+    SAME --> CONF["✅ root cause<br/><b>CONFIRMED = the VAP</b>"]
+
+    style Before fill:#e6f0ff,stroke:#4472c4
+    style After fill:#fff2cc,stroke:#d6b656
+    style SAME fill:#ffcccc,stroke:#c00
+    style CONF fill:#d5e8d4,stroke:#82b366
+```
+
+> **Say (Part 2):** "Then I confirmed it. That policy is present on *every* AKS Automatic cluster — on classic ones it just runs in Audit mode, so writes succeed and the deny is only logged. On a cluster I controlled, I changed one field on the binding, `Audit` to `Deny`, and re-applied the *exact same* ConfigMap. The identical error came back. Nothing else changed — so the VAP, and only the VAP, is the root cause. That's the proof I walked into AKS with."
 
 ---
 
-## 6. The fix — VAP decision tree, before vs after
+## 5. The fix — one exempt clause, proven on the same cluster
+
+Still on that classic AKS Automatic cluster (binding already flipped to `[Deny]` from the RCA step), I appended **one** `matchCondition` to the VAP — a negated CEL clause that exempts the ama-metrics ConfigMaps — then re-applied the exact ConfigMap that had just failed:
+
+```yaml
+# appended to spec.matchConditions[] of aks-managed-protect-system-namespaces
+- name: exempt-ama-metrics-configmaps
+  expression: |
+    !(request.namespace == "kube-system" &&
+      request.resource.resource == "configmaps" &&
+      request.name in ["ama-metrics-prometheus-config",
+                       "ama-metrics-settings-configmap",
+                       "ama-metrics-prometheus-config-node",
+                       "ama-metrics-prometheus-config-node-windows"])
+```
+
+```mermaid
+flowchart LR
+    D["classic AKS Automatic<br/>binding still <b>[Deny]</b><br/><i>(from the RCA step)</i>"] --> P["kubectl patch VAP:<br/>append<br/><b>exempt-ama-metrics-configmaps</b>"]
+    P --> R["re-apply the SAME<br/>ama-metrics ConfigMap"]
+    R --> OK["✅ ADMITTED —<br/>ConfigMap created"]
+    R -.->|"unrelated ConfigMap"| NO["❌ still denied<br/>(scope holds)"]
+
+    style D fill:#ffe6cc,stroke:#d79b00
+    style P fill:#fff2cc,stroke:#d6b656
+    style OK fill:#d5e8d4,stroke:#82b366
+    style NO fill:#ffcccc,stroke:#c00
+```
+
+> **Say:** "Same cluster, still in Deny mode from a minute ago. I appended one `matchCondition` — this negated clause that says *if it's one of these named ama-metrics ConfigMaps in `kube-system`, skip the policy and admit.* Then I re-applied the **exact same** ConfigMap that had just been rejected — and it went straight through. Everything else in `kube-system` stayed blocked. That's the entire fix: no ama-metrics code changed, nothing moves namespaces, one CEL clause."
+
+**How the clause works** — it just adds one branch to the policy's decision:
 
 ```mermaid
 flowchart TD
@@ -175,11 +223,11 @@ flowchart TD
     style C3 fill:#fff2cc,stroke:#d6b656
 ```
 
-**The exception (one CEL clause) exempts only these:**
+**From PoC to what AKS shipped** — AKS generalized my 4-name PoC into the final exception, covering all three object types ama-metrics is forced to put in `kube-system`:
 
 ```mermaid
 flowchart LR
-    EX["ama-metrics<br/>exception"] --> CM["ConfigMaps<br/>prefix <b>ama-metrics-*</b><br/>or <b>container-azm-ms-*</b>"]
+    EX["ama-metrics<br/>exception (shipped)"] --> CM["ConfigMaps<br/>prefix <b>ama-metrics-*</b><br/>or <b>container-azm-ms-*</b>"]
     EX --> SEC["Secret<br/>exact <b>ama-metrics-mtls-secret</b>"]
     EX --> CR["CRs<br/><b>podmonitors / servicemonitors</b><br/>azmonitoring.coreos.com/v1"]
 
@@ -189,34 +237,11 @@ flowchart LR
     style CR fill:#e6f0ff,stroke:#4472c4
 ```
 
-> **Say:** "The fix is one negated clause: *if it's one of these specific objects, short-circuit and admit.* Zero code change in ama-metrics. Nothing moves namespaces."
+> **Say:** "My PoC exempted four named ConfigMaps. AKS took that same idiom and generalized it — a prefix match for the ConfigMaps so it covers ama-logs and future ones too, plus the mTLS Secret by exact name, plus the PodMonitor and ServiceMonitor CRs. Same one-clause shape, just the complete list of what's structurally pinned to `kube-system`."
 
 ---
 
-## 7. How I reproduced it safely (the PoC lever)
-
-```mermaid
-flowchart LR
-    subgraph Classic["Classic AKS Automatic — no MSNP"]
-        V1["Same VAP<br/>already present"] --> B1["Binding: <b>[Audit]</b><br/>writes still succeed"]
-    end
-
-    subgraph Lab["My disposable PoC lab"]
-        V2["Same VAP"] --> B2["Binding: <b>[Deny]</b><br/>reproduces MSNP<br/>failure exactly"]
-    end
-
-    B1 == "kubectl patch<br/>validationActions: [Deny]" ==> B2
-
-    style Classic fill:#e6f0ff,stroke:#4472c4
-    style Lab fill:#fff2cc,stroke:#d6b656
-    style B2 fill:#ffe6cc,stroke:#d79b00
-```
-
-> **Say:** "The same policy ships on classic AKS Automatic in *Audit* mode. Flip one field to *Deny* and I've got a safe lab that behaves exactly like a real MSNP customer — no need to touch production."
-
----
-
-## 8. Validation of what AKS shipped
+## 6. Validation of what AKS shipped
 
 ```mermaid
 flowchart TD
@@ -240,7 +265,7 @@ flowchart TD
 
 ---
 
-## 9. Lessons — what I'd want you to take away
+## 7. Lessons — what I'd want you to take away
 
 ```mermaid
 flowchart TB
@@ -267,4 +292,4 @@ flowchart TB
 
 - **GitHub / VS Code**: renders inline automatically. In VS Code use the built-in Markdown preview (`Ctrl+Shift+V`).
 - **Export to image** (for a slide, if ever needed): paste a block into <https://mermaid.live> → export SVG/PNG.
-- **Colors** use the classic Mermaid palette (blue = context/input, yellow = investigation/decision, green = success, red = deny/break, orange = the policy) — consistent across all ten diagrams so the audience learns the legend once.
+- **Colors** use the classic Mermaid palette (blue = context/input, yellow = investigation/decision, green = success, red = deny/break, orange = the policy) — consistent across all diagrams so the audience learns the legend once.
