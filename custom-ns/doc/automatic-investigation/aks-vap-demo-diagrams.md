@@ -1,11 +1,11 @@
-# Demo diagrams: the AKS `kube-system` lockdown story
+# Migrate ama-metrics out of kube-system namespace — the story
 
 > **This is the demo doc — drive the talk straight from here.** Each diagram has a one-line **`Say:`** cue beneath it: that's your talk-track. Walk top to bottom (0 → 7) and talk over each picture; don't read the cue verbatim. All diagrams are **Mermaid** (render on GitHub / VS Code / most markdown viewers).
 >
 > `aks-vap-demo-script.md` is optional backup only — deeper wording, the verbatim error message, and the Q&A appendix if someone digs in. You don't need it open during the demo.
 >
 > **Order (built for an audience new to ama-metrics):**
-> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (RCA — proving it's the VAP) → 5 (fix) → 6 (validation) → 7 (lessons).
+> 0 (what is ama-metrics) → 1 (the project) → 2 (why it's a mountain) → 3 (the story spine) → 4 (RCA — proving it's the VAP) → 5 (fix) → 6 (rollout) → 7 (lessons) → Bonus (ama-logs unblocked for free).
 >
 > **Color legend (consistent across every diagram):** blue = context/input · yellow = investigation/decision · green = success · red = deny/break · orange = the policy itself.
 
@@ -38,7 +38,7 @@ flowchart LR
 
 ---
 
-## 1. The project — as it was handed to me
+## 1. The project we planned — migrate ama-metrics out of kube-system namespace
 
 ```mermaid
 flowchart LR
@@ -104,19 +104,39 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    A["Ask AKS<br/><b>why is kube-system<br/>locked down?</b>"] --> B["RCA<br/><b>it's a native VAP</b>"]
+    START["ama-metrics writes to<br/>kube-system start failing"]
+
+    START --> Q["<b>Track 1 — ask the owners</b><br/>AKS Automatic team:<br/>why is kube-system<br/>locked down?"]
+    START --> R["<b>Track 2 — RCA in parallel</b><br/>tear the mechanism<br/>apart myself"]
+
+    Q --> SUG["their suggestion:<br/>expose a config <b>CRD</b><br/>(app-routing · scheduler pattern)<br/><i>= redesign · didn't fit</i>"]
+    R --> B["<b>Root cause:</b> a native VAP<br/>aks-managed-protect-<br/>system-namespaces"]
+
+    SUG -.->|"set aside"| B
     B --> D["Prototype fix<br/><b>one CEL clause</b><br/>no code, no migration"]
     D --> E["AKS buy-in"]
     E --> F["Rollout ✅"]
 
-    style A fill:#e6f0ff,stroke:#4472c4
-    style B fill:#fff2cc,stroke:#d6b656
+    style START fill:#e6f0ff,stroke:#4472c4
+    style Q fill:#fff2cc,stroke:#d6b656
+    style R fill:#fff2cc,stroke:#d6b656
+    style SUG fill:#f2f2f2,stroke:#999
+    style B fill:#ffe6cc,stroke:#d79b00
     style D fill:#d5e8d4,stroke:#82b366
     style E fill:#d5e8d4,stroke:#82b366
     style F fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "The whole thing turned on step 2 — finding the *actual* mechanism — which made the rest cheap. Instead of a quarter of migration, it became a month."
+**What AKS first suggested — one pattern, two examples:** *"configure a managed add-on through a **CRD** the customer applies outside `kube-system`, not through ConfigMaps in `kube-system`."*
+
+| Their pointer | The CRD it uses | What they meant for ama-metrics |
+|---|---|---|
+| [App-routing NGINX config](https://learn.microsoft.com/en-us/azure/aks/app-routing-nginx-configuration?tabs=azure-cli&pivots=nginx-ingress-controller) | `NginxIngressController` — customer applies the CR, the add-on operator reads it and configures NGINX | Do the same: replace ama-metrics' ConfigMaps with a config **CRD** the customer applies in their own namespace |
+| [AKS scheduler profiles](https://learn.microsoft.com/en-us/azure/aks/configure-aks-scheduler?tabs=new-cluster#limitations) | `SchedulerConfiguration` — customer applies the CR, AKS's controller configures the scheduler (system `aks-system` scheduler stays off-limits) | Same pattern again — CRD in, no writes to `kube-system` |
+
+**Why I set it aside:** both amount to *re-architecting ama-metrics' config surface into a new CRD* — a big build, a breaking change for every customer already using the 4 ConfigMaps, and it doesn't unblock existing customers now. It's the same migration mountain from §2, just dressed as a CRD. The VAP exception does the same job with **zero code and no customer migration**.
+
+> **Say:** "I didn't just wait on AKS — I asked the owning team **and** ran my own root-cause in parallel. Their first answer was a pattern their other add-ons use: expose a config **CRD** so customers apply a custom resource outside `kube-system` instead of editing ConfigMaps in it — that's what the app-routing and scheduler examples both show. Honest take: I didn't chase it, because it's the same redesign-and-migrate mountain from the last slide, just wearing a CRD costume — big build, breaks every existing customer, unblocks no one today. The parallel RCA is what actually cracked it: the block is a native Validating Admission Policy. Once I had that, the fix and the buy-in were quick — a quarter of migration became a month."
 
 ---
 
@@ -127,17 +147,15 @@ flowchart LR
 ```mermaid
 flowchart LR
     U["kubectl apply<br/>ama-metrics ConfigMap<br/>-n kube-system<br/><i>(MSNP AKS Automatic)</i>"] --> Z{"Azure RBAC<br/>authorization"}
-    Z -->|"❌ no"| RB["plain 403 —<br/>NO policy named<br/>= a role problem"]
     Z ==>|"✅ YES<br/>(Cluster Admin)"| ADM{"<b>Admission</b>"}
     ADM ==>|"❌ DENY"| ERR["<b>Forbidden</b> — body NAMES the policy:<br/>ValidatingAdmissionPolicy<br/>'aks-managed-protect-system-namespaces'<br/>denied request: 'Modification of resources in<br/>managed system namespaces is not allowed'"]
 
     style Z fill:#d5e8d4,stroke:#82b366
     style ADM fill:#ffe6cc,stroke:#d79b00
     style ERR fill:#ffcccc,stroke:#c00
-    style RB fill:#f2f2f2,stroke:#999
 ```
 
-> **Say (Part 1):** "Read the failure. It's a 403 Forbidden — but look at the body: it literally names a `ValidatingAdmissionPolicy`, `aks-managed-protect-system-namespaces`. That's the fingerprint. A *role* denial — an RBAC 403 — never mentions a policy. So authorization actually **passed** — the customer is Cluster Admin — and the block happens one gate later, at **admission**. That already tells me two things: it's a VAP, and no Azure role can ever bypass it."
+> **Say (Part 1):** "Read the failure. A `403 Forbidden` can come from two very different places, and telling them apart *is* the root-cause analysis. If **authorization** denied you — a role/RBAC problem — you get a plain 403 that names no policy. But look at this body: it literally names a `ValidatingAdmissionPolicy`, `aks-managed-protect-system-namespaces`. That's the fingerprint of the *other* gate — **admission**. So authorization actually **passed**; the customer is Cluster Admin. The block happens one step later, at admission. That tells me two things immediately: it's a VAP, and because it's not an authorization decision, **no Azure role can ever bypass it.**"
 
 **Part 2 — confirm it by flipping the switch.** The same VAP ships on *classic* AKS Automatic, but in `[Audit]` mode (writes still succeed). On a cluster I could modify, I flipped one field and the failure reproduced exactly:
 
@@ -241,50 +259,58 @@ flowchart LR
 
 ---
 
-## 6. Validation of what AKS shipped
+## 6. Rollout — validated in canary, zero code on our side
 
 ```mermaid
-flowchart TD
-    T["On-cluster test matrix<br/>(trang-hosted-eastus2euap, MSNP, K8s 1.35.5)"]
+flowchart LR
+    A["AKS implements<br/>the VAP allowlist<br/>(the exempt clause)"] --> B["rolls out to<br/><b>canary region</b>"]
+    B --> C["<b>we validate</b> on canary:<br/>ConfigMaps · the mTLS Secret ·<br/>PodMonitor / ServiceMonitor CRs<br/>all create successfully in kube-system"]
+    C --> D["AKS <b>continues the rollout</b><br/>→ broader regions"]
+    C -.->|"unrelated CM / Secret<br/>still denied"| SCOPE["scope held —<br/>exception, not a hole"]
 
-    T --> POS["<b>Allowed cases</b> P1–P7"]
-    T --> NEG["<b>Negative controls</b> N1–N2"]
-    T --> EDGE["<b>Edge proofs</b> E1–E2"]
-
-    POS --> POSR["✅ ama-metrics CMs · mtls-secret ·<br/>PodMonitor · ServiceMonitor<br/>→ ADMITTED"]
-    NEG --> NEGR["✅ unrelated CM / Secret<br/>→ STILL DENIED<br/>(scope held)"]
-    EDGE --> EDGER["✅ keys on metadata.name,<br/>not filename"]
-
-    style POSR fill:#d5e8d4,stroke:#82b366
-    style NEGR fill:#d5e8d4,stroke:#82b366
-    style EDGER fill:#d5e8d4,stroke:#82b366
-    style T fill:#e6f0ff,stroke:#4472c4
+    style A fill:#ffe6cc,stroke:#d79b00
+    style B fill:#fff2cc,stroke:#d6b656
+    style C fill:#e6f0ff,stroke:#4472c4
+    style D fill:#d5e8d4,stroke:#82b366
+    style SCOPE fill:#f2f2f2,stroke:#999
 ```
 
-> **Say:** "Every allowed object goes through; every unrelated object is still blocked. The exception is *scoped*, not a hole. AKS is rolling this out now."
+**✅ Zero code changes on ama-metrics** — the entire fix lived in the AKS-managed policy.
+
+> **Say:** "Here's how it shipped. AKS implemented the allowlist and rolled it to a **canary region** first. On a canary cluster, *we* did the validation — applied the ama-metrics ConfigMaps, the mTLS Secret, and the PodMonitor/ServiceMonitor CRs, and confirmed they all create successfully in `kube-system`, while unrelated objects stay blocked so the scope held. With that green signal, AKS continued the rollout to broader regions. And the headline: **zero code changes on ama-metrics.** We shipped a cross-cutting customer-facing fix without touching our agent at all."
 
 ---
 
 ## 7. Lessons — what I'd want you to take away
 
+1. **Work backwards from the problem, not forward from a solution.** "Migrate the addon" was a solution in disguise. Keep asking *what problem does this solve?* until you hit an actual problem — then you often find a cheaper answer.
+2. **AI is a superpower outside your own domain.** I'd never heard of a Validating Admission Policy — it's really the AKS team's area, not a monitoring engineer's. With AI I learned enough to prototype the exact fix in hours, not the weeks it would've taken alone.
+3. **Less code — or no code — wins.** Zero ama-metrics lines changed. Code you don't write can't break, can't rot, and can't page you at 2am.
+
+> **Say:** "If you forget everything else: keep asking *why* until you find the real problem, lean on AI to move fast outside your own domain, and remember the cheapest fix we ever ship is the one we talk ourselves out of building."
+
+---
+
+## Bonus — ama-logs got AKS Automatic support for free
+
+Because the shipped ConfigMap exception is a **prefix** match (`ama-metrics-*` **or** `container-azm-ms-*`), the same one clause that unblocked ama-metrics **also** covers ama-logs (Container Insights) — its customer ConfigMaps are `container-azm-ms-*`.
+
 ```mermaid
-flowchart TB
-    L1["<b>1 · Work backwards from the problem</b><br/>'Migrate the addon' was a solution<br/>in disguise — ask <i>what problem<br/>does this solve?</i> until you hit one"]
-    L2["<b>2 · AI is a superpower outside your domain</b><br/>I'd never heard of a VAP — AI collapsed<br/>the time to become dangerous in<br/>admission-control, someone else's turf"]
-    L3["<b>3 · Less code — or no code — wins</b><br/>Zero ama-metrics lines changed.<br/>Code you don't write can't break,<br/>rot, or page you at 2am"]
-    L4["<b>4 · Reproduce before you fix</b><br/>The Audit→Deny lab turned a theory<br/>into proof — walked into AKS with a<br/>working demo, not an opinion"]
-    L5["<b>5 · A narrow ask gets a fast yes</b><br/>One CEL clause over ~5 named objects,<br/>not 'open kube-system' — small,<br/>auditable asks clear review in a week"]
+flowchart LR
+    EX["one prefix clause<br/><b>container-azm-ms-*</b>"] --> M["ama-metrics<br/>ConfigMaps"]
+    EX --> L["ama-logs<br/>container-azm-ms-agentconfig ·<br/>container-azm-ms-vpaconfig<br/>✅ admitted in kube-system"]
 
-    L1 --- L2 --- L3 --- L4 --- L5
-
-    style L1 fill:#e6f0ff,stroke:#4472c4
-    style L2 fill:#e6f0ff,stroke:#4472c4
-    style L3 fill:#d5e8d4,stroke:#82b366
-    style L4 fill:#fff2cc,stroke:#d6b656
-    style L5 fill:#fff2cc,stroke:#d6b656
+    style EX fill:#fff2cc,stroke:#d6b656
+    style M fill:#e6f0ff,stroke:#4472c4
+    style L fill:#d5e8d4,stroke:#82b366
 ```
 
-> **Say:** "If you forget everything else: the cheapest fix we ever ship is the one we talk ourselves out of building. RCA first, reproduce to prove it, then make the ask small enough that the answer is yes."
+| | ama-logs on AKS Automatic |
+|---|---|
+| **The alternative** | migrate ama-logs out of `kube-system` — its own multi-month, cross-team effort |
+| **What we actually spent** | **0 extra effort** — the ama-metrics prefix clause already admits its ConfigMaps (validated on the same cluster) |
+
+> **Say:** "And a bonus we didn't even plan for. Because AKS made the ConfigMap rule a prefix match, the exact same clause that unblocked ama-metrics *also* unblocks **ama-logs** — Container Insights uses `container-azm-ms-` ConfigMaps, which fall under the same prefix. So a second addon that would have needed its own months-long migration to support AKS Automatic got it for **zero additional effort**. One narrowly-scoped fix, two products unblocked."
 
 ---
 
