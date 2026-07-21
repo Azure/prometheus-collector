@@ -8,12 +8,12 @@
 {{/* Set the default HPA values for minReplicas, maxReplicas, and metrics.  */}}
 {{- $amaMetricsHpaName := "ama-metrics-hpa" }}
 {{- $amaMetricsAutoscaleMin := 2 -}}
-{{- $amaMetricsAutoscaleMax := 30 -}}
-{{- $amaMetricsAutoscaleMaxPrevious := 24 -}}
+{{- $amaMetricsAutoscaleMax := 50 -}}
+{{- $amaMetricsAutoscaleMaxPrevious := 30 -}}
 
 
 amaMetricsMinReplicasFromHelper: 2
-amaMetricsMaxReplicasFromHelper: 30
+amaMetricsMaxReplicasFromHelper: 50
 
 {{/* If the current HPA already exists, set the HPA values to the current 
      HPA spec to preserve those values. */}}
