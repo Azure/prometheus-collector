@@ -34,6 +34,7 @@
   + build(deps): bump golang.org/x/net from 0.43.0 to 0.55.0 in /otelcollector/test/ginkgo-e2e/regionTests (https://github.com/Azure/prometheus-collector/pull/1596)
   + build(deps): bump golang.org/x/net from 0.43.0 to 0.55.0 in /otelcollector/test/ginkgo-e2e/containerstatus (https://github.com/Azure/prometheus-collector/pull/1601)
   + build(deps): bump google.golang.org/grpc from 1.81.0 to 1.82.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1599)
+  + CVE remediation: bump Go toolchain to 1.26.5, golang.org/x/crypto to 0.52.0, and golang.org/x/net to 0.55.0; remove stale .trivyignore suppressions (https://github.com/Azure/prometheus-collector/pull/1614)
 
 * Pipeline/Docs/Templates Updates:
   + Skills for dev and prod image release validation (https://github.com/Azure/prometheus-collector/pull/1545)
