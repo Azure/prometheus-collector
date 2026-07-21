@@ -40,6 +40,10 @@
 							"enableWindowsRecordingRules": {
 								"type": "bool"
 							},
+							"enableControlPlaneMetrics": {
+								"type": "bool",
+								"defaultValue": false
+							},
 							"clusterResourceId": {
 								"type": "string"
 							},
@@ -74,7 +78,7 @@
 						"resources": [
 							{
 								"type": "Microsoft.Insights/dataCollectionEndpoints",
-								"apiVersion": "2022-06-01",
+								"apiVersion": "2024-03-11",
 								"name": "[variables('dceName')]",
 								"location": "[parameters('azureMonitorWorkspaceLocation')]",
 								"kind": "Linux",
@@ -82,7 +86,7 @@
 							},
 							{
 								"type": "Microsoft.Insights/dataCollectionRules",
-								"apiVersion": "2022-06-01",
+								"apiVersion": "2025-05-11",
 								"name": "[variables('dcrName')]",
 								"location": "[parameters('azureMonitorWorkspaceLocation')]",
 								"kind": "Linux",
@@ -144,7 +148,7 @@
 											{
 												"type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
 												"name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
-												"apiVersion": "2022-06-01",
+												"apiVersion": "2024-03-11",
 												"location": "[parameters('clusterLocation')]",
 												"properties": {
 													"description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
@@ -177,7 +181,7 @@
 												"name": "[variables('clusterName')]",
 												"type": "Microsoft.ContainerService/managedClusters",
 												"location": "[parameters('clusterLocation')]",
-												"apiVersion": "2023-01-01",
+												"apiVersion": "2026-04-01",
 												"properties": {
 													"mode": "Incremental",
 													"id": "[parameters('clusterResourceId')]",
@@ -187,6 +191,9 @@
 															"kubeStateMetrics": {
 																"metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
 																"metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+															},
+															"controlPlane": {
+																"enabled": "[parameters('enableControlPlaneMetrics')]"
 															}
 														}
 													}
@@ -683,6 +690,9 @@
 						},
 						"enableWindowsRecordingRules": {
 							"value": "[parameters('enableWindowsRecordingRules')]"
+						},
+						"enableControlPlaneMetrics": {
+							"value": "[parameters('enableControlPlaneMetrics')]"
 						},
 						"clusterResourceId": {
 							"value": "[field('id')]"

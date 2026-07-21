@@ -10,6 +10,9 @@ param grafanaLocation string
 param grafanaSku string
 param grafanaAdminObjectId string
 
+@description('Enable collection of Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled on the cluster.')
+param enableControlPlaneMetrics bool = false
+
 @description('A new GUID used to identify the role assignment')
 param roleNameGuid string = newGuid()
 
@@ -37,7 +40,7 @@ var uxRecordingRulesRuleGroupWin = 'UXRecordingRulesRuleGroup-Win - ${clusterNam
 var uxRecordingRulesRuleGroupWinDescription = 'UX recording rules for Windows'
 var version = ' - 0.1'
 
-resource dce 'Microsoft.Insights/dataCollectionEndpoints@2022-06-01' = {
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
   name: dceName
   location: azureMonitorWorkspaceLocation
   kind: 'Linux'
@@ -45,7 +48,12 @@ resource dce 'Microsoft.Insights/dataCollectionEndpoints@2022-06-01' = {
   }
 }
 
-resource dcr 'Microsoft.Insights/dataCollectionRules@2022-06-01' = {
+// 2025-05-11 is the latest stable dataCollectionRules API version. It is newer than the
+// Bicep CLI's bundled type catalog, so suppress the "types not available" warning; the DCR
+// request schema used here (dataFlows, dataSources.prometheusForwarder, destinations.
+// monitoringAccounts, dataCollectionEndpointId) is long-stable and the compiled ARM deploys fine.
+#disable-next-line BCP081
+resource dcr 'Microsoft.Insights/dataCollectionRules@2025-05-11' = {
   name: dcrName
   location: azureMonitorWorkspaceLocation
   kind: 'Linux'
@@ -108,6 +116,7 @@ module azuremonitormetrics_profile_clusterResourceId './nested_azuremonitormetri
     clusterLocation: clusterLocation
     metricLabelsAllowlist: metricLabelsAllowlist
     metricAnnotationsAllowList: metricAnnotationsAllowList
+    enableControlPlaneMetrics: enableControlPlaneMetrics
   }
   dependsOn: [
     azuremonitormetrics_dcra_clusterResourceId
@@ -651,7 +660,7 @@ resource uxRecordingRulesRuleGroupWinObj 'Microsoft.AlertsManagement/prometheusR
   }
 }
 
-resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
+resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2025-08-01' = {
   name: split(grafanaResourceId, '/')[8]
   sku: {
     name: grafanaSku
@@ -687,6 +696,6 @@ module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
   scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
   params: {
     azureMonitorWorkspaceSubscriptionId: azureMonitorWorkspaceSubscriptionId
-    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
+    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2025-08-01', 'Full').identity.principalId
   }
 }

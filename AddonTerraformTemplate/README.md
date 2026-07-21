@@ -10,6 +10,7 @@ Note: Pass the variables for `annotations_allowed` and `labels_allowed` keys onl
 
 **NOTE**
 - Please edit the main.tf file appropriately before running the terraform template
+- To collect Azure Monitor managed Prometheus **control plane** metrics (controlplane-apiserver and controlplane-etcd targets by default), set the `enable_control_plane_metrics` variable to `true` (default: `false`). Because the `azurerm` provider's `monitor_metrics` block does not expose this property, the template sets `azureMonitorProfile.metrics.controlPlane.enabled` via the `azapi` provider (added to `providers.tf`); run `terraform init -upgrade` so the `azapi` provider is installed.
 - Please add in any existing azure_monitor_workspace_integrations values to the grafana resource before running the template otherwise the older values will get deleted and replaced with what is there in the template at the time of deployment
 - Users with 'User Access Administrator' role in the subscription  of the AKS cluster can be able to enable 'Monitoring Data Reader' role directly by deploying the template.
 - Please edit the grafanaSku parameter if you are using a non standard SKU.

@@ -4,7 +4,7 @@ param variables_dcraName string
 param clusterLocation string
 
 #disable-next-line BCP174 // This warning is a false positive as dcra is already 'scope'-ed to the resource group in main template
-resource variables_clusterName_microsoft_insights_variables_dcra 'Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations@2022-06-01' = {
+resource variables_clusterName_microsoft_insights_variables_dcra 'Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations@2024-03-11' = {
   name: '${variables_clusterName}/microsoft.insights/${variables_dcraName}'
   location: clusterLocation
   properties: {

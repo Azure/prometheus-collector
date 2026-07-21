@@ -27,6 +27,13 @@
       "type": "bool",
       "defaultValue": false
     },
+    "enableControlPlaneMetrics": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable collection of Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled on the cluster."
+      }
+    },
     "grafanaResourceId": {
       "type": "string",
       "defaultValue": ""
@@ -75,7 +82,7 @@
   "resources": [
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
-      "apiVersion": "2022-06-01",
+      "apiVersion": "2024-03-11",
       "name": "[variables('dceName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "kind": "Linux",
@@ -83,7 +90,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionRules",
-      "apiVersion": "2022-06-01",
+      "apiVersion": "2025-05-11",
       "name": "[variables('dcrName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "kind": "Linux",
@@ -145,7 +152,7 @@
             {
               "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
               "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
-              "apiVersion": "2022-06-01",
+              "apiVersion": "2024-03-11",
               "location": "[parameters('clusterLocation')]",
               "properties": {
                 "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
@@ -178,7 +185,7 @@
               "name": "[variables('clusterName')]",
               "type": "Microsoft.ContainerService/managedClusters",
               "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
+              "apiVersion": "2026-04-01",
               "properties": {
                 "mode": "Incremental",
                 "id": "[parameters('clusterResourceId')]",
@@ -188,6 +195,9 @@
                     "kubeStateMetrics": {
                       "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
                       "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+                    },
+                    "controlPlane": {
+                      "enabled": "[parameters('enableControlPlaneMetrics')]"
                     }
                   }
                 }
@@ -674,12 +684,12 @@
       "scope": "[parameters('azureMonitorWorkspaceResourceId')]",
       "properties": {
         "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
-        "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
+        "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2025-08-01', 'Full').identity.principalId]"
       }
     },
     {
       "type": "Microsoft.Dashboard/grafana",
-      "apiVersion": "2022-08-01",
+      "apiVersion": "2025-08-01",
       "name": "[split(parameters('grafanaResourceId'),'/')[8]]",
       "sku": {
         "name": "[parameters('grafanaSku')]"
