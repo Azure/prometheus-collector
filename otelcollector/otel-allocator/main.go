@@ -29,7 +29,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/allocation"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/collector"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/config"
-	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/prehook"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/server"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/target"
 	allocatorWatcher "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/watcher"
@@ -44,9 +43,6 @@ func main() {
 		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
 	}
 	var (
-		// allocatorPrehook will be nil if filterStrategy is not set or
-		// unrecognized. No filtering will be used in this case.
-		allocatorPrehook prehook.Hook
 		allocator        allocation.Allocator
 		discoveryManager *discovery.Manager
 		collectorWatcher *collector.Watcher
@@ -94,8 +90,7 @@ func main() {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(metricExporter))
 	otel.SetMeterProvider(meterProvider)
 
-	allocatorPrehook = prehook.New(cfg.FilterStrategy, log)
-	allocator, allocErr := allocation.New(cfg.AllocationStrategy, log, allocation.WithFilter(allocatorPrehook), allocation.WithFallbackStrategy(cfg.AllocationFallbackStrategy))
+	allocator, allocErr := allocation.New(cfg.AllocationStrategy, log, allocation.WithFallbackStrategy(cfg.AllocationFallbackStrategy))
 	if allocErr != nil {
 		setupLog.Error(allocErr, "Unable to initialize allocation strategy")
 		os.Exit(1)
@@ -129,7 +124,7 @@ func main() {
 	}
 	discoveryManager = discovery.NewManager(discoveryCtx, config.NopLogger, prometheus.DefaultRegisterer, sdMetrics)
 
-	targetDiscoverer, targetErr := target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv, allocator.SetTargets)
+	targetDiscoverer, targetErr := target.NewDiscoverer(log, discoveryManager, cfg.FilterStrategy, srv, allocator.SetTargets)
 	if targetErr != nil {
 		panic(targetErr)
 	}

@@ -53,21 +53,21 @@ type Manager struct {
 
 func NewManager(set receiver.Settings, cfg *Config, promCfg *sharedpromconfig.Config) *Manager {
 	return &Manager{
-		shutdown:          make(chan struct{}),
-		settings:          set,
-		cfg:               cfg,
-		promCfg:           promCfg,
-		configUpdateCount: &atomic.Int64{},
-		configUpdated:     make(chan struct{}, 10),
+		shutdown:             make(chan struct{}),
+		settings:             set,
+		cfg:                  cfg,
+		promCfg:              promCfg,
+		initialScrapeConfigs: promCfg.Get().ScrapeConfigs,
+		configUpdateCount:    &atomic.Int64{},
+		configUpdated:        make(chan struct{}, 10),
 	}
 }
 
 func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager) error {
 	m.scrapeManager = sm
 	m.discoveryManager = dm
-	cfgSnapshot := m.promCfg.Get()
-	m.initialScrapeConfigs = cfgSnapshot.ScrapeConfigs
-	err := m.applyCfg(&cfgSnapshot)
+	promCfg := m.promCfg.Get()
+	err := m.applyCfg(&promCfg)
 	if err != nil {
 		m.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
 		return err
@@ -144,13 +144,12 @@ func (m *Manager) sync(compareHash uint64, httpClient *http.Client) (uint64, err
 		return hash, nil
 	}
 
-	// Copy initial scrape configurations
-	initialConfig := make([]*promconfig.ScrapeConfig, len(m.initialScrapeConfigs))
-	copy(initialConfig, m.initialScrapeConfigs)
-
-	newScrapeConfigs := initialConfig
-
+	// Read GlobalConfig under read lock for validation outside the write lock.
 	globalCfg := m.promCfg.Get().GlobalConfig
+
+	// Build the new scrape configs outside the lock to minimize the critical section.
+	newConfigs := make([]*promconfig.ScrapeConfig, len(m.initialScrapeConfigs))
+	copy(newConfigs, m.initialScrapeConfigs)
 
 	for jobName, scrapeConfig := range scrapeConfigsResponse {
 		var httpSD promHTTP.SDConfig
@@ -190,16 +189,15 @@ func (m *Manager) sync(compareHash uint64, httpClient *http.Client) (uint64, err
 			return 0, err
 		}
 
-		newScrapeConfigs = append(newScrapeConfigs, scrapeConfig)
+		newConfigs = append(newConfigs, scrapeConfig)
 	}
 
+	// Hold the write lock only for the config swap for the shared pointer.
 	m.promCfg.Mutate(func(cfg *promconfig.Config) {
-		cfg.ScrapeConfigs = newScrapeConfigs
+		cfg.ScrapeConfigs = newConfigs
 	})
-
 	cfgSnapshot := m.promCfg.Get()
-	err = m.applyCfg(&cfgSnapshot)
-	if err != nil {
+	if err = m.applyCfg(&cfgSnapshot); err != nil {
 		m.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
 		return 0, err
 	}
