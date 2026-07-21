@@ -40,6 +40,9 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+        - --listen-addr=127.0.0.1:8080
+{{- end }}
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -74,10 +77,11 @@ spec:
         - containerPort: 8081
           name: health-ta
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
-        - containerPort: 8080
-          name: http
         - containerPort: 8443
           name: https
+{{- else }}
+        - containerPort: 8080
+          name: http
 {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
