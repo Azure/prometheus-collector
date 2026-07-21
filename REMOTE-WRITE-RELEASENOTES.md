@@ -1,5 +1,24 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 07-13-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260713.1`
+* Change log -
+  * Bump `golang.org/x/crypto` from v0.45.0 to v0.52.0 to fix 13 CVEs (7 Critical, 2 High, 4 Medium).
+* Fixed CVEs:
+    - [CVE-2026-39830](https://avd.aquasec.com/nvd/cve-2026-39830) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39831](https://avd.aquasec.com/nvd/cve-2026-39831) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39832](https://avd.aquasec.com/nvd/cve-2026-39832) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39833](https://avd.aquasec.com/nvd/cve-2026-39833) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39834](https://avd.aquasec.com/nvd/cve-2026-39834) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-42508](https://avd.aquasec.com/nvd/cve-2026-42508) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-46595](https://avd.aquasec.com/nvd/cve-2026-46595) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39829](https://avd.aquasec.com/nvd/cve-2026-39829) — `golang.org/x/crypto` vulnerability (High).
+    - [CVE-2026-46597](https://avd.aquasec.com/nvd/cve-2026-46597) — `golang.org/x/crypto` vulnerability (High).
+    - [CVE-2026-39827](https://avd.aquasec.com/nvd/cve-2026-39827) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-39828](https://avd.aquasec.com/nvd/cve-2026-39828) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-39835](https://avd.aquasec.com/nvd/cve-2026-39835) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-46598](https://avd.aquasec.com/nvd/cve-2026-46598) — `golang.org/x/crypto` vulnerability (Medium).
+
 ## Release 07-06-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260706.1`
 * Change log -
