@@ -110,12 +110,7 @@ flowchart LR
     style F fill:#d5e8d4,stroke:#82b366
 ```
 
-**What AKS first suggested — one pattern, two examples:** *"configure a managed add-on through a **CRD** the customer applies outside `kube-system`, not through ConfigMaps in `kube-system`."*
-
-| Their pointer | The CRD it uses | What they meant for ama-metrics |
-|---|---|---|
-| [App-routing NGINX config](https://learn.microsoft.com/en-us/azure/aks/app-routing-nginx-configuration?tabs=azure-cli&pivots=nginx-ingress-controller) | `NginxIngressController` — customer applies the CR, the add-on operator reads it and configures NGINX | Do the same: replace ama-metrics' ConfigMaps with a config **CRD** the customer applies in their own namespace |
-| [AKS scheduler profiles](https://learn.microsoft.com/en-us/azure/aks/configure-aks-scheduler?tabs=new-cluster#limitations) | `SchedulerConfiguration` — customer applies the CR, AKS's controller configures the scheduler (system `aks-system` scheduler stays off-limits) | Same pattern again — CRD in, no writes to `kube-system` |
+**Track 1 — What AKS first suggested:** *"configure a managed add-on through a **CRD** the customer applies outside `kube-system`, not through ConfigMaps in `kube-system`."*
 
 **Why I set it aside:** both amount to *re-architecting ama-metrics' config surface into a new CRD* — a big build, a breaking change for every customer already using the 4 ConfigMaps, and it doesn't unblock existing customers now. It's the same migration mountain from §2, just dressed as a CRD. The VAP exception does the same job with **zero code and no customer migration**.
 
@@ -158,21 +153,18 @@ flowchart LR
     style CONF fill:#d5e8d4,stroke:#82b366
 ```
 
-**Part 3 — the finding that killed the migration idea.** While in there, I applied a ConfigMap to a *different* AKS-managed namespace, `azuresecuritylinuxagent` — it failed with the **same** policy. So the lockdown isn't about `kube-system` specifically; it protects **every** namespace AKS manages. That means "move ama-metrics out" was never a solution — only a prerequisite — and it forks into two dead ends:
+**Part 3 — the finding that killed the migration idea.** While in there, I applied a ConfigMap to a *different* AKS-managed namespace, `azuresecuritylinuxagent` — it failed with the **same** policy. So the lockdown isn't about `kube-system` specifically; it protects **every** namespace AKS manages. That means "move ama-metrics out" was never a final solution — only a prerequisite — and it forks into two potential dead ends:
 
 ```mermaid
 flowchart TD
     M["Move ama-metrics to a<br/>new namespace<br/><i>(the proposed 'solution')</i>"] --> Q{"Is the new namespace<br/>AKS-managed?"}
-    Q -->|"Yes"| A["❌ still blocked by the VAP<br/>— need an AKS exception anyway<br/>(exactly what we did, without moving)"]
-    Q -->|"No"| B["❌ lose managed-namespace benefits<br/>security · priority class ·<br/>autoscaling"]
-    A --> C["<b>Migration solves nothing —<br/>the exception is the real fix</b>"]
-    B --> C
+    Q -->|"Yes"| A["❌ still blocked by the VAP<br/>— need an AKS exception anyway"]
+    Q -->|"No"| B["❌ lose managed-namespace benefits<br/>security · priority class · autoscaling, etc"]
 
     style M fill:#ffe6cc,stroke:#d79b00
     style Q fill:#fff2cc,stroke:#d6b656
     style A fill:#ffcccc,stroke:#c00
     style B fill:#ffcccc,stroke:#c00
-    style C fill:#d5e8d4,stroke:#82b366
 ```
 
 ---
@@ -237,7 +229,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    EX["ama-metrics<br/>exception (shipped)"] --> CM["ConfigMaps<br/>prefix <b>ama-metrics-*</b><br/>or <b>container-azm-ms-*</b>"]
+    EX["ama-metrics<br/>exception (shipped)"] --> CM["ConfigMaps<br/>prefix <b>ama-metrics-*</b>"]
     EX --> SEC["Secret<br/>exact <b>ama-metrics-mtls-secret</b>"]
     EX --> CR["CRs<br/><b>podmonitors / servicemonitors</b><br/>azmonitoring.coreos.com/v1"]
 
@@ -279,12 +271,12 @@ flowchart LR
 
 ## Bonus — ama-logs got AKS Automatic support in the same clause
 
-While the ama-metrics exception was being added, I asked AKS to **also** allowlist the `container-azm-ms-*` ConfigMap prefix that ama-logs (Container Insights) uses. They folded it into the **same** VAP change, so the one clause unblocks both addons — ama-logs' customer ConfigMaps are `container-azm-ms-*`.
+While the ama-metrics exception was being added, I asked AKS to **also** allowlist the `container-azm-ms-*` ConfigMap prefix that ama-logs (Container Insights) uses. They folded it into the **same** VAP change, so adding a couple of lines — the `container-azm-ms-*` prefix — unblocks ama-logs too.
 
 ```mermaid
 flowchart LR
-    EX["one prefix clause<br/><b>container-azm-ms-*</b>"] --> M["ama-metrics<br/>ConfigMaps"]
-    EX --> L["ama-logs<br/>container-azm-ms-agentconfig ·<br/>container-azm-ms-vpaconfig<br/>✅ admitted in kube-system"]
+    EX["One VAP change · two prefix rules<br/><b>ama-metrics-*</b><br/><b>container-azm-ms-*</b>"] --> M["ama-metrics"]
+    EX --> L["ama-logs"]
 
     style EX fill:#fff2cc,stroke:#d6b656
     style M fill:#e6f0ff,stroke:#4472c4
