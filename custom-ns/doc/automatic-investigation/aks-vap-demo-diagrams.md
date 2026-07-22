@@ -1,6 +1,6 @@
 # Migrate ama-metrics out of kube-system namespace — the story
 
-## 0. What is ama-metrics?container-azm-ms-kWork backwards from the problem, not forward from a solution.
+## 0. What is ama-metrics?
 
 ```mermaid
 flowchart LR
