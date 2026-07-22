@@ -47,16 +47,16 @@ flowchart TB
 
     subgraph OURS["1 · Our code — refactor across every deploy mode"]
         direction TB
-        O1["helm charts · ARM/Bicep<br/>AKS addon · Arc · CCP config-ref"]
+        O1["helm charts · ARM/Bicep<br/>AKS addon · Arc"]
         O2["Go code: make POD_NAMESPACE required<br/>OTel + fluent-bit configs · TA URLs / TLS SANs"]
-        O3["mixins · dashboards ·<br/>recording &amp; alert rules"]
+        O3["dashboards ·<br/>recording &amp; alert rules"]
     end
 
     subgraph EXT["2 · Dependencies we DON'T own — AKS-RP &amp; others"]
         direction TB
         E1["aad-msi-auth-token secret<br/>(AKS-RP must dual-provision)"]
         E2["token-adaptor image<br/>(different for AKS vs Arc) · retina"]
-        E3["priority class · default-deny NetworkPolicy ·<br/>Pod Security (NET_ADMIN/NET_RAW) ·<br/>Deployment-Safeguards allowlist"]
+        E3["priority class · NetworkPolicy ·<br/>Pod Security (NET_ADMIN/NET_RAW)"]
         E4["CCP configmap-watcher<br/>(Overlay → Underlay name)"]
     end
 
@@ -70,7 +70,7 @@ flowchart TB
     ASK --> EXT
     ASK --> CX
 
-    OURS --> COST["<b>Multi-month · cross-team · high blast radius</b><br/>— and still just a <i>hypothesis</i> until<br/>Phase-0 validation says migration is even needed"]
+    OURS --> COST["<b>Multi-month · cross-team · high blast radius</b>"]
     EXT --> COST
     CX --> COST
 
@@ -92,7 +92,7 @@ flowchart LR
     START --> Q["<b>Track 1 — ask the owners</b><br/>AKS Automatic team:<br/>why is kube-system<br/>locked down?"]
     START --> R["<b>Track 2 — RCA in parallel</b><br/>tear the mechanism<br/>apart myself"]
 
-    Q --> SUG["their suggestion:<br/>expose a config <b>CRD</b><br/>(app-routing · scheduler pattern)<br/><i>= redesign · didn't fit</i>"]
+    Q --> SUG["their suggestion:<br/>expose a config <b>CRD</b>"]
     R --> B["<b>Root cause:</b> a native VAP<br/>aks-managed-protect-<br/>system-namespaces"]
 
     SUG -.->|"set aside"| B
@@ -112,7 +112,7 @@ flowchart LR
 
 **Track 1 — What AKS first suggested:** *"configure a managed add-on through a **CRD** the customer applies outside `kube-system`, not through ConfigMaps in `kube-system`."*
 
-**Why I set it aside:** both amount to *re-architecting ama-metrics' config surface into a new CRD* — a big build, a breaking change for every customer already using the 4 ConfigMaps, and it doesn't unblock existing customers now. It's the same migration mountain from §2, just dressed as a CRD. The VAP exception does the same job with **zero code and no customer migration**.
+**Why I set it aside:** it's *re-architecting ama-metrics' config surface into a new CRD* — a big build, a breaking change for every customer already using the ConfigMaps, and it doesn't unblock existing customers now. It's a similar migration mountain from §2, just dressed as a CRD. The VAP exception does the same job with **zero code and no customer migration**.
 
 ---
 
@@ -225,13 +225,13 @@ flowchart TD
     style C3 fill:#fff2cc,stroke:#d6b656
 ```
 
-**From PoC to what AKS shipped** — AKS generalized my 4-name PoC into the final exception, covering all three object types ama-metrics is forced to put in `kube-system`:
+**From PoC to what AKS shipped** — AKS generalized the condition into the final exception, covering all three object types ama-metrics is forced to put in `kube-system`:
 
 ```mermaid
 flowchart LR
     EX["ama-metrics<br/>exception (shipped)"] --> CM["ConfigMaps<br/>prefix <b>ama-metrics-*</b>"]
     EX --> SEC["Secret<br/>exact <b>ama-metrics-mtls-secret</b>"]
-    EX --> CR["CRs<br/><b>podmonitors / servicemonitors</b><br/>azmonitoring.coreos.com/v1"]
+    EX --> CR["CRs<br/><b>podmonitors / servicemonitors</b>"]
 
     style EX fill:#fff2cc,stroke:#d6b656
     style CM fill:#e6f0ff,stroke:#4472c4
@@ -263,7 +263,7 @@ flowchart LR
 
 ## 7. Lessons — what I'd want you to take away
 
-1. **Work backwards from the problem, not forward from a solution.** "Migrate the addon" was a solution in disguise. Keep asking *what problem does this solve?* until you hit an actual problem — then you often find a cheaper answer.
+1. **Work backwards from the problem, not forward from a solution.** "Migrate the addon" was a solution in disguise. Keep asking *what problem does this solve?* until you hit an actual problem — then you may find a cheaper answer.
 2. **AI is a superpower outside your own domain.** I'd never heard of a Validating Admission Policy — it's really the AKS team's area, not a monitoring engineer's. With AI I learned enough to prototype the exact fix in hours, not the weeks it would've taken alone.
 3. **Less code — or no code — wins.** Zero ama-metrics lines changed. Code you don't write can't break, can't rot, and can't page you at 2am.
 
