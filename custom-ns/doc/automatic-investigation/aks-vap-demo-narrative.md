@@ -14,11 +14,11 @@ Here's what kicked it off. AKS shipped a security feature that locks down system
 
 **(2 · Why "just migrate it" is a mountain)**
 
-But "just migrate it" isn't one change — it's three problems stacked. **One:** we'd refactor our own code across every deployment mode — helm, ARM/Bicep, the Go code, the OTel and fluent-bit configs, plus dashboards and recording rules that filter on the agent's namespace. **Two:** a pile of things we don't own — the auth-token secret AKS-RP provisions, the token-adaptor image (different for AKS versus Arc), retina, priority classes, network policy, pod-security capabilities, the CCP config watcher — every one needs another team moving in lockstep. **Three:** it's a breaking change for *every* existing customer — all their ConfigMaps, custom resources, and rules point at `kube-system`. Multi-month, cross-team, high blast radius. And the kicker: migration was still just a *hypothesis*. So before building any of it, I asked one question — *why* is `kube-system` locked down, and can we get around it cheaply?
+But "just migrate it" isn't one change — it's three problems stacked. **One:** we'd refactor our own code across every deployment mode — helm, ARM/Bicep, the Go code, the OTel and fluent-bit configs, plus dashboards and recording rules that filter on the agent's namespace. **Two:** a pile of things we don't own — the auth-token secret AKS-RP provisions, the token-adaptor image (different for AKS versus Arc), retina, priority classes, network policy, pod-security capabilities, the CCP config watcher — every one needs another team moving in lockstep. **Three:** it's a breaking change for *every* existing customer — all their ConfigMaps, custom resources, and rules point at `kube-system`. Multi-month, cross-team, high blast radius. So before building any of it, I asked one question — *why* is `kube-system` locked down, and can we get around it cheaply?
 
 **(3 · The story spine)**
 
-I ran two tracks in parallel. Track one: ask the owners — the AKS Automatic team — why the lockdown exists and what they'd recommend. Track two: don't wait, tear the mechanism apart myself. Their answer on track one was a pattern their other add-ons use: expose a config **CRD**, so customers apply a custom resource *outside* `kube-system` instead of editing ConfigMaps inside it — what their app-routing and scheduler examples do. I didn't chase it: it's the same redesign-and-migrate mountain in a CRD costume — big build, breaks every existing customer, unblocks nobody today. Track two is what actually cracked it.
+I ran two tracks in parallel. Track one: ask the owners — the AKS Automatic team — why the lockdown exists and what they'd recommend. Track two: don't wait, tear the mechanism apart myself. Their answer on track one: expose a config **CRD**, so customers apply a custom resource *outside* `kube-system` instead of editing ConfigMaps inside it. I didn't chase it: it's the same redesign-and-migrate mountain in a CRD costume — big build, breaks every existing customer, unblocks nobody today. Track two is what actually cracked it.
 
 **(4 · RCA — proving it's the VAP)**
 
@@ -30,7 +30,7 @@ Two parts here. **Part one — read the error.** Applying an ama-metrics ConfigM
 
 **(5 · The fix)**
 
-And the fix is almost anticlimactic. Same cluster, still in Deny mode. I appended one `matchCondition` — a negated CEL clause that says: *if it's one of these named ama-metrics ConfigMaps in `kube-system`, skip the policy and admit.* Re-applied the exact ConfigMap that had just been rejected, and it went straight through — while everything else in `kube-system` stayed blocked. That's the whole fix: no ama-metrics code changed, nothing moves namespaces, one clause. AKS then generalized my four-name PoC — a prefix match on the ConfigMaps, the mTLS Secret by exact name, and the two custom resources.
+And the fix is almost anticlimactic. Same cluster, still in Deny mode. I appended one `matchCondition` — a negated CEL clause that says: *if it's one of these named ama-metrics ConfigMaps in `kube-system`, skip the policy and admit.* Re-applied the exact ConfigMap that had just been rejected, and it went straight through — while everything else in `kube-system` stayed blocked. That's the whole fix: no ama-metrics code changed, nothing moves namespaces, one clause. AKS then generalized it into the final exception — a prefix match on the ConfigMaps, the mTLS Secret by exact name, and the two custom resources.
 
 **(6 · Rollout)**
 
@@ -38,7 +38,7 @@ Here's how it shipped. AKS implemented the allowlist and rolled it to a canary r
 
 **(7 · Lessons)**
 
-Three takeaways. First — work backwards from the problem, not forward from a solution. "Migrate the addon" was a solution in disguise; keep asking *what problem does this actually solve* until you hit a real one, and you often find a cheaper answer. Second — AI is a superpower outside your own domain. I'd never touched a Validating Admission Policy — it's the AKS team's turf — but with AI I prototyped the exact fix in hours instead of weeks. Third — less code, or no code, wins. Code you don't write can't break, can't rot, and can't page you at 2am.
+Three takeaways. First — work backwards from the problem, not forward from a solution. "Migrate the addon" was a solution in disguise; keep asking *what problem does this actually solve* until you hit a real one, and you may find a cheaper answer. Second — AI is a superpower outside your own domain. I'd never touched a Validating Admission Policy — it's the AKS team's turf — but with AI I prototyped the exact fix in hours instead of weeks. Third — less code, or no code, wins. Code you don't write can't break, can't rot, and can't page you at 2am.
 
 **(Bonus · ama-logs for free)**
 
