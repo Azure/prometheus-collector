@@ -1,6 +1,6 @@
 # Migrate ama-metrics out of kube-system namespace — the story
 
-## 0. What is ama-metrics?
+## 0. What is ama-metrics?container-azm-ms-kWork backwards from the problem, not forward from a solution.
 
 ```mermaid
 flowchart LR
@@ -158,6 +158,23 @@ flowchart LR
     style CONF fill:#d5e8d4,stroke:#82b366
 ```
 
+**Part 3 — the finding that killed the migration idea.** While in there, I applied a ConfigMap to a *different* AKS-managed namespace, `azuresecuritylinuxagent` — it failed with the **same** policy. So the lockdown isn't about `kube-system` specifically; it protects **every** namespace AKS manages. That means "move ama-metrics out" was never a solution — only a prerequisite — and it forks into two dead ends:
+
+```mermaid
+flowchart TD
+    M["Move ama-metrics to a<br/>new namespace<br/><i>(the proposed 'solution')</i>"] --> Q{"Is the new namespace<br/>AKS-managed?"}
+    Q -->|"Yes"| A["❌ still blocked by the VAP<br/>— need an AKS exception anyway<br/>(exactly what we did, without moving)"]
+    Q -->|"No"| B["❌ lose managed-namespace benefits<br/>security · priority class ·<br/>autoscaling"]
+    A --> C["<b>Migration solves nothing —<br/>the exception is the real fix</b>"]
+    B --> C
+
+    style M fill:#ffe6cc,stroke:#d79b00
+    style Q fill:#fff2cc,stroke:#d6b656
+    style A fill:#ffcccc,stroke:#c00
+    style B fill:#ffcccc,stroke:#c00
+    style C fill:#d5e8d4,stroke:#82b366
+```
+
 ---
 
 ## 5. The fix — one exempt clause, proven on the same cluster
@@ -260,9 +277,9 @@ flowchart LR
 
 ---
 
-## Bonus — ama-logs got AKS Automatic support for free
+## Bonus — ama-logs got AKS Automatic support in the same clause
 
-Because the shipped ConfigMap exception is a **prefix** match (`ama-metrics-*` **or** `container-azm-ms-*`), the same one clause that unblocked ama-metrics **also** covers ama-logs (Container Insights) — its customer ConfigMaps are `container-azm-ms-*`.
+While the ama-metrics exception was being added, I asked AKS to **also** allowlist the `container-azm-ms-*` ConfigMap prefix that ama-logs (Container Insights) uses. They folded it into the **same** VAP change, so the one clause unblocks both addons — ama-logs' customer ConfigMaps are `container-azm-ms-*`.
 
 ```mermaid
 flowchart LR
@@ -277,4 +294,4 @@ flowchart LR
 | | ama-logs on AKS Automatic |
 |---|---|
 | **The alternative** | migrate ama-logs out of `kube-system` — its own multi-month, cross-team effort |
-| **What we actually spent** | **0 extra effort** — the ama-metrics prefix clause already admits its ConfigMaps (validated on the same cluster) |
+| **What we actually spent** | **0 extra effort** — asked AKS to add the `container-azm-ms-*` prefix in the same VAP change (validated on the same cluster) |
