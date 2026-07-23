@@ -8,12 +8,12 @@
 {{/* Set the default HPA values for minReplicas, maxReplicas, and metrics.  */}}
 {{- $amaMetricsHpaName := "ama-metrics-hpa" }}
 {{- $amaMetricsAutoscaleMin := 2 -}}
-{{- $amaMetricsAutoscaleMax := 30 -}}
-{{- $amaMetricsAutoscaleMaxPrevious := 24 -}}
+{{- $amaMetricsAutoscaleMax := .Values.AzureMonitorMetrics.CollectorAutoscaleMax | default 30 | int -}}
+{{- $amaMetricsAutoscaleMaxPrevious := .Values.AzureMonitorMetrics.CollectorAutoscaleMaxPrevious | default 24 | int -}}
 
 
-amaMetricsMinReplicasFromHelper: 2
-amaMetricsMaxReplicasFromHelper: 30
+amaMetricsMinReplicasFromHelper: {{ $amaMetricsAutoscaleMin }}
+amaMetricsMaxReplicasFromHelper: {{ $amaMetricsAutoscaleMax }}
 
 {{/* If the current HPA already exists, set the HPA values to the current 
      HPA spec to preserve those values. */}}
