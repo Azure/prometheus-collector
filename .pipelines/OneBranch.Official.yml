@@ -55,6 +55,12 @@ extends:
   template: v2/OneBranch.Official.CrossPlat.yml@onebranchTemplates
   parameters:
     customTags: 'ES365AIMigrationTooling-BulkMigrated'
+    featureFlags:
+      # SFI SR21 (MountainPass): onboard to CFS network isolation in AUDIT mode.
+      # 'Permissive' reports public-feed (CFSClean) violations without failing the
+      # build. Drop 'Permissive' to flip to enforcing once builds are violation-free.
+      networkisolation:
+        policy: Permissive,CFSClean
     stages:
     - stage: BuildAndDeploy
       jobs:
