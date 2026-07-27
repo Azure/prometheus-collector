@@ -3098,10 +3098,15 @@ extends:
             export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            export SYSTEM_COLLECTIONURI="$(System.CollectionUri)"
+            export SYSTEM_TEAMPROJECT="$(System.TeamProject)"
+            export BUILD_BUILDID="$(Build.BuildId)"
             chmod +x ./testkube/send-testkube-summary.sh
-            ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+            ./testkube/send-testkube-summary.sh "$TEAMS_WEBHOOK_URL" "$(Pipeline.Workspace)/testkube-results"
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          env:
+            TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
 
       - job: TestKube_Notification_OTelCollector_Upgrade
         displayName: "Send TestKube Summary Notification"
@@ -3153,7 +3158,12 @@ extends:
             export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
             export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
             export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+            export SYSTEM_COLLECTIONURI="$(System.CollectionUri)"
+            export SYSTEM_TEAMPROJECT="$(System.TeamProject)"
+            export BUILD_BUILDID="$(Build.BuildId)"
             chmod +x ./testkube/send-testkube-summary.sh
-            ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
+            ./testkube/send-testkube-summary.sh "$TEAMS_WEBHOOK_URL" "$(Pipeline.Workspace)/testkube-results"
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          env:
+            TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
