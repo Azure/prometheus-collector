@@ -168,22 +168,61 @@ if [ "$total_count" -gt 0 ]; then
     done <<< "$(echo "$temp_json" | jq -c '.results[]' 2>/dev/null)"
 fi
 
-payload=$(cat <<EOF
-{
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    "themeColor": "$color",
-    "summary": "$title",
-    "sections": [{
-        "activityTitle": "$title",
-        "activitySubtitle": "TestKube Workflow Summary",
-        "text": "$summary_message\\n\\n$details",
-        "facts": []
-    }]
-}
-EOF
-)
+# Convert the literal "\n" sequences accumulated in details into real newlines
+# so they are encoded correctly by jq below and render as line breaks in the card.
+details="${details//\\n/$'\n'}"
+
+# Derive the Azure DevOps build URL when the pipeline provides the required variables.
+build_url=""
+collection_uri="${SYSTEM_COLLECTIONURI:-}"
+team_project="${SYSTEM_TEAMPROJECT:-}"
+build_id="${BUILD_BUILDID:-}"
+if [ -n "$collection_uri" ] && [ -n "$team_project" ] && [ -n "$build_id" ]; then
+    build_url="${collection_uri%/}/${team_project}/_build/results?buildId=${build_id}"
+fi
+
+# Build the JSON payload consumed by the Logic App workflow. Each field maps to a
+# placeholder in the Adaptive Card defined on the "Post card in a channel" action.
+payload=$(jq -n \
+    --arg title "$title" \
+    --arg summaryMessage "$summary_message" \
+    --arg details "$details" \
+    --arg color "$color" \
+    --argjson total "$total_count" \
+    --argjson passed "$passed_count" \
+    --argjson failed "$failed_count" \
+    --arg buildNumber "$build_number" \
+    --arg buildUrl "$build_url" \
+    '{
+        title: $title,
+        summaryMessage: $summaryMessage,
+        details: $details,
+        color: $color,
+        total: $total,
+        passed: $passed,
+        failed: $failed,
+        buildNumber: $buildNumber,
+        buildUrl: $buildUrl
+    }')
 
 echo "Sending Teams notification..."
-curl -H "Content-Type: application/json" -d "$payload" "$TEAMS_WEBHOOK_URL" || echo "Failed to send Teams notification"
-echo "Summary notification sent."
+response_file=$(mktemp)
+http_code=$(curl -sS -o "$response_file" -w "%{http_code}" \
+    -H "Content-Type: application/json" \
+    -d "$payload" "$TEAMS_WEBHOOK_URL")
+curl_exit=$?
+response_body=$(cat "$response_file" 2>/dev/null)
+rm -f "$response_file"
+
+if [ "$curl_exit" -ne 0 ]; then
+    echo "ERROR: Failed to reach Teams webhook (curl exit code $curl_exit)"
+    exit 1
+fi
+
+if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+    echo "Summary notification sent (HTTP $http_code)."
+else
+    echo "ERROR: Teams webhook returned HTTP $http_code"
+    [ -n "$response_body" ] && echo "Response body: $response_body"
+    exit 1
+fi
