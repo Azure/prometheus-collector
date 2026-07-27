@@ -27,6 +27,8 @@ CVE-2026-39835 #golang.org/x/crypto/ssh - CertChecker used as public key callbac
 CVE-2026-42508 #golang.org/x/crypto/ssh/knownhosts
 CVE-2026-46595 #golang.org/x/crypto/ssh
 CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to int
+# gobinary - google.golang.org/grpc (otelcollector, promconfigvalidator) (v1.81.1 -> 1.82.1)
+GHSA-hrxh-6v49-42gf #google.golang.org/grpc - gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities
 # gobinary - stdlib / Go os.Root (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
 CVE-2026-39822 #stdlib os - Go os.Root symlink following vulnerability
 
