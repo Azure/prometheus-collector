@@ -423,6 +423,9 @@ stages:
         export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        export SYSTEM_COLLECTIONURI="$(System.CollectionUri)"
+        export SYSTEM_TEAMPROJECT="$(System.TeamProject)"
+        export BUILD_BUILDID="$(Build.BuildId)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
@@ -469,6 +472,9 @@ stages:
         export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
         export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
         export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+        export SYSTEM_COLLECTIONURI="$(System.CollectionUri)"
+        export SYSTEM_TEAMPROJECT="$(System.TeamProject)"
+        export BUILD_BUILDID="$(Build.BuildId)"
         chmod +x ./testkube/send-testkube-summary.sh
         ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
