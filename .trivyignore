@@ -5,11 +5,12 @@
 CVE-2026-34182 #openssl - CMS AuthEnvelopedData processing may accept forged messages
 
 # HIGH
-# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-3.azl3, suppress pending base image rebuild)
+# os-pkgs - openssl/openssl-libs (azurelinux 3.0, 3.3.5-5.azl3 -> 3.3.7-4.azl3, suppress pending base image rebuild)
 CVE-2026-34180 #openssl - Heap buffer over-read in ASN.1 decoding can lead to DoS
 CVE-2026-45445 #openssl - AES-OCB IV ignored on EVP_Cipher() path
 CVE-2026-7383  #openssl - Heap buffer overflow due to signed integer overflow in Unicode
 CVE-2026-9076  #openssl - DoS due to heap out-of-bounds read in CMS
+CVE-2026-45447 #openssl - Heap Use-After-Free in OpenSSL PKCS7_verify()
 # gobinary - golang.org/x/net (ccpmain) (v0.38.0 -> 0.55.0)
 CVE-2026-25680 #golang.org/x/net - excessive CPU parsing arbitrary HTML
 CVE-2026-25681 #golang.org/x/net - HTML parsed then rendered via Render
@@ -27,6 +28,8 @@ CVE-2026-39835 #golang.org/x/crypto/ssh - CertChecker used as public key callbac
 CVE-2026-42508 #golang.org/x/crypto/ssh/knownhosts
 CVE-2026-46595 #golang.org/x/crypto/ssh
 CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to int
+# gobinary - google.golang.org/grpc (otelcollector, promconfigvalidator) (v1.81.1 -> 1.82.1)
+GHSA-hrxh-6v49-42gf #google.golang.org/grpc - gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities
 # gobinary - stdlib / Go os.Root (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
 CVE-2026-39822 #stdlib os - Go os.Root symlink following vulnerability
 
@@ -36,6 +39,7 @@ CVE-2026-34183 #openssl - Unbounded memory growth in QUIC PATH_CHALLENGE handler
 CVE-2026-42766 #openssl - Possible NULL dereference in password-based CMS decryption
 CVE-2026-42767 #openssl - NULL pointer dereference in CRMF EncryptedValue decryption
 CVE-2026-45446 #openssl - Incorrect tag processing for empty messages in AES-GCM-SIV/AES-SIV
+CVE-2026-42769 #openssl - Trust-Anchor Substitution via cert/issuer Typo in CMP rootCaKeyUpdate
 # gobinary - golang.org/x/net/html (ccpmain) (v0.38.0 -> 0.45.0)
 CVE-2025-47911 #golang.org/x/net/html - quadratic parsing complexity
 CVE-2025-58190 #golang.org/x/net/html - infinite parsing loop
