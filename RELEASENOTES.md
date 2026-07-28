@@ -1,5 +1,13 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 07-27-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.2.0-main-07-27-2026-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.2.0-main-07-27-2026-<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.2.0-main-07-27-2026-<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.2.0-main-07-27-2026-<TBD>-cfg`
+* Pipeline/Docs/Templates Updates:
+  + Update remote write release notes for 20260713.1 (https://github.com/Azure/prometheus-collector/pull/1629)
+
 ## Release 07-20-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-20-2026-<TBD>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.1.1-main-07-20-2026-<TBD>-win`
