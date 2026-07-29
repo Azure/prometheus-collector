@@ -40,6 +40,7 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
+        - --config-file-wait-timeout=5m
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:

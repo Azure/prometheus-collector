@@ -45,6 +45,8 @@ const (
 	DefaultAllocationStrategy                          = "consistent-hashing"
 	DefaultFilterStrategy                              = "relabel-config"
 	DefaultCollectorNotReadyGracePeriod                = 30 * time.Second
+	DefaultConfigFileWaitTimeout                       = 0 * time.Second
+	configFilePollInterval                             = 250 * time.Millisecond
 )
 
 var DefaultKubeConfigFilePath = filepath.Join(homedir.HomeDir(), ".kube", "config")
@@ -393,6 +395,48 @@ func CreateDefaultConfig() Config {
 	}
 }
 
+func configFileReady(file string) (bool, error) {
+	info, err := os.Stat(file)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return false, nil
+	case err != nil:
+		return false, err
+	case info.IsDir():
+		return false, fmt.Errorf("config file %s is a directory", file)
+	}
+	return info.Size() > 0, nil
+}
+
+func waitForConfigFile(file string, timeout time.Duration) error {
+	ready, err := configFileReady(file)
+	if err != nil || ready || timeout <= 0 {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Config file %s is not available yet, waiting up to %s for it to be created\n", file, timeout)
+
+	ticker := time.NewTicker(configFilePollInterval)
+	defer ticker.Stop()
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			ready, err = configFileReady(file)
+			if err != nil {
+				return err
+			}
+			if ready {
+				return nil
+			}
+		case <-deadline.C:
+			return fmt.Errorf("timed out after %s waiting for config file %s: %w", timeout, file, fs.ErrNotExist)
+		}
+	}
+}
+
 func Load(args []string) (*Config, error) {
 	var err error
 
@@ -406,6 +450,14 @@ func Load(args []string) (*Config, error) {
 
 	// load the config from the config file
 	configFilePath, err := getConfigFilePath(flagSet)
+	if err != nil {
+		return nil, err
+	}
+	configFileWaitTimeout, err := getConfigFileWaitTimeout(flagSet)
+	if err != nil {
+		return nil, err
+	}
+	err = waitForConfigFile(configFilePath, configFileWaitTimeout)
 	if err != nil {
 		return nil, err
 	}

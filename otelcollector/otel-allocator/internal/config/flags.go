@@ -5,6 +5,7 @@ package config
 
 import (
 	"flag"
+	"time"
 
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -14,6 +15,7 @@ import (
 const (
 	targetAllocatorName              = "target-allocator"
 	configFilePathFlagName           = "config-file"
+	configFileWaitTimeoutFlagName    = "config-file-wait-timeout"
 	listenAddrFlagName               = "listen-addr"
 	prometheusCREnabledFlagName      = "enable-prometheus-cr-watcher"
 	kubeConfigPathFlagName           = "kubeconfig-path"
@@ -31,6 +33,7 @@ var zapCmdLineOpts zap.Options
 func getFlagSet(errorHandling pflag.ErrorHandling) *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet(targetAllocatorName, errorHandling)
 	flagSet.String(configFilePathFlagName, DefaultConfigFilePath, "The path to the config file.")
+	flagSet.Duration(configFileWaitTimeoutFlagName, DefaultConfigFileWaitTimeout, "How long to wait for the config file to be created before giving up. Zero fails immediately if the file is missing. Useful when the config file is written by another container in the same Pod.")
 	flagSet.String(listenAddrFlagName, DefaultListenAddr, "The address where this service serves.")
 	flagSet.Bool(prometheusCREnabledFlagName, false, "Enable Prometheus CRs as target sources")
 	flagSet.String(kubeConfigPathFlagName, DefaultKubeConfigFilePath, "absolute path to the KubeconfigPath file")
@@ -48,6 +51,10 @@ func getFlagSet(errorHandling pflag.ErrorHandling) *pflag.FlagSet {
 
 func getConfigFilePath(flagSet *pflag.FlagSet) (string, error) {
 	return flagSet.GetString(configFilePathFlagName)
+}
+
+func getConfigFileWaitTimeout(flagSet *pflag.FlagSet) (time.Duration, error) {
+	return flagSet.GetDuration(configFileWaitTimeoutFlagName)
 }
 
 func getKubeConfigFilePath(flagSet *pflag.FlagSet) (value string, changed bool, err error) {
