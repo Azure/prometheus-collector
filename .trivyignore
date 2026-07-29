@@ -32,6 +32,8 @@ CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to 
 GHSA-hrxh-6v49-42gf #google.golang.org/grpc - gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities
 # gobinary - stdlib / Go os.Root (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
 CVE-2026-39822 #stdlib os - Go os.Root symlink following vulnerability
+# gobinary - golang.org/x/text (all images) (v0.37.0 -> 0.39.0)
+CVE-2026-56852 #golang.org/x/text - norm.Iter infinite loop on invalid input
 
 # MEDIUM
 # os-pkgs - openssl/openssl-libs (azurelinux 3.0, suppress pending base image rebuild)
