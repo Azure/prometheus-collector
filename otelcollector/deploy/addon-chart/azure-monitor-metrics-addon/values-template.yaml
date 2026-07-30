@@ -57,6 +57,10 @@ AzureMonitorMetrics:
   ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
+  # HPA max replicas (shards) for the ama-metrics collector. Controlled by the centralized toggle framework.
+  CollectorAutoscaleMax: 30
+  # Previous default of CollectorAutoscaleMax. Used to detect clusters still on the prior default so they get bumped to the new max. Controlled by the centralized toggle framework.
+  CollectorAutoscaleMaxPrevious: 24
   OperatorTargetsHttpsEnabled: true
   MeshMembershipMetricsFQDN: ""
   DeploymentReplicas: 2
