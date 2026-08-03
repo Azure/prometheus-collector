@@ -12,6 +12,7 @@ CVE-2026-7383  #openssl - Heap buffer overflow due to signed integer overflow in
 CVE-2026-9076  #openssl - DoS due to heap out-of-bounds read in CMS
 CVE-2026-45447 #openssl - Heap Use-After-Free in OpenSSL PKCS7_verify()
 # gobinary - golang.org/x/net (ccpmain) (v0.38.0 -> 0.55.0)
+CVE-2026-46600 #golang.org/x/net - SVCB/HTTPS RR parameter value overflow panic
 CVE-2026-25680 #golang.org/x/net - excessive CPU parsing arbitrary HTML
 CVE-2026-25681 #golang.org/x/net - HTML parsed then rendered via Render
 CVE-2026-27136 #golang.org/x/net - HTML parsed then rendered via Render
@@ -30,7 +31,7 @@ CVE-2026-46595 #golang.org/x/crypto/ssh
 CVE-2026-46597 #golang.org/x/crypto/ssh - incorrectly placed cast from bytes to int
 # gobinary - google.golang.org/grpc (otelcollector, promconfigvalidator) (v1.81.1 -> 1.82.1)
 GHSA-hrxh-6v49-42gf #google.golang.org/grpc - gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities
-# gobinary - stdlib / Go os.Root (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
+# gobinary - stdlib / Go os.Root (all images, go1.26.5, FIXED by GOLANG_VERSION bump)
 CVE-2026-39822 #stdlib os - Go os.Root symlink following vulnerability
 # gobinary - golang.org/x/text (all images) (v0.37.0 -> 0.39.0)
 CVE-2026-56852 #golang.org/x/text - norm.Iter infinite loop on invalid input
@@ -52,5 +53,5 @@ CVE-2026-39831 #golang.org/x/crypto/ssh - FIDO/U2F Verify() issue
 CVE-2026-39833 #golang.org/x/crypto/ssh - in-memory keyring silent failure
 CVE-2026-39834 #golang.org/x/crypto/ssh - writing data larger than 4GB in a single Write call
 CVE-2026-46598 #golang.org/x/crypto/ssh/agent
-# gobinary - stdlib / Go crypto/tls (all images, go1.26.4 -> go1.26.5, suppress pending golang toolchain bump)
+# gobinary - stdlib / Go crypto/tls (all images, go1.26.5, FIXED by GOLANG_VERSION bump)
 CVE-2026-42505 #stdlib crypto/tls - Information disclosure in Encrypted Client Hello
