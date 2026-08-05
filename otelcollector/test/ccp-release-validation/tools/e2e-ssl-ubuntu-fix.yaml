@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-ssl-ubuntu-fix
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: e2e-ssl-ubuntu-fix
+  namespace: e2e-ssl-ubuntu-fix
+spec:
+  selector:
+    matchLabels:
+      app: e2e-ssl-ubuntu-fix
+  template:
+    metadata:
+      labels:
+        app: e2e-ssl-ubuntu-fix
+    spec:
+      hostPID: true
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: fix
+          image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+          securityContext:
+            privileged: true
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -u
+              prev=""
+              while true; do
+                cur=""
+                for f in /host/etc/pki/ca-trust/source/anchors/*.pem; do
+                  [ -e "$f" ] || continue
+                  b=$(basename "$f" .pem)
+                  dst="/host/usr/local/share/ca-certificates/e2essl-${b}.crt"
+                  cp "$f" "$dst"
+                  cur="$cur $b"
+                done
+                if [ "$cur" != "$prev" ] && [ -n "$cur" ]; then
+                  echo "staged:$cur -> running update-ca-certificates in host root"
+                  if chroot /host /usr/sbin/update-ca-certificates; then
+                    echo "update-ca-certificates OK"
+                    prev="$cur"
+                  else
+                    echo "update-ca-certificates FAILED"
+                  fi
+                fi
+                sleep 30
+              done
+          volumeMounts:
+            - name: host
+              mountPath: /host
+      volumes:
+        - name: host
+          hostPath:
+            path: /
+            type: Directory

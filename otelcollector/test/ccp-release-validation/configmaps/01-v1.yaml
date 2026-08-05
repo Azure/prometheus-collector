@@ -1,0 +1,35 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v1
+  config-version: ccpv1test
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    https_config = true
+    secrets_access_namespaces = ""
+  # SIGNATURE for scenario 1 (v1 schema):
+  #   apiserver=TRUE (default true), etcd=FALSE (default true -> flipped),
+  #   kube-scheduler=TRUE (default false -> flipped), kube-controller-manager=FALSE (default false)
+  default-scrape-settings-enabled: |-
+    controlplane-apiserver = true
+    controlplane-cluster-autoscaler = false
+    controlplane-node-auto-provisioning = false
+    controlplane-kube-scheduler = true
+    controlplane-kube-controller-manager = false
+    controlplane-etcd = false
+  default-targets-metrics-keep-list: |-
+    controlplane-apiserver = ""
+    controlplane-cluster-autoscaler = ""
+    controlplane-node-auto-provisioning = ""
+    controlplane-kube-scheduler = ""
+    controlplane-kube-controller-manager = ""
+    controlplane-etcd = ""
+    minimalingestionprofile = true
+  default-targets-scrape-interval-settings: |-
+    controlplane-apiserver = "30s"
+    controlplane-kube-scheduler = "30s"
+  debug-mode: |-
+    enabled = false

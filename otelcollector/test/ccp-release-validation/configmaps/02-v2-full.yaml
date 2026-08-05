@@ -1,0 +1,33 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v2
+  config-version: ccpv2full
+  # SIGNATURE for scenario 2 (complete v2 schema):
+  #   apiserver=TRUE, etcd=TRUE, kube-scheduler=FALSE,
+  #   kube-controller-manager=TRUE (default false -> flipped)
+  controlplane-metrics: |-
+    default-targets-scrape-enabled: |-
+      apiserver = true
+      cluster-autoscaler = false
+      node-auto-provisioning = false
+      kube-scheduler = false
+      kube-controller-manager = true
+      etcd = true
+    default-targets-metrics-keep-list: |-
+      apiserver = ""
+      cluster-autoscaler = ""
+      node-auto-provisioning = ""
+      kube-scheduler = ""
+      kube-controller-manager = ""
+      etcd = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    debug-mode = false
+    https_config = true
+    secrets_access_namespaces = ""

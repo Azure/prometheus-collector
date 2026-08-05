@@ -1,0 +1,36 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v2
+  config-version: ccpv2part
+  # SIGNATURE for scenario 3 (INCOMPLETE v2 schema - PR #1582 regression test):
+  #   The optional `prometheus-collector-settings` data key is DELIBERATELY ABSENT.
+  #   The agent reads /etc/config/settings/{controlplane-metrics,prometheus-collector-settings};
+  #   the second file will not exist.
+  #
+  #   EXPECTED (post-#1582): missing optional file is skipped, controlplane-metrics still applied.
+  #     apiserver=FALSE (default true -> flipped), etcd=TRUE,
+  #     kube-scheduler=TRUE (default false -> flipped), kube-controller-manager=FALSE
+  #
+  #   REGRESSION (pre-#1582): whole v2 config dropped -> falls back to defaults
+  #     (apiserver=true, etcd=true, scheduler=false) which is a DIFFERENT, detectable signature.
+  controlplane-metrics: |-
+    default-targets-scrape-enabled: |-
+      apiserver = false
+      cluster-autoscaler = false
+      node-auto-provisioning = false
+      kube-scheduler = true
+      kube-controller-manager = false
+      etcd = true
+    default-targets-metrics-keep-list: |-
+      apiserver = ""
+      cluster-autoscaler = ""
+      node-auto-provisioning = ""
+      kube-scheduler = ""
+      kube-controller-manager = ""
+      etcd = ""
+    minimal-ingestion-profile: |-
+      enabled = true

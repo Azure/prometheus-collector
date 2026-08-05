@@ -1,0 +1,19 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  # Applied to the cx-1 UNDERLAY's own kube-system so that cx-1's own managed
+  # control-plane CCP agent stops scraping controlplane targets. Without this,
+  # cx-1's own control plane emits controlplane-* series under the SAME
+  # cluster label as our test agent, making results ambiguous.
+  schema-version: v1
+  config-version: cx1silence
+  default-scrape-settings-enabled: |-
+    controlplane-apiserver = false
+    controlplane-cluster-autoscaler = false
+    controlplane-node-auto-provisioning = false
+    controlplane-kube-scheduler = false
+    controlplane-kube-controller-manager = false
+    controlplane-etcd = false
