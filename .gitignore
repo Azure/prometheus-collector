@@ -16,3 +16,9 @@ promconfigvalidator
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
