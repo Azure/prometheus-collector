@@ -80,7 +80,7 @@ type PrometheusCRConfig struct {
 	Enabled                         bool                          `yaml:"enabled,omitempty"`
 	AllowNamespaces                 []string                      `yaml:"allow_namespaces,omitempty"`
 	DenyNamespaces                  []string                      `yaml:"deny_namespaces,omitempty"`
-	SecretNamespaces                []string                      `yaml:"secret_namespaces,omitempty"`
+	SecretsAccessNamespaces         []string                      `yaml:"secrets_access_namespaces,omitempty"`
 	PodMonitorSelector              *metav1.LabelSelector         `yaml:"pod_monitor_selector,omitempty"`
 	PodMonitorNamespaceSelector     *metav1.LabelSelector         `yaml:"pod_monitor_namespace_selector,omitempty"`
 	ServiceMonitorSelector          *metav1.LabelSelector         `yaml:"service_monitor_selector,omitempty"`
@@ -500,17 +500,12 @@ func (c HTTPSServerConfig) NewTLSConfig(logger logr.Logger) (*tls.Config, *certw
 	return tlsConfig, certWatcher, nil
 }
 
-// GetSecretsAllowList returns the namespaces to watch for secrets as a map.
-// If SecretNamespaces is explicitly configured, those namespaces are used.
-// Otherwise, it defaults to the collectorNamespace (the target allocator's own namespace).
-func (c PrometheusCRConfig) GetSecretsAllowList(collectorNamespace string) map[string]struct{} {
+// GetSecretsAllowList converts SecretsAccessNamespaces into a map suitable for
+// NewMetadataInformerFactory. An empty/nil slice results in an empty map (watch nothing).
+func (c PrometheusCRConfig) GetSecretsAllowList() map[string]struct{} {
 	secretsAllowList := make(map[string]struct{})
-	if len(c.SecretNamespaces) > 0 {
-		for _, ns := range c.SecretNamespaces {
-			secretsAllowList[ns] = struct{}{}
-		}
-	} else if collectorNamespace != "" {
-		secretsAllowList[collectorNamespace] = struct{}{}
+	for _, ns := range c.SecretsAccessNamespaces {
+		secretsAllowList[ns] = struct{}{}
 	}
 	return secretsAllowList
 }
