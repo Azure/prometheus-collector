@@ -183,9 +183,6 @@ const (
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
-	basicAuthEnabled                      = "BasicAuthEnabled"
-	bearerTokenEnabledWithFile            = "BearerTokenEnabledWithFile"
-	bearerTokenEnabledWithSecret          = "BearerTokenEnabledWithSecret"
 )
 
 var (
@@ -604,11 +601,6 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 }
 
 func addScrapeJobMetadataToTelemetryItem() map[string]string {
-	telemetryPropertiesString := map[string]string{
-		basicAuthEnabled:             "false",
-		bearerTokenEnabledWithFile:   "false",
-		bearerTokenEnabledWithSecret: "false",
-	}
 	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
 
 	// Send metric to app insights for target allocator metrics
@@ -616,64 +608,17 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 		taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
 	}
 	scrapeJobs := getTargetAllocatorResponse(taEndpoint)
-	if scrapeJobs != nil {
-		var scrapeJobsMap map[string]interface{}
-		err := json.Unmarshal(scrapeJobs, &scrapeJobsMap)
-		if err != nil {
-			Log(fmt.Sprintf("Error unmarshalling scrape jobs JSON: %v", err))
-			SendException(err)
-			return nil
-		} else {
-			hasBasicAuth := false
-			hasBearerToken := false
-			hasBearerTokenInFile := false
-			hasBearerTokenInSecret := false
-			var checkForConfigProperties func(map[string]interface{})
-			checkForConfigProperties = func(data map[string]interface{}) {
-				for _, value := range data {
-					job := value.(map[string]interface{})
-					if _, ok := job["basic_auth"]; ok {
-						hasBasicAuth = true
-						// break
-					}
-					if auth, ok := job["authorization"]; ok {
-						authValue := auth.(map[string]interface{})
-						if typeValue, ok := authValue["type"]; ok {
-							if typeValue == "Bearer" {
-								hasBearerToken = true
-							}
-							if hasBearerToken {
-								if _, ok := authValue["credentials_file"]; ok {
-									hasBearerTokenInFile = true
-								}
-								if _, ok := authValue["credentials"]; ok {
-									hasBearerTokenInSecret = true
-								}
-							}
-							// break
-						}
-					}
-
-					if hasBasicAuth && hasBearerTokenInFile && hasBearerTokenInSecret {
-						break
-					}
-				}
-			}
-			checkForConfigProperties(scrapeJobsMap)
-			if hasBasicAuth {
-				telemetryPropertiesString[basicAuthEnabled] = "true"
-			}
-
-			if hasBearerTokenInFile {
-				telemetryPropertiesString[bearerTokenEnabledWithFile] = "true"
-			}
-			if hasBearerTokenInSecret {
-				telemetryPropertiesString[bearerTokenEnabledWithSecret] = "true"
-			}
-		}
+	if scrapeJobs == nil {
+		return scrapeJobMetadata(nil)
 	}
-	return telemetryPropertiesString
 
+	var scrapeJobsMap map[string]interface{}
+	if err := json.Unmarshal(scrapeJobs, &scrapeJobsMap); err != nil {
+		Log(fmt.Sprintf("Error unmarshalling scrape jobs JSON: %v", err))
+		SendException(err)
+		return nil
+	}
+	return scrapeJobMetadata(scrapeJobsMap)
 }
 
 // Get scrape jobs for basic auth and bearer token telemetry
