@@ -8,8 +8,8 @@ AzureMonitorMetrics:
     ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
     CPULimit: 1
     MemoryLimit: 5Gi
-# Kube-state-metrics ImageTag - 2.19.0, corresponds to chart version - 7.1.0
-    ImageTag: "v2.19.0-4"
+# Kube-state-metrics ImageTag - 2.19.1, corresponds to chart version - 7.1.0
+    ImageTag: "v2.19.1-2"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -57,6 +57,10 @@ AzureMonitorMetrics:
   ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
+  # HPA max replicas (shards) for the ama-metrics collector. Controlled by the centralized toggle framework.
+  CollectorAutoscaleMax: 50
+  # Previous default of CollectorAutoscaleMax. Used to detect clusters still on the prior default so they get bumped to the new max. Controlled by the centralized toggle framework.
+  CollectorAutoscaleMaxPrevious: 30
   OperatorTargetsHttpsEnabled: true
   MeshMembershipMetricsFQDN: ""
   DeploymentReplicas: 2
