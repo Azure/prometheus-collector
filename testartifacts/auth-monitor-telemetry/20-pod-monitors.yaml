@@ -1,0 +1,49 @@
+# Verifies PodMonitor Basic Auth telemetry using username and password
+# references from the monitor-auth Kubernetes Secret.
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: basic-auth
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      basicAuth:
+        username:
+          name: monitor-auth
+          key: username
+        password:
+          name: monitor-auth
+          key: password
+---
+# Verifies PodMonitor Bearer token telemetry using a token referenced from the
+# monitor-auth Kubernetes Secret.
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: bearer-token-secret
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      authorization:
+        type: Bearer
+        credentials:
+          name: monitor-auth
+          key: bearer-token

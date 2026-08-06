@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metrics-target
+  namespace: ama-metrics-auth-telemetry-test
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      location /metrics {
+        default_type text/plain;
+        alias /usr/share/nginx/html/metrics;
+      }
+    }
+  metrics: |
+    # HELP auth_monitor_telemetry_test Test metric for monitor authentication telemetry.
+    # TYPE auth_monitor_telemetry_test gauge
+    auth_monitor_telemetry_test 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-target
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  template:
+    metadata:
+      labels:
+        app: auth-monitor-telemetry-test
+    spec:
+      containers:
+        - name: nginx
+          image: mcr.microsoft.com/oss/nginx/nginx:1.25.5
+          ports:
+            - name: metrics
+              containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
+            - name: config
+              mountPath: /usr/share/nginx/html/metrics
+              subPath: metrics
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: metrics-target
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics-target
+  namespace: ama-metrics-auth-telemetry-test
+  labels:
+    app: auth-monitor-telemetry-test
+spec:
+  selector:
+    app: auth-monitor-telemetry-test
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: metrics

@@ -1,5 +1,37 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 07-29-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260729.1`
+* Change log -
+  * golang upgrade 1.25.9 -> 1.25.10 (7 Go stdlib/toolchain CVE fixes)
+* Fixed CVEs:
+    - [CVE-2026-42499](https://avd.aquasec.com/nvd/cve-2026-42499) — `net/mail` quadratic string concatenation in consumePhrase, leading to denial of service.
+    - [CVE-2026-39836](https://avd.aquasec.com/nvd/cve-2026-39836) — `net` panic in Dial and LookupPort when handling a NUL byte on Windows.
+    - [CVE-2026-39820](https://avd.aquasec.com/nvd/cve-2026-39820) — `net/mail` quadratic string concatenation in consumeComment, leading to denial of service.
+    - [CVE-2026-33811](https://avd.aquasec.com/nvd/cve-2026-33811) — `net` crash when handling a long CNAME response.
+    - [CVE-2026-42501](https://avd.aquasec.com/nvd/cve-2026-42501) — `cmd/go` a malicious module proxy can bypass the checksum database.
+    - [CVE-2026-42504](https://avd.aquasec.com/nvd/cve-2026-42504) — `mime` quadratic complexity in WordDecoder.DecodeHeader, leading to denial of service.
+    - [CVE-2026-33814](https://avd.aquasec.com/nvd/cve-2026-33814) — `net/http2` infinite loop when given a bad SETTINGS_MAX_FRAME_SIZE.
+
+## Release 07-13-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260713.1`
+* Change log -
+  * Bump `golang.org/x/crypto` from v0.45.0 to v0.52.0 to fix 13 CVEs (7 Critical, 2 High, 4 Medium).
+* Fixed CVEs:
+    - [CVE-2026-39830](https://avd.aquasec.com/nvd/cve-2026-39830) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39831](https://avd.aquasec.com/nvd/cve-2026-39831) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39832](https://avd.aquasec.com/nvd/cve-2026-39832) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39833](https://avd.aquasec.com/nvd/cve-2026-39833) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39834](https://avd.aquasec.com/nvd/cve-2026-39834) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-42508](https://avd.aquasec.com/nvd/cve-2026-42508) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-46595](https://avd.aquasec.com/nvd/cve-2026-46595) — `golang.org/x/crypto` vulnerability (Critical).
+    - [CVE-2026-39829](https://avd.aquasec.com/nvd/cve-2026-39829) — `golang.org/x/crypto` vulnerability (High).
+    - [CVE-2026-46597](https://avd.aquasec.com/nvd/cve-2026-46597) — `golang.org/x/crypto` vulnerability (High).
+    - [CVE-2026-39827](https://avd.aquasec.com/nvd/cve-2026-39827) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-39828](https://avd.aquasec.com/nvd/cve-2026-39828) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-39835](https://avd.aquasec.com/nvd/cve-2026-39835) — `golang.org/x/crypto` vulnerability (Medium).
+    - [CVE-2026-46598](https://avd.aquasec.com/nvd/cve-2026-46598) — `golang.org/x/crypto` vulnerability (Medium).
+
 ## Release 07-06-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260706.1`
 * Change log -
