@@ -237,7 +237,7 @@ cp otelcollector/Makefile.backup otelcollector/otel-allocator/Makefile
 rm otelcollector/Makefile.backup
 
 # Preserve Azure's configured secret namespace allow list after replacing the
-# Target Allocator source with the upstream version.
+# Target Allocator source with the upstream version
 TA_CONFIG_FILE="otelcollector/otel-allocator/internal/config/config.go"
 TA_PROM_OPERATOR_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
 
