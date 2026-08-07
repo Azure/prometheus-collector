@@ -133,7 +133,7 @@ extends:
             LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
             WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
-            AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
+            AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER-arc
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
             LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
             WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
@@ -2293,6 +2293,7 @@ extends:
                     SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
                     RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85" # dp app - extension
                     METHOD="PUT"
+                    HELM_SEMVER="${HELM_SEMVER}-arc"
                     echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER"
                     ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
                     if [ $? -eq 0 ]; then
@@ -2350,6 +2351,7 @@ extends:
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
+                    HELM_SEMVER="${HELM_SEMVER}-arc"
                     az config set extension.use_dynamic_install=yes_without_prompt
                     # Pin k8s-extension to 1.6.7 (last dependency-free release); newer
                     # versions require pypi-hosted deps that the build agents can't reach.

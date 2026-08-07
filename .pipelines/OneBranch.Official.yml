@@ -118,7 +118,7 @@ extends:
             LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
             WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
-            ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+            ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER-arc
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
             LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
             WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
@@ -963,17 +963,17 @@ extends:
           displayName: "Build: update helm dependencies"
 
         - bash: |
-            helm package ./azure-monitor-metrics-addon/
+            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: package helm chart"
+          displayName: "Build: package Arc-tagged helm chart"
 
         - bash: |
             helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
             mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
             echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: push helm chart to dev ACR"
+          displayName: "Build: push Arc-tagged helm chart to dev ACR"
 
         - task: CopyFiles@2
           displayName: "Copy Files for 'Ev2: publish helm chart artifacts' publish task"
@@ -1028,6 +1028,7 @@ extends:
             SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
             SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
             METHOD="PUT"
+            HELM_SEMVER="${HELM_SEMVER}-arc"
 
             echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
 
@@ -1101,6 +1102,7 @@ extends:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
+              HELM_SEMVER="${HELM_SEMVER}-arc"
               az config set extension.use_dynamic_install=yes_without_prompt
               # Pin k8s-extension to 1.6.7 (last dependency-free release); newer
               # versions require pypi-hosted deps that the build agents can't reach.
