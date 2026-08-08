@@ -3108,6 +3108,7 @@ extends:
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          continueOnError: true
 
       - job: TestKube_Notification_OTelCollector_Upgrade
         displayName: "Send TestKube Summary Notification"
@@ -3163,3 +3164,4 @@ extends:
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          continueOnError: true
