@@ -236,6 +236,60 @@ rm otelcollector/Dockerfile.backup
 cp otelcollector/Makefile.backup otelcollector/otel-allocator/Makefile
 rm otelcollector/Makefile.backup
 
+# Preserve Azure's configured secret namespace allow list after replacing the
+# Target Allocator source with the upstream version
+TA_CONFIG_FILE="otelcollector/otel-allocator/internal/config/config.go"
+TA_PROM_OPERATOR_FILE="otelcollector/otel-allocator/internal/watcher/promOperator.go"
+
+echo "Ensuring Target Allocator secrets access namespace changes..."
+
+if grep -q 'SecretNamespaces.*yaml:"secret_namespaces,omitempty"' "$TA_CONFIG_FILE"; then
+	sed -i 's/SecretNamespaces.*yaml:"secret_namespaces,omitempty"`/SecretsAccessNamespaces         []string                      `yaml:"secrets_access_namespaces,omitempty"`/' "$TA_CONFIG_FILE"
+elif ! grep -q 'SecretsAccessNamespaces.*yaml:"secrets_access_namespaces,omitempty"' "$TA_CONFIG_FILE"; then
+	sed -i '/DenyNamespaces.*yaml:"deny_namespaces,omitempty"/a\\tSecretsAccessNamespaces         []string                      `yaml:"secrets_access_namespaces,omitempty"`' "$TA_CONFIG_FILE"
+fi
+
+if ! grep -q 'func (c PrometheusCRConfig) GetSecretsAllowList()' "$TA_CONFIG_FILE"; then
+	if grep -q 'func (c PrometheusCRConfig) GetSecretsAllowList' "$TA_CONFIG_FILE"; then
+		sed -i '/^\/\/ GetSecretsAllowList/,/^func (c PrometheusCRConfig) GetAllowDenyLists()/{
+/^func (c PrometheusCRConfig) GetAllowDenyLists()/!d
+}' "$TA_CONFIG_FILE"
+	fi
+
+	sed -i '/^func (c PrometheusCRConfig) GetAllowDenyLists()/i\
+// GetSecretsAllowList converts SecretsAccessNamespaces into a map suitable for\
+// NewMetadataInformerFactory. An empty/nil slice results in an empty map (watch nothing).\
+func (c PrometheusCRConfig) GetSecretsAllowList() map[string]struct{} {\
+\tsecretsAllowList := make(map[string]struct{})\
+\tfor _, ns := range c.SecretsAccessNamespaces {\
+\t\tsecretsAllowList[ns] = struct{}{}\
+\t}\
+\treturn secretsAllowList\
+}\
+' "$TA_CONFIG_FILE"
+fi
+
+if ! grep -q 'secretsAllowList := cfg.PrometheusCR.GetSecretsAllowList()' "$TA_PROM_OPERATOR_FILE"; then
+	if grep -q 'GetSecretsAllowList(' "$TA_PROM_OPERATOR_FILE"; then
+		sed -i 's/GetSecretsAllowList(cfg.CollectorNamespace)/GetSecretsAllowList()/' "$TA_PROM_OPERATOR_FILE"
+		sed -i "s/If SecretNamespaces is not configured, defaults to the target allocator's own namespace./If SecretsAccessNamespaces is not configured, no namespaces are watched for secrets./" "$TA_PROM_OPERATOR_FILE"
+	else
+		sed -i '/metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)/c\
+\t// Scope the metadata informer factory to specific namespaces for secrets access.\
+\t// This avoids requiring cluster-wide secrets list/watch RBAC.\
+\t// If SecretsAccessNamespaces is not configured, no namespaces are watched for secrets.\
+\tsecretsAllowList := cfg.PrometheusCR.GetSecretsAllowList()\
+\tmetaDataInformerFactory := informers.NewMetadataInformerFactory(secretsAllowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)' "$TA_PROM_OPERATOR_FILE"
+	fi
+fi
+
+if ! grep -q 'SecretsAccessNamespaces.*yaml:"secrets_access_namespaces,omitempty"' "$TA_CONFIG_FILE" ||
+	! grep -q 'func (c PrometheusCRConfig) GetSecretsAllowList()' "$TA_CONFIG_FILE" ||
+	! grep -q 'secretsAllowList := cfg.PrometheusCR.GetSecretsAllowList()' "$TA_PROM_OPERATOR_FILE"; then
+	echo "ERROR: Failed to preserve Target Allocator secrets access namespace changes." >&2
+	exit 1
+fi
+
 # Add the Arc EULA into the main.go file
 echo "Adding Arc EULA to otel-allocator main.go file..."
 sed -i '/func main() {/a\\t// EULA statement is required for Arc extension\n\tclusterResourceId := os.Getenv("CLUSTER")\n\tif strings.EqualFold(clusterResourceId, "connectedclusters") {\n\t\tsetupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\\n\\nMICROSOFT Azure Arc-enabled Kubernetes\\n\\nThis software is licensed to you as part of your or your company'\''s subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")\n\t}' otelcollector/otel-allocator/main.go

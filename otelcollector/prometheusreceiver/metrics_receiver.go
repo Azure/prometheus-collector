@@ -66,7 +66,8 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 	registry := prometheus.NewRegistry()
 	registerer := prometheus.WrapRegistererWith(
 		prometheus.Labels{"receiver": set.ID.String()},
-		registry)
+		registry,
+	)
 	sharedCfg := sharedpromconfig.NewConfig(&baseCfg)
 	var apiServerManager *apiserver.Manager
 	if cfg.APIServer.Enabled {
@@ -220,6 +221,9 @@ func (r *pReceiver) initScrapeOptions(o prometheusScrapeTestOptions) *scrape.Opt
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
 		EnableStartTimestampZeroIngestion: metadata.ReceiverPrometheusreceiverEnableCreatedTimestampZeroIngestionFeatureGate.IsEnabled(),
+		ScrapeOnShutdown:                  r.cfg.ScrapeOnShutdown,
+		DiscoveryReloadOnStartup:          r.cfg.DiscoveryReloadOnStartup,
+		InitialScrapeOffset:               r.cfg.InitialScrapeOffset,
 	}
 
 	return opts
