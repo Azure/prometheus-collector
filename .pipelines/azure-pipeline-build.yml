@@ -813,6 +813,12 @@ extends:
             echo "==========================================="
             
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
+            echo "=== Disk usage before Docker cleanup ==="
+            df -h
+            sudo docker system prune --all --volumes --force
+            sudo docker builder prune --all --force
+            echo "=== Disk usage after Docker cleanup ==="
+            df -h
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
@@ -3104,6 +3110,7 @@ extends:
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          continueOnError: true
 
       - job: TestKube_Notification_OTelCollector_Upgrade
         displayName: "Send TestKube Summary Notification"
@@ -3159,3 +3166,4 @@ extends:
             ./testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Pipeline.Workspace)/testkube-results
           workingDirectory: $(Pipeline.Workspace)
           displayName: "Send TestKube Summary Notification"
+          continueOnError: true
