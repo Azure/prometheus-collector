@@ -15,6 +15,8 @@
   + build(deps): bump github.com/prometheus/client_golang from 1.23.2 to 1.24.1 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1664)
   + build(deps): Upgrade otelcollector to v0.156.0 (https://github.com/Azure/prometheus-collector/pull/1649)
   + build(deps): bump github.com/prometheus/client_golang from 1.23.2 to 1.24.1 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1656)
+  + build(deps): bump go.opentelemetry.io/otel from 1.44.0 to 1.45.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1665)
+  + build(deps): bump k8s.io/apimachinery from 0.35.3 to 0.36.3 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1631)
 
 * Pipeline/Docs/Templates Updates:
   + Update remote write release notes for 20260729.1 (https://github.com/Azure/prometheus-collector/pull/1653)
