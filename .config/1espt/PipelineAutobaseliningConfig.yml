@@ -19,6 +19,7 @@ pipelines:
           lastModifiedDate: 2026-08-11
         spotbugs:
           lastModifiedDate: 2026-08-11
+    usedNonDefaultBranch: true
   978:
     retail:
       source:
