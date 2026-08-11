@@ -14,18 +14,40 @@
     "2bc159ebba334c55965b2ac505bdd4eb178d1a9ed6dc0abc640b7ffb7dcfafea": {
       "signature": "2bc159ebba334c55965b2ac505bdd4eb178d1a9ed6dc0abc640b7ffb7dcfafea",
       "alternativeSignatures": [
-        "a648663d93fe23ba9d5102c2de69f518f7b2fd568eb629b23cd60e6e9d017f9e"
+        "a648663d93fe23ba9d5102c2de69f518f7b2fd568eb629b23cd60e6e9d017f9e",
+        "9031bb73d1f7c54363140025e649f693d834119c59887dc2afdd3da0c9e1a909",
+        "122f5f0bad93dfde43f71a7a974b0222acd16c49f89a19385db9cd7a55503e49"
       ],
       "target": "otelcollector/otel-allocator/internal/server/server_test.go",
-      "line": 494,
+      "line": 502,
+      "uriBaseId": "file:///mnt/vss/_work/1/s/",
       "memberOf": [
         "default"
       ],
       "tool": "credscan",
       "ruleId": "CSCAN-GENERAL0060",
-      "createdDate": "2025-05-02 19:45:07Z",
-      "expirationDate": "2025-10-19 21:15:02Z",
-      "justification": "This error is baselined with an expiration date of 180 days from 2025-05-02 21:15:02Z"
+      "createdDate": "2026-08-10 20:50:09Z",
+      "expirationDate": "2027-01-28 01:03:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-11 01:03:26Z"
+    },
+    "244581d2011c8595bd3d21ddae69813e22585558506370882b1b7f7e0fce970c": {
+      "signature": "244581d2011c8595bd3d21ddae69813e22585558506370882b1b7f7e0fce970c",
+      "alternativeSignatures": [
+        "04f603045d0c7994b545ef893cfb997cdf8ea727161eea51b6072fccf4e95cfe",
+        "ee22edbfd35eb05b520be24370c58066fadde57e2bc13532c2dd9e704dc4077a",
+        "5bcb37bdce6a31948a9af90171019b0e4bfda80209490e5c001bfaf5afb25f52"
+      ],
+      "target": "otelcollector/test/test-cluster-yamls/basic-auth/secret.yaml",
+      "line": 9,
+      "uriBaseId": "file:///mnt/vss/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0030",
+      "createdDate": "2026-08-10 20:50:09Z",
+      "expirationDate": "2027-01-28 01:03:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-11 01:03:26Z"
     }
   }
 }
