@@ -214,7 +214,6 @@ extends:
                   # the wave order (Canary -> Pilot -> ... -> HighAvailability).
                   #Select: regions(centraluseuap,eastus2euap)
                   Select: regions(*)
-                  ArtifactsVersionOverride: $(extensionVersionValue)
 
       # - stage: FF_Managed_SDP
       #   displayName: "FF: Managed SDP"
