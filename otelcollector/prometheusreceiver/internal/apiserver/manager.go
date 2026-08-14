@@ -17,14 +17,12 @@ import (
 	"time"
 
 	"github.com/grafana/regexp"
-	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
 	toolkit_web "github.com/prometheus/exporter-toolkit/web"
-	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/promql/parser"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
@@ -76,14 +74,9 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 	// If allowed CORS origins are provided in the receiver config, combine them into a single regex since the Prometheus API server requires this format.
 	var corsOriginRegexp *regexp.Regexp
-	if m.cfg.ServerConfig.CORS.HasValue() && len(m.cfg.ServerConfig.CORS.Get().AllowedOrigins) > 0 {
-		var combinedOriginsBuilder strings.Builder
-		combinedOriginsBuilder.WriteString(m.cfg.ServerConfig.CORS.Get().AllowedOrigins[0])
-		for _, origin := range m.cfg.ServerConfig.CORS.Get().AllowedOrigins[1:] {
-			combinedOriginsBuilder.WriteString("|")
-			combinedOriginsBuilder.WriteString(origin)
-		}
-		combinedRegexp, err := regexp.Compile(combinedOriginsBuilder.String())
+	corsConfig := m.cfg.ServerConfig.CORS.Get()
+	if corsConfig != nil && len(corsConfig.AllowedOrigins) > 0 {
+		combinedRegexp, err := regexp.Compile(strings.Join(corsConfig.AllowedOrigins, "|"))
 		if err != nil {
 			return fmt.Errorf("failed to compile combined CORS allowed origins into regex: %w", err)
 		}
@@ -121,13 +114,18 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 	var appV2 storage.AppendableV2
 	logger := promslog.NewNopLogger()
 
-	apiV1 := api_v1.NewAPI(o.QueryEngine, o.Storage, app, appV2, o.ExemplarStorage, factorySPr, factoryTr, factoryAr,
-
+	apiV1 := api_v1.NewAPI(
+		o.QueryEngine,
+		o.Storage,
+		app,
+		appV2,
+		o.ExemplarStorage,
+		factorySPr,
+		factoryTr,
+		factoryAr,
 		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
-		func() promconfig.Config {
-			return m.promCfg.Get()
-		},
-		o.Flags, // nil
+		m.promCfg.Get,
+		o.Flags,
 		api_v1.GlobalURLOptions{
 			ListenAddress: o.ListenAddresses[0],
 			Host:          o.ExternalURL.Host,
@@ -138,14 +136,14 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 				f(w, r)
 			}
 		},
-		nil,              // TSDBAdminStats
-		o.TSDBDir,        // ""
-		o.EnableAdminAPI, // false
+		o.LocalStorage,   // nil
+		o.TSDBDir,        // nil
+		o.EnableAdminAPI, // nil
 		logger,
 		factoryRr,
-		o.RemoteReadSampleLimit,      // 0
-		o.RemoteReadConcurrencyLimit, // 0
-		o.RemoteReadBytesInFrame,     // 0
+		o.RemoteReadSampleLimit,      // nil
+		o.RemoteReadConcurrencyLimit, // nil
+		o.RemoteReadBytesInFrame,     // nil
 		o.IsAgent,
 		o.CORSOrigin,
 		func() (api_v1.RuntimeInfo, error) {
@@ -187,15 +185,12 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		parser.NewParser(parser.Options{}),
 	)
 
-	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
+	// Create listener in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
 	listener, err := m.cfg.ServerConfig.ToListener(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	listener = netutil.LimitListener(listener, o.MaxConnections)
-	listener = conntrack.NewListener(listener,
-		conntrack.TrackWithName("http"),
-		conntrack.TrackWithTracing())
 
 	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 	mux := http.NewServeMux()

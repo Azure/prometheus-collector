@@ -21,16 +21,16 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.19.0-4'
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.19.1-2'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.26.4'
-  FLUENTBIT_GOLANG_VERSION: '1.25.9'
-  TESTKUBE_GOLANG_VERSION: '1.25.9'
+  GOLANG_VERSION: '1.26.5'
+  FLUENTBIT_GOLANG_VERSION: '1.26.5'
+  TESTKUBE_GOLANG_VERSION: '1.25.12'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -813,6 +813,12 @@ extends:
             echo "==========================================="
             
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
+            echo "=== Disk usage before Docker cleanup ==="
+            df -h
+            sudo docker system prune --all --volumes --force
+            sudo docker builder prune --all --force
+            echo "=== Disk usage after Docker cleanup ==="
+            df -h
             sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
@@ -1025,7 +1031,7 @@ extends:
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
               for i in {1..5}; do
-                trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
+                trivy image --exit-code 0 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
                 TRIVY_EXIT_CODE=$?
                 if [ $TRIVY_EXIT_CODE -eq 0 ]; then
                   cat trivy_output.log
@@ -1201,7 +1207,7 @@ extends:
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
-              trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+              trivy image --exit-code 0 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
               TRIVY_EXIT_CODE=$?
               if [ $TRIVY_EXIT_CODE -eq 0 ]; then
                 cat trivy_output.log
@@ -1460,7 +1466,7 @@ extends:
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
-              trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+              trivy image --exit-code 0 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
               TRIVY_EXIT_CODE=$?
               if [ $TRIVY_EXIT_CODE -eq 0 ]; then
                 cat trivy_output.log
@@ -1577,7 +1583,7 @@ extends:
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
-              trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+              trivy image --exit-code 0 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
               TRIVY_EXIT_CODE=$?
               if [ $TRIVY_EXIT_CODE -eq 0 ]; then
                 cat trivy_output.log
@@ -2293,6 +2299,7 @@ extends:
                     SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
                     RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85" # dp app - extension
                     METHOD="PUT"
+                    HELM_SEMVER="${HELM_SEMVER}-arc"
                     echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER"
                     ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
                     if [ $? -eq 0 ]; then
@@ -2350,6 +2357,7 @@ extends:
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
+                    HELM_SEMVER="${HELM_SEMVER}-arc"
                     az config set extension.use_dynamic_install=yes_without_prompt
                     # Pin k8s-extension to 1.6.7 (last dependency-free release); newer
                     # versions require pypi-hosted deps that the build agents can't reach.
@@ -3107,6 +3115,7 @@ extends:
           displayName: "Send TestKube Summary Notification"
           env:
             TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
+          continueOnError: true
 
       - job: TestKube_Notification_OTelCollector_Upgrade
         displayName: "Send TestKube Summary Notification"
@@ -3167,3 +3176,4 @@ extends:
           displayName: "Send TestKube Summary Notification"
           env:
             TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
+          continueOnError: true

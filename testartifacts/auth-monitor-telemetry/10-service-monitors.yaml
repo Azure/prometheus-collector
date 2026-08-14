@@ -1,0 +1,69 @@
+# Verifies ServiceMonitor Basic Auth telemetry using username and password
+# references from the monitor-auth Kubernetes Secret.
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: basic-auth
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      basicAuth:
+        username:
+          name: monitor-auth
+          key: username
+        password:
+          name: monitor-auth
+          key: password
+---
+# Verifies ServiceMonitor Bearer token telemetry using a token referenced from
+# the monitor-auth Kubernetes Secret.
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bearer-token-secret
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      authorization:
+        type: Bearer
+        credentials:
+          name: monitor-auth
+          key: bearer-token
+---
+# Verifies ServiceMonitor file-based Bearer token telemetry using the
+# service-account token mounted in the collector container.
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bearer-token-file
+  namespace: ama-metrics-auth-telemetry-test
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: auth-monitor-telemetry-test
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token

@@ -1,5 +1,29 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 08-13-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260813.1`
+* Change log -
+  * golang upgrade 1.25.10 -> 1.25.13 (4 Go stdlib CVE fixes)
+  * Correction: CVE-2026-42504 was listed under the 07-29-2026 release, but that fix shipped in Go 1.25.11, not 1.25.10. It is genuinely fixed as of this release.
+* Fixed CVEs:
+    - [CVE-2026-42504](https://avd.aquasec.com/nvd/cve-2026-42504) - `mime` quadratic complexity in WordDecoder.DecodeHeader, leading to denial of service (fixed in Go 1.25.11).
+    - [CVE-2026-42507](https://avd.aquasec.com/nvd/cve-2026-42507) - `net/textproto` arbitrary inputs are included in errors without any escaping (fixed in Go 1.25.11).
+    - [CVE-2026-27145](https://avd.aquasec.com/nvd/cve-2026-27145) - `crypto/x509` inefficient candidate hostname parsing, leading to denial of service (fixed in Go 1.25.11).
+    - [CVE-2026-39822](https://avd.aquasec.com/nvd/cve-2026-39822) - `os` Root escape via symlink plus trailing slash, breaking os.Root sandbox isolation (fixed in Go 1.25.12).
+
+## Release 07-29-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260729.1`
+* Change log -
+  * golang upgrade 1.25.9 -> 1.25.10 (7 Go stdlib/toolchain CVE fixes)
+* Fixed CVEs:
+    - [CVE-2026-42499](https://avd.aquasec.com/nvd/cve-2026-42499) — `net/mail` quadratic string concatenation in consumePhrase, leading to denial of service.
+    - [CVE-2026-39836](https://avd.aquasec.com/nvd/cve-2026-39836) — `net` panic in Dial and LookupPort when handling a NUL byte on Windows.
+    - [CVE-2026-39820](https://avd.aquasec.com/nvd/cve-2026-39820) — `net/mail` quadratic string concatenation in consumeComment, leading to denial of service.
+    - [CVE-2026-33811](https://avd.aquasec.com/nvd/cve-2026-33811) — `net` crash when handling a long CNAME response.
+    - [CVE-2026-42501](https://avd.aquasec.com/nvd/cve-2026-42501) — `cmd/go` a malicious module proxy can bypass the checksum database.
+    - [CVE-2026-42504](https://avd.aquasec.com/nvd/cve-2026-42504) — `mime` quadratic complexity in WordDecoder.DecodeHeader, leading to denial of service.
+    - [CVE-2026-33814](https://avd.aquasec.com/nvd/cve-2026-33814) — `net/http2` infinite loop when given a bad SETTINGS_MAX_FRAME_SIZE.
+
 ## Release 07-13-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260713.1`
 * Change log -

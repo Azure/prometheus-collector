@@ -789,7 +789,8 @@ func TestTargetAllocatorJobRetrieval(t *testing.T) {
 						}
 
 						if s.MetricRelabelConfig != nil {
-							for _, sc := range manager.promCfg.Get().ScrapeConfigs {
+							promCfg := manager.promCfg.Get()
+							for _, sc := range promCfg.ScrapeConfigs {
 								if sc.JobName == s.MetricRelabelConfig.JobName {
 									for _, mc := range sc.MetricRelabelConfigs {
 										require.Equal(t, s.MetricRelabelConfig.MetricRelabelRegex, mc.Regex)
@@ -799,7 +800,8 @@ func TestTargetAllocatorJobRetrieval(t *testing.T) {
 						}
 
 						if s.ScrapeFallbackProtocol != "" {
-							for _, sc := range manager.promCfg.Get().ScrapeConfigs {
+							promCfg := manager.promCfg.Get()
+							for _, sc := range promCfg.ScrapeConfigs {
 								if sc.JobName == job {
 									require.Equal(t, sc.ScrapeFallbackProtocol, s.ScrapeFallbackProtocol)
 								}
@@ -955,11 +957,11 @@ func TestManagerSyncWithInitialScrapeConfigs(t *testing.T) {
 	require.Len(t, providers, 2)
 	require.IsType(t, &promHTTP.Discovery{}, providers[1].Discoverer())
 
-	cfgSnapshot := manager.promCfg.Get()
-	require.Len(t, cfgSnapshot.ScrapeConfigs, 3)
-	require.Equal(t, "job1", cfgSnapshot.ScrapeConfigs[0].JobName)
-	require.Equal(t, "job2", cfgSnapshot.ScrapeConfigs[1].JobName)
-	require.Equal(t, "job3", cfgSnapshot.ScrapeConfigs[2].JobName)
+	promCfg := manager.promCfg.Get()
+	require.Len(t, promCfg.ScrapeConfigs, 3)
+	require.Equal(t, "job1", promCfg.ScrapeConfigs[0].JobName)
+	require.Equal(t, "job2", promCfg.ScrapeConfigs[1].JobName)
+	require.Equal(t, "job3", promCfg.ScrapeConfigs[2].JobName)
 }
 
 func initPrometheusManagers(ctx context.Context, t *testing.T) (*scrape.Manager, *discovery.Manager) {
