@@ -3115,7 +3115,6 @@ extends:
           displayName: "Send TestKube Summary Notification"
           env:
             TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
-          continueOnError: true
 
       - job: TestKube_Notification_OTelCollector_Upgrade
         displayName: "Send TestKube Summary Notification"
@@ -3176,4 +3175,3 @@ extends:
           displayName: "Send TestKube Summary Notification"
           env:
             TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
-          continueOnError: true
