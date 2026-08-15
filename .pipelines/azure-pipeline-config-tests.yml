@@ -920,7 +920,12 @@ stages:
               export BUILD_SOURCEVERSIONMESSAGE="$(Build.SourceVersionMessage)"
               export BUILD_SOURCEBRANCHNAME="$(Build.SourceBranchName)"
               export BUILD_BUILDNUMBER="$(Build.BuildNumber)"
+              export SYSTEM_COLLECTIONURI="$(System.CollectionUri)"
+              export SYSTEM_TEAMPROJECT="$(System.TeamProject)"
+              export BUILD_BUILDID="$(Build.BuildId)"
               chmod +x ./otelcollector/test/testkube/send-testkube-summary.sh
-              ./otelcollector/test/testkube/send-testkube-summary.sh $(TEAMS_WEBHOOK_URL) $(Build.ArtifactStagingDirectory)/testkube-results
+              ./otelcollector/test/testkube/send-testkube-summary.sh "$TEAMS_WEBHOOK_URL" "$(Build.ArtifactStagingDirectory)/testkube-results"
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Send TestKube Summary Notification"
+            env:
+              TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
