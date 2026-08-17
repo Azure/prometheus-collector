@@ -17,7 +17,12 @@ scrape_configs:
 - job_name: controlplane-etcd
   scrape_interval: $$SCRAPE_INTERVAL$$
   follow_redirects: false
-  scheme: https
+  # etcd's dedicated metrics listener (--listen-metrics-urls) serves only
+  # /metrics and /health over plain HTTP. Unlike the client port it does not
+  # mount the gRPC gateway, so it exposes no KV API and needs no client
+  # certificate. Scraping it lets this collector drop the etcd-client-tls
+  # credential, which grants full read/write access to every etcd key.
+  scheme: http
   label_limit: 63
   label_name_length_limit: 511
   label_value_length_limit: 1023
@@ -26,15 +31,10 @@ scrape_configs:
       namespaces:
         names:
           - $$POD_NAMESPACE$$
-  tls_config:
-    ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
-    cert_file: /etc/kubernetes/secrets/etcd-client.crt
-    key_file: /etc/kubernetes/secrets/etcd-client.key
-    insecure_skip_verify: true
   relabel_configs:
     - source_labels: [ __meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number ]
       action: keep
-      regex: etcd;2379
+      regex: etcd;2381
     - source_labels: [ __meta_kubernetes_pod_name ]
       regex: (.*)
       target_label: instance
