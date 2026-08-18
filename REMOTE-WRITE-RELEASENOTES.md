@@ -1,5 +1,16 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 08-13-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260813.1`
+* Change log -
+  * golang upgrade 1.25.10 -> 1.25.13 (4 Go stdlib CVE fixes)
+  * Correction: CVE-2026-42504 was listed under the 07-29-2026 release, but that fix shipped in Go 1.25.11, not 1.25.10. It is genuinely fixed as of this release.
+* Fixed CVEs:
+    - [CVE-2026-42504](https://avd.aquasec.com/nvd/cve-2026-42504) - `mime` quadratic complexity in WordDecoder.DecodeHeader, leading to denial of service (fixed in Go 1.25.11).
+    - [CVE-2026-42507](https://avd.aquasec.com/nvd/cve-2026-42507) - `net/textproto` arbitrary inputs are included in errors without any escaping (fixed in Go 1.25.11).
+    - [CVE-2026-27145](https://avd.aquasec.com/nvd/cve-2026-27145) - `crypto/x509` inefficient candidate hostname parsing, leading to denial of service (fixed in Go 1.25.11).
+    - [CVE-2026-39822](https://avd.aquasec.com/nvd/cve-2026-39822) - `os` Root escape via symlink plus trailing slash, breaking os.Root sandbox isolation (fixed in Go 1.25.12).
+
 ## Release 07-29-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260729.1`
 * Change log -
