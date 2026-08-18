@@ -1,0 +1,591 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "hideControls": false,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "content": "## AKS control-plane etcd (hyperscale-aware)\\n\\nOn **hyperscale** control planes etcd is split into **6 independent partitions** (`etcd`, `etcd-events`, `etcd-leases`, `etcd-nodes`, `etcd-pods`, `etcd-secrets`), each with **3 Raft replicas**. The `controlplane-etcd` scrape job emits one flat series per member distinguished only by `instance` (the pod name, e.g. `etcd-nodes-<ccp>-<rand>`) and adds **no** partition label, so `etcd_mvcc_db_total_size_in_bytes` arrives as up to 18 flat series.\\n\\nThese two dimensions need **opposite** aggregation:\\n\\n- The **6 partitions are disjoint** keyspaces \\u2192 they **SUM** (total DB size).\\n- The **3 replicas** in a partition are Raft **duplicates** of the same data \\u2192 they must be **collapsed with `max`**, never summed.\\n\\nSo `sum(etcd_mvcc_db_total_size_in_bytes)` over-reports ~3x and `max(...)` under-reports (only the biggest partition). Every panel here derives an `etcd_partition` label from `instance` via `label_replace`, does **max-over-replicas first**, then **sum-over-partitions**. Non-hyperscale clusters have a single `etcd` partition and behave correctly with the same math.\\n\\n> Regex note: in the `label_replace` alternation the specific `etcd-<name>` branches come **before** the bare `etcd` (Go RE2 is leftmost-first) \\u2013 otherwise `etcd-nodes-\\u2026` would wrongly capture just `etcd`.\\n\\nPanels prefer the recorded rules from `etcd-RecordingRules.json` and fall back to the raw `label_replace` expression (via `or`) when the rule group is not deployed.",
+      "datasource": null,
+      "description": "How the numbers are computed.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "mode": "markdown",
+      "span": 12,
+      "title": "Why partition-aware math?",
+      "type": "text"
+    }
+  ],
+  "refresh": "1m",
+  "rows": [
+    {
+      "collapse": false,
+      "collapsed": false,
+      "height": "250px",
+      "title": "etcd database size",
+      "showTitle": true,
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "titleSize": "h6",
+      "panels": [
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": true,
+          "colors": [
+            "#299c46",
+            "rgba(237, 129, 40, 0.89)",
+            "#d44a3a"
+          ],
+          "datasource": "$datasource",
+          "decimals": 2,
+          "description": "Sum across the 6 disjoint partitions of the per-partition max-over-replicas size.",
+          "format": "bytes",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "gridPos": {},
+          "id": 3,
+          "interval": "1m",
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "tableColumn": "",
+          "targets": [
+            {
+              "expr": "cluster:etcd_mvcc_db_total_size_in_bytes:sum{cluster=\"$cluster\"} or sum by (cluster) (max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\")))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "thresholds": "",
+          "title": "Total etcd DB size (all partitions)",
+          "tooltip": {
+            "shared": false
+          },
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": true,
+          "colors": [
+            "#299c46",
+            "rgba(237, 129, 40, 0.89)",
+            "#d44a3a"
+          ],
+          "datasource": "$datasource",
+          "decimals": 2,
+          "description": "Sum across partitions of the per-partition max-over-replicas in-use size.",
+          "format": "bytes",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "gridPos": {},
+          "id": 4,
+          "interval": "1m",
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "tableColumn": "",
+          "targets": [
+            {
+              "expr": "cluster:etcd_mvcc_db_total_size_in_use_in_bytes:sum{cluster=\"$cluster\"} or sum by (cluster) (max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_use_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\")))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "thresholds": "",
+          "title": "Total etcd in-use (logical) size",
+          "tooltip": {
+            "shared": false
+          },
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$datasource",
+          "description": "Physical DB size per partition. Stacked because partitions are disjoint and genuinely add up to the total.",
+          "fill": 6,
+          "fillGradient": 0,
+          "gridPos": {},
+          "id": 5,
+          "interval": "1m",
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sideWidth": null,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 16,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_bytes:max{cluster=\"$cluster\"} or max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{etcd_partition}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "etcd DB size by partition (stacked)",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "collapsed": false,
+      "height": "300px",
+      "title": "Per-partition detail",
+      "showTitle": true,
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "titleSize": "h6",
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "$datasource",
+          "fontSize": "100%",
+          "gridPos": {},
+          "id": 20,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": true
+          },
+          "span": 12,
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Partition",
+              "colorMode": null,
+              "colors": [],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": false,
+              "linkTargetBlank": false,
+              "linkTooltip": "Drill down",
+              "linkUrl": "",
+              "pattern": "etcd_partition",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Total size",
+              "colorMode": null,
+              "colors": [],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": false,
+              "linkTargetBlank": false,
+              "linkTooltip": "Drill down",
+              "linkUrl": "",
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "In-use (logical) size",
+              "colorMode": null,
+              "colors": [],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": false,
+              "linkTargetBlank": false,
+              "linkTooltip": "Drill down",
+              "linkUrl": "",
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Fragmentation gap (defrag opportunity)",
+              "colorMode": null,
+              "colors": [],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": false,
+              "linkTargetBlank": false,
+              "linkTooltip": "Drill down",
+              "linkUrl": "",
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "cluster",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "cluster",
+              "type": "hidden"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "pattern": "/.*/",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_bytes:max{cluster=\"$cluster\"} or max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))",
+              "format": "table",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true,
+              "step": 10
+            },
+            {
+              "expr": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_use_in_bytes:max{cluster=\"$cluster\"} or max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_use_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))",
+              "format": "table",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "B",
+              "instant": true,
+              "step": 10
+            },
+            {
+              "expr": "cluster_etcd_partition:etcd_mvcc_db_free_bytes:max{cluster=\"$cluster\"} or (max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\")) - max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_use_in_bytes{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\")))",
+              "format": "table",
+              "intervalFactor": 2,
+              "legendFormat": "",
+              "refId": "C",
+              "instant": true,
+              "step": 10
+            }
+          ],
+          "title": "etcd size per partition (total / in-use / fragmentation gap)",
+          "transform": "table",
+          "type": "table",
+          "description": "Per-partition physical DB size, logical (in-use) size, and the fragmentation gap between them. A large gap is the signal that a defrag would reclaim space. Replicas are collapsed with max; partitions are NOT summed here so each row is one keyspace."
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "collapsed": false,
+      "height": "250px",
+      "title": "etcd health",
+      "showTitle": true,
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "titleSize": "h6",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$datasource",
+          "description": "1 = every replica in the partition sees a leader; drops below 1 if ANY replica in the partition reports no leader (min over the 3 replicas).",
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {},
+          "id": 21,
+          "interval": "1m",
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sideWidth": null,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 24,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "min by (cluster, etcd_partition) (label_replace(etcd_server_has_leader{cluster=\"$cluster\"}, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{etcd_partition}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "etcd has leader (min over replicas, per partition)",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 14,
+  "style": "dark",
+  "tags": [
+    "aks",
+    "control-plane",
+    "etcd"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "label": "Data Source",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "$datasource",
+        "hide": 0,
+        "includeAll": false,
+        "label": "cluster",
+        "multi": false,
+        "name": "cluster",
+        "options": [],
+        "query": "label_values(etcd_server_has_leader, cluster)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "UTC",
+  "title": "AKS / Control Plane / etcd",
+  "uid": "aksetcdcontrolplane0001",
+  "version": 0
+}

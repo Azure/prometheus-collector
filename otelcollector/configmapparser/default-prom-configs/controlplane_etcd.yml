@@ -39,6 +39,21 @@ scrape_configs:
       regex: (.*)
       target_label: instance
       action: replace
+    # Capture the etcd partition key (e.g. etcd, etcd-events, etcd-nodes) from the
+    # etcd-operator's etcd_cluster pod label (value format: <key>-<CCPID>) into a stable
+    # etcd_partition target label. Hyperscale control planes shard etcd into independent
+    # clusters, so this lets a series be attributed to its partition without regex-parsing
+    # the churny pod name in `instance`. Only the key is kept; the CCPID is redundant with
+    # the `cluster` external label.
+    # ORDER MATTERS: Prometheus relabel regexes are fully anchored and Go RE2 alternation is
+    # leftmost-first, so the specific names (etcd-events...etcd2) MUST come before the bare
+    # `etcd` branch. If `etcd` were first it would match `etcd-nodes-<id>` and wrongly capture
+    # just "etcd". Do not reorder these alternatives.
+    - source_labels: [ __meta_kubernetes_pod_label_etcd_cluster ]
+      action: replace
+      target_label: etcd_partition
+      regex: (etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*
+      replacement: $$1
     - source_labels: [ __meta_kubernetes_pod_name ]
       action: drop
       regex: (etcd2-.*)

@@ -30,6 +30,22 @@ Azure Monitor metrics addon has pre-built configurations to discover & scrape mo
 1. Enable coredns scraping by specifying `coredns = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping coredns every 30s.
 2. Import the coredns Grafana dashboard from [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/coredns) into your Grafana instance
 
+## Control plane etcd
+
+The `controlplane-etcd` job is collected by default for AKS clusters that expose control-plane metrics, so no `default-scrape-settings-enabled` / keep-list change is required for the metrics used below (`etcd_mvcc_db_total_size_in_bytes`, `etcd_mvcc_db_total_size_in_use_in_bytes`, `etcd_server_has_leader` are in the control-plane minimal-ingestion keep list). The recording rules and dashboard exist to make the numbers partition-aware.
+
+On **hyperscale** control planes etcd is split into **6 independent partitions** (`etcd`, `etcd-events`, `etcd-leases`, `etcd-nodes`, `etcd-pods`, `etcd-secrets`), each with **3 Raft replicas**. The scrape job emits one flat series per member, labelled only by `instance` (the pod name, e.g. `etcd-nodes-<ccp>-<rand>`) with **no** partition label, so a metric such as `etcd_mvcc_db_total_size_in_bytes` arrives as up to 18 flat series. The two dimensions need **opposite** aggregation:
+
+- The **6 partitions are disjoint** keyspaces → they **SUM** (total DB size).
+- The **3 replicas** within a partition are Raft **duplicates** of the same data → they must be **collapsed with `max`**, never summed.
+
+So `sum(etcd_mvcc_db_total_size_in_bytes)` over-reports ~3x and `max(...)` under-reports. The artifacts derive an `etcd_partition` label from `instance` with `label_replace`, do **max-over-replicas first**, then **sum-over-partitions**. Non-hyperscale clusters have a single `etcd` partition and the same math is correct.
+
+> Regex note: in the `label_replace` alternation `^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*` the specific `etcd-<name>` branches MUST precede the bare `etcd` branch. Prometheus uses Go RE2 leftmost-first alternation, so a leading bare `etcd` would match `etcd-nodes-...` and wrongly capture just `etcd`. Preserve this ordering everywhere.
+
+1. Import the pre-defined recording rules for etcd from the template [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/etcd) (`etcd-RecordingRules.json`) into your Azure Monitor Workspace.
+2. Import the etcd Grafana dashboard (`etcd.json`) from [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/etcd) into your Grafana instance. The dashboard prefers the recorded rules above but falls back to the raw `label_replace` expression (via `or`) so it renders even if the rule group is not deployed.
+
 ## Kubernetes mixin
 
 By default Azure Managed Prometheus collects metrics used by Kubernetes mixins  and also auto configures few dashboards & recording rules from Kubernetes mixins. In addition to that, you can configure it to collect all other remaining metrics used by Kubernetes mixin usig the steps below.

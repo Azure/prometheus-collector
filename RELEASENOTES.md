@@ -7,6 +7,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-05-07-2026-dbf4ae51-cfg`
 * AKS and Arc Container Images :
   + Store all Current Toggle Documents for Metrics (https://github.com/Azure/prometheus-collector/pull/1490)
+  + Add `etcd_partition` label to control plane etcd metrics to identify the etcd cluster/partition (etcd, etcd-events, etcd-leases, etcd-nodes, etcd-pods, etcd-secrets) on hyperscale control planes
   + Delos support for ama-metrics addon (https://github.com/Azure/prometheus-collector/pull/1529)
   + Tidy and remove duplicate health metrics (https://github.com/Azure/prometheus-collector/pull/1532)
   + Add tests for basic auth scenario (https://github.com/Azure/prometheus-collector/pull/1536)

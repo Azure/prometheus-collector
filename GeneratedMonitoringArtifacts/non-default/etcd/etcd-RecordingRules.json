@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster name"
+            }
+        },
+        "clusterResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster Resource Id"
+            }
+        },
+        "azureMonitorWorkspaceResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]"
+        }
+    },
+    "variables": {
+        "etcdRecordingRuleGroup": "EtcdRecordingRulesRuleGroup-",
+        "etcdRecordingRuleGroupName": "[concat(variables('etcdRecordingRuleGroup'), parameters('clusterName'))]",
+        "etcdRecordingRuleGroupDescription": "Control plane etcd Recording Rules RuleGroup. Splits the flat control-plane etcd series into their 6 independent etcd partitions (etcd, etcd-events, etcd-leases, etcd-nodes, etcd-pods, etcd-secrets). The 3 Raft replicas within a partition are duplicates so they are collapsed with max; the 6 partitions are disjoint keyspaces so they are summed. The etcd_partition label is derived from the pod name in the instance label. IMPORTANT: in the label_replace regex the specific etcd-<name> branches MUST precede the bare etcd branch (Go RE2 leftmost-first alternation) or every partition would collapse to etcd.",
+        "version": " - 0.1"
+    },
+    "resources": [
+        {
+            "name": "[variables('etcdRecordingRuleGroupName')]",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2023-03-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "description": "[concat(variables('etcdRecordingRuleGroupDescription'), variables('version'))]",
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]",
+                    "[parameters('clusterResourceId')]"
+                ],
+                "enabled": true,
+                "clusterName": "[parameters('clusterName')]",
+                "interval": "PT1M",
+                "rules": [
+                    {
+                        "record": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_bytes:max",
+                        "expression": "max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_bytes, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))"
+                    },
+                    {
+                        "record": "cluster:etcd_mvcc_db_total_size_in_bytes:sum",
+                        "expression": "sum by (cluster) (cluster_etcd_partition:etcd_mvcc_db_total_size_in_bytes:max)"
+                    },
+                    {
+                        "record": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_use_in_bytes:max",
+                        "expression": "max by (cluster, etcd_partition) (label_replace(etcd_mvcc_db_total_size_in_use_in_bytes, \"etcd_partition\", \"$1\", \"instance\", \"^(etcd-events|etcd-leases|etcd-nodes|etcd-pods|etcd-secrets|etcd2|etcd)-.*\"))"
+                    },
+                    {
+                        "record": "cluster:etcd_mvcc_db_total_size_in_use_in_bytes:sum",
+                        "expression": "sum by (cluster) (cluster_etcd_partition:etcd_mvcc_db_total_size_in_use_in_bytes:max)"
+                    },
+                    {
+                        "record": "cluster_etcd_partition:etcd_mvcc_db_free_bytes:max",
+                        "expression": "cluster_etcd_partition:etcd_mvcc_db_total_size_in_bytes:max - cluster_etcd_partition:etcd_mvcc_db_total_size_in_use_in_bytes:max"
+                    }
+                ]
+            }
+        }
+    ]
+}
