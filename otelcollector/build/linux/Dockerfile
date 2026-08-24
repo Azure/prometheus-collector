@@ -270,7 +270,11 @@ COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
 COPY --from=builder /usr/lib/pkcs11 /usr/lib/
 COPY --from=builder /usr/libexec/p11-kit /usr/libexec
 COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
-COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
+# libp11-kit.so.0* matches both the SONAME symlink and the versioned file it points to.
+# Do not pin the full version here: p11-kit-proxy.so and libp11-kit.so.0 are symlinks to
+# libp11-kit.so.0.<x>.<y>, and that version changes whenever the azurelinux base image is
+# rebuilt, which breaks this COPY.
+COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0* /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
