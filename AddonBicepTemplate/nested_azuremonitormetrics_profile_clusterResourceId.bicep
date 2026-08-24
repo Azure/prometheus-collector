@@ -4,12 +4,12 @@ param metricLabelsAllowlist string
 param metricAnnotationsAllowList string
 param enableControlPlaneMetrics bool
 
-// 2026-04-01 is the latest stable AKS API version and the first GA version to expose
-// azureMonitorProfile.metrics.controlPlane. It is newer than the Bicep CLI's bundled
-// type catalog, so suppress the "types not available" warning; the compiled ARM is
-// correct and deploys fine.
+// 2026-06-01 is the latest stable AKS API version and exposes
+// azureMonitorProfile.metrics.controlPlane (GA since 2026-04-01). It is newer than the
+// Bicep CLI's bundled type catalog, so suppress the "types not available" warning; the
+// compiled ARM is correct and deploys fine.
 #disable-next-line BCP081
-resource variables_cluster 'Microsoft.ContainerService/managedClusters@2026-04-01' = {
+resource variables_cluster 'Microsoft.ContainerService/managedClusters@2026-06-01' = {
   name: variables_clusterName
   location: clusterLocation
   properties: {

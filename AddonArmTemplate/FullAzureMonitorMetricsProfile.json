@@ -152,7 +152,7 @@
             {
               "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
               "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
-              "apiVersion": "2024-03-11",
+              "apiVersion": "2025-05-11",
               "location": "[parameters('clusterLocation')]",
               "properties": {
                 "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
@@ -185,7 +185,7 @@
               "name": "[variables('clusterName')]",
               "type": "Microsoft.ContainerService/managedClusters",
               "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2026-04-01",
+              "apiVersion": "2026-06-01",
               "properties": {
                 "mode": "Incremental",
                 "id": "[parameters('clusterResourceId')]",
