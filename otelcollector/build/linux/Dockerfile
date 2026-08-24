@@ -251,7 +251,10 @@ COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.
 COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6 /usr/lib/
 # metricsextension dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
+# boost and cpprest have no stable SONAME symlink: the full version is the SONAME, and the
+# file name changes whenever those packages are refreshed. Glob the version so base image
+# rebuilds don't break this COPY.
+COPY --from=builder /usr/lib/libboost_filesystem.so.* /usr/lib/libcpprest.so.* /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.* /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # fluent-bit dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libpq.so.5 /usr/lib/libldap.so.2 /usr/lib/liblber.so.2 /usr/lib/libgnutls.so.30 /usr/lib/libidn2.so.0 /usr/lib/libunistring.so.5 /usr/lib/libnettle.so.8 /usr/lib/libhogweed.so.6 /usr/lib/
@@ -270,7 +273,11 @@ COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
 COPY --from=builder /usr/lib/pkcs11 /usr/lib/
 COPY --from=builder /usr/libexec/p11-kit /usr/libexec
 COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
-COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
+# libp11-kit.so.0* matches both the SONAME symlink and the versioned file it points to.
+# Do not pin the full version here: p11-kit-proxy.so and libp11-kit.so.0 are symlinks to
+# libp11-kit.so.0.<x>.<y>, and that version changes whenever the azurelinux base image is
+# rebuilt, which breaks this COPY.
+COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0* /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
