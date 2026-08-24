@@ -300,6 +300,8 @@ extends:
         dependsOn: PROD_Managed_SDP
         variables:
           ob_release_environment: USSec
+          ob_release_stagetype: deployment
+          CvrpManifestRelativePath: '\build.manifest'
         jobs:
           - job: USSec_Managed_SDP
             displayName: "USSec: Managed SDP"
