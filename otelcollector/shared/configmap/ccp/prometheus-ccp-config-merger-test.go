@@ -56,11 +56,16 @@ func TestMergeYAML_WithMultipleJobsEnabled_ThenMergedConfigIsComplete(t *testing
 				"key_file":             "/etc/kubernetes/secrets/etcd-client.key",
 				"insecure_skip_verify": "true",
 			},
-			"relabel_configs": [3]map[interface{}]interface{}{
+			"relabel_configs": [4]map[interface{}]interface{}{
 				{
-					"source_labels": [2]string{"__meta_kubernetes_pod_label_app", "__meta_kubernetes_pod_container_port_number"},
+					"source_labels": [2]string{"__meta_kubernetes_pod_label_kubernetes_azure_com_etcd_separate_metrics_port", "__meta_kubernetes_pod_container_port_number"},
+					"action":        "drop",
+					"regex":         "true;2379",
+				},
+				{
+					"source_labels": [3]string{"__meta_kubernetes_service_label_app", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"},
 					"action":        "keep",
-					"regex":         "etcd;2379",
+					"regex":         "etcd;metrics;.*|etcd;.*;2379",
 				},
 				{
 					"source_labels": [1]string{"__meta_kubernetes_pod_name"},

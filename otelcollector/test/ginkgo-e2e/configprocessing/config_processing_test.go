@@ -854,6 +854,103 @@ var _ = DescribeTable("The Prometheus UI API should respect controlplane-istio c
 		Label(utils.ConfigProcessingControlplaneIstioEnabled)),
 )
 
+// Partial configmap (no prometheus-collector-settings section) — v1 and v2.
+//
+// Regression test for the v2 partial-configmap bug AND its v1 parity control. A
+// schema-version v2 ama-metrics-settings-configmap that omits the optional
+// prometheus-collector-settings section must still have its customizations honored.
+// Before the ParseMetricsFiles fix, the missing section file caused the whole v2
+// configmap to be discarded and the agent fell back to defaults. v1 uses a separate
+// directory-based parser (ParseV1Config) that was never affected, so the v1 case is a
+// control that should pass on every agent version.
+//
+// Both fixtures set a distinctive kube-state-metrics scrape interval (59s) and a custom
+// keep-list with PV/PVC metrics that are NOT in the minimal-ingestion-profile baseline.
+// If the partial configmap is honored, the served kube-state-metrics job reflects both;
+// if it is discarded (the v2 bug), the interval falls back to 30s and the PV/PVC metrics
+// are absent from the keep-list regex.
+func assertPartialConfigmapHonored(schemaVersion string, namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string) {
+	time.Sleep(120 * time.Second)
+	var apiResponse utils.APIResponse
+	err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(apiResponse.Data).NotTo(BeNil())
+
+	var prometheusConfigResult v1.ConfigResult
+	json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+	Expect(prometheusConfigResult).NotTo(BeNil())
+	Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+	prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(prometheusConfig).NotTo(BeNil())
+	Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+	if controllerLabelValue == "ama-metrics" {
+		var kubeStateJobConfig *config.ScrapeConfig
+		for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+			if scrapeJob.JobName == "kube-state-metrics" {
+				kubeStateJobConfig = scrapeJob
+				break
+			}
+		}
+		Expect(kubeStateJobConfig).NotTo(BeNil(), "kube-state-metrics job should be present")
+
+		// The custom scrape interval must survive the partial configmap.
+		// For v2 pre-fix the whole configmap was discarded and this would fall back to the 30s default.
+		actualScrapeInterval := kubeStateJobConfig.ScrapeInterval.String()
+		GinkgoWriter.Printf("[PartialNoPcs-%s] kube-state-metrics scrape interval - expected=%s, actual=%s\n", schemaVersion, expectedScrapeInterval, actualScrapeInterval)
+		Expect(actualScrapeInterval).To(Equal(expectedScrapeInterval), "kube-state-metrics should use the custom scrape interval from the partial %s configmap", schemaVersion)
+
+		// The custom keep-list must survive the partial configmap.
+		Expect(kubeStateJobConfig.MetricRelabelConfigs).NotTo(BeEmpty(), "kube-state-metrics should have metric relabeling")
+
+		foundCustomRegex := false
+		for _, relabelConfig := range kubeStateJobConfig.MetricRelabelConfigs {
+			if relabelConfig.Action == "keep" && len(relabelConfig.SourceLabels) > 0 && string(relabelConfig.SourceLabels[0]) == "__name__" {
+				foundCustomRegex = true
+				regex := relabelConfig.Regex.String()
+				GinkgoWriter.Printf("[PartialNoPcs-%s] kube-state-metrics keep regex=%s\n", schemaVersion, regex)
+
+				// The custom PV/PVC metrics (not part of the minimal ingestion profile baseline)
+				// must be present. For v2 pre-fix they would be absent because the configmap was discarded.
+				for _, pattern := range expectedRegexPatterns {
+					Expect(regex).To(ContainSubstring(pattern), "kube-state-metrics regex should contain custom keep-list pattern: %s", pattern)
+				}
+
+				// The minimal ingestion profile baseline (e.g. kube_node_info) should still be unioned in.
+				Expect(regex).To(ContainSubstring("kube_node_info"), "kube-state-metrics regex should still include the minimal ingestion profile baseline")
+				break
+			}
+		}
+		Expect(foundCustomRegex).To(BeTrue(), "kube-state-metrics should have the custom keep-list regex in metric relabeling")
+
+		GinkgoWriter.Printf("[PartialNoPcs-%s] Partial configmap honored: custom interval and keep-list validated successfully\n", schemaVersion)
+	}
+}
+
+// v1 partial configmap (control: ParseV1Config was never affected by the bug).
+var _ = DescribeTable("The Prometheus UI API should honor a partial v1 configmap with no prometheus-collector-settings",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string) {
+		assertPartialConfigmapHonored("v1", namespace, controllerLabelName, controllerLabelValue, containerName, isLinux, expectedScrapeInterval, expectedRegexPatterns)
+	},
+	Entry("when a v1 configmap omits prometheus-collector-settings but sets a custom kube-state interval and keep-list",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "59s",
+		[]string{"kube_persistentvolumeclaim_info", "kube_persistentvolume_capacity_bytes"},
+		Label(utils.ConfigProcessingPartialNoPcsV1)),
+)
+
+// v2 partial configmap (regression test for the ParseMetricsFiles fix).
+var _ = DescribeTable("The Prometheus UI API should honor a partial v2 configmap with no prometheus-collector-settings",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, expectedScrapeInterval string, expectedRegexPatterns []string) {
+		assertPartialConfigmapHonored("v2", namespace, controllerLabelName, controllerLabelValue, containerName, isLinux, expectedScrapeInterval, expectedRegexPatterns)
+	},
+	Entry("when a v2 configmap omits prometheus-collector-settings but sets a custom kube-state interval and keep-list",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "59s",
+		[]string{"kube_persistentvolumeclaim_info", "kube_persistentvolume_capacity_bytes"},
+		Label(utils.ConfigProcessingPartialNoPcsV2)),
+)
+
 // Basic auth ServiceMonitor — verify RBAC, config, and targets
 var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
 	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {

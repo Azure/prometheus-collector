@@ -1,6 +1,6 @@
 name: size-label #https://github.com/kubernetes/kubernetes/labels?q=size
-on: 
-  pull_request:
+on:
+  pull_request_target:
     branches:
       - main
 jobs:
@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write
       pull-requests: write
     steps:
       - name: size-label

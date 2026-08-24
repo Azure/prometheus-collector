@@ -6,6 +6,25 @@ Expand the name of the chart.
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{ define "nodeexporter-arc-extension-settings" }}
+# overriding setting here so that it can be set dynamically based on cluster id (needed because the same chart can be used for both Aks and Arc clusters)
+{{- $azureResourceID := "" }}
+{{- if .Values.global }}
+{{- if .Values.global.commonGlobals }}
+{{- if .Values.global.commonGlobals.Customer }}
+{{- if .Values.global.commonGlobals.Customer.AzureResourceID }}
+{{- $azureResourceID = .Values.global.commonGlobals.Customer.AzureResourceID }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if and (ne $azureResourceID "") (contains "microsoft.containerservice/managedclusters" (lower $azureResourceID)) }}
+isArcExtensionNodeExporter: false
+{{- else }}
+isArcExtensionNodeExporter: true
+{{- end }}
+{{- end }}
+
 {{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).

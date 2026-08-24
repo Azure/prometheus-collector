@@ -1,3 +1,5 @@
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if and .Values.rbac.create .Values.rbac.pspEnabled (.Capabilities.APIVersions.Has "policy/v1beta1/PodSecurityPolicy") }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -13,4 +15,5 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "prometheus-node-exporter.fullname" . }}
     namespace: {{ include "prometheus-node-exporter.namespace" . }}
+{{- end }}
 {{- end }}

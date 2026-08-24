@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/sharedpromconfig"
 )
 
 func TestNewManager(t *testing.T) {
@@ -31,13 +32,13 @@ func TestNewManager(t *testing.T) {
 		Interval:    30 * time.Second,
 		CollectorID: "test-collector",
 	}
-	promCfg := &promconfig.Config{
+	promCfg := sharedpromconfig.NewConfig(&promconfig.Config{
 		ScrapeConfigs: []*promconfig.ScrapeConfig{
 			{JobName: "test-job"},
 		},
-	}
+	})
 
-	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg, nil)
+	manager := NewManager(receivertest.NewNopSettings(metadata.Type), cfg, promCfg)
 
 	assert.NotNil(t, manager)
 	assert.Equal(t, cfg, manager.cfg)
@@ -71,7 +72,7 @@ func TestManagerShutdown(t *testing.T) {
 	settings := receivertest.NewNopSettings(metadata.Type)
 	settings.Logger = logger
 
-	manager := NewManager(settings, cfg, promCfg, nil)
+	manager := NewManager(settings, cfg, sharedpromconfig.NewConfig(promCfg))
 
 	// Start the manager so the goroutine is running
 	ctx := t.Context()
@@ -85,7 +86,7 @@ func TestManagerShutdown(t *testing.T) {
 	require.NotNil(t, discoveryManager)
 
 	store := teststorage.New(t)
-	scrapeManager, err := scrape.NewManager(&scrape.Options{}, promLogger, nil, store, nil, reg)
+	scrapeManager, err := scrape.NewManager(&scrape.Options{}, promLogger, nil, nil, store, reg)
 	require.NoError(t, err)
 	defer scrapeManager.Stop()
 

@@ -205,7 +205,7 @@
               "properties": {
                 "extensionType": "Microsoft.AzureMonitor.Containers.Metrics",
                 "configurationSettings": {
-                  "AzureMonitorMetrics.KubeStateMetrics.MetricsLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+                  "AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList": "[parameters('metricLabelsAllowlist')]",
                   "AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
                 },
                 "configurationProtectedSettings": {},

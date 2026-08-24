@@ -72,6 +72,12 @@ fi
 cd ../
 helm package ./${HELM_CHART_NAME}
 
+# Also package the SAME chart contents under <version>-arc so the Arc
+# extension central rollout (azure-pipeline-arc-extension-managedsdp.yml)
+# can pull a distinct OCI tag from the same artifact. Chart.yaml version is
+# overridden at package time so the embedded version matches the OCI tag.
+helm package --version ${HELM_SEMVER}-arc ./${HELM_CHART_NAME}
+
 # Login to az cli and authenticate to acr
 echo "Login cli using managed identity"
 
@@ -109,8 +115,17 @@ fi
 
 helm push ${HELM_CHART_NAME}-${HELM_SEMVER}.tgz oci://${ACR_REGISTRY}${PROD_ACR_REPOSITORY}
 if [ $? -eq 0 ]; then            
-  echo "pushing the chart to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} completed successfully."
+  echo "pushing the chart (tag: ${HELM_SEMVER}) to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} completed successfully."
 else     
-  echo "-e error pushing the chart to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} failed."
+  echo "-e error pushing the chart (tag: ${HELM_SEMVER}) to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} failed."
   exit 1
-fi    
+fi
+
+# Push the Arc-tagged variant (same chart contents, version = <ver>-arc)
+helm push ${HELM_CHART_NAME}-${HELM_SEMVER}-arc.tgz oci://${ACR_REGISTRY}${PROD_ACR_REPOSITORY}
+if [ $? -eq 0 ]; then
+  echo "pushing the chart (tag: ${HELM_SEMVER}-arc) to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} completed successfully."
+else
+  echo "-e error pushing the chart (tag: ${HELM_SEMVER}-arc) to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} failed."
+  exit 1
+fi

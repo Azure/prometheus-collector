@@ -1,3 +1,5 @@
+{{- $exporterArcExtensionSettings := include "nodeexporter-arc-extension-settings" . | fromYaml }}
+{{- if $exporterArcExtensionSettings.isArcExtensionNodeExporter }}
 {{- if .Values.kubeRBACProxy.enabled}}
 apiVersion: v1
 kind: ConfigMap
@@ -13,4 +15,5 @@ data:
         resource: services
         subresource: {{ template "prometheus-node-exporter.fullname" . }}
         name: {{ template "prometheus-node-exporter.fullname" . }}
+{{- end }}
 {{- end }}
