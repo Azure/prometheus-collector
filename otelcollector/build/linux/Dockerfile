@@ -251,7 +251,10 @@ COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.
 COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6 /usr/lib/
 # metricsextension dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
+# boost and cpprest have no stable SONAME symlink: the full version is the SONAME, and the
+# file name changes whenever those packages are refreshed. Glob the version so base image
+# rebuilds don't break this COPY.
+COPY --from=builder /usr/lib/libboost_filesystem.so.* /usr/lib/libcpprest.so.* /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.* /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # fluent-bit dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libpq.so.5 /usr/lib/libldap.so.2 /usr/lib/liblber.so.2 /usr/lib/libgnutls.so.30 /usr/lib/libidn2.so.0 /usr/lib/libunistring.so.5 /usr/lib/libnettle.so.8 /usr/lib/libhogweed.so.6 /usr/lib/
