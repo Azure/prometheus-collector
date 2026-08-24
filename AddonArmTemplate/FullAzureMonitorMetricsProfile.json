@@ -187,8 +187,6 @@
               "location": "[parameters('clusterLocation')]",
               "apiVersion": "2026-06-01",
               "properties": {
-                "mode": "Incremental",
-                "id": "[parameters('clusterResourceId')]",
                 "azureMonitorProfile": {
                   "metrics": {
                     "enabled": true,
