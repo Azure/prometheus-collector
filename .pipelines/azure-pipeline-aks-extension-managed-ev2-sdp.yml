@@ -148,37 +148,37 @@ variables:
         }
       }
 
-  # - name: USNatConfigurationOverrides
-  #   value: |
-  #     {
-  #       "ConfigurationSpecification": {
-  #         "settings": {
-  #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
-  #           "helmChartUrl": "mcr.microsoft.eaglex.ic.gov/azuremonitor/containerinsights/ciprod/ama-metrics",
-  #           "userAssignedIdentity": "REPLACE_WITH_USNAT_MSI_ARM_ID",
-  #           "version": "$(extensionVersionValue)",
-  #           "releaseTrain": "${{ parameters.releaseTrain }}",
-  #           "kustoGatingWaitDuration": "PT1H"
-  #         }
-  #       }
-  #     }
+  - name: USNatConfigurationOverrides
+    value: |
+      {
+        "ConfigurationSpecification": {
+          "settings": {
+            "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
+            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+            "helmChartUrl": "mcr.microsoft.eaglex.ic.gov/azuremonitor/containerinsights/ciprod/ama-metrics",
+            "userAssignedIdentity": "/subscriptions/f8272cc8-8c5a-438c-ad5c-21264c697c53/resourcegroups/ContainerInsights-AI/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ContainerInsights-MI",
+            "version": "$(extensionVersionValue)",
+            "releaseTrain": "${{ parameters.releaseTrain }}",
+            "kustoGatingWaitDuration": "PT1H"
+          }
+        }
+      }
 
-  # - name: USSecConfigurationOverrides
-  #   value: |
-  #     {
-  #       "ConfigurationSpecification": {
-  #         "settings": {
-  #           "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
-  #           "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
-  #           "helmChartUrl": "mcr.microsoft.scloud/azuremonitor/containerinsights/ciprod/ama-metrics",
-  #           "userAssignedIdentity": "REPLACE_WITH_USSEC_MSI_ARM_ID",
-  #           "version": "$(extensionVersionValue)",
-  #           "releaseTrain": "${{ parameters.releaseTrain }}",
-  #           "kustoGatingWaitDuration": "PT1H"
-  #         }
-  #       }
-  #     }
+  - name: USSecConfigurationOverrides
+    value: |
+      {
+        "ConfigurationSpecification": {
+          "settings": {
+            "extensionTypeName": "microsoft.azuremonitor.containers.metrics",
+            "packageConfig": "Microsoft.AzureMonitor.Containers.Metrics-PromAks052926",
+            "helmChartUrl": "mcr.microsoft.scloud/azuremonitor/containerinsights/ciprod/ama-metrics",
+            "userAssignedIdentity": "/subscriptions/3be87dbe-53e1-410a-b8b7-a0d8fa86a9e9/resourcegroups/ContainerInsights-AI/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ContainerInsights-MI",
+            "version": "$(extensionVersionValue)",
+            "releaseTrain": "${{ parameters.releaseTrain }}",
+            "kustoGatingWaitDuration": "PT1H"
+          }
+        }
+      }
 
   # - name: BleuConfigurationOverrides
   #   value: |
@@ -295,59 +295,59 @@ extends:
                   ConfigurationOverrides: $(MooncakeConfigurationOverrides)
                   Select: regions(*)
 
-      # - stage: USSec_Managed_SDP
-      #   displayName: "USSec: Managed SDP"
-      #   dependsOn: PROD_Managed_SDP
-      #   variables:
-      #     ob_release_environment: USSec
-      #     ob_release_stagetype: deployment
-      #     CvrpManifestRelativePath: '\build.manifest'
-      #   jobs:
-      #     - job: USSec_Managed_SDP
-      #       displayName: "USSec: Managed SDP"
-      #       pool:
-      #         type: release
-      #       steps:
-      #         - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-      #           displayName: "Ev2 Managed SDP Rollout (USSec)"
-      #           inputs:
-      #             EndpointProviderType: ApprovalService
-      #             ApprovalServiceEnvironment: USSec
-      #             TaskAction: CentralArtifactsRollout
-      #             CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
-      #             CentralArtifactsTenantIdentifier: 20ac2fc4-effc-4f76-ba7d-63c5ae134f5f
-      #             CentralArtifactsPolicyName: CentralArtifactsPolicy
-      #             ServiceIdentifier: $(serviceIdentifier)
-      #             ServiceGroup: $(serviceGroup)
-      #             ConfigurationOverrides: $(USSecConfigurationOverrides)
-      #             Select: regions(*)
+      - stage: USSec_Managed_SDP
+        displayName: "USSec: Managed SDP"
+        dependsOn: PROD_Managed_SDP
+        variables:
+          ob_release_environment: USSec
+          ob_release_stagetype: deployment
+          CvrpManifestRelativePath: '\build.manifest'
+        jobs:
+          - job: USSec_Managed_SDP
+            displayName: "USSec: Managed SDP"
+            pool:
+              type: release
+            steps:
+              - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+                displayName: "Ev2 Managed SDP Rollout (USSec)"
+                inputs:
+                  EndpointProviderType: ApprovalService
+                  ApprovalServiceEnvironment: USSec
+                  TaskAction: CentralArtifactsRollout
+                  CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
+                  CentralArtifactsTenantIdentifier: 20ac2fc4-effc-4f76-ba7d-63c5ae134f5f
+                  CentralArtifactsPolicyName: CentralArtifactsPolicy
+                  ServiceIdentifier: $(serviceIdentifier)
+                  ServiceGroup: $(serviceGroup)
+                  ConfigurationOverrides: $(USSecConfigurationOverrides)
+                  Select: regions(*)
 
-      # - stage: USNat_Managed_SDP
-      #   displayName: "USNat: Managed SDP"
-      #   dependsOn: PROD_Managed_SDP
-      #   variables:
-      #     ob_release_environment: USNat
-      #     ob_release_stagetype: deployment
-      #     CvrpManifestRelativePath: '\build.manifest'
-      #   jobs:
-      #     - job: USNat_Managed_SDP
-      #       displayName: "USNat: Managed SDP"
-      #       pool:
-      #         type: release
-      #       steps:
-      #         - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-      #           displayName: "Ev2 Managed SDP Rollout (USNat)"
-      #           inputs:
-      #             EndpointProviderType: ApprovalService
-      #             ApprovalServiceEnvironment: USNat
-      #             TaskAction: CentralArtifactsRollout
-      #             CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
-      #             CentralArtifactsTenantIdentifier: 70a90262-f46c-48aa-ac4c-37e37f8be1a2
-      #             CentralArtifactsPolicyName: CentralArtifactsPolicy
-      #             ServiceIdentifier: $(serviceIdentifier)
-      #             ServiceGroup: $(serviceGroup)
-      #             ConfigurationOverrides: $(USNatConfigurationOverrides)
-      #             Select: regions(*)
+      - stage: USNat_Managed_SDP
+        displayName: "USNat: Managed SDP"
+        dependsOn: PROD_Managed_SDP
+        variables:
+          ob_release_environment: USNat
+          ob_release_stagetype: deployment
+          CvrpManifestRelativePath: '\build.manifest'
+        jobs:
+          - job: USNat_Managed_SDP
+            displayName: "USNat: Managed SDP"
+            pool:
+              type: release
+            steps:
+              - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+                displayName: "Ev2 Managed SDP Rollout (USNat)"
+                inputs:
+                  EndpointProviderType: ApprovalService
+                  ApprovalServiceEnvironment: USNat
+                  TaskAction: CentralArtifactsRollout
+                  CentralArtifactsServiceIdentifier: 2bbbdccc-fa4c-4f81-b9fd-12cd0234701c
+                  CentralArtifactsTenantIdentifier: 70a90262-f46c-48aa-ac4c-37e37f8be1a2
+                  CentralArtifactsPolicyName: CentralArtifactsPolicy
+                  ServiceIdentifier: $(serviceIdentifier)
+                  ServiceGroup: $(serviceGroup)
+                  ConfigurationOverrides: $(USNatConfigurationOverrides)
+                  Select: regions(*)
 
       # - stage: Bleu_Managed_SDP
       #   displayName: "Bleu: Managed SDP"
