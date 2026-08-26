@@ -10,7 +10,7 @@ spec:
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
-      revision: main
+      revision: $BRANCH_NAME
       paths: 
       - otelcollector/test/ginkgo-e2e
   steps:
@@ -40,7 +40,7 @@ spec:
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
-      revision: main
+      revision: $BRANCH_NAME
       paths: 
       - otelcollector/test/ginkgo-e2e
   steps:
@@ -70,7 +70,7 @@ spec:
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
-      revision: main
+      revision: $BRANCH_NAME
       paths: 
       - otelcollector/test/ginkgo-e2e
   steps:
@@ -100,7 +100,7 @@ spec:
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
-      revision: main
+      revision: $BRANCH_NAME
       paths: 
       - otelcollector/test/ginkgo-e2e
   steps:
@@ -130,7 +130,7 @@ spec:
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
-      revision: main
+      revision: $BRANCH_NAME
       paths: 
       - otelcollector/test/ginkgo-e2e
   steps:

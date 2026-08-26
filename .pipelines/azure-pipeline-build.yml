@@ -2366,7 +2366,8 @@ extends:
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy/Validate: AKS dev cluster"
         environment: Prometheus-Collector
-        condition: or(eq(variables.IS_PR, true), and(eq(variables.IS_MAIN_BRANCH, true), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1))))
+        # TEMP-E2E-VALIDATION: REVERT BEFORE MERGE. Allows a manual branch build to deploy to ci-dev-aks-mac-eus.
+        condition: or(eq(variables['Build.SourceBranchName'], 'vigilant-giggle'), eq(variables.IS_PR, true), and(eq(variables.IS_MAIN_BRANCH, true), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1))))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2725,7 +2726,8 @@ extends:
         timeoutInMinutes: 90
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        # TEMP-E2E-VALIDATION: REVERT BEFORE MERGE. Allows a manual branch build to run testkube on ci-dev-aks-mac-eus.
+        condition: and(succeeded(), eq(variables.IS_PR, false), or(eq(variables['Build.SourceBranchName'], 'vigilant-giggle'), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2756,6 +2758,7 @@ extends:
                   export SYSTEM_JOBID="$(System.JobId)"
                   export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
                   chmod +x ./testkube/run-testkube-workflow.sh
+                  # TEMP-E2E-VALIDATION: REVERT BEFORE MERGE. 8th arg pins ginkgo tests to this branch instead of main.
                   ./testkube/run-testkube-workflow.sh \
                     "https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com" \
                     "c7f895bb-c4f6-45af-be82-2273a424e237" \
@@ -2763,7 +2766,8 @@ extends:
                     "testkube-test-crs-ci-dev-aks-mac-eus.yaml" \
                     "" \
                     "" \
-                    "AKS"
+                    "AKS" \
+                    "grwehner/vigilant-giggle"
                 workingDirectory: $(Pipeline.Workspace)
                 displayName: "Run TestKube workflow"
                 continueOnError: true
