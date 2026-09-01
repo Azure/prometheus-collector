@@ -130,6 +130,47 @@ same source with CVE-patched Go toolchain and pinned module replacements
 - `github.com/google/cel-go` → `v0.29.0` (addresses GHSA-gcjh-h69q-9w9g)
 - Go stdlib CVE fixes via the msft-golang toolchain bump (multiple HIGH stdlib advisories)
 
+## Upstream Helm chart changes (chart 8.3.1 → 8.4.0)
+
+The addon does **not** vendor the prometheus-community chart — it maintains its own
+KSM manifests (`otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-ksm-*.yaml`),
+which are a customized fork of that chart. On every upgrade, diff the upstream chart
+across the app-version boundary (last chart at the old appVersion → first chart at the
+new one) and port anything relevant: **RBAC (`role.yaml`), container args/flags, probes,
+ports, securityContext**.
+
+For **2.19.1 → 2.20.0** the boundary is chart `8.3.1` → `8.4.0`, and the delta is
+**version-only** — verified with:
+
+```powershell
+gh api "repos/prometheus-community/helm-charts/compare/kube-state-metrics-8.3.1...kube-state-metrics-8.4.0" `
+  --jq '.files[] | select(.filename|startswith("charts/kube-state-metrics/")) | "\(.status)  \(.filename)"'
+# => modified  charts/kube-state-metrics/Chart.yaml   (only the version/appVersion bump)
+```
+
+- `templates/role.yaml` (RBAC): **unchanged** between 8.3.1 and 8.4.0.
+- `templates/deployment.yaml`, `service.yaml`, `serviceaccount.yaml`, etc.: **unchanged**.
+- No new required args, flags, probes, or ports.
+
+**Conclusion:** nothing needs to be ported into the addon's `ama-metrics-ksm-*.yaml`
+for 2.20.0; the only code change is the image tag (and the chart-version comment).
+
+### New 2.20.0 metrics vs. RBAC / collectors
+
+| New metric(s) | KSM collector | Enabled by default in the addon? | New RBAC needed? |
+|---|---|---|---|
+| PersistentVolume access mode | `persistentvolumes` | yes | no (already granted) |
+| `kube_node_spec_pod_cidrs` | `nodes` | yes | no |
+| init-container `state_started` / `last_terminated_*`, `kube_pod_status_disruption_reason`, `kube_pod_resourceclaim_info`, ephemeral-volume labels | `pods` | yes | no |
+| HPA scale up/down behavior tolerance | `horizontalpodautoscalers` | yes | no |
+| ValidatingAdmissionPolicy(+Binding), MutatingAdmissionPolicy(+Binding) | `validatingadmissionpolicies` / `mutatingadmissionpolicies` (new, **opt-in**) | no | **yes** if enabled |
+
+Most new metrics extend collectors the addon already enables, so they light up as soon
+as the image is bumped — no RBAC or config change required. The admission-policy
+collectors are opt-in (upstream leaves them off by default too); to scrape them, add the
+collector name to `KubeStateMetrics.Collectors` in `values-template.yaml` **and** add a
+matching `admissionregistration.k8s.io` `list`/`watch` rule in `ama-metrics-ksm-role.yaml`.
+
 ## Impact / things to watch
 
 - **Cardinality change**: `kube_pod_status_reason` now emits only the set reason ([#3089](https://github.com/kubernetes/kube-state-metrics/pull/3089)). Review any recording rules/alerts that assumed the previous always-present zero rows.
@@ -143,3 +184,4 @@ same source with CVE-patched Go toolchain and pinned module replacements
 - Upstream releases: <https://github.com/kubernetes/kube-state-metrics/releases>
 - Upstream v2.19.1…v2.20.0 diff: <https://github.com/kubernetes/kube-state-metrics/compare/v2.19.1...v2.20.0>
 - prometheus-community Helm chart (version ↔ appVersion mapping): <https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics>
+- prometheus-community chart diff for this upgrade: <https://github.com/prometheus-community/helm-charts/compare/kube-state-metrics-8.3.1...kube-state-metrics-8.4.0>

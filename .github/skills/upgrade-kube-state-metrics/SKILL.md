@@ -33,6 +33,10 @@ Exactly two committed files carry the tag (keep them in sync):
 | `.pipelines/azure-pipeline-build.yml` | `KUBE_STATE_METRICS_IMAGE` |
 | `otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml` | `KubeStateMetrics.ImageTag` + the `# ... corresponds to chart version` comment |
 
+When the upstream chart delta (Phase 5) requires it, also edit the addon KSM manifests:
+`templates/ama-metrics-ksm-role.yaml` (RBAC) and/or `templates/ama-metrics-ksm-deployment.yaml`
+(args/probes/ports).
+
 Do **not** edit `values-rashmi-operator-cfg.yaml` (local developer override).
 
 ## Execution plan
@@ -83,7 +87,36 @@ foreach ($t in (gh api "repos/prometheus-community/helm-charts/git/matching-refs
 ```
 Record `CHART` = the first chart version at the new appVersion (e.g. `8.4.0`).
 
-### Phase 5 — Collect the upstream changelog (PR description)
+### Phase 5 — Check upstream Helm chart changes (port relevant ones)
+
+The addon keeps its **own** KSM manifests (`otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-ksm-*.yaml`), forked from the prometheus-community chart. Diff the upstream chart across the app-version boundary — the last chart at the **old** appVersion (`OLD_CHART`) → the first at the **new** one (`NEW_CHART` from Phase 4) — and port anything relevant.
+
+```powershell
+$OLD_CHART = '8.3.1'   # last chart at the previous appVersion
+$NEW_CHART = '8.4.0'   # first chart at the new appVersion (from Phase 4)
+
+# 1) file-level delta for the KSM chart
+gh api "repos/prometheus-community/helm-charts/compare/kube-state-metrics-$OLD_CHART...kube-state-metrics-$NEW_CHART" `
+  --jq '.files[] | select(.filename|startswith("charts/kube-state-metrics/")) | "\(.status)  \(.filename)"'
+
+# 2) RBAC diff (most important — new metrics often need new list/watch rules)
+foreach ($ref in $OLD_CHART,$NEW_CHART) {
+  gh api "repos/prometheus-community/helm-charts/contents/charts/kube-state-metrics/templates/role.yaml?ref=kube-state-metrics-$ref" `
+    --jq '.content' | % { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($_ -replace '\s',''))) } |
+    Set-Content "$env:TEMP\ksm_role_$ref.yaml"
+}
+git --no-pager diff --no-index -- "$env:TEMP\ksm_role_$OLD_CHART.yaml" "$env:TEMP\ksm_role_$NEW_CHART.yaml"
+```
+
+Decide per change:
+- **RBAC rule added for a collector the addon enables** → mirror it into `ama-metrics-ksm-role.yaml`.
+- **New required container arg / flag / probe / port** → mirror it into `ama-metrics-ksm-deployment.yaml`.
+- **New opt-in collector** (e.g. admission policies, standalone DRA `resourceclaims`) → add the collector to `KubeStateMetrics.Collectors` in `values-template.yaml` **and** its RBAC rule **only if** the new metrics are wanted (upstream leaves these off by default).
+- **Chart-only / packaging changes** (`Chart.yaml`, README, values plumbing the addon doesn't use) → ignore.
+
+If the delta is version-only (just `Chart.yaml`), there is nothing to port — record that in the PR description and the readme (as was the case for 2.19.1 → 2.20.0).
+
+### Phase 6 — Collect the upstream changelog (PR description)
 ```powershell
 gh api "repos/kubernetes/kube-state-metrics/compare/$CURRENT_UPSTREAM...$NEW_UPSTREAM" `
   --jq '{commits: .total_commits, files: (.files|length)}'
@@ -91,12 +124,12 @@ gh api "repos/kubernetes/kube-state-metrics/releases/tags/$NEW_UPSTREAM" --jq '.
 ```
 Keep the categorized `[CHANGE]/[FEATURE]/[ENHANCEMENT]/[BUGFIX]` list for the PR body. Call out any **cardinality / breaking** changes explicitly.
 
-### Phase 6 — Edit both files
+### Phase 7 — Edit both files
 - `.pipelines/azure-pipeline-build.yml`: set `KUBE_STATE_METRICS_IMAGE` to `mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:$NEW`.
 - `values-template.yaml`: set `ImageTag: "$NEW"` and update the comment line to
   `# Kube-state-metrics ImageTag - <upstream>, corresponds to chart version - $CHART`.
 
-### Phase 7 — Verify
+### Phase 8 — Verify
 ```powershell
 # new tag present in the two shipped files; old tag gone
 Select-String -Path .pipelines/azure-pipeline-build.yml,`
@@ -106,11 +139,11 @@ git --no-pager diff -- .pipelines/azure-pipeline-build.yml `
   otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml
 ```
 
-### Phase 8 — Docs, commit, PR
+### Phase 9 — Docs, commit, PR
 - Update `internal/docs/kube-state-metrics-upgrade.md` with the new before/after row and changelog.
 - Stage **only** the intended files (not developer overrides like `values-rashmi-operator-cfg.yaml`).
 - Suggested commit subject: `build(deps): Upgrade kube-state-metrics from <old> to <new>`.
-- Use the Phase 5 changelog as the PR description; include the dalec revision CVE patches and any breaking/cardinality notes.
+- Use the Phase 6 changelog as the PR description; include the dalec revision CVE patches and any breaking/cardinality notes.
 
 ## PR description template
 
@@ -144,4 +177,5 @@ Refs:
 - Only ship a version that **exists in MCR** with a dalec spec — never a raw upstream tag.
 - Always take the **highest dalec revision** for the chosen upstream version (revisions carry CVE fixes).
 - Keep the two tag references identical.
+- Diff the upstream chart's `role.yaml`/`deployment.yaml` across the app-version boundary (Phase 5) and port only **relevant** rules (RBAC for enabled collectors, required args/probes) into the addon's `ama-metrics-ksm-*.yaml`; ignore chart-only/packaging changes.
 - Leave local override files untouched.
