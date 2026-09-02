@@ -33,9 +33,12 @@ Exactly two committed files carry the tag (keep them in sync):
 | `.pipelines/azure-pipeline-build.yml` | `KUBE_STATE_METRICS_IMAGE` |
 | `otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml` | `KubeStateMetrics.ImageTag` + the `# ... corresponds to chart version` comment |
 
-When the upstream chart delta (Phase 5) requires it, also edit the addon KSM manifests:
-`templates/ama-metrics-ksm-role.yaml` (RBAC) and/or `templates/ama-metrics-ksm-deployment.yaml`
-(args/probes/ports).
+Always bump the `app.kubernetes.io/version` label to the new **upstream** version (no leading `v`,
+no dalec revision — e.g. `2.20.0`) in all five addon KSM manifests
+(`templates/ama-metrics-ksm-*.yaml`; the deployment carries it twice) — see Phase 7.
+
+When the upstream chart delta (Phase 5) also requires it, edit the addon KSM manifests'
+RBAC (`ama-metrics-ksm-role.yaml`) and/or the Deployment args/probes/ports (`ama-metrics-ksm-deployment.yaml`).
 
 Do **not** edit `values-rashmi-operator-cfg.yaml` (local developer override).
 
@@ -124,10 +127,20 @@ gh api "repos/kubernetes/kube-state-metrics/releases/tags/$NEW_UPSTREAM" --jq '.
 ```
 Keep the categorized `[CHANGE]/[FEATURE]/[ENHANCEMENT]/[BUGFIX]` list for the PR body. Call out any **cardinality / breaking** changes explicitly.
 
-### Phase 7 — Edit both files
+### Phase 7 — Edit the version references
 - `.pipelines/azure-pipeline-build.yml`: set `KUBE_STATE_METRICS_IMAGE` to `mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:$NEW`.
 - `values-template.yaml`: set `ImageTag: "$NEW"` and update the comment line to
   `# Kube-state-metrics ImageTag - <upstream>, corresponds to chart version - $CHART`.
+- `templates/ama-metrics-ksm-*.yaml`: bump the `app.kubernetes.io/version` label to the new **upstream** version (no leading `v`, no dalec revision — e.g. `2.20.0`) in all five manifests (the deployment carries it twice):
+
+```powershell
+$LABEL_OLD = '2.19.1'; $LABEL_NEW = '2.20.0'   # upstream versions, no leading v / dalec revision
+Get-ChildItem otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-ksm-*.yaml |
+  ForEach-Object {
+    (Get-Content $_ -Raw) -replace "app.kubernetes.io/version: $LABEL_OLD", "app.kubernetes.io/version: $LABEL_NEW" |
+      Set-Content $_ -NoNewline
+  }
+```
 
 ### Phase 8 — Verify
 ```powershell
@@ -135,8 +148,12 @@ Keep the categorized `[CHANGE]/[FEATURE]/[ENHANCEMENT]/[BUGFIX]` list for the PR
 Select-String -Path .pipelines/azure-pipeline-build.yml,`
   otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml `
   -Pattern ([regex]::Escape($NEW))
+# every manifest label bumped; no stale upstream version remains
+Select-String -Path otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-ksm-*.yaml `
+  -Pattern 'app.kubernetes.io/version'
 git --no-pager diff -- .pipelines/azure-pipeline-build.yml `
-  otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml
+  otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml `
+  otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates
 ```
 
 ### Phase 9 — Docs, commit, and open the PR (automated)

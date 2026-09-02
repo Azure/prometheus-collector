@@ -36,6 +36,13 @@ Two files reference the KSM image tag and must be kept in sync:
 | `.pipelines/azure-pipeline-build.yml` | `KUBE_STATE_METRICS_IMAGE` |
 | `otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml` | `KubeStateMetrics.ImageTag` (and the `# ... corresponds to chart version` comment above it) |
 
+In addition, the addon's hand-maintained KSM manifests carry an `app.kubernetes.io/version`
+label that should track the **upstream** version (no `v`, no dalec revision):
+
+| File | Field |
+|------|-------|
+| `otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/templates/ama-metrics-ksm-*.yaml` | `app.kubernetes.io/version` (e.g. `2.20.0`) — 5 manifests; the deployment carries it twice |
+
 > Note: `values-rashmi-operator-cfg.yaml` is a local developer override and is **not** part of the shipped tag; do not treat it as the source of truth.
 
 ## Upgrade procedure
@@ -49,7 +56,7 @@ Two files reference the KSM image tag and must be kept in sync:
    ```
    Pick the highest `v<version>-<revision>` tag (here: `v2.20.0-4`).
 4. **Map the upstream version to the prometheus-community Helm chart** version for the comment in `values-template.yaml` (see [helm-charts/charts/kube-state-metrics](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics) — `Chart.yaml` `appVersion`). KSM `2.20.0` first shipped in chart `8.4.0`.
-5. **Update both files** above to the new tag.
+5. **Update both files** above to the new tag, and bump the `app.kubernetes.io/version` label in the `ama-metrics-ksm-*.yaml` manifests to the new upstream version.
 6. **Collect the upstream changelog** (`git compare <old>...<new>`) for the PR description — see below.
 7. Open the PR; CI will build/push the addon image referencing the new KSM tag.
 
@@ -152,8 +159,9 @@ gh api "repos/prometheus-community/helm-charts/compare/kube-state-metrics-8.3.1.
 - `templates/deployment.yaml`, `service.yaml`, `serviceaccount.yaml`, etc.: **unchanged**.
 - No new required args, flags, probes, or ports.
 
-**Conclusion:** nothing needs to be ported into the addon's `ama-metrics-ksm-*.yaml`
-for 2.20.0; the only code change is the image tag (and the chart-version comment).
+**Conclusion:** no RBAC/args/probe changes need to be ported into the addon's `ama-metrics-ksm-*.yaml`
+for 2.20.0. The manifest change there is limited to the `app.kubernetes.io/version` label bump to
+`2.20.0`; the functional changes are the image tag and the chart-version comment.
 
 ### New 2.20.0 metrics vs. RBAC / collectors
 
