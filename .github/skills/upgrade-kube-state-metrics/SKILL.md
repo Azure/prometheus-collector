@@ -139,11 +139,28 @@ git --no-pager diff -- .pipelines/azure-pipeline-build.yml `
   otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml
 ```
 
-### Phase 9 — Docs, commit, PR
+### Phase 9 — Docs, commit, and open the PR (automated)
 - Update `internal/docs/kube-state-metrics-upgrade.md` with the new before/after row and changelog.
-- Stage **only** the intended files (not developer overrides like `values-rashmi-operator-cfg.yaml`).
-- Suggested commit subject: `build(deps): Upgrade kube-state-metrics from <old> to <new>`.
-- Use the Phase 6 changelog as the PR description; include the dalec revision CVE patches and any breaking/cardinality notes.
+- Stage **only** the intended files (not developer overrides like `values-rashmi-operator-cfg.yaml`) and commit with subject `build(deps): Upgrade kube-state-metrics from <old> to <new>` plus the required Copilot trailers.
+- Fill the PR-description template below with the Phase 6 changelog, the dalec `-<rev>` CVE patches, and the Phase 5 chart-delta finding, then push the branch and open the PR automatically:
+
+```powershell
+$branch = git rev-parse --abbrev-ref HEAD
+# write the filled-in PR description to a temp file (single-quoted here-string keeps the markdown intact)
+$body = @'
+<paste the filled-in PR-description template here>
+'@
+Set-Content -Path "$env:TEMP\ksm_pr_body.md" -Value $body -Encoding utf8
+
+git push -u origin $branch
+gh pr create --base main --head $branch `
+  --title "build(deps): Upgrade kube-state-metrics from <old> to <new>" `
+  --body-file "$env:TEMP\ksm_pr_body.md"
+gh pr view --web        # optional: open the new PR in a browser
+```
+
+- If a PR already exists for the branch, `gh pr create` errors — refresh its description instead with
+  `gh pr edit $branch --body-file "$env:TEMP\ksm_pr_body.md"`.
 
 ## PR description template
 
@@ -161,6 +178,9 @@ git --no-pager diff -- .pipelines/azure-pipeline-build.yml `
 #### Microsoft (dalec) build patches in revision <rev>
 <CVE/dependency replaces from the dalec spec changelog>
 
+#### Upstream Helm chart delta (chart <OLD_CHART> → <CHART>)
+<version-only, or the RBAC/args changes ported into the addon's ama-metrics-ksm-*.yaml>
+
 #### Impact / breaking notes
 <cardinality changes, new collectors to enable, etc.>
 
@@ -170,6 +190,7 @@ Refs:
 - Releases: https://github.com/kubernetes/kube-state-metrics/releases
 - Diff: https://github.com/kubernetes/kube-state-metrics/compare/<CURRENT_UPSTREAM>...<NEW_UPSTREAM>
 - Helm chart: https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics
+- Helm chart diff: https://github.com/prometheus-community/helm-charts/compare/kube-state-metrics-<OLD_CHART>...kube-state-metrics-<CHART>
 ```
 
 ## Guardrails
