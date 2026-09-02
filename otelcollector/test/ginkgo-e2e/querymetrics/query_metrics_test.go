@@ -34,25 +34,37 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				for _, sample := range vectorResult {
 					if string(sample.Metric["__name__"]) == metric {
 						found = true
-						break
 					}
 					if val, ok := sample.Metric["cluster"]; !ok || val == "" {
 						noClusterLabel = true
-						break
 					}
 					if val, ok := sample.Metric["job"]; !ok || val == "" {
 						noJobLabel = true
-						break
 					}
 					if val, ok := sample.Metric["instance"]; !ok || val == "" {
 						noInstanceLabel = true
-						break
 					}
 				}
 				Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
 				Expect(noClusterLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
 				Expect(noJobLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
 				Expect(noInstanceLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
+
+				if job == "windows-exporter" {
+					missingInstanceQuery := fmt.Sprintf(
+						"count by (instance) (up{job=\"%s\"} == 1) unless on (instance) count by (instance) (%s{job=\"%s\"})",
+						job,
+						metric,
+						job,
+					)
+					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, missingInstanceQuery)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(warnings).To(BeEmpty())
+
+					missingInstances, ok := result.(model.Vector)
+					Expect(ok).To(BeTrue(), "missing-instance query should return a vector for metric %s", metric)
+					Expect(missingInstances).To(BeEmpty(), "Metric %s is missing from one or more healthy Windows exporter instances: %s", metric, missingInstances)
+				}
 			}
 		},
 		Entry("default job 'cadvisor'", "cadvisor", []string{
