@@ -97,6 +97,7 @@ data:
       enabled = true
   prometheus-collector-settings: |-
     cluster_alias = ""
+    windowsexporter_port = "19182"
     debug-mode = false
     https_config = true
     secrets_access_namespaces = ""

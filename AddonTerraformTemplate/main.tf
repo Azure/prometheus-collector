@@ -557,7 +557,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
     enabled    = true
     record     = "node:windows_node:sum"
     expression = <<EOF
-count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"})
+count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"} or windows_system_boot_time_timestamp{job="windows-exporter"})
 EOF
   }
   rule {
@@ -585,7 +585,7 @@ EOF
     enabled    = true
     record     = ":windows_node_memory_utilisation:"
     expression = <<EOF
-1 -sum(windows_memory_available_bytes{job="windows-exporter"})/sum(windows_os_visible_memory_bytes{job="windows-exporter"})
+1 -sum(windows_memory_available_bytes{job="windows-exporter"})/sum(windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})
 EOF
   }
   rule {
@@ -606,7 +606,7 @@ EOF
     enabled    = true
     record     = ":windows_node_memory_MemTotal_bytes:sum"
     expression = <<EOF
-sum(windows_os_visible_memory_bytes{job="windows-exporter"})
+sum(windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})
 EOF
   }
   rule {
@@ -620,7 +620,7 @@ EOF
     enabled    = true
     record     = "node:windows_node_memory_bytes_total:sum"
     expression = <<EOF
-sum by (instance) (windows_os_visible_memory_bytes{job="windows-exporter"})
+sum by (instance) (windows_os_visible_memory_bytes{job="windows-exporter"} or windows_memory_physical_total_bytes{job="windows-exporter"})
 EOF
   }
   rule {
@@ -953,7 +953,7 @@ EOF
 
   rule {
     record     = "ux:node_memory_usage_windows:sum"
-    expression = "sum by (instance, cluster, microsoft_resourceid) ((windows_os_visible_memory_bytes{job = \"windows-exporter\"}- windows_memory_available_bytes{job = \"windows-exporter\"}))"
+    expression = "sum by (instance, cluster, microsoft_resourceid) (((windows_os_visible_memory_bytes{job = \"windows-exporter\"} or windows_memory_physical_total_bytes{job = \"windows-exporter\"})- windows_memory_available_bytes{job = \"windows-exporter\"}))"
   }
 
   rule {
@@ -966,4 +966,3 @@ EOF
     expression = "sum by (instance, cluster, microsoft_resourceid) (irate(windows_net_packets_outbound_discarded_total{job=\"windows-exporter\", device!=\"lo\"}[5m]))"
   }
 }
-  

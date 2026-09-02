@@ -65,6 +65,21 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		}
 	}
 
+	// Populate the Windows exporter port. Invalid values retain the AKS-native default.
+	if cp.WindowsExporterPort == "" {
+		cp.WindowsExporterPort = windowsExporterDefaultPort
+	}
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["windowsexporter_port"]; ok {
+			if port, valid := normalizeWindowsExporterPort(value); valid {
+				cp.WindowsExporterPort = port
+				log.Printf("Using configmap setting for windowsexporter_port: %s\n", cp.WindowsExporterPort)
+			} else {
+				log.Printf("Ignoring invalid configmap setting for windowsexporter_port: %q\n", value)
+			}
+		}
+	}
+
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
@@ -102,6 +117,9 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	if len(configParser.SecretsAccessNamespaces) > 0 {
 		file.WriteString(fmt.Sprintf("AZMON_SECRETS_ACCESS_NAMESPACES=%s\n", strings.Join(configParser.SecretsAccessNamespaces, ",")))
+	}
+	if configParser.WindowsExporterPort != "" {
+		file.WriteString(fmt.Sprintf("%s=%s\n", windowsExporterPortEnv, configParser.WindowsExporterPort))
 	}
 	return nil
 }
@@ -150,8 +168,11 @@ func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]str
 	}
 
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
-		ConfigParser:   &ConfigProcessor{TargetallocatorHttpsEnabled: operatorHttpsEnabled},
+		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
+		ConfigParser: &ConfigProcessor{
+			TargetallocatorHttpsEnabled: operatorHttpsEnabled,
+			WindowsExporterPort:         windowsExporterDefaultPort,
+		},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}

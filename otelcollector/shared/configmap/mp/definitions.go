@@ -106,6 +106,7 @@ type ConfigProcessor struct {
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
 	SecretsAccessNamespaces                 []string
+	WindowsExporterPort                     string
 
 	Kubelet                    string
 	Coredns                    string

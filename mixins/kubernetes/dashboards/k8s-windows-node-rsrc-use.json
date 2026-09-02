@@ -198,7 +198,7 @@
                   "type": "prometheus",
                   "uid": "${datasource}"
                },
-               "expr": "max(\n  windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n  - windows_memory_available_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n)\n",
+               "expr": "max(\n  (windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"} or windows_memory_physical_total_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"})\n  - windows_memory_available_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n)\n",
                "legendFormat": "memory used"
             },
             {
