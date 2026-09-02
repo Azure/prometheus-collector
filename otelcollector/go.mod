@@ -1,8 +1,6 @@
 module prometheus-collector
 
-go 1.23.0
-
-toolchain go1.23.8
+go 1.25.0
 
 replace github.com/prometheus-collector/shared => ./shared
 
@@ -36,9 +34,9 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
