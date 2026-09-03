@@ -4,7 +4,6 @@ package shared
 
 import (
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -43,22 +42,31 @@ func TestSetEnvAndSourceBashrcOrPowershell_ValidInput(t *testing.T) {
 // TestSetEnvAndSourceBashrcOrPowershell_RejectsInvalidKeys ensures malformed names are not
 // set. The "export " case is the shape the old prom-config-validator file produced.
 func TestSetEnvAndSourceBashrcOrPowershell_RejectsInvalidKeys(t *testing.T) {
-	keys := []string{
-		"",
-		"export AZMON_TEST",
-		"AZMON TEST",
-		"1AZMON_TEST",
-		"AZMON-TEST",
-		"AZMON.TEST",
+	cases := []struct {
+		name string
+		key  string
+	}{
+		{"empty", ""},
+		{"export prefix", "export AZMON_TEST"},
+		{"embedded space", "AZMON TEST"},
+		{"leading digit", "1AZMON_TEST"},
+		{"hyphen", "AZMON-TEST"},
+		{"dot", "AZMON.TEST"},
 	}
 
-	for _, key := range keys {
-		t.Run(key, func(t *testing.T) {
-			if err := SetEnvAndSourceBashrcOrPowershell(key, "value", false); err == nil {
-				t.Errorf("expected error for key %q, got nil", key)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// LookupEnv distinguishes "set to empty" from "not set", so the assertion holds
+			// even if something in the environment already uses this name.
+			if _, present := os.LookupEnv(tc.key); present {
+				t.Skipf("key %q already present in the environment", tc.key)
 			}
-			if key != "" && os.Getenv(key) != "" {
-				t.Errorf("key %q should not have been set", key)
+
+			if err := SetEnvAndSourceBashrcOrPowershell(tc.key, "value", false); err == nil {
+				t.Errorf("expected error for key %q, got nil", tc.key)
+			}
+			if _, present := os.LookupEnv(tc.key); present {
+				t.Errorf("key %q should not have been set", tc.key)
 			}
 		})
 	}
@@ -68,25 +76,29 @@ func TestSetEnvAndSourceBashrcOrPowershell_RejectsInvalidKeys(t *testing.T) {
 // otherwise add extra lines to the configmapparser env files, which are parsed line by
 // line and would therefore be read back as additional key=value pairs.
 func TestSetEnvAndSourceBashrcOrPowershell_RejectsControlCharacters(t *testing.T) {
-	values := []string{
-		"value\nAZMON_INJECTED=true",
-		"value\rAZMON_INJECTED=true",
-		"value\x00trailing",
+	cases := []struct {
+		name  string
+		value string
+	}{
+		{"newline", "value\nAZMON_INJECTED=true"},
+		{"carriage return", "value\rAZMON_INJECTED=true"},
+		{"nul byte", "value\x00trailing"},
 	}
 
-	for _, value := range values {
-		t.Run(strings.ReplaceAll(value, "\x00", "NUL"), func(t *testing.T) {
-			key := "AZMON_TEST_CONTROL"
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			const key = "AZMON_TEST_CONTROL"
+			const injected = "AZMON_INJECTED"
 			defer os.Unsetenv(key)
 
-			if err := SetEnvAndSourceBashrcOrPowershell(key, value, false); err == nil {
+			if err := SetEnvAndSourceBashrcOrPowershell(key, tc.value, false); err == nil {
 				t.Error("expected error for value containing control characters, got nil")
 			}
-			if os.Getenv(key) != "" {
+			if _, present := os.LookupEnv(key); present {
 				t.Error("value with control characters should not have been set")
 			}
-			if os.Getenv("AZMON_INJECTED") != "" {
-				t.Error("a second variable must never be created from one value")
+			if _, present := os.LookupEnv(injected); present {
+				t.Errorf("a second variable (%s) must never be created from one value", injected)
 			}
 		})
 	}

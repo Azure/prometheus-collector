@@ -45,18 +45,19 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	// Write env var to a file so it can be used by other processes
 	file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
+		log.Printf("prom-config-validator::Unable to open file - prom_config_validator_env_var: %v", err)
+		return
 	}
+	defer file.Close()
+
 	// This file is parsed as KEY=value by shared.SetEnvVarsFromFile, not sourced by a shell.
 	// The former "export KEY=\"value\"" form on Linux meant the variable was set under the
 	// name `export INVALID_CONFIG_FATAL_ERROR`, so os.Getenv("INVALID_CONFIG_FATAL_ERROR")
 	// in prometheus_collector_health.go never saw it.
 	setEnvVarString := fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
-	_, err = file.Write([]byte(setEnvVarString))
-	if err != nil {
-		log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
+	if _, err := file.Write([]byte(setEnvVarString)); err != nil {
+		log.Printf("prom-config-validator::Unable to write to the file prom_config_validator_env_var: %v", err)
 	}
-	file.Close()
 }
 
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
