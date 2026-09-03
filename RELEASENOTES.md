@@ -1,5 +1,34 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 09-03-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-03-2026-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-03-2026-<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-03-2026-<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-03-2026-<TBD>-cfg`
+* AKS and Arc Container Images :
+  + build(deps): bump github.com/shirou/gopsutil/v4 from 4.26.6 to 4.26.7 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1674)
+  + build(deps): bump go.opentelemetry.io/otel/sdk from 1.44.0 to 1.45.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1673)
+  + build(deps): bump go.opentelemetry.io/otel/sdk/metric from 1.44.0 to 1.45.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1672)
+  + feat: support azureMonitorProfile.metrics.controlPlane.enabled in onboarding templates (ARM/Bicep/Terraform/Policy) (https://github.com/Azure/prometheus-collector/pull/1590)
+  + build(deps): Upgrade otelcollector to v0.158.0 (https://github.com/Azure/prometheus-collector/pull/1685)
+  + build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc from 1.42.0 to 1.46.0 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1700)
+  + fix: correct minimal ingestion profile keep-list for recommended alerts and docs (https://github.com/Azure/prometheus-collector/pull/1659)
+  + build(deps): Upgrade kube-state-metrics from v2.19.1-2 to v2.20.0-4 (https://github.com/Azure/prometheus-collector/pull/1706)
+  + build(deps): bump k8s.io/client-go from 0.36.3 to 0.37.0 in /otelcollector/fluent-bit/src (https://github.com/Azure/prometheus-collector/pull/1709)
+  + build(deps): bump google.golang.org/grpc from 1.83.1 to 1.83.2 in /internal/referenceapp/golang (https://github.com/Azure/prometheus-collector/pull/1708)
+
+* Pipeline/Docs/Templates Updates:
+  + Update azure-pipeline-arc-extension-managed-ev2-sdp.yml for Azure Pipelines (https://github.com/Azure/prometheus-collector/pull/1669)
+  + Add all couds to the ev2 pipelines (https://github.com/Azure/prometheus-collector/pull/1676)
+  + Update remote write release notes for prom-remotewrite-20260813.1 (https://github.com/Azure/prometheus-collector/pull/1679)
+  + test: Send TestKube notifications via Azure Logic App webhook (https://github.com/Azure/prometheus-collector/pull/1641)
+  + Add USNat and USSec to ev2 rollout (https://github.com/Azure/prometheus-collector/pull/1689)
+  + Update remote write release notes for prom-remotewrite-20260825.2 (https://github.com/Azure/prometheus-collector/pull/1695)
+  + build(deps): bump brace-expansion from 1.1.11 to 1.1.18 in /tools/az-prom-rules-converter (https://github.com/Azure/prometheus-collector/pull/1693)
+  + build(deps): bump github.com/gorilla/websocket from 1.5.0 to 1.5.3 in /otelcollector/test/ginkgo-e2e/utils (https://github.com/Azure/prometheus-collector/pull/1691)
+  + build(deps): bump google.golang.org/grpc from 1.82.1 to 1.83.1 in /otelcollector/test/ginkgo-e2e/prometheusui (https://github.com/Azure/prometheus-collector/pull/1702)
+  + build(deps): bump google.golang.org/grpc from 1.82.1 to 1.83.1 in /otelcollector/test/ginkgo-e2e/configprocessing (https://github.com/Azure/prometheus-collector/pull/1712)
+
 ## Release 08-10-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.3.0-main-08-10-2026-<TBD>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.3.0-main-08-10-2026-<TBD>-win`
