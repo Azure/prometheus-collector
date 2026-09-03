@@ -11,6 +11,7 @@ data:
     ver1
   prometheus-collector-settings: |-
     cluster_alias = ""
+    windowsexporter_port = "19182"
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = true
@@ -49,4 +50,3 @@ data:
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system
-

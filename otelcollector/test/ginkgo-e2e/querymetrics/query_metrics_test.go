@@ -34,25 +34,37 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				for _, sample := range vectorResult {
 					if string(sample.Metric["__name__"]) == metric {
 						found = true
-						break
 					}
 					if val, ok := sample.Metric["cluster"]; !ok || val == "" {
 						noClusterLabel = true
-						break
 					}
 					if val, ok := sample.Metric["job"]; !ok || val == "" {
 						noJobLabel = true
-						break
 					}
 					if val, ok := sample.Metric["instance"]; !ok || val == "" {
 						noInstanceLabel = true
-						break
 					}
 				}
 				Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
 				Expect(noClusterLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
 				Expect(noJobLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
 				Expect(noInstanceLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
+
+				if job == "windows-exporter" {
+					missingInstanceQuery := fmt.Sprintf(
+						"count by (instance) (up{job=\"%s\"} == 1) unless on (instance) count by (instance) (%s{job=\"%s\"})",
+						job,
+						metric,
+						job,
+					)
+					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, missingInstanceQuery)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(warnings).To(BeEmpty())
+
+					missingInstances, ok := result.(model.Vector)
+					Expect(ok).To(BeTrue(), "missing-instance query should return a vector for metric %s", metric)
+					Expect(missingInstances).To(BeEmpty(), "Metric %s is missing from one or more healthy Windows exporter instances: %s", metric, missingInstances)
+				}
 			}
 		},
 		Entry("default job 'cadvisor'", "cadvisor", []string{
@@ -163,6 +175,31 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"node_time_seconds",
 			"node_uname_info",
 		}),
+		Entry("AKS native Windows exporter contract", "windows-exporter", []string{
+			"windows_system_boot_time_timestamp",
+			"windows_cpu_time_total",
+			"windows_memory_available_bytes",
+			"windows_memory_physical_total_bytes",
+			"windows_memory_cache_bytes",
+			"windows_memory_modified_page_list_bytes",
+			"windows_memory_standby_cache_core_bytes",
+			"windows_memory_standby_cache_normal_priority_bytes",
+			"windows_memory_standby_cache_reserve_bytes",
+			"windows_memory_swap_page_operations_total",
+			"windows_logical_disk_read_seconds_total",
+			"windows_logical_disk_write_seconds_total",
+			"windows_logical_disk_size_bytes",
+			"windows_logical_disk_free_bytes",
+			"windows_net_bytes_total",
+			"windows_net_packets_received_discarded_total",
+			"windows_net_packets_outbound_discarded_total",
+			"windows_container_available",
+			"windows_container_cpu_usage_seconds_total",
+			"windows_container_memory_usage_commit_bytes",
+			"windows_container_memory_usage_private_working_set_bytes",
+			"windows_container_network_receive_bytes_total",
+			"windows_container_network_transmit_bytes_total",
+		}, Label(utils.WindowsLabel)),
 		Entry("job 'kube-state-metrics' (job=kube-state-metrics)", "kube-state-metrics", []string{
 			// "kube_job_status_succeeded",
 			// "kube_job_spec_completions",
@@ -306,6 +343,9 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		Entry("External labels are applied from Windows DaemonSet Configmap", "windows-node-configmap", "up", map[string]string{
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
+		}, Label(utils.WindowsLabel)),
+		Entry("Windows exporter container metrics include container IDs", "windows-exporter", "windows_container_cpu_usage_seconds_total", map[string]string{
+			"container_id": ".+",
 		}, Label(utils.WindowsLabel)),
 	)
 

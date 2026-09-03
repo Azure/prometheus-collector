@@ -673,6 +673,7 @@ func populateDefaultPrometheusConfig() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				contents = configureWindowsExporterTarget(contents)
 				err = os.WriteFile(windowsExporterDefaultRsSimpleFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultRsSimpleFile)
@@ -688,6 +689,7 @@ func populateDefaultPrometheusConfig() {
 			contents, err := os.ReadFile(windowsExporterDefaultDsFile)
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = configureWindowsExporterTarget(contents)
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
 				err = os.WriteFile(windowsExporterDefaultDsFile, contents, 0644)
 				if err == nil {
@@ -1246,6 +1248,7 @@ func populateDefaultPrometheusConfigWithOperator() {
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+				contents = configureWindowsExporterTarget(contents)
 				err = os.WriteFile(windowsExporterDefaultRsSimpleFile, contents, 0644)
 				if err == nil {
 					defaultConfigs = append(defaultConfigs, windowsExporterDefaultRsSimpleFile)
@@ -1261,6 +1264,7 @@ func populateDefaultPrometheusConfigWithOperator() {
 			contents, err := os.ReadFile(windowsExporterDefaultDsFile)
 			if err == nil {
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+				contents = configureWindowsExporterTarget(contents)
 				contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
 				err = os.WriteFile(windowsExporterDefaultDsFile, contents, 0644)
 				if err == nil {

@@ -293,7 +293,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "max(\n  windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n  - windows_memory_available_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n)\n",
+                     "expr": "max(\n  (windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"} or windows_memory_physical_total_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"})\n  - windows_memory_available_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n)\n",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "memory used",
@@ -909,7 +909,7 @@
             "multi": false,
             "name": "instance",
             "options": [ ],
-            "query": "label_values(windows_system_boot_time_timestamp_seconds, instance)",
+            "query": "label_values({__name__=~\"windows_system_boot_time_timestamp_seconds|windows_system_boot_time_timestamp\"}, instance)",
             "refresh": 2,
             "regex": "",
             "sort": 1,

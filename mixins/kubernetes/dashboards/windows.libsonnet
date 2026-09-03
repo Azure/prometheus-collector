@@ -68,7 +68,7 @@ local var = g.dashboard.variable;
       + var.query.withDatasourceFromVariable(self.datasource)
       + var.query.queryTypes.withLabelValues(
         'instance',
-         'up{%(windowsExporterSelector)s, %(clusterLabel)s="$cluster"}' % $._config,
+        'up{%(windowsExporterSelector)s, %(clusterLabel)s="$cluster"}' % $._config,
       )
       + var.query.generalOptions.withLabel('instance')
       + var.query.refresh.onTime()
@@ -979,7 +979,7 @@ local var = g.dashboard.variable;
             '${datasource}',
             |||
               max(
-                windows_os_visible_memory_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"}
+                (windows_os_visible_memory_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"} or windows_memory_physical_total_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"})
                 - windows_memory_available_bytes{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, instance="$instance"}
               )
             ||| % $._config

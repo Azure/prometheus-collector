@@ -499,7 +499,7 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
-              value: "19100"
+              value: "19182"
             {{- if $.Values.AzureMonitorMetrics }}
               {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
@@ -624,4 +624,3 @@ spec:
             path: C:\ca
       {{- end }}
 {{- end }}
-
