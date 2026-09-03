@@ -234,6 +234,13 @@ Use this category when a PR affects any shipped artifact or its runtime behavior
 - Dockerfiles, base images, packaging, or image build inputs
 - Scraping, ingestion, authentication, networking, telemetry, or runtime bug fixes
 
+**All dependency updates belong in this category.** Any PR whose title begins with
+`build(deps):` or `build(deps-dev):`, or that is otherwise a dependency bump, is listed
+here regardless of which module or directory it touches. This includes bumps confined to
+test modules such as `otelcollector/test/ginkgo-e2e/*`, to `internal/referenceapp/*`, and
+to repository tooling such as `tools/az-prom-rules-converter`. Do not split dependency
+updates across the two categories based on whether the module ships in an image.
+
 ### Pipeline/Docs/Templates Updates
 
 Use this category when a PR affects only:
@@ -242,6 +249,9 @@ Use this category when a PR affects only:
 - Tests that do not alter a shipped image
 - Documentation or release notes
 - Repository automation, tools, templates, or skills
+
+Never place a dependency update here, even when it only touches pipeline, test, tooling,
+or documentation modules.
 
 If a PR affects both categories, list it once under **AKS and Arc Container Images**. Use the PR title as the entry text unless it is unclear; make only a minimal clarification based on the PR body and diff.
 
