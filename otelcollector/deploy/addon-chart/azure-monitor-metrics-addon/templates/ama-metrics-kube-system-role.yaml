@@ -1,0 +1,20 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ama-metrics-kube-system-secrets
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
+    verbs: ["get", "watch"]
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["ama-metrics-operator-targets-client-tls-secret", "ama-metrics-operator-targets-server-tls-secret"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+{{- end }}
