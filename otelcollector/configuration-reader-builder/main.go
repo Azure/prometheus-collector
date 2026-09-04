@@ -22,7 +22,6 @@ import (
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/kubernetes"
@@ -433,22 +432,17 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 		return err
 	}
 
-	// Create or update the secret in the kube-system namespace
-	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	// The secret is pre-created (empty) by the Helm chart, so only `update` on a fixed name is
+	// needed here. It is deliberately not created by this code: a bare `secrets: create` grant
+	// cannot be constrained by resourceNames, which would let a holder of this service account's
+	// token mint a ServiceAccount-token Secret under a name this account can also read.
+	_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-			if err != nil {
-				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
-				return err
-			}
-		} else {
-			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
-			return err
-		}
+		log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
+		return err
 	}
 
-	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
+	log.Printf("Secret %s updated successfully in namespace %s", secretName, namespace)
 	return nil
 }
 
@@ -488,22 +482,17 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 		return err
 	}
 
-	// Create or update the secret in the kube-system namespace
-	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	// The secret is pre-created (empty) by the Helm chart, so only `update` on a fixed name is
+	// needed here. It is deliberately not created by this code: a bare `secrets: create` grant
+	// cannot be constrained by resourceNames, which would let a holder of this service account's
+	// token mint a ServiceAccount-token Secret under a name this account can also read.
+	_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-			if err != nil {
-				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
-				return err
-			}
-		} else {
-			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
-			return err
-		}
+		log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
+		return err
 	}
 
-	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
+	log.Printf("Secret %s updated successfully in namespace %s", secretName, namespace)
 	return nil
 }
 
