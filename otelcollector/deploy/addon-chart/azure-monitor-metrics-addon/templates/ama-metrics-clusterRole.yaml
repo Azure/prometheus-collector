@@ -34,13 +34,15 @@ rules:
     verbs: ["get", "list", "watch"]
 {{- end }}
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+  # These two secrets are pre-created by ama-metrics-operator-targets-tls-secrets.yaml so that
+  # the config-reader can populate them with `update` on a fixed name. Do not add a bare
+  # `secrets: create` rule here: RBAC cannot constrain `create` by resourceNames, so it would
+  # let a holder of this service account's token mint a ServiceAccount-token Secret under a
+  # name this same account is allowed to read.
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["ama-metrics-operator-targets-client-tls-secret", "ama-metrics-operator-targets-server-tls-secret"]
     verbs: ["get", "update"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["create"]
 {{- end }}
   - apiGroups: [""]
     resources: ["events"]
