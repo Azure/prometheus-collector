@@ -227,55 +227,68 @@ func hasConfigChanged(filePath string) bool {
 	return false
 }
 
-func taHealthHandler(w http.ResponseWriter, r *http.Request) {
+// taHealthCheck probes the targetallocator's metrics endpoint and returns the
+// HTTP status and message the liveness handler should serve. A nil response
+// (connection refused/timeout) or a non-200 status is treated as unhealthy and
+// mapped to 503, so the liveness probe fails when the targetallocator is down.
+func taHealthCheck(targetURL string) (int, string) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
 	client := &http.Client{Timeout: time.Duration(2) * time.Second}
 
-	req, err := http.NewRequest("GET", "http://localhost:8080/metrics", nil)
-	if err == nil {
-		resp, _ := client.Do(req)
-		if resp != nil && resp.StatusCode == http.StatusOK {
-			if taConfigUpdated {
-				if !taLivenessStartTime.IsZero() {
-					duration := time.Since(taLivenessStartTime)
-					// Serve the response of ServiceUnavailable for 60s and then reset
-					if duration.Seconds() < 60 {
-						status = http.StatusServiceUnavailable
-						message += "targetallocator-config changed"
-					} else {
-						taConfigUpdated = false
-						taLivenessStartTime = time.Time{}
-					}
-				}
-			}
-
-			if hasConfigChanged("/opt/inotifyoutput-ta-server-cert-secret.txt") {
-				status = http.StatusServiceUnavailable
-				message = "\ninotifyoutput-ta-server-cert-secret.txt has been updated"
-				// Resetting contents of inotifyoutput-ta-server-cert-secret.txt file after detecting changes to secret
-				if err := os.WriteFile("/opt/inotifyoutput-ta-server-cert-secret.txt", []byte{}, 0644); err != nil {
-					log.Printf("Error clearing inotifyoutput-ta-server-cert-secret.txt: %v", err)
-				}
-			}
-
-			if status != http.StatusOK {
-				fmt.Printf(message)
-			}
-			w.WriteHeader(status)
-			fmt.Fprintln(w, message)
-		}
-		if resp != nil && resp.Body != nil {
-			defer resp.Body.Close()
-		}
-	} else {
-		message = "\ncall to get TA metrics failed"
-		status = http.StatusServiceUnavailable
-		fmt.Printf(message)
-		w.WriteHeader(status)
-		fmt.Fprintln(w, message)
+	req, err := http.NewRequest("GET", targetURL, nil)
+	if err != nil {
+		return http.StatusServiceUnavailable, "\ncall to get TA metrics failed"
 	}
+
+	resp, doErr := client.Do(req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	// A nil response (connection refused/timeout) or a non-200 status means the
+	// targetallocator is not reachable/healthy. Fail the probe explicitly here;
+	// otherwise net/http returns an implicit 200 with an empty body when nothing
+	// is written, which would let the liveness probe (and e2e checks) pass while
+	// the targetallocator is down.
+	if doErr != nil || resp == nil || resp.StatusCode != http.StatusOK {
+		return http.StatusServiceUnavailable, "\ntargetallocator is not reachable"
+	}
+
+	if taConfigUpdated {
+		if !taLivenessStartTime.IsZero() {
+			duration := time.Since(taLivenessStartTime)
+			// Serve the response of ServiceUnavailable for 60s and then reset
+			if duration.Seconds() < 60 {
+				status = http.StatusServiceUnavailable
+				message += "targetallocator-config changed"
+			} else {
+				taConfigUpdated = false
+				taLivenessStartTime = time.Time{}
+			}
+		}
+	}
+
+	if hasConfigChanged("/opt/inotifyoutput-ta-server-cert-secret.txt") {
+		status = http.StatusServiceUnavailable
+		message = "\ninotifyoutput-ta-server-cert-secret.txt has been updated"
+		// Resetting contents of inotifyoutput-ta-server-cert-secret.txt file after detecting changes to secret
+		if err := os.WriteFile("/opt/inotifyoutput-ta-server-cert-secret.txt", []byte{}, 0644); err != nil {
+			log.Printf("Error clearing inotifyoutput-ta-server-cert-secret.txt: %v", err)
+		}
+	}
+
+	return status, message
+}
+
+func taHealthHandler(w http.ResponseWriter, r *http.Request) {
+	status, message := taHealthCheck("http://localhost:8080/metrics")
+	if status != http.StatusOK {
+		fmt.Print(message)
+	}
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
 }
 
 func writeTerminationLog(message string) {
