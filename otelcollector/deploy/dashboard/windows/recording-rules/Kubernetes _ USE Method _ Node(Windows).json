@@ -909,7 +909,7 @@
             "multi": false,
             "name": "instance",
             "options": [ ],
-            "query": "label_values({__name__=~\"windows_system_boot_time_timestamp_seconds|windows_system_boot_time_timestamp\"}, instance)",
+            "query": "label_values(up{job=\"windows-exporter\"}, instance)",
             "refresh": 2,
             "regex": "",
             "sort": 1,

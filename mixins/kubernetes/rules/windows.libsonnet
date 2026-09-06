@@ -12,6 +12,8 @@
                 windows_system_boot_time_timestamp_seconds{%(windowsExporterSelector)s}
                 or
                 windows_system_boot_time_timestamp{%(windowsExporterSelector)s}
+                or
+                windows_system_system_up_time{%(windowsExporterSelector)s}
               )
             ||| % $._config,
           },

@@ -188,6 +188,8 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"windows_memory_swap_page_operations_total",
 			"windows_logical_disk_read_seconds_total",
 			"windows_logical_disk_write_seconds_total",
+			"windows_logical_disk_read_bytes_total",
+			"windows_logical_disk_write_bytes_total",
 			"windows_logical_disk_size_bytes",
 			"windows_logical_disk_free_bytes",
 			"windows_net_bytes_total",
