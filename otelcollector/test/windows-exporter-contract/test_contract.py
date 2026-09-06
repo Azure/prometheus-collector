@@ -158,6 +158,30 @@ class WindowsContract(unittest.TestCase):
                                                     {"labels": '{instance="win25"}', "value": 1}]}]})
         self.evaluate(tests)
 
+    def test_health_alert_detects_down_and_undiscovered_windows_nodes(self):
+        template = json.loads((ROOT / "otelcollector/test/ci-cd/ci-cd-cluster.json").read_text())
+        alert = next(o for o in objects(template) if "up metric missing for target = windows-exporter" in o.get("alert", ""))
+        source = (ROOT / "otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go").read_text()
+        inventory = re.search(r'const windowsExporterExpectedNodesQuery = `([^`]+)`', source)[1]
+        suffix = re.search(r'const windowsExporterMissingTargetsQuery = windowsExporterExpectedNodesQuery \+ `([^`]+)`', source)[1]
+        ginkgo_query = inventory + suffix
+        self.assertIn(ginkgo_query, alert["expression"])
+        tests = []
+        for state in ["healthy", "down", "undiscovered"]:
+            inputs = [sample("up", "win22")]
+            if state != "undiscovered":
+                inputs.append(sample("up", "win25", value=1 if state == "healthy" else 0))
+            inputs += [{"series": f'kube_node_info{{job="kube-state-metrics",node="{node}",os_image="Windows Server {version} Datacenter"}}',
+                        "values": "1+0x90"} for node, version in [("win22", "2022"), ("win25", "2025")]]
+            inputs.append({"series": 'kube_node_info{job="kube-state-metrics",node="linux",os_image="Ubuntu 24.04.4 LTS"}',
+                           "values": "1+0x90"})
+            tests.append({"name": f"Windows 2025 exporter {state}", "interval": "1m", "input_series": inputs,
+                          "promql_expr_test": [{"expr": expression, "eval_time": "5m",
+                                                "exp_samples": [] if state == "healthy" else [
+                                                    {"labels": '{instance="win25"}', "value": 1}]}
+                                               for expression in [alert["expression"], ginkgo_query]]})
+        self.evaluate(tests)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)

@@ -12,7 +12,26 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 )
 
+const windowsExporterExpectedNodesQuery = `count by (instance) (label_replace(kube_node_info{job="kube-state-metrics",os_image=~"Windows.*"}, "instance", "$1", "node", "(.*)"))`
+const windowsExporterMissingTargetsQuery = windowsExporterExpectedNodesQuery + ` unless on (instance) count by (instance) (up{job="windows-exporter"} == 1)`
+
 var _ = Describe("Query Metrics Test Suite", func() {
+
+	It("scrapes every Windows node", Label(utils.WindowsLabel), func() {
+		warnings, result, err := utils.InstantQuery(PrometheusQueryClient, windowsExporterExpectedNodesQuery)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(warnings).To(BeEmpty())
+		nodes, ok := result.(model.Vector)
+		Expect(ok).To(BeTrue(), "Windows node inventory should return a vector")
+		Expect(nodes).NotTo(BeEmpty(), "Windows exporter validation requires Windows nodes in kube-state-metrics")
+
+		warnings, result, err = utils.InstantQuery(PrometheusQueryClient, windowsExporterMissingTargetsQuery)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(warnings).To(BeEmpty())
+		missingNodes, ok := result.(model.Vector)
+		Expect(ok).To(BeTrue(), "Windows exporter health query should return a vector")
+		Expect(missingNodes).To(BeEmpty(), "Windows nodes have down or undiscovered exporter targets: %s", missingNodes)
+	})
 
 	DescribeTable("should return the expected results for specified Prometheus metrics in each job",
 		func(job string, expectedMetrics []string) {

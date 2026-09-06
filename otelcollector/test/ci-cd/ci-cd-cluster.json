@@ -888,8 +888,8 @@
               },
               {
                   "alert": "[Concat('up metric missing for target = windows-exporter in cluster', parameters('clusterName'))]",
-                  "expression": "absent_over_time(up{job=\"windows-exporter\"}[30m]) == 1 or count(up{job=\"windows-exporter\"} == 1) == 0",
-                  "for": "PT30M",
+                  "expression": "(count by (instance) (label_replace(kube_node_info{job=\"kube-state-metrics\",os_image=~\"Windows.*\"}, \"instance\", \"$1\", \"node\", \"(.*)\")) unless on (instance) count by (instance) (up{job=\"windows-exporter\"} == 1)) or (absent_over_time(up{job=\"windows-exporter\"}[30m]) == 1 or count(up{job=\"windows-exporter\"} == 1) == 0)",
+                  "for": "PT1H",
                   "annotations": {
                       "description": "[Concat('up metric missing for target = windows-exporter in cluster', parameters('clusterName'))]"
                   },
