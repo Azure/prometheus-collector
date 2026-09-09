@@ -414,6 +414,7 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
+			Labels:    operatorTargetsTLSSecretLabels(),
 		},
 		Data: secretData,
 		Type: corev1.SecretTypeOpaque,
@@ -446,6 +447,16 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 	return nil
 }
 
+// operatorTargetsTLSSecretLabels returns the labels the chart stamps on the operator-targets
+// mTLS secrets. Update replaces the whole object, so they have to be resent on every write or
+// they would be dropped the first time the certificates are generated.
+func operatorTargetsTLSSecretLabels() map[string]string {
+	return map[string]string{
+		"component":                      "ama-metrics-operator-targets",
+		"kubernetes.azure.com/managedby": "aks",
+	}
+}
+
 func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string, caCertPem string) error {
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
@@ -464,6 +475,7 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
+			Labels:    operatorTargetsTLSSecretLabels(),
 		},
 		Data: secretData,
 		Type: corev1.SecretTypeOpaque,
