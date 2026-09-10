@@ -18,7 +18,7 @@ func IsProcessRunning(processName string) bool {
 	pid := os.Getpid()
 	processes, err := os.ReadDir("/proc")
 	if err != nil {
-		log.Printf("Error:", err)
+		log.Printf("Error: %v", err)
 		return false
 	}
 

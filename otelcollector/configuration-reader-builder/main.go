@@ -328,7 +328,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
-		fmt.Printf(message)
+		fmt.Print(message)
 		writeTerminationLog(message)
 	}
 }
@@ -350,7 +350,7 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 	caCert, caCertPem, caKey, caKeyPem, err := co.CreateSelfSignedCertificateKeyPair(caCSR)
 
 	if err != nil {
-		log.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
+		log.Printf("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
 		return nil, "", nil, "", err
 	}
 	log.Println("CA certificate is generated successfully.")
@@ -379,7 +379,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 
 	serverCertPem, serverKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
-		log.Println("CreateCertificateKeyPair for targetallocator failed: %s", rerr)
+		log.Printf("CreateCertificateKeyPair for targetallocator failed: %s", rerr)
 		return "", "", rerr
 	}
 	log.Println("Server certificate is generated successfully")
@@ -403,7 +403,7 @@ func createClientCertificate(co certOperator.CertOperator, caCert *x509.Certific
 
 	clientCertPem, clientKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
-		log.Println("CreateCertificateKeyPair for replicaset client failed: %s", rerr)
+		log.Printf("CreateCertificateKeyPair for replicaset client failed: %s", rerr)
 		return "", "", rerr
 	}
 	log.Println("Client certificate is generated successfully")
@@ -528,17 +528,17 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	// Create CA cert, server cert and server key
 	caCert, caCertPem, caKey, _, caErr := createCACertificate(certOperator)
 	if caErr != nil {
-		log.Println("Error creating CA certificate: %v\n", caErr)
+		log.Printf("Error creating CA certificate: %v\n", caErr)
 	}
 	// TODO: add delay for TA start
 	serverCertPem, serverKeyPem, serErr := createServerCertificate(certOperator, caCert, caKey)
 	if serErr != nil {
-		log.Println("Error creating server certificate: %v\n", serErr)
+		log.Printf("Error creating server certificate: %v\n", serErr)
 	}
 
 	clientCertPem, clientKeyPem, cliErr := createClientCertificate(certOperator, caCert, caKey)
 	if cliErr != nil {
-		log.Println("Error creating client certificate: %v\n", cliErr)
+		log.Printf("Error creating client certificate: %v\n", cliErr)
 	}
 
 	var serverSecretErr error
@@ -547,7 +547,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 		log.Println("Generating secret so that targetallocator pod can get the certs and key")
 		serverSecretErr = generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
 		if serverSecretErr != nil {
-			log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr)
+			log.Printf("Error generating secret for targetallocator: %v\n", serverSecretErr)
 		}
 	}
 
@@ -557,7 +557,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 		log.Println("Generating secret so that replicaset pod can get the certs and key")
 		clientSecretErr = generateSecretWithClientCertForRs(clientCertPem, clientKeyPem, caCertPem)
 		if clientSecretErr != nil {
-			log.Println("Error generating secret for replciaset: %v\n", clientSecretErr)
+			log.Printf("Error generating secret for replciaset: %v\n", clientSecretErr)
 		}
 	}
 	log.Println("TLS certificates and secret generated successfully")
@@ -603,24 +603,24 @@ func main() {
 			if caErr1 != nil || serErr1 != nil || cliErr1 != nil || serverSecretErr1 != nil || clientSecretErr1 != nil {
 				log.Println("Error creating TLS certificates and secret, during retry, not trying again")
 				if caErr1 != nil {
-					log.Println("Error during ca cert creation: %v\n", caErr1)
+					log.Printf("Error during ca cert creation: %v\n", caErr1)
 					httpsEnabled = false
 				}
 				if serErr1 != nil {
-					log.Println("Error during server cert creation: %v\n", serErr1)
+					log.Printf("Error during server cert creation: %v\n", serErr1)
 					httpsEnabled = false
 				}
 
 				if cliErr1 != nil {
-					log.Println("Error during client cert creation: %v\n", serErr1)
+					log.Printf("Error during client cert creation: %v\n", cliErr1)
 					httpsEnabled = false
 				}
 				if serverSecretErr1 != nil {
-					log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
+					log.Printf("Error generating secret for targetallocator: %v\n", serverSecretErr1)
 					httpsEnabled = false
 				}
 				if clientSecretErr1 != nil {
-					log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
+					log.Printf("Error generating secret for replicaset: %v\n", clientSecretErr1)
 					httpsEnabled = false
 				}
 			}
@@ -644,7 +644,7 @@ func main() {
 		outputFile := "/opt/inotifyoutput-ta-server-cert-secret.txt"
 		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
-			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
+			log.Printf("Error starting inotify for watching targetallocator server certs: %v\n", err)
 		}
 
 		// Wait for 10 seconds before starting inotify for server certs and ca certs
@@ -653,12 +653,12 @@ func main() {
 		outputFile = "/opt/inotifyoutput-server-cert-secret.txt"
 		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
-			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
+			log.Printf("Error starting inotify for watching targetallocator server certs: %v\n", err)
 		}
 		outputFile = "/opt/inotifyoutput-ca-cert-secret.txt"
 		log.Println("Starting inotify for ca certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
-			log.Println("Error starting inotify for watching targetallocator client certs: %v\n", err)
+			log.Printf("Error starting inotify for watching targetallocator client certs: %v\n", err)
 		}
 	}
 

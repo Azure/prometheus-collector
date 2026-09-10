@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
@@ -167,20 +168,21 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func Configmapparser() {
+// processConfigmapSettings prepares the settings and scrape configs without
+// invoking the container's external Prometheus config validator.
+func processConfigmapSettings(configDir string) {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		filePaths := []string{filepath.Join(configDir, "cluster-metrics"), filepath.Join(configDir, "prometheus-collector-settings")}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			log.Printf("Using defaults as error parsing files: %v\n", err)
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			log.Printf("Using defaults as error parsing config: %v\n", err)
@@ -194,7 +196,7 @@ func Configmapparser() {
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		configmapVer = "v2"
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		files, err := os.ReadDir("/etc/config/settings")
+		files, err := os.ReadDir(configDir)
 		if err == nil {
 			for _, file := range files {
 				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
@@ -225,6 +227,10 @@ func Configmapparser() {
 	} else {
 		prometheusConfigMerger(false)
 	}
+}
+
+func Configmapparser() {
+	processConfigmapSettings("/etc/config/settings")
 
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
