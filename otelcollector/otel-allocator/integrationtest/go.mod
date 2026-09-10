@@ -8,7 +8,7 @@ go 1.26.3
 // cmd/otel-allocator/) and a real prometheus receiver, and wires them in-process.
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.157.0
-	github.com/open-telemetry/opentelemetry-operator v0.0.0-00010101000000-000000000000
+	github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -321,7 +321,7 @@ require (
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-operator => ../../../
+	github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator => ..
 	// Mirror the parent module's replace; a nested module does not inherit it.
-	github.com/open-telemetry/opentelemetry-operator/apis => ../../../apis
+	github.com/open-telemetry/opentelemetry-operator/apis => ../apis
 )
