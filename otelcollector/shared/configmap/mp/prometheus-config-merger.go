@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	configMapMountPath               = "/etc/config/settings/prometheus/prometheus-config"
 	replicasetControllerType         = "replicaset"
 	daemonsetControllerType          = "daemonset"
 	configReaderSidecarContainerType = "configreadersidecar"
@@ -25,8 +24,9 @@ const (
 )
 
 var (
-	regexHash    = make(map[string]string)
-	intervalHash = make(map[string]string)
+	configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
+	regexHash          = make(map[string]string)
+	intervalHash       = make(map[string]string)
 )
 
 var mergedDefaultConfigs map[interface{}]interface{}

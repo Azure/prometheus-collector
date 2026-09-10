@@ -1,64 +1,52 @@
 package configmapsettings
 
 import (
-	"bufio"
-	"fmt"
+	"bytes"
+	"log"
 	"os"
-	"strings"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus-collector/shared"
 )
 
 var _ = Describe("ConfigMapSettings", func() {
 	Describe("parseConfigMapForPodAnnotations", func() {
-		AfterEach(func() {
-			cleanupEnvVars()
+		var configDir string
+		var metricsConfigBySection map[string]map[string]string
+
+		BeforeEach(func() {
+			configDir = GinkgoT().TempDir()
+			setTestPath(&configMapMountPathForPodAnnotation, filepath.Join(configDir, "pod-annotation-based-scraping"))
+			setTestPath(&podAnnotationEnvVarPath, filepath.Join(GinkgoT().TempDir(), "pod-annotation-env"))
+			metricsConfigBySection = nil
 		})
+
+		parseSettings := func(content string) {
+			Expect(os.WriteFile(configMapMountPathForPodAnnotation, []byte(content), 0600)).To(Succeed())
+			var err error
+			metricsConfigBySection, err = shared.ParseV1Config(configDir)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		Context("when the config map file exists", func() {
 			BeforeEach(func() {
-				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
-
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
-				podAnnotationEnvVarPath = fmt.Sprintf("%s_out", configMapMountPathForPodAnnotation)
-
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
+				parseSettings(`podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`)
 			})
 
-			AfterEach(func() {
-				Expect(os.Remove(configMapMountPathForPodAnnotation)).To(Succeed())
-			})
+			It("should log the configmap namespace regex", func() {
+				var output bytes.Buffer
+				originalOutput := log.Writer()
+				log.SetOutput(&output)
+				DeferCleanup(log.SetOutput, originalOutput)
 
-			It("should print the configmap namespace regex", func() {
-				capturedOutput := captureOutput(func() {
-					err := configurePodAnnotationSettings()
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				Expect(capturedOutput).To(ContainSubstring("Using configmap namespace regex for podannotations: ^namespace-regex|namespace-regex-2$"))
+				Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(Succeed())
+				Expect(output.String()).To(ContainSubstring("Using configmap namespace regex for pod annotations: ^namespace-regex|namespace-regex-2$"))
 			})
 
 			It("should write the config to the output file", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(Succeed())
 
 				content, err := os.ReadFile(podAnnotationEnvVarPath)
 				Expect(err).NotTo(HaveOccurred())
@@ -66,118 +54,39 @@ var _ = Describe("ConfigMapSettings", func() {
 			})
 		})
 
-		Context("when the config map file does not exist", func() {
-			BeforeEach(func() {
-				configMapMountPathForPodAnnotation = "/path/to/nonexistent/file"
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
+		It("should report when the config map directory does not exist", func() {
+			var err error
+			metricsConfigBySection, err = shared.ParseV1Config(filepath.Join(configDir, "missing"))
+			Expect(err).To(MatchError(ContainSubstring("failed to read config directory")))
 
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("configmap section not mounted, using defaults"))
-			})
+			Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(MatchError("configmap section not mounted, using defaults"))
+			Expect(podAnnotationEnvVarPath).NotTo(BeAnExistingFile())
 		})
 
-		Context("when the out file does not exist", func() {
-			BeforeEach(func() {
-				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
+		It("should report an error opening the output file", func() {
+			parseSettings(`podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`)
+			podAnnotationEnvVarPath = filepath.Join(configDir, "missing", "pod-annotation-env")
 
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
-				podAnnotationEnvVarPath = "/path/to/nonexistent/file"
-
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
-
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("error opening file"))
-			})
+			Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(MatchError(ContainSubstring("error opening file")))
 		})
 
-		Context("when the config map file contains an invalid namespace regex", func() {
-			BeforeEach(func() {
-				// Create a temporary file with an invalid regex
-				fileContent := `podannotationnamespaceregex = "invalid-regex("`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
+		It("should reject an invalid namespace regex without writing the output file", func() {
+			parseSettings(`podannotationnamespaceregex = "invalid-regex("`)
 
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
+			Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(MatchError("Invalid namespace regex for pod annotations: invalid-regex("))
+			Expect(podAnnotationEnvVarPath).NotTo(BeAnExistingFile())
+		})
 
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
+		It("should report a missing annotation section", func() {
+			Expect(configurePodAnnotationSettings(map[string]map[string]string{})).To(MatchError("pod annotation namespace regex configuration not found"))
+			Expect(podAnnotationEnvVarPath).NotTo(BeAnExistingFile())
+		})
 
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
+		It("should reject an empty namespace regex", func() {
+			parseSettings(`podannotationnamespaceregex = ""`)
 
-			AfterEach(func() {
-				Expect(os.Remove(configMapMountPathForPodAnnotation)).To(Succeed())
-			})
-
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid namespace regex for podannotations"))
-			})
+			Expect(configurePodAnnotationSettings(metricsConfigBySection)).To(MatchError("pod annotation namespace regex does not have a value"))
+			Expect(podAnnotationEnvVarPath).NotTo(BeAnExistingFile())
 		})
 	})
 })
-
-// Helper function to capture the output of fmt.Printf
-func captureOutput(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf strings.Builder
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		buf.WriteString(scanner.Text())
-		buf.WriteString("\n")
-	}
-
-	return buf.String()
-}
