@@ -929,44 +929,38 @@ func TestGetSecretsAllowList(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		promCRConfig             PrometheusCRConfig
-		collectorNamespace       string
 		expectedSecretsAllowList map[string]struct{}
 	}{
 		{
-			name:                     "no secrets namespaces configured, defaults to collector namespace",
+			name:                     "no secrets namespaces configured, watches nothing",
 			promCRConfig:             PrometheusCRConfig{Enabled: true},
-			collectorNamespace:       "ta-namespace",
-			expectedSecretsAllowList: map[string]struct{}{"ta-namespace": {}},
-		},
-		{
-			name:                     "no secrets namespaces and no collector namespace",
-			promCRConfig:             PrometheusCRConfig{Enabled: true},
-			collectorNamespace:       "",
 			expectedSecretsAllowList: map[string]struct{}{},
 		},
 		{
-			name:                     "single namespace overrides default",
-			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretNamespaces: []string{"ns1"}},
-			collectorNamespace:       "ta-namespace",
+			name:                     "duplicate namespaces are deduplicated",
+			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretsAccessNamespaces: []string{"ns1", "ns1"}},
+			expectedSecretsAllowList: map[string]struct{}{"ns1": {}},
+		},
+		{
+			name:                     "single namespace",
+			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretsAccessNamespaces: []string{"ns1"}},
 			expectedSecretsAllowList: map[string]struct{}{"ns1": {}},
 		},
 		{
 			name:                     "multiple namespaces",
-			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretNamespaces: []string{"ns1", "ns2", "ns3"}},
-			collectorNamespace:       "ta-namespace",
+			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretsAccessNamespaces: []string{"ns1", "ns2", "ns3"}},
 			expectedSecretsAllowList: map[string]struct{}{"ns1": {}, "ns2": {}, "ns3": {}},
 		},
 		{
-			name:                     "empty slice defaults to collector namespace",
-			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretNamespaces: []string{}},
-			collectorNamespace:       "ta-namespace",
-			expectedSecretsAllowList: map[string]struct{}{"ta-namespace": {}},
+			name:                     "empty slice watches nothing",
+			promCRConfig:             PrometheusCRConfig{Enabled: true, SecretsAccessNamespaces: []string{}},
+			expectedSecretsAllowList: map[string]struct{}{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			secretsAllowList := tc.promCRConfig.GetSecretsAllowList(tc.collectorNamespace)
+			secretsAllowList := tc.promCRConfig.GetSecretsAllowList()
 			assert.Equal(t, tc.expectedSecretsAllowList, secretsAllowList)
 		})
 	}

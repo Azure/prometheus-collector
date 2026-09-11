@@ -62,6 +62,49 @@ extends:
     stages:
     - stage: Build
       jobs:
+      - job: Go_Unit_Tests
+        displayName: "Test: Go unit and self-contained integration suites"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        variables:
+          GOTOOLCHAIN: local
+        steps:
+        - checkout: self
+        - task: GoTool@0
+          displayName: "Test: install golang $(GOLANG_VERSION)"
+          inputs:
+            version: $(GOLANG_VERSION)
+        - bash: |
+            set -euo pipefail
+            go version
+            # Go does not traverse nested modules; keep each tested module explicit.
+            for module in \
+              shared \
+              shared/configmap/mp \
+              shared/configmap/ccp \
+              configuration-reader-builder \
+              otel-allocator \
+              otel-allocator/integrationtest; do
+              echo "Testing otelcollector/$module"
+              (
+                cd "$module"
+                go test -count=1 ./...
+              )
+            done
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector
+          displayName: "Test: shared, configuration reader, and target allocator modules"
+        - task: GoTool@0
+          displayName: "Test: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          inputs:
+            version: $(FLUENTBIT_GOLANG_VERSION)
+        - bash: |
+            set -euo pipefail
+            go version
+            go test -count=1 ./...
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src
+          displayName: "Test: fluent-bit Go plugin"
       - job: Image_Tags_and_Ev2_Artifacts
         displayName: "Build: Set image tags and publish Ev2 artifacts"
         pool:
