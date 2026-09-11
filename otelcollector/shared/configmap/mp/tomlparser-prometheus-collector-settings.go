@@ -8,12 +8,24 @@ import (
 	"strings"
 )
 
+// metricAccountNamePattern constrains default_metric_account_name to the characters a
+// Geneva metric account can actually contain.
+var metricAccountNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+
+// namespacePattern is the RFC 1123 label form required for Kubernetes namespace names.
+var namespacePattern = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Populate default metric account name
 	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
-			cp.DefaultMetricAccountName = value
-			log.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
+			trimmed := strings.TrimSpace(value)
+			if trimmed == "" || metricAccountNamePattern.MatchString(trimmed) {
+				cp.DefaultMetricAccountName = trimmed
+				log.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
+			} else {
+				log.Printf("Ignoring invalid default_metric_account_name in configmap; using default\n")
+			}
 		}
 	}
 
@@ -51,9 +63,14 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 				var namespaces []string
 				for _, ns := range strings.Split(trimmed, ",") {
 					ns = strings.TrimSpace(ns)
-					if ns != "" {
-						namespaces = append(namespaces, ns)
+					if ns == "" {
+						continue
 					}
+					if len(ns) > 63 || !namespacePattern.MatchString(ns) {
+						log.Printf("Ignoring invalid namespace in secrets_access_namespaces\n")
+						continue
+					}
+					namespaces = append(namespaces, ns)
 				}
 				cp.SecretsAccessNamespaces = namespaces
 				log.Printf("Using configmap setting for secrets_access_namespaces in targetallocator: %v\n", cp.SecretsAccessNamespaces)

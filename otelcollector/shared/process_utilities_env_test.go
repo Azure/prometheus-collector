@@ -1,0 +1,124 @@
+//go:build linux
+
+package shared
+
+import (
+	"os"
+	"testing"
+)
+
+// TestSetEnvAndSourceBashrcOrPowershell_ValidInput verifies normal settings still reach
+// the process environment, which is how child processes receive them
+// (cmd.Env = append(os.Environ())).
+func TestSetEnvAndSourceBashrcOrPowershell_ValidInput(t *testing.T) {
+	cases := []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{"simple", "AZMON_TEST_SIMPLE", "myaccount"},
+		{"empty value", "AZMON_TEST_EMPTY", ""},
+		{"underscore prefix", "_AZMON_TEST_UNDERSCORE", "value"},
+		{"regex value", "AZMON_TEST_REGEX", "kube.*|node_.+"},
+		{"value with equals", "AZMON_TEST_EQUALS", "a=b"},
+		{"value with spaces", "AZMON_TEST_SPACES", "some value"},
+		{"shell metacharacters are stored verbatim", "AZMON_TEST_METACHARS", "a$b`c;d|e&f"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer os.Unsetenv(tc.key)
+
+			if err := SetEnvAndSourceBashrcOrPowershell(tc.key, tc.value, false); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got := os.Getenv(tc.key); got != tc.value {
+				t.Errorf("os.Getenv(%q) = %q, want %q", tc.key, got, tc.value)
+			}
+		})
+	}
+}
+
+// TestSetEnvAndSourceBashrcOrPowershell_RejectsInvalidKeys ensures malformed names are not
+// set. The "export " case is the shape the old prom-config-validator file produced.
+func TestSetEnvAndSourceBashrcOrPowershell_RejectsInvalidKeys(t *testing.T) {
+	cases := []struct {
+		name string
+		key  string
+	}{
+		{"empty", ""},
+		{"export prefix", "export AZMON_TEST"},
+		{"embedded space", "AZMON TEST"},
+		{"leading digit", "1AZMON_TEST"},
+		{"hyphen", "AZMON-TEST"},
+		{"dot", "AZMON.TEST"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// LookupEnv distinguishes "set to empty" from "not set", so the assertion holds
+			// even if something in the environment already uses this name.
+			if _, present := os.LookupEnv(tc.key); present {
+				t.Skipf("key %q already present in the environment", tc.key)
+			}
+
+			if err := SetEnvAndSourceBashrcOrPowershell(tc.key, "value", false); err == nil {
+				t.Errorf("expected error for key %q, got nil", tc.key)
+			}
+			if _, present := os.LookupEnv(tc.key); present {
+				t.Errorf("key %q should not have been set", tc.key)
+			}
+		})
+	}
+}
+
+// TestSetEnvAndSourceBashrcOrPowershell_RejectsControlCharacters covers values that would
+// otherwise add extra lines to the configmapparser env files, which are parsed line by
+// line and would therefore be read back as additional key=value pairs.
+func TestSetEnvAndSourceBashrcOrPowershell_RejectsControlCharacters(t *testing.T) {
+	cases := []struct {
+		name  string
+		value string
+	}{
+		{"newline", "value\nAZMON_INJECTED=true"},
+		{"carriage return", "value\rAZMON_INJECTED=true"},
+		{"nul byte", "value\x00trailing"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			const key = "AZMON_TEST_CONTROL"
+			const injected = "AZMON_INJECTED"
+			defer os.Unsetenv(key)
+
+			if err := SetEnvAndSourceBashrcOrPowershell(key, tc.value, false); err == nil {
+				t.Error("expected error for value containing control characters, got nil")
+			}
+			if _, present := os.LookupEnv(key); present {
+				t.Error("value with control characters should not have been set")
+			}
+			if _, present := os.LookupEnv(injected); present {
+				t.Errorf("a second variable (%s) must never be created from one value", injected)
+			}
+		})
+	}
+}
+
+// TestSetEnvAndSourceBashrcOrPowershell_NoBashrcWritten asserts the function no longer
+// writes to ~/.bashrc. The file was previously used to pass values between the shell
+// scripts this agent was ported from; it is no longer read by anything.
+func TestSetEnvAndSourceBashrcOrPowershell_NoBashrcWritten(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	key := "AZMON_TEST_NO_BASHRC"
+	defer os.Unsetenv(key)
+
+	if err := SetEnvAndSourceBashrcOrPowershell(key, "value", false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(home + "/.bashrc"); !os.IsNotExist(err) {
+		t.Error("expected ~/.bashrc not to be created")
+	}
+}

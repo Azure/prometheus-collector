@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -43,62 +43,43 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
-// SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable in the .bashrc file
-// and sources the file to apply changes immediately. If echo is true, it calls EchoVar
-func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
+// envKeyPattern matches the POSIX-portable form for environment variable names.
+var envKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-	// Set the environment variable
-	err := os.Setenv(key, value)
-	if err != nil {
-		log.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:", value, ":error:", err)
+// SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable for
+// the current process. Child processes inherit it because every process launcher in this
+// package sets cmd.Env = append(os.Environ()). No shell is involved.
+//
+// The name is retained for parity with the Windows build; it no longer writes or sources
+// .bashrc. That mechanism was inherited from the pre-Go agent, where main.sh and
+// configmap-parser.sh used ~/.bashrc to pass values between separate shell invocations. In
+// Go, os.Setenv covers that directly, and the sourced shell ran in a child process that
+// could not mutate this process's environment anyway.
+//
+// If echo is true, it calls EchoVar.
+func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
+	if !envKeyPattern.MatchString(key) {
+		log.Println("SetEnvAndSourceBashrcOrPowershell: rejecting invalid environment variable name:", key)
+		return fmt.Errorf("invalid environment variable name")
+	}
+
+	// Values are written to the configmapparser env files line by line and read back the
+	// same way, so a line break would be parsed as an additional key=value pair.
+	if strings.ContainsAny(value, "\n\r\x00") {
+		log.Println("SetEnvAndSourceBashrcOrPowershell: rejecting control characters in value for key:", key)
+		return fmt.Errorf("invalid characters in value for %s", key)
+	}
+
+	// Do not log value here: callers pass echo=false for secrets such as
+	// APPLICATIONINSIGHTS_AUTH specifically to keep them out of the logs.
+	if err := os.Setenv(key, value); err != nil {
+		log.Println("SetEnvAndSourceBashrcOrPowershell: error setting key:", key, ":error:", err)
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
 	// Conditionally call EchoVar
 	if echo {
 		EchoVar(key, value)
-	}
-
-	if GetEnv("CCP_METRICS_ENABLED", "false") == "true" {
-		// return if in ccp mode as no bash shell present here
-		return nil
-	}
-
-	// Get user's home directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
-	}
-
-	// Construct the path to .bashrc
-	bashrcPath := filepath.Join(homeDir, ".bashrc")
-
-	// Check if .bashrc exists, if not, create it
-	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-		file, err := os.Create(bashrcPath)
-		if err != nil {
-			return fmt.Errorf("failed to create .bashrc file: %v", err)
-		}
-		defer file.Close()
-	}
-
-	// Open the .bashrc file for appending
-	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open .bashrc file: %v", err)
-	}
-	defer file.Close()
-
-	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
-
-	if err != nil {
-		return fmt.Errorf("failed to write to .bashrc file: %v", err)
-	}
-
-	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}
 
 	return nil

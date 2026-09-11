@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// SetupArcEnvironment sets up environment variables and modifies .bashrc as needed for Azure Arc.
+// SetupArcEnvironment sets up the IS_ARC_CLUSTER environment variable for Azure Arc.
 func SetupArcEnvironment() error {
 	// Initialize IS_ARC_CLUSTER variable
 	isArcCluster := "false"
@@ -18,40 +18,11 @@ func SetupArcEnvironment() error {
 		isArcCluster = "true"
 	}
 
-	// Export IS_ARC_CLUSTER variable
+	// Export IS_ARC_CLUSTER variable. Child processes inherit it because every process
+	// launcher in this package sets cmd.Env = append(os.Environ()).
 	err := os.Setenv("IS_ARC_CLUSTER", isArcCluster)
 	if err != nil {
 		return fmt.Errorf("error setting environment variable: %w", err)
-	}
-
-	// Get the home directory
-	home := os.Getenv("HOME")
-	if home == "" {
-		return fmt.Errorf("HOME environment variable not set")
-	}
-
-	// Create the path for .bashrc
-	bashrcPath := home + "/.bashrc"
-
-	// Check if .bashrc exists
-	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-		// Create .bashrc file
-		if _, err := os.Create(bashrcPath); err != nil {
-			return fmt.Errorf("error creating .bashrc file: %w", err)
-		}
-	}
-
-	// Open .bashrc file for appending
-	bashrcFile, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("error opening .bashrc file: %w", err)
-	}
-	defer bashrcFile.Close()
-
-	// Append export command to .bashrc file
-	exportCommand := fmt.Sprintf("export IS_ARC_CLUSTER=%s\n", isArcCluster)
-	if _, err := bashrcFile.WriteString(exportCommand); err != nil {
-		return fmt.Errorf("error writing to .bashrc file: %w", err)
 	}
 
 	// EULA statement for Arc extension
