@@ -239,6 +239,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 	CommonProperties["collectorConfigWithHttps"] = os.Getenv("COLLECTOR_CONFIG_WITH_HTTPS")
 	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
+	CommonProperties["collectorConfigHttpsCheckFailed"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_CHECK_FAILED")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
 	CommonProperties["ksmConfigEnabled"] = os.Getenv("AZMON_KSM_CONFIG_ENABLED")
