@@ -124,7 +124,7 @@
     },
     "clusterApiVersion": {
       "type": "string",
-      "defaultValue": "2024-01-01",
+      "defaultValue": "2025-08-01",
       "metadata": {
         "description": "apiVersion for Microsoft.ContainerService/managedClusters"
       }
@@ -171,9 +171,9 @@
         "description": "VM size for specified agent pool"
       }
     },
-    "win19VmSize": {
+    "win25VmSize": {
       "type": "string",
-      "defaultValue": "Standard_DS3_v2",
+      "defaultValue": "Standard_D2s_v3",
       "metadata": {
         "description": "VM size for specified agent pool"
       }
@@ -353,10 +353,10 @@
               "networkProfile": {}
           },
           {
-              "name": "win19",
+              "name": "win25",
               "count": 2,
-              "vmSize": "[parameters('win19VmSize')]",
-              "osDiskType": "Ephemeral",
+              "vmSize": "[parameters('win25VmSize')]",
+              "osDiskType": "Managed",
               "kubeletDiskType": "OS",
               "maxPods": 30,
               "type": "VirtualMachineScaleSets",
@@ -364,8 +364,8 @@
               "enableNodePublicIP": false,
               "mode": "User",
               "osType": "Windows",
-              "osSKU": "Windows2019",
-              "enableFIPS": false
+              "osSKU": "Windows2025",
+              "enableFIPS": true
           }
         ],
         "azureMonitorProfile": {
@@ -661,7 +661,7 @@
         "rules": [
           {
             "record": "node:windows_node:sum",
-            "expression": "count (windows_system_boot_time_timestamp_seconds{job=\"windows-exporter\"})"
+            "expression": "count (windows_system_boot_time_timestamp_seconds{job=\"windows-exporter\"} or windows_system_boot_time_timestamp{job=\"windows-exporter\"} or windows_system_system_up_time{job=\"windows-exporter\"})"
           },
           {
             "record": "node:windows_node_num_cpu:sum",
@@ -677,7 +677,7 @@
           },
           {
             "record": ":windows_node_memory_utilisation:",
-            "expression": "1 -sum(windows_memory_available_bytes{job=\"windows-exporter\"})/sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+            "expression": "1 -sum(windows_memory_available_bytes{job=\"windows-exporter\"})/sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"} or windows_memory_physical_total_bytes{job=\"windows-exporter\"})"
           },
           {
             "record": ":windows_node_memory_MemFreeCached_bytes:sum",
@@ -689,7 +689,7 @@
           },
           {
             "record": ":windows_node_memory_MemTotal_bytes:sum",
-            "expression": "sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+            "expression": "sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"} or windows_memory_physical_total_bytes{job=\"windows-exporter\"})"
           },
           {
             "record": "node:windows_node_memory_bytes_available:sum",
@@ -697,7 +697,7 @@
           },
           {
             "record": "node:windows_node_memory_bytes_total:sum",
-            "expression": "sum by (instance) (windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+            "expression": "sum by (instance) (windows_os_visible_memory_bytes{job=\"windows-exporter\"} or windows_memory_physical_total_bytes{job=\"windows-exporter\"})"
           },
           {
             "record": "node:windows_node_memory_utilisation:ratio",
@@ -888,10 +888,28 @@
               },
               {
                   "alert": "[Concat('up metric missing for target = windows-exporter in cluster', parameters('clusterName'))]",
-                  "expression": "absent_over_time(up{job=\"windows-exporter\"}[30m]) == 1 or count(up{job=\"windows-exporter\"} == 1) == 0",
-                  "for": "PT30M",
+                  "expression": "(count by (instance) (label_replace(kube_node_info{job=\"kube-state-metrics\",os_image=~\"Windows.*\"}, \"instance\", \"$1\", \"node\", \"(.*)\")) unless on (instance) count by (instance) (up{job=\"windows-exporter\"} == 1)) or (absent_over_time(up{job=\"windows-exporter\"}[30m]) == 1 or count(up{job=\"windows-exporter\"} == 1) == 0)",
+                  "for": "PT1H",
                   "annotations": {
                       "description": "[Concat('up metric missing for target = windows-exporter in cluster', parameters('clusterName'))]"
+                  },
+                  "severity": 4,
+                  "resolveConfiguration": {
+                      "autoResolved": true,
+                      "timeToResolve": "PT10M"
+                  },
+                  "actions": [
+                      {
+                          "actionGroupId": "[parameters('actionGroupId')]"
+                      }
+                  ]
+              },
+              {
+                  "alert": "[Concat('Windows exporter metric contract missing in cluster', parameters('clusterName'))]",
+                  "expression": "count by (instance) (up{job=\"windows-exporter\"} == 1) unless on (instance) (count by (instance) (windows_system_boot_time_timestamp{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_cpu_time_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_available_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_physical_total_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_cache_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_modified_page_list_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_standby_cache_core_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_standby_cache_normal_priority_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_standby_cache_reserve_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_memory_swap_page_operations_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_read_seconds_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_write_seconds_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_read_bytes_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_write_bytes_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_size_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_logical_disk_free_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_net_bytes_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_net_packets_received_discarded_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_net_packets_outbound_discarded_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_available{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_cpu_usage_seconds_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_memory_usage_commit_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_memory_usage_private_working_set_bytes{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_network_receive_bytes_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_container_network_transmit_bytes_total{job=\"windows-exporter\"}) and on (instance) count by (instance) (windows_pod_container_available) and on (instance) count by (instance) (windows_container_total_runtime) and on (instance) count by (instance) (windows_container_memory_usage) and on (instance) count by (instance) (windows_container_private_working_set_usage) and on (instance) count by (instance) (windows_container_network_received_bytes_total) and on (instance) count by (instance) (windows_container_network_transmitted_bytes_total))",
+                  "for": "PT30M",
+                  "annotations": {
+                      "description": "[Concat('One or more required Windows exporter metric families or recording-rule outputs are missing in cluster', parameters('clusterName'))]"
                   },
                   "severity": 4,
                   "resolveConfiguration": {

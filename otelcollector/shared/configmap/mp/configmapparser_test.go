@@ -344,7 +344,10 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			schemaVersionFile = createTempFile("schema-version", "v1")
 			configVersionFile = createTempFile("config-version", "ver1")
 			configMapMountPathForPodAnnotation = createTempFile("podannotation", `podannotationnamespaceregex = ".*|value"`)
-			collectorSettingsMountPath = createTempFile("collector-settings", `cluster_alias = "alias"`)
+			collectorSettingsMountPath = createTempFile("collector-settings", `
+				cluster_alias = "alias"
+				windowsexporter_port = "9182"
+			`)
 			defaultSettingsMountPath = createTempFile("default-settings", `
 				kubelet = true
 				coredns = true
@@ -408,6 +411,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
 				"AZMON_CLUSTER_LABEL":                              "alias",
 				"AZMON_CLUSTER_ALIAS":                              "alias",
+				"AZMON_WINDOWS_EXPORTER_PORT":                      "9182",
 				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "true",
 				"AZMON_OPERATOR_ENABLED":                            "true",
 				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
@@ -681,6 +685,7 @@ func cleanupEnvVars() {
 		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME",
 		"AZMON_CLUSTER_LABEL",
 		"AZMON_CLUSTER_ALIAS",
+		"AZMON_WINDOWS_EXPORTER_PORT",
 		"AZMON_OPERATOR_ENABLED_CHART_SETTING",
 		"AZMON_OPERATOR_ENABLED",
 		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",

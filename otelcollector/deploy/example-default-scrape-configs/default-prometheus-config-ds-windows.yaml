@@ -10,7 +10,7 @@ scrape_configs:
     replacement: '$NODE_NAME'
     target_label: instance
   static_configs:
-  - targets: ['$NODE_IP:9182']
+  - targets: ['$NODE_IP:19182']
 
 - job_name: kube-proxy-windows
   scheme: http

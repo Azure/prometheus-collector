@@ -171,4 +171,4 @@ scrape_configs:
     action: replace
     target_label: __address__
     regex: (.+?)(\:\d+)?
-    replacement: $$1:9182
+    replacement: $$1:19182

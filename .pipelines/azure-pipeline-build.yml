@@ -80,6 +80,18 @@ extends:
         - checkout: self
           submodules: true
         - bash: |
+            set -euo pipefail
+            contract_tools=$(mktemp -d)
+            archive="prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz"
+            release="https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)"
+            curl --fail --location --retry 3 "$release/$archive" -o "$contract_tools/$archive"
+            curl --fail --location --retry 3 "$release/sha256sums.txt" -o "$contract_tools/sha256sums.txt"
+            (cd "$contract_tools" && grep " $archive\$" sha256sums.txt | sha256sum --check --strict)
+            tar -xzf "$contract_tools/$archive" -C "$contract_tools"
+            python3 otelcollector/test/windows-exporter-contract/test_contract.py \
+              --promtool "$contract_tools/prometheus-$(PROMETHEUS_VERSION).linux-amd64/promtool"
+          displayName: 'Test: Windows exporter recording rules and per-node metric contract'
+        - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else

@@ -23,6 +23,18 @@ Azure Monitor metrics addon has pre-built configurations to discover & scrape mo
 1. Enable kubeproxy scraping by specifying `kubeproxy = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping kubeproxy every 30s.
 2. Import the kubeproxy Grafana dashboard from [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/kubeproxy) into your Grafana instance
 
+## Windows exporter
+
+`windowsexporter` is turned off by default. AKS Windows nodes expose the native exporter on port `19182`. Enable the target by setting `windowsexporter = true` under `default-scrape-settings-enabled`.
+
+If the cluster uses a separately installed Windows exporter on the legacy port, set the following under `prometheus-collector-settings`:
+
+```toml
+windowsexporter_port = "9182"
+```
+
+The setting accepts TCP ports from 1 through 65535. Invalid values fall back to the AKS-native port `19182`.
+
 ## coredns
 
 `coredns` job is turned OFF by default. To collect API-server metrics, do the following -
