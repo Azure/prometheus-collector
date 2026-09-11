@@ -174,6 +174,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				ServiceMonitorSelector:  &metav1.LabelSelector{},
 				PodMonitorSelector:      &metav1.LabelSelector{},
 				SecretsAccessNamespaces: secretsAccessNamespaces,
+				DenyFSAccessThroughSMs:  true,
 			},
 			HTTPS: shared.HTTPSServerConfig{
 				Enabled:         true,
@@ -199,6 +200,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				ServiceMonitorSelector:  &metav1.LabelSelector{},
 				PodMonitorSelector:      &metav1.LabelSelector{},
 				SecretsAccessNamespaces: secretsAccessNamespaces,
+				DenyFSAccessThroughSMs:  true,
 			},
 		}
 	}
