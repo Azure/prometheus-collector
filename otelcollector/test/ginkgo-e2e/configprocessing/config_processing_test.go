@@ -1026,6 +1026,18 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 			GinkgoWriter.Printf("[BasicAuth] Verified Role and RoleBinding exist in basic-auth-test namespace\n")
 		}
 
+		// --- Verify kube-system scoped secrets Role and RoleBinding ---
+		GinkgoWriter.Printf("[BasicAuth] Step 2b: Checking kube-system namespaced Role for scoped secrets access...\n")
+		kubeSystemRole, err := utils.GetRole(K8sClient, "kube-system", "ama-metrics-kube-system-secrets")
+		Expect(err).NotTo(HaveOccurred(), "Role ama-metrics-kube-system-secrets should exist in kube-system namespace")
+		Expect(kubeSystemRole).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuth] Verified kube-system secrets Role exists with %d rules\n", len(kubeSystemRole.Rules))
+
+		kubeSystemRoleBinding, err := utils.GetRoleBinding(K8sClient, "kube-system", "ama-metrics-kube-system-secrets-rolebinding")
+		Expect(err).NotTo(HaveOccurred(), "RoleBinding ama-metrics-kube-system-secrets-rolebinding should exist in kube-system namespace")
+		Expect(kubeSystemRoleBinding).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuth] Verified kube-system secrets RoleBinding exists\n")
+
 		// --- Config check: verify basic-auth job exists with correct basic_auth config ---
 		GinkgoWriter.Printf("[BasicAuth] Step 3: Querying Prometheus config from ama-metrics RS pod...\n")
 		var apiResponse utils.APIResponse
@@ -1219,6 +1231,18 @@ var _ = Describe("Basic auth ServiceMonitor scraping (v2)", Label(utils.ConfigPr
 			Expect(roleBinding).NotTo(BeNil())
 			GinkgoWriter.Printf("[BasicAuthV2] Verified Role and RoleBinding exist in basic-auth-test namespace\n")
 		}
+
+		// --- Verify kube-system scoped secrets Role and RoleBinding ---
+		GinkgoWriter.Printf("[BasicAuthV2] Step 2b: Checking kube-system namespaced Role for scoped secrets access...\n")
+		kubeSystemRole, err := utils.GetRole(K8sClient, "kube-system", "ama-metrics-kube-system-secrets")
+		Expect(err).NotTo(HaveOccurred(), "Role ama-metrics-kube-system-secrets should exist in kube-system namespace")
+		Expect(kubeSystemRole).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuthV2] Verified kube-system secrets Role exists with %d rules\n", len(kubeSystemRole.Rules))
+
+		kubeSystemRoleBinding, err := utils.GetRoleBinding(K8sClient, "kube-system", "ama-metrics-kube-system-secrets-rolebinding")
+		Expect(err).NotTo(HaveOccurred(), "RoleBinding ama-metrics-kube-system-secrets-rolebinding should exist in kube-system namespace")
+		Expect(kubeSystemRoleBinding).NotTo(BeNil())
+		GinkgoWriter.Printf("[BasicAuthV2] Verified kube-system secrets RoleBinding exists\n")
 
 		// --- Config check: verify basic-auth job exists with correct basic_auth config ---
 		GinkgoWriter.Printf("[BasicAuthV2] Step 3: Querying Prometheus config from ama-metrics RS pod...\n")
