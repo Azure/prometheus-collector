@@ -78,7 +78,11 @@ extends:
             rolloutInfra: Prod
             serviceRootPath: deploy/ServiceGroupRoot
             rolloutSpecPath: RolloutSpec.json
-            select: regions(eastus2euap)
+            # This region only selects where the Ev2 shell container runs; the push target
+            # (containerinsights.azurecr.io) is global, so the pushed artifacts are identical.
+            # Moved off eastus2euap: its egress path returns a corrupt Content-Length for MCR
+            # manifest GETs, which fails `oras copy`. Revert once MCR/ACI networking is fixed.
+            select: regions(centraluseuap)
             skipRegistrationIfExists: true
             forceRegistration: true
             configurationOverrides:
