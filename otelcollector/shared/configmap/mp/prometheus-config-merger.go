@@ -1566,6 +1566,79 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 	}
 }
 
+// sanitizeCustomScrapeConfigs strips file-based credential fields from
+// tenant-supplied custom scrape configs to prevent exfiltration of mounted
+// platform credentials (e.g. service-account tokens). This is the ConfigMap
+// equivalent of the DenyFSAccessThroughSMs guard in the Target Allocator.
+func sanitizeCustomScrapeConfigs(prometheusConfigString string) string {
+	var config map[interface{}]interface{}
+	err := yaml.Unmarshal([]byte(prometheusConfigString), &config)
+	if err != nil {
+		shared.EchoError(fmt.Sprintf("Error unmarshalling config for sanitization: %v", err))
+		return prometheusConfigString
+	}
+
+	scrapeConfigs, ok := config["scrape_configs"].([]interface{})
+	if !ok || len(scrapeConfigs) == 0 {
+		return prometheusConfigString
+	}
+
+	modified := false
+	for _, sc := range scrapeConfigs {
+		scMap, ok := sc.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+		jobName, _ := scMap["job_name"].(string)
+
+		// Strip bearer_token_file
+		if _, exists := scMap["bearer_token_file"]; exists {
+			delete(scMap, "bearer_token_file")
+			log.Printf("Stripped bearer_token_file from custom scrape config job '%s' for security hardening\n", jobName)
+			modified = true
+		}
+
+		// Strip authorization.credentials_file
+		if auth, ok := scMap["authorization"].(map[interface{}]interface{}); ok {
+			if _, exists := auth["credentials_file"]; exists {
+				delete(auth, "credentials_file")
+				log.Printf("Stripped authorization.credentials_file from custom scrape config job '%s' for security hardening\n", jobName)
+				modified = true
+				if len(auth) == 0 {
+					delete(scMap, "authorization")
+				}
+			}
+		}
+
+		// Strip tls_config file references
+		if tlsCfg, ok := scMap["tls_config"].(map[interface{}]interface{}); ok {
+			for _, fileField := range []string{"ca_file", "cert_file", "key_file"} {
+				if _, exists := tlsCfg[fileField]; exists {
+					delete(tlsCfg, fileField)
+					log.Printf("Stripped tls_config.%s from custom scrape config job '%s' for security hardening\n", fileField, jobName)
+					modified = true
+				}
+			}
+			if len(tlsCfg) == 0 {
+				delete(scMap, "tls_config")
+			}
+		}
+	}
+
+	if !modified {
+		return prometheusConfigString
+	}
+
+	updatedConfig, err := yaml.Marshal(config)
+	if err != nil {
+		shared.EchoError(fmt.Sprintf("Error marshalling sanitized config: %v", err))
+		return prometheusConfigString
+	}
+
+	shared.EchoWarning("Done sanitizing custom scrape config — stripped file-based credential references")
+	return string(updatedConfig)
+}
+
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	customConfig := prometheusConfigString
 
@@ -1647,8 +1720,10 @@ func prometheusConfigMerger(operatorEnabled bool) {
 	if len(prometheusConfigMap) > 0 {
 		modifiedPrometheusConfigString := setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigMap)
 		writeDefaultScrapeTargetsFile(operatorEnabled)
+		// Sanitize custom scrape configs: strip file-based credential references to prevent token exfiltration
+		sanitizedConfigString := sanitizeCustomScrapeConfigs(modifiedPrometheusConfigString)
 		// Set label limits for every custom scrape job, before merging the default & custom config
-		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
+		labellimitedconfigString := setLabelLimitsPerScrape(sanitizedConfigString)
 		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
 	} else {
