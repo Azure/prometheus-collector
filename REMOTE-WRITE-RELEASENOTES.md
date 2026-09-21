@@ -1,5 +1,14 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 09-21-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260921.1`
+* Change log -
+  * Removed the unused OpenTelemetry metrics path from the sidecar. The Prometheus/OTel telemetry client had been disabled since 2022 - its constructor and exporter factory were commented out and `LogMetric` was a no-op with no callers - so the dependency was dead weight rather than a live code path.
+  * Deleting it drops 16 modules from the build, including `go.opentelemetry.io/otel/sdk` and the stale transitives `prometheus/client_golang` v1.12.2 and `google.golang.org/protobuf` v1.30.0. No runtime behaviour change; the sidecar emitted no OpenTelemetry metrics before or after.
+  * Pruned five `replace` directives that no longer matched any module requirement. A `replace` with no corresponding `require` silently forces a downgrade if that module is later pulled in transitively - the same failure mode behind the `x/text` exposure fixed in the 08-25-2026 release.
+* Fixed CVEs:
+    - [CVE-2026-81870](https://avd.aquasec.com/nvd/cve-2026-81870) - `go.opentelemetry.io/otel/sdk` may write exporter configuration to logs when `otel.SetLogger` enables Info-level internal logging, potentially exposing collector endpoints and any credentials embedded in them (fixed upstream in otel/sdk v1.45.0). Not reachable in this image because the sidecar never constructed a TracerProvider; cleared by removing the dependency outright.
+
 ## Release 08-25-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260825.2`
 * Change log -
