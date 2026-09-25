@@ -26,10 +26,25 @@ parameters:
   - name: 'releaseTrain'
     displayName: 'Release Train'
     type: string
-    default: 'preview'
+    default: 'stable'
     values:
       - preview
       - stable
+
+  # Version the extension platform should roll clusters BACK to if this
+  # rollout's version turns out to be bad. RollbackVersion is stored on the
+  # version document being registered by this run, so a rollback rollout sets
+  # BOTH `overrideExtensionVersion` (the bad version being re-registered) and
+  # `rollbackVersion` (the last known-good version to fall back to).
+  #
+  # Left as 'none' the setting resolves to an empty string and the platform
+  # records no rollback target, which is the current behaviour. 'none' is used
+  # as the sentinel rather than '' because Azure DevOps renders a parameter
+  # whose default is an empty string as a required field.
+  - name: 'rollbackVersion'
+    displayName: 'Rollback Version (leave as "none" to not register a rollback target)'
+    type: string
+    default: 'none'
 
   - name: 'rolloutType'
     displayName: 'SDP rollout type'
@@ -100,6 +115,14 @@ variables:
   # files (now removed). MSI ARM IDs below must be the cloud-specific identity
   # registered in the extension type registration document (msiClientIds field).
   # See: https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
+  #
+  # `rollbackVersion` is resolved at compile time with ${{ }} rather than via a
+  # runtime $() macro variable: an empty-valued macro is not reliably expanded,
+  # and a leftover literal '$(rollbackVersionValue)' would be non-empty and get
+  # registered as a bogus rollback target. With the 'none' default the replace()
+  # collapses to "", which the platform treats as "no rollback target".
+  # Note: replace() substitutes every occurrence, so avoid an actual version
+  # string containing the literal substring 'none'.
 
   - name: ProdConfigurationOverrides
     value: |
@@ -112,6 +135,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -127,6 +151,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/e4f0f588-48fc-43c1-86b3-2861f1ddaa9d/resourcegroups/container-insights-extension-fairfax/providers/Microsoft.ManagedIdentity/userAssignedIdentities/extension-rollout-identity-ContainerInsights",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -143,6 +168,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/fdbe2580-1746-4bb7-ae1a-da7ada55880b/resourcegroups/container-insights-extension-mooncake/providers/Microsoft.ManagedIdentity/userAssignedIdentities/Extension-insights-mooncake",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -159,6 +185,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/f8272cc8-8c5a-438c-ad5c-21264c697c53/resourcegroups/ContainerInsights-AI/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ContainerInsights-MI",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -175,6 +202,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/3be87dbe-53e1-410a-b8b7-a0d8fa86a9e9/resourcegroups/ContainerInsights-AI/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ContainerInsights-MI",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -191,6 +219,7 @@ variables:
   #           "userAssignedIdentity": "REPLACE_WITH_BLEU_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
   #           "releaseTrain": "${{ parameters.releaseTrain }}",
+  #           "rollbackVersion": "${{ replace(parameters.rollbackVersion, 'none', '') }}",
   #           "kustoGatingWaitDuration": "PT1H"
   #         }
   #       }
