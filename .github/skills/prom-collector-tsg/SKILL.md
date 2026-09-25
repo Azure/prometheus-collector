@@ -8,7 +8,7 @@ description: >
   metrics not flowing, pod crashes, OOM, high CPU, token adapter errors,
   DCR/DCE errors, MDSD errors, ME errors, target allocator issues,
   control plane metrics, private link issues, DNS errors, liveness probe failures,
-  sample drops, queue backup, metric volume analysis.
+  sample drops, queue backup, metric volume analysis, vulnerability and CVE incidents.
   DO NOT USE FOR: code changes, build fixes, EV2 artifacts, load testing.
 argument-hint: 'Provide the ICM number or cluster ARM resource ID — e.g. "investigate ICM 12345678" or "troubleshoot cluster /subscriptions/.../managedClusters/mycluster"'
 ---
@@ -65,6 +65,11 @@ Call the ICM API tools AND the browser scrape simultaneously. The API tools give
 
 #### 1b. Finding the Cluster ARM ID
 
+**VHD/CVE scanner exception:** A scanner-generated vulnerability incident may identify a
+container image or VHD rather than a customer cluster. After gathering the authored summary and
+discussion, follow `tsgs/vulnerabilities.md`. Do not require a cluster ARM ID or run cluster KQL
+unless the incident also reports cluster-specific symptoms.
+
 The cluster ARM resource ID is critical for running TSG queries. It looks like:
 `/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.ContainerService/managedClusters/{name}`
 
@@ -103,11 +108,12 @@ The cluster ARM resource ID is critical for running TSG queries. It looks like:
    **Important:** Read the full authored summary AND discussion entries carefully — they contain the reporter's actual problem description, specific metric names, PromQL queries, and evidence that the AI summary loses. This context is essential for targeted diagnosis.
 6. **Ask the user (LAST RESORT ONLY)** — if none of the above have it, ask: "What is the cluster ARM resource ID? It's usually in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
 
-**⚠️ MANDATORY: You MUST call `tsg_icm_page` (step 5) before asking the user for the ARM ID.**
+**⚠️ MANDATORY FOR CLUSTER-SCOPED INCIDENTS: You MUST call `tsg_icm_page` (step 5) before asking the user for the ARM ID.**
 The ICM MCP API tools (steps 1–4) almost never return the ARM ID because they don't expose the authored summary. The browser scrape via `tsg_icm_page` is the primary method for getting the ARM ID — it intercepts the raw ICM API response which contains the full authored summary where reporters paste the cluster ARM ID. Do NOT skip it. Do NOT go straight to asking the user.
 
-**STOP and ask the user ONLY after `tsg_icm_page` has been attempted and failed to find the ARM ID.**
-Do NOT proceed to triage queries without the ARM ID — every query requires the cluster ARM ID.
+**For cluster-scoped incidents, STOP and ask the user ONLY after `tsg_icm_page` has been attempted and failed to find the ARM ID.**
+Do NOT proceed to cluster triage queries without the ARM ID — every cluster query requires the
+cluster ARM ID.
 Do NOT guess, fabricate, or skip this step. If `tsg_icm_page` failed (e.g. Edge not running, sign-in needed), tell the user what happened and ask them to either:
 - Fix the browser issue and retry, OR
 - Provide the ARM ID manually
@@ -210,6 +216,9 @@ Get-Content "pods-all-wide.txt" | Where-Object { $_ -match "ama-metrics-[0-9a-f]
 
 ### Step 2: Run Triage Queries
 
+Skip this step for scanner-only vulnerability incidents that do not identify a customer cluster.
+Follow `tsgs/vulnerabilities.md` instead.
+
 **Use the `prom-collector-tsg` MCP server** which provides these tools:
 
 | Tool | Description |
@@ -286,7 +295,11 @@ This is almost always one of these causes (check in order):
 
 Based on triage results, identify the primary symptom category and follow the corresponding TSG file in the `tsgs/` directory.
 
-**Always check versions first** — run `tsg_triage` → "Version" (addon image tag) and "Component Versions" (ME, OTel, Golang, Prometheus). See `reference.md` → "Checking Versions and Release Notes" for details.
+**For cluster investigations, always check versions first** — run `tsg_triage` → "Version" (addon image tag) and "Component Versions" (ME, OTel, Golang, Prometheus). See `reference.md` → "Checking Versions and Release Notes" for details.
+
+For scanner-generated CVE incidents, use the exact scanned artifact as the starting version and
+follow `tsgs/vulnerabilities.md`. Do not substitute the current source version or newest registry
+tag for the version embedded in the scanned VHD or other consumer.
 
 **TSG categories available** (each is a separate file in `tsgs/`):
 
@@ -338,6 +351,9 @@ Present findings as:
 9. **Reference Documentation** — search the learn.microsoft.com doc trees below for the most relevant page based on the customer's specific issue. Use `web_search` or `web_fetch` to find the right sub-page (e.g., custom scrape config, remote write, troubleshooting). Do NOT just link the overview — find and link the specific doc page that addresses the customer's problem:
    - TOC root: [Azure Managed Prometheus](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/prometheus-metrics-overview) — covers configuration, collection, scrape configs, remote write
    - TOC root: [Kubernetes monitoring](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-overview) — covers AKS addon setup, troubleshooting, managed Grafana
+
+For vulnerability incidents, use the evidence and conclusion format in
+`tsgs/vulnerabilities.md` instead of this cluster-health format.
 
 ### Step 5: Improve the Tooling
 
@@ -514,7 +530,7 @@ Some ME internals are not documented in EngHub (e.g. the exact dimension count l
 | Windows pod restarts | `tsg_errors` + `tsg_logs` | Windows Pod Restart |
 | Remote write failures | `tsg_errors` | Remote Write |
 | Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
-| CVE reported | N/A | Vulnerabilities |
+| CVE reported | `tsg_icm_page` + build, registry, and consumer evidence | Vulnerabilities (artifact-to-consumer trace) |
 | ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |
 | HPA scaled down | `tsg_workload` | Known Issues (expected behavior) |
 | HPA oscillating / OOMKill feedback loop | `tsg_workload` + `tsg_errors` + `tsg_pods` | Pod Restarts and OOMKills (HPA can't scale when OOM resets memory signal) |
