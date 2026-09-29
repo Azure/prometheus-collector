@@ -50,7 +50,7 @@ var _ = Describe("ConfigMapSettings", func() {
 
 				content, err := os.ReadFile(podAnnotationEnvVarPath)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='^namespace-regex|namespace-regex-2$'\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"))
+				Expect(string(content)).To(Equal("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=^namespace-regex|namespace-regex-2$\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"))
 			})
 		})
 

@@ -238,7 +238,7 @@ var _ = Describe("Configmapparser settings and scrape configuration", func() {
 					env[key] = "true"
 				}
 			}
-			env["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"] = "'.*|value'"
+			env["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"] = ".*|value"
 			env["AZMON_CLUSTER_LABEL"], env["AZMON_CLUSTER_ALIAS"] = "alias", "alias"
 			env["DEBUG_MODE_ENABLED"] = "true"
 			checkEnvVars(env)
