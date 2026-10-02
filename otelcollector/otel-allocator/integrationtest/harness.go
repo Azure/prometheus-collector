@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	prometheusreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -26,8 +27,6 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.uber.org/zap/zaptest"
-
-	prometheusreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/allocation"
 	taconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/config"
@@ -92,7 +91,7 @@ func startTargetAllocator(t *testing.T, scrapeConfigs []*promconfig.ScrapeConfig
 	// Keep the production discovery path (discoverer.Run + reloader), just with a
 	// short reload interval so the test does not wait on the 5s default debounce.
 	// Relabel filtering now happens inside discovery (selected by the filter strategy).
-	discoverer, err := target.NewDiscoverer(log, discoveryManager, target.RelabelConfigFilterStrategy, srv, alloc.SetTargets, target.WithReloadInterval(10*time.Millisecond))
+	discoverer, err := target.NewDiscoverer(log, discoveryManager, taconfig.FilterStrategyRelabelConfig, srv, alloc.SetTargets, target.WithReloadInterval(10*time.Millisecond))
 	require.NoError(t, err)
 
 	errs := make(chan error, 3)
@@ -171,7 +170,7 @@ func shutdown(t *testing.T, fn func(context.Context) error) {
 
 func freeLocalAddress(t *testing.T) string {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	addr := l.Addr().String()
 	require.NoError(t, l.Close())
