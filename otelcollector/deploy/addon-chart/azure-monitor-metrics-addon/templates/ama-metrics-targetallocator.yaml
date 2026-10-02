@@ -43,7 +43,7 @@ spec:
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
         - --listen-addr=127.0.0.1:8080
 {{- end }}
-        image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -111,7 +111,7 @@ spec:
           periodSeconds: 15
           failureThreshold: 3
       - name: config-reader
-        image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
