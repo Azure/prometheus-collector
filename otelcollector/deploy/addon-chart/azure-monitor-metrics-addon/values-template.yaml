@@ -4,7 +4,8 @@ AzureMonitorMetrics:
     #MetricLabelsAllowList: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     #MetricAllowList: ""
-    ImageRegistry: mcr.microsoft.com
+    # Registry comes from the "addon_mcr_repository_base" helper so that sovereign
+    # clouds resolve to their own MCR endpoint.
     ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
     CPULimit: 1
     MemoryLimit: 5Gi
@@ -39,7 +40,8 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRegistry: mcr.microsoft.com
+  # Registry comes from the "addon_mcr_repository_base" helper so that sovereign
+  # clouds resolve to their own MCR endpoint.
   ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
