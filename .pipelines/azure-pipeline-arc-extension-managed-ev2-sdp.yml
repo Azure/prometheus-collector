@@ -26,10 +26,27 @@ parameters:
   - name: 'releaseTrain'
     displayName: 'Release Train'
     type: string
-    default: 'preview'
+    default: 'stable'
     values:
       - preview
       - stable
+
+  # Version the extension platform should roll clusters BACK to if this
+  # rollout's version turns out to be bad. RollbackVersion is stored on the
+  # version document being registered by this run, so a rollback rollout sets
+  # BOTH `overrideExtensionVersion` (the bad version being re-registered) and
+  # `rollbackVersion` (the last known-good version to fall back to).
+  #
+  # Supply the BASE version here without the '-arc' suffix (e.g. 7.3.0-main-...);
+  # the suffix is appended automatically, exactly as it is for the rolled-out
+  # version. Left as 'none' the setting resolves to an empty string and the
+  # platform records no rollback target, which is the current behaviour. 'none'
+  # is used as the sentinel rather than '' because Azure DevOps renders a
+  # parameter whose default is an empty string as a required field.
+  - name: 'rollbackVersion'
+    displayName: 'Rollback Version, without the "-arc" suffix (leave as "none" to not register a rollback target)'
+    type: string
+    default: 'none'
 
   - name: 'rolloutType'
     displayName: 'SDP rollout type'
@@ -94,8 +111,9 @@ variables:
   # When `overrideExtensionVersion` is left at its default value of 'auto',
   # the pipeline uses the runName of the latest upstream build pipeline run
   # (resolved at runtime by the resources.pipelines reference). Any other
-  # value is taken as an explicit version override (e.g. for rollback or for
-  # pinning to a known-good build). The '-arc' suffix is always appended.
+  # value is taken as an explicit version override (e.g. for pinning to a
+  # known-good build). The '-arc' suffix is always appended. To register a
+  # rollback target, use the separate `rollbackVersion` parameter above.
   - ${{ if ne(parameters.overrideExtensionVersion, 'auto') }}:
       - name: baseVersionValue
         value: '${{ parameters.overrideExtensionVersion }}'
@@ -111,6 +129,16 @@ variables:
   # userAssignedIdentity must be the MSI registered in the *cloud-specific*
   # extension type registration document (msiClientIds field). See:
   # https://msazure.visualstudio.com/One/_wiki/wikis/One.wiki/202225/Extension-Type-Registration
+  #
+  # `rollbackVersion` is resolved at compile time with ${{ }} rather than via a
+  # runtime $() macro variable: an empty-valued macro is not reliably expanded,
+  # and a leftover literal '$(rollbackVersionValue)' would be non-empty and get
+  # registered as a bogus rollback target.
+  #
+  # Note the ordering inside the expression: '-arc' is appended FIRST and the
+  # sentinel is stripped SECOND ('none-arc' -> ''). Stripping first would leave
+  # a bare "-arc", which is non-empty and would be registered as a rollback to
+  # a version that does not exist.
 
   - name: ProdConfigurationOverrides
     value: |
@@ -123,6 +151,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/containerinsightsprod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ev2-agent-release",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -139,6 +168,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/e4f0f588-48fc-43c1-86b3-2861f1ddaa9d/resourcegroups/container-insights-extension-fairfax/providers/Microsoft.ManagedIdentity/userAssignedIdentities/extension-rollout-identity-ContainerInsights",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -155,6 +185,7 @@ variables:
             "userAssignedIdentity": "/subscriptions/fdbe2580-1746-4bb7-ae1a-da7ada55880b/resourcegroups/container-insights-extension-mooncake/providers/Microsoft.ManagedIdentity/userAssignedIdentities/Extension-insights-mooncake",
             "version": "$(extensionVersionValue)",
             "releaseTrain": "${{ parameters.releaseTrain }}",
+            "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
             "kustoGatingWaitDuration": "PT1H"
           }
         }
@@ -171,6 +202,7 @@ variables:
   #           "userAssignedIdentity": "REPLACE_WITH_USNAT_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
   #           "releaseTrain": "${{ parameters.releaseTrain }}",
+  #           "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
   #           "kustoGatingWaitDuration": "PT1H"
   #         }
   #       }
@@ -187,6 +219,7 @@ variables:
   #           "userAssignedIdentity": "REPLACE_WITH_USSEC_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
   #           "releaseTrain": "${{ parameters.releaseTrain }}",
+  #           "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
   #           "kustoGatingWaitDuration": "PT1H"
   #         }
   #       }
@@ -203,6 +236,7 @@ variables:
   #           "userAssignedIdentity": "REPLACE_WITH_BLEU_MSI_ARM_ID",
   #           "version": "$(extensionVersionValue)",
   #           "releaseTrain": "${{ parameters.releaseTrain }}",
+  #           "rollbackVersion": "${{ replace(format('{0}-arc', parameters.rollbackVersion), 'none-arc', '') }}",
   #           "kustoGatingWaitDuration": "PT1H"
   #         }
   #       }
