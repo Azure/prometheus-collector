@@ -5,6 +5,7 @@ description: >
   by running diagnostic KQL queries against ADX and App Insights.
   USE FOR: ICM investigation, customer escalation, prometheus-collector TSG,
   AMA metrics troubleshooting, managed prometheus debugging, scrape config issues,
+  Managed Prometheus support questions, proxy bypass, OTel configuration,
   metrics not flowing, pod crashes, OOM, high CPU, token adapter errors,
   DCR/DCE errors, MDSD errors, ME errors, target allocator issues,
   control plane metrics, private link issues, DNS errors, liveness probe failures,
@@ -17,6 +18,33 @@ argument-hint: 'Provide the ICM number or cluster ARM resource ID — e.g. "inve
 
 Investigate ICMs for Azure Managed Prometheus (prometheus-collector / AMA Metrics addon)
 customers by running diagnostic KQL queries from the TSG dashboard.
+
+## SRE Agent reference mode
+
+For support questions or requests for configuration guidance, use the TSGs as
+references without requiring an incident number, cluster ID, or local MCP tools.
+Read the matching file from the TSG category table below before answering. Follow
+its links to related TSGs when the question spans categories.
+
+If companion files are not available in the imported skill, read them from
+`Azure/prometheus-collector` at the installed plugin's source commit using the
+agent's GitHub connector. Their repository path is
+`.github/skills/prom-collector-tsg/tsgs/<filename>`. If the connector is unavailable,
+use the public raw-file URL:
+`https://raw.githubusercontent.com/Azure/prometheus-collector/<source-commit>/.github/skills/prom-collector-tsg/tsgs/<filename>`.
+Do not silently substitute another branch or claim to have read an inaccessible file.
+
+Cite the TSG used and relevant public product documentation. Distinguish configuration
+guidance from a diagnosis: do not claim customer connectivity or ingestion was
+verified without diagnostic evidence. For proxy + AMPLS questions, read both
+`tsgs/proxy-authenticated.md` and `tsgs/firewall-network-private-link.md`.
+
+Internal references are for authorized internal investigation only. Do not copy
+customer-identifying information, incident contents, or internal-only links into
+customer-facing answers. Do not run cluster or Azure mutations merely to answer
+a support question. Diagnostic tools require separately configured connectors;
+if deeper investigation is needed, follow the workflow below with the tools
+actually available to the agent.
 
 ## Workflow
 

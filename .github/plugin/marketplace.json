@@ -12,7 +12,7 @@
     {
       "name": "prom-collector-tsg",
       "source": "plugins/prom-collector-tsg",
-      "description": "Troubleshoot Azure Managed Prometheus ICMs by running diagnostic KQL queries against ADX and App Insights. Covers missing metrics, pod crashes, OOM, scrape config issues, MDM throttling, control plane metrics, private link, and more.",
+      "description": "Answer Azure Managed Prometheus support questions using 16 troubleshooting references, and investigate ICMs with separately configured diagnostic tools. Covers missing metrics, pod crashes, OOM, scrape configuration, proxy bypass, OTel, control plane metrics, and private link.",
       "version": "1.0.0",
       "skills": [
         ".github/skills/prom-collector-tsg"

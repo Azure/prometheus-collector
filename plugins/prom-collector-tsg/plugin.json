@@ -1,6 +1,6 @@
 {
   "name": "prom-collector-tsg",
-  "description": "Troubleshoot Azure Managed Prometheus (prometheus-collector / AMA Metrics addon) ICMs by running diagnostic KQL queries against ADX and App Insights.",
+  "description": "Answer Azure Managed Prometheus support questions using 16 troubleshooting references, and investigate ICMs with separately configured diagnostic tools.",
   "version": "1.0.0",
   "author": {
     "name": "Azure Container Insights"
