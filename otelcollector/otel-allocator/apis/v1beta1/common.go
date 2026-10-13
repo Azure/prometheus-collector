@@ -99,6 +99,11 @@ type OpenTelemetryCommonFields struct {
 	// Resources to set on generated pods.
 	// +optional
 	Resources v1.ResourceRequirements `json:"resources,omitempty"`
+	// ResizePolicy specifies how the primary container responds to in-place
+	// resource resizes.
+	// +optional
+	// +listType=atomic
+	ResizePolicy []v1.ContainerResizePolicy `json:"resizePolicy,omitempty"`
 	// NodeSelector to schedule generated pods.
 	// This only works with the following OpenTelemetryCollector mode's: daemonset, statefulset, and deployment.
 	// +optional
@@ -201,6 +206,10 @@ type OpenTelemetryCommonFields struct {
 	// ShareProcessNamespace indicates if the pod's containers should share process namespace.
 	// +optional
 	ShareProcessNamespace bool `json:"shareProcessNamespace,omitempty"`
+	// EnableServiceLinks sets enableServiceLinks on the generated pods. Defaults to true.
+	// +optional
+	// +kubebuilder:default:=true
+	EnableServiceLinks *bool `json:"enableServiceLinks,omitempty"`
 	// If specified, indicates the pod's priority.
 	// If not specified, the pod priority will be default or zero if there is no
 	// default.
