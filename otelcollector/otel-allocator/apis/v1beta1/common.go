@@ -99,6 +99,11 @@ type OpenTelemetryCommonFields struct {
 	// Resources to set on generated pods.
 	// +optional
 	Resources v1.ResourceRequirements `json:"resources,omitempty"`
+	// ResizePolicy specifies how the primary container responds to in-place
+	// resource resizes.
+	// +optional
+	// +listType=atomic
+	ResizePolicy []v1.ContainerResizePolicy `json:"resizePolicy,omitempty"`
 	// NodeSelector to schedule generated pods.
 	// This only works with the following OpenTelemetryCollector mode's: daemonset, statefulset, and deployment.
 	// +optional
@@ -110,6 +115,10 @@ type OpenTelemetryCommonFields struct {
 	// +optional
 	// +kubebuilder:default:=1
 	Replicas *int32 `json:"replicas,omitempty"`
+	// RevisionHistoryLimit is The number of old replicasets to retain to allow rollback.
+	// +optional
+	// +kubebuilder:default:=10
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 	// PodDisruptionBudget specifies the pod disruption budget configuration to use
 	// for the generated workload. By default, a PDB with a MaxUnavailable of one is set.
 	//
@@ -149,6 +158,10 @@ type OpenTelemetryCommonFields struct {
 	// ImagePullPolicy indicates the pull policy to be used for retrieving the container image.
 	// +optional
 	ImagePullPolicy v1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets is a list of references to secrets in the same namespace to use for pulling the images of the generated pods.
+	// +optional
+	// +listType=atomic
+	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// VolumeMounts represents the mount points to use in the underlying deployment(s).
 	// +optional
 	// +listType=atomic
@@ -201,6 +214,10 @@ type OpenTelemetryCommonFields struct {
 	// ShareProcessNamespace indicates if the pod's containers should share process namespace.
 	// +optional
 	ShareProcessNamespace bool `json:"shareProcessNamespace,omitempty"`
+	// EnableServiceLinks sets enableServiceLinks on the generated pods. Defaults to true.
+	// +optional
+	// +kubebuilder:default:=true
+	EnableServiceLinks *bool `json:"enableServiceLinks,omitempty"`
 	// If specified, indicates the pod's priority.
 	// If not specified, the pod priority will be default or zero if there is no
 	// default.
