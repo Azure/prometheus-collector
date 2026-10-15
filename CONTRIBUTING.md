@@ -55,6 +55,24 @@ cause byte-for-byte comparisons to fail.
 upstream OpenTelemetry Prometheus receiver, and `internal/otel-upgrade-scripts/upgrade.sh`
 deletes the `testdata` fixtures its tests read, so the suite cannot run as vendored.
 
+### Maintaining the module list
+
+The job is an explicit selection of seven modules, not automatic discovery of
+every `go.mod` in the repository. Tests and packages added within a selected
+module are included automatically by `go test ./...`. Adding a new module
+(including a nested `go.mod`) requires updating the job's selection.
+
+When adding a module with unit or self-contained integration tests, add it to
+`Go_Unit_Tests` in `.pipelines/azure-pipeline-build.yml` and to the local commands
+above in the same PR. Use the step with the appropriate pinned Go toolchain;
+the fluent-bit module runs separately because it uses `FLUENTBIT_GOLANG_VERSION`.
+Run the selected command locally and keep Go's default vet checks enabled.
+
+Do not discover and run every module indiscriminately: cluster-dependent suites
+remain in TestKube, and modules needing other provisioned services or unavailable
+fixtures need a separate test setup. Document any intentional exclusion here
+rather than silently omitting a module or suppressing its failures.
+
 ## Test Images
 
 After creating a PR, the pipeline will build the images with the tag as the name of the build in the following format:

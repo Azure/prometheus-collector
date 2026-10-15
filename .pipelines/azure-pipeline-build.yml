@@ -80,6 +80,7 @@ extends:
             set -euo pipefail
             go version
             # Go does not traverse nested modules; keep each tested module explicit.
+            # When adding a module, follow CONTRIBUTING.md: Maintaining the module list.
             for module in \
               shared \
               shared/configmap/mp \
