@@ -38,7 +38,11 @@ amaMetricsMaxReplicasFromHelper: {{ $amaMetricsAutoscaleMax }}
 {{/* If the current HPA already exists, set the HPA values to the current 
      HPA spec to preserve those values. */}}
 
-{{- $amaMetricsCurrentHPA := lookup "autoscaling/v2" "HorizontalPodAutoscaler" "kube-system" $amaMetricsHpaName }}
+{{/* lookup fails rendering on clusters where autoscaling/v2 is unavailable, so only call it when the API exists. */}}
+{{- $amaMetricsCurrentHPA := dict }}
+{{- if .Capabilities.APIVersions.Has "autoscaling/v2" }}
+{{- $amaMetricsCurrentHPA = lookup "autoscaling/v2" "HorizontalPodAutoscaler" "kube-system" $amaMetricsHpaName }}
+{{- end }}
 {{- if and $amaMetricsCurrentHPA $amaMetricsCurrentHPA.spec }}
 {{- $amaMetricsMinReplicasFromCurrentSpec := $amaMetricsCurrentHPA.spec.minReplicas -}}
 {{- $amaMetricsMaxReplicasFromCurrentSpec := $amaMetricsCurrentHPA.spec.maxReplicas -}}
