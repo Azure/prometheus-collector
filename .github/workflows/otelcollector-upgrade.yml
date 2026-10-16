@@ -9,10 +9,10 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Generate a token
         id: generate-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -83,7 +83,7 @@ jobs:
       - name: Create Pull Request
         if: ${{ env.ISNEWVERSION == 'true' && steps.check_existing_pr.outputs.exists == '0' }}
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           token: ${{ steps.generate-token.outputs.token }}
           commit-message: Upgrade otelcollector to ${{ env.VERSION }}
@@ -113,7 +113,7 @@ jobs:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Checkout PR branch if it exists
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         if: steps.check_new_pr.outputs.exists != '0'
         with:
           ref: bot/otelcollector-upgrade-${{ env.VERSION }}
@@ -137,7 +137,7 @@ jobs:
 
       - name: Comment Build Failed on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'true' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
@@ -154,7 +154,7 @@ jobs:
 
       - name: Comment Build Succeeded on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
@@ -183,7 +183,7 @@ jobs:
 
       - name: Comment CVE changes on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}

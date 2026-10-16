@@ -29,11 +29,11 @@ jobs:
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: get-go-version-greater-than-1-16
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '^1.17.3' 
       - name: Checkout-code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Set-HELM-Chart-Version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-semver
@@ -70,7 +70,7 @@ jobs:
       #    timeout: '5m0s'
       - name: Create-release
         id: create-release
-        uses: actions/create-release@v1
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +86,7 @@ jobs:
           prerelease: true
       - name: Upload-Release-Asset
         id: upload-Release-Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
         if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
