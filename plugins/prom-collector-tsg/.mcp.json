@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "prom-collector-tsg": {
+      "command": "node",
+      "args": ["dist/server.cjs"],
+      "description": "Azure Managed Prometheus TSG diagnostic queries (KQL against ADX, App Insights, AKS Kusto)"
+    }
+  }
+}

@@ -1,0 +1,525 @@
+# Managed Prometheus Investigation Guide
+
+Load this guide for incident investigations, not reference-only support questions.
+Use only tools available through authorized connectors. For local tooling setup,
+follow [the setup skill](../troubleshooting-setup/SKILL.md).
+
+### Step 1: Gather Context
+
+If an **ICM number** is provided (or an ICM URL like `https://portal.microsofticm.com/imp/v5/incidents/details/{id}/summary`):
+
+#### 1a. Use ICM MCP tools AND browser scrape (run in parallel)
+
+Call the ICM API tools AND the browser scrape simultaneously. The API tools give structured metadata; the browser scrape gives the **authored summary** which is the richest source of context (problem description, ARM IDs, PromQL queries, evidence).
+
+| Tool | What it returns | Reliability |
+|------|----------------|-------------|
+| `icm-get_incident_details_by_id` | Severity, state, owning team, custom fields, howFixed, mitigation steps, tags, time range | ✅ Always works |
+| `icm-get_ai_summary` | AI-generated summary — **often contains the cluster ARM ID** quoted from the authored summary | ✅ Usually works (may say "No AI summary available") |
+| `icm-get_incident_context` | AI-generated `Description`, `BriefSummary`, `DiscussionSection`, `DescriptionEntriesSummary`, symptoms, causes, mitigation, similar incidents, Kusto queries, bridge info | ⚠️ Works for ~60% of incidents; returns "Error fetching context" for others |
+| `icm-get_incident_location` | Region, cluster, datacenter info | ✅ Usually works |
+| `icm-get_support_requests_crisit` | Linked support requests and CritSits | ✅ Usually works |
+| **`tsg_icm_page`** | **Authored summary** (full problem description, ARM IDs, AMW IDs), **discussion entries** (full thread with all context) | ✅ Works on both Windows and WSL2 when Edge is running with `--remote-debugging-port=9222` |
+
+**⚠️ CRITICAL:** The `icm-get_incident_context` `Description` and `DescriptionEntriesSummary` fields are **AI-generated paraphrases**, NOT the original authored text. They often omit ARM IDs, specific metric names, PromQL queries, and reproduction details. Always use the browser scrape to get the real authored summary.
+
+**When `get_incident_context` succeeds, parse these fields for the cluster ARM ID:**
+- `SummarySection.Description` — AI-synthesized description (may quote the ARM ID)
+- `SummarySection.DescriptionEntriesSummary` — summary of the authored description entries
+- `SummarySection.Symptoms[]` — symptom descriptions
+- `SummarySection.Causes` — root cause if known
+- `SummarySection.MitigationSolutions` — mitigation steps taken
+- `SummarySection.KustoQueries[]` — any Kusto queries referenced (may contain cluster ID)
+- `DiscussionSection[]` — discussion thread entries
+- `BasicInfoSection` — incident metadata
+
+**When `get_incident_context` fails, fall back to:**
+- `icm-get_ai_summary` response (AI often quotes the cluster ARM ID from the authored summary)
+- `icm-get_incident_details_by_id` → scan `customFields[].StringValue`, `mitigateData`, `title`, `tags`, `howFixed`
+- `icm-get_incident_location` → cluster field
+
+**Known API limitations:**
+- `icm-get_incident_details_by_id` does NOT return the `Summary` field (which IS the authored summary in the ICM portal). The raw ICM API at `prod.microsofticm.com` exposes `Summary` in `GetIncidentDetails`, but the ICM MCP tool strips it. The authored summary often has the cluster ARM ID and AMW ID right at the top
+- `icm-get_incident_context` returns an AI-generated `Description` and `DescriptionEntriesSummary`, NOT the raw authored text. These may paraphrase or omit the ARM IDs
+- `icm-get_ai_summary` also returns AI-generated content — it sometimes includes the ARM ID but often doesn't
+- **Restricted ICMs** — some incidents have restricted access. When restricted, `get_ai_summary` returns "No AI summary available" and `get_incident_context` returns empty. Only `get_incident_details_by_id` reliably works for restricted ICMs
+- **The browser scrape (step 5) is the most reliable way to get the ARM ID.** `tsg_icm_page` intercepts the raw `GetIncidentDetails` and `getdescriptionentries` API responses via CDP Network capture during page reload, extracting the full authored summary and all discussion entries
+
+#### 1b. Finding the Cluster ARM ID
+
+**VHD/CVE scanner exception:** A scanner-generated vulnerability incident may identify a
+container image or VHD rather than a customer cluster. After gathering the authored summary and
+discussion, follow `tsgs/vulnerabilities.md`. Do not require a cluster ARM ID or run cluster KQL
+unless the incident also reports cluster-specific symptoms.
+
+The cluster ARM resource ID is critical for running TSG queries. It looks like:
+`/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.ContainerService/managedClusters/{name}`
+
+**Search order (check ALL responses from 1a):**
+1. **`icm-get_incident_context`** → search `Description`, `DescriptionEntriesSummary`, `Symptoms`, `KustoQueries`, `DiscussionSection` for `/subscriptions/.../managedClusters/...` pattern
+2. **`icm-get_ai_summary`** — AI summary often quotes the cluster ARM ID from the authored summary
+3. **`icm-get_incident_details_by_id`** — scan ALL fields: `customFields[].StringValue`, `mitigateData`, `title`, `tags`, `howFixed`
+4. **`icm-get_incident_location`** — may have cluster info
+5. **Browser scrape (CRITICAL for full context)** — The ICM authored summary (`Summary` field in the raw API) is **the most important source of information** for understanding the incident. It typically contains:
+   - The **cluster ARM ID** and **AMW resource ID** at the top
+   - A **detailed problem description** written by the reporter — often with PromQL queries, specific metric names, timestamps, and screenshots that the AI summary omits or paraphrases
+   - **Reproduction steps** and evidence (e.g. "only cAdvisor is affected, node-exporter is fine")
+
+   The ICM MCP API tools (`get_incident_details_by_id`, `get_ai_summary`, `get_incident_context`) do NOT return this field. The AI-generated descriptions are often too vague to understand the real issue. **Always scrape the ICM page to get the full authored summary before starting diagnosis.**
+
+   **Use the `tsg_icm_page` MCP tool** (works on both Windows and WSL2):
+   - Call `tsg_icm_page` with the incident ID
+   - This connects to a running Edge instance via CDP (Chrome DevTools Protocol)
+   - **On Windows:** connects directly to `localhost:9222` — just launch Edge with `--remote-debugging-port=9222` and a unique `--user-data-dir` (see below)
+   - **On WSL2:** connects via port proxy on `9223` — requires Edge on the Windows host with `--remote-debugging-port=9222` and a netsh port proxy from `0.0.0.0:9223` → `127.0.0.1:9222`
+   - If Edge is not running, the tool will show platform-appropriate launch instructions
+   - If sign-in is needed, the tool will prompt you to tell the user to sign in
+   - The tool returns: authored summary, extracted ARM IDs, and all discussion entries
+
+   **Windows Edge CDP quick start** (if `tsg_icm_page` fails with connection error):
+   ```powershell
+   # Launch a separate Edge with CDP enabled (don't reuse your main Edge profile!)
+   Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+     -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\Users\$env:USERNAME\.edge-cdp-debug","--no-first-run","--disable-sync"
+   # Then sign in to ICM in that Edge window
+   ```
+   > ⚠️ Use a **dedicated** `--user-data-dir` (not your main Edge profile). If another Edge instance already uses that profile, the new one merges into it and CDP becomes inaccessible.
+
+   **Do NOT use Playwright MCP for ICM scraping.** The ICM portal SPA is extremely heavy — `browser_snapshot` hangs on the DOM, and the authored summary is loaded via XHR API calls (not visible in `innerText`). Playwright is fine for Grafana, Azure portal, etc. — just not ICM.
+
+   **Important:** Read the full authored summary AND discussion entries carefully — they contain the reporter's actual problem description, specific metric names, PromQL queries, and evidence that the AI summary loses. This context is essential for targeted diagnosis.
+6. **Ask the user (LAST RESORT ONLY)** — if none of the above have it, ask: "What is the cluster ARM resource ID? It's usually in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
+
+**⚠️ MANDATORY FOR CLUSTER-SCOPED INCIDENTS: You MUST call `tsg_icm_page` (step 5) before asking the user for the ARM ID.**
+The ICM MCP API tools (steps 1–4) almost never return the ARM ID because they don't expose the authored summary. The browser scrape via `tsg_icm_page` is the primary method for getting the ARM ID — it intercepts the raw ICM API response which contains the full authored summary where reporters paste the cluster ARM ID. Do NOT skip it. Do NOT go straight to asking the user.
+
+**For cluster-scoped incidents, STOP and ask the user ONLY after `tsg_icm_page` has been attempted and failed to find the ARM ID.**
+Do NOT proceed to cluster triage queries without the ARM ID — every cluster query requires the
+cluster ARM ID.
+Do NOT guess, fabricate, or skip this step. If `tsg_icm_page` failed (e.g. Edge not running, sign-in needed), tell the user what happened and ask them to either:
+- Fix the browser issue and retry, OR
+- Provide the ARM ID manually
+
+> "I couldn't find the cluster ARM resource ID in the ICM details or via browser scrape. Can you provide it?
+> It looks like: `/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.ContainerService/managedClusters/{name}`
+> You can find it in the ICM authored summary at: https://portal.microsofticm.com/imp/v5/incidents/details/{ICM_ID}/summary"
+
+#### 1c. Determine the Incident Time Range
+
+**CRITICAL:** All TSG queries must target the time window when the incident was active, NOT the current time. Querying current data for a past incident will return irrelevant or empty results.
+
+1. Extract the incident time range from `icm-get_incident_details_by_id`:
+   - `impactStartTime` — when the issue started
+   - `mitigateTime` (in `mitigateData`) — when the issue was mitigated
+   - `createdDate` — when the ICM was filed (use as fallback start time)
+2. Calculate the appropriate `timeRange` parameter:
+   - For active/recent incidents (still ongoing or within last 24h): use `"24h"` or `"6h"`
+   - For past incidents: the TSG tools query relative to "now", so data may no longer be available if the incident is old (App Insights retains ~30 days, Kusto clusters vary)
+   - **If the incident is older than 30 days**, App Insights queries will return empty. Only Kusto-backed queries (AKS, AKS CCP, MetricInsights, AMWInfo) may still have data
+3. **Start with a shorter timeRange** (e.g. `"1h"` or `"6h"`) and widen if needed. Queries with `"7d"` timeRange can timeout on busy clusters. If a query times out, retry with `"1h"` or `"24h"`
+
+**Connection issues:** If MCP server queries fail with connection errors, timeouts, or authentication failures, **STOP and ask the user**: "Are you connected to the corp VPN? The MCP server queries require VPN access to reach internal data sources (App Insights, Kusto, AKS CCP)."
+
+#### 1d. Check ICM Attachment Logs
+
+**⚠️ CRITICAL — Do this BEFORE running KQL queries.** ICM attachments often contain a diagnostic bundle (zip file named after the cluster) that can answer key questions in minutes — saving hours of KQL investigation.
+
+**How to find and extract attachments:**
+
+1. Check the ICM discussion entries (from `tsg_icm_page`) for attachment references — CSS engineers often attach diagnostic bundles
+2. Look in the user's Downloads folder for zip files matching the cluster name:
+   ```powershell
+   Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "*cluster-name*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 3
+   ```
+3. If found, extract to a working directory:
+   ```powershell
+   Expand-Archive -Path "<zip-path>" -DestinationPath "<session-dir>/icm-attachments/" -Force
+   ```
+
+**What the diagnostic bundle typically contains:**
+
+| File | What to look for | Priority |
+|------|-----------------|----------|
+| `pods-all-wide.txt` | **ALL pods** with namespace, name, ready state, status, **restart count**, **age**, IP, **node placement**. Search for the exporter/target pods mentioned in the ICM — check their restart count, node, and age | 🔴 Check first |
+| `nodes.txt` | Node names, ready state, **age**, K8s version. Nodes with age `0d` were recently reimaged/recreated (indicates drain activity) | 🔴 Check first |
+| `nodes-detailed.yaml` | Full node conditions (MemoryPressure, CPUPressure, DiskPressure), taints, allocatable resources. Check system pool nodes for pressure conditions | 🟡 Check if nodes.txt shows issues |
+| `cluster-info.txt` | K8s version, namespace list, component statuses | 🟢 Quick context |
+| `diagnostic.log` | HPA status, validation results, addon health checks | 🟢 Quick context |
+| `configmap_ama-metrics-settings-configmap.yaml` | Custom settings — keep lists, scrape intervals, debug mode, default targets enabled | 🟡 Check for config issues |
+| `configmap_ama-metrics-prometheus-config.yaml` | Custom Prometheus scrape config (RS) | 🟡 Check for custom jobs |
+| `configmap_ama-metrics-prometheus-config-node.yaml` | Custom DS scrape config | 🟡 If DS-related issue |
+| `deployment-ama-metrics.yaml` | RS deployment spec — resource limits, replicas, image version | 🟢 Version verification |
+| `daemonset-ama-metrics-node.yaml` | DS spec — tolerations, resource limits, image version | 🟢 Version verification |
+| `replicaset-pods/` | RS pod logs (may be empty/truncated). If present, search for errors, ME failures, scrape timeouts | 🟡 If RS-related issue |
+
+**Key diagnostic patterns in `pods-all-wide.txt`:**
+
+1. **For "missing metrics" ICMs** — identify the exporter pods that produce the missing metrics:
+   - Search for the pod name or namespace mentioned in the ICM
+   - Check **restart count** — high restarts (>2) indicate pod instability (crashlooping)
+   - Check **age** — very young pods (minutes/hours) on old nodes suggest recent eviction/recreation
+   - Check **node** — if exporter pods run on system pool nodes that show age `0d` in `nodes.txt`, they were likely evicted during node drains
+   - Compare restart counts: if the exporter pods have many restarts but other pods on the same node have zero, the exporter has an application-level stability issue
+
+2. **For "pod restarts/OOM" ICMs** — check our addon pods (`ama-metrics-*`):
+   - RS pods: `ama-metrics-{hash}-{id}` — check restart count, age, node placement
+   - DS pods: `ama-metrics-node-*` — check per-node status, restart count
+   - If RS pods have ages much shorter than the cluster uptime, they were recently evicted/recreated
+   - If RS pods are all on the same node pool (especially system pool), they're vulnerable to pool-wide drains
+
+3. **Cross-reference nodes.txt with pods:**
+   - System nodes with age `0d` = reimaged today (drain activity)
+   - Match pod node placement → node age to determine if pods were affected by drains
+   - Compare addon pod stability vs customer pod stability on the same nodes
+
+**Example — rapid diagnosis from attachment:**
+```
+# 1. Find the exporter pods producing the missing metrics
+Select-String -Path "pods-all-wide.txt" -Pattern "my-exporter|custom-metrics"
+# → my-exporter-deployment on system pool nodes, 4-6 restarts, age 4-5h
+
+# 2. Check those nodes (replace with actual system pool name)
+Select-String -Path "nodes.txt" -Pattern "aks-systempool"
+# → system pool nodes all age 0d (reimaged today)
+
+# 3. Check our RS pods on the same nodes
+Get-Content "pods-all-wide.txt" | Where-Object { $_ -match "ama-metrics-[0-9a-f]" }
+# → RS pods also on system pool, ages 2-5h, 0-3 restarts
+
+# Conclusion: Node drains evicted both exporter and RS pods.
+# Exporter pods crashlooping (4-6 restarts) extended the gap.
+# RS pods recovered faster (0-3 restarts).
+```
+
+**⚠️ Important:** The attachment is a **point-in-time snapshot** — it shows pod/node state at collection time, not during the incident. Use the pod age and restart count to infer what happened:
+- Pod age < incident duration → pod was recreated during/after the incident
+- High restart count + young age → pod has been crashing since recreation
+- Pod `Running` with 0 restarts and age > incident duration → pod was stable throughout
+
+### Step 2: Run Triage Queries
+
+Skip this step for scanner-only vulnerability incidents that do not identify a customer cluster.
+Follow `tsgs/vulnerabilities.md` instead.
+
+**Use the `prom-collector-tsg` MCP server** which provides these tools:
+
+| Tool | Description |
+|------|-------------|
+| `tsg_triage` | Initial triage: version, region, AMW config, token adapter, DCR/DCE. **Includes ⚠️ Private Cluster Check (definitive — from `ManagedClusterSnapshot.privateLinkProfile.enablePrivateCluster` boolean, NOT the FQDN) and ⚠️ Missing DCE check.** Also resolves CCP cluster_id, node pool capacity, autoscaling history, and AKS upgrade history (version timeline with resource_id fallback). |
+| `tsg_errors` | Scan all error categories: container, OtelCollector, ME, MDSD, token adapter, TA, DNS, private link |
+| `tsg_config` | Configuration: scrape configs, keep lists, intervals, custom config validation status/errors, custom job names from startup logs, HPA, pod/service monitors, **addon enabled check, recording rules** |
+| `tsg_workload` | Workload health: CPU, memory, samples/min, drops, queue sizes, export failures. **Also includes HPA status, HPA scaling metric and oscillation analysis, HPA metric configuration, pod resource limits, target allocator distribution, exporter send failures, ME ingestion success rate, event timeline correlation, scrape samples per job over time, ME throughput by pod type, node exporter sample count trend, AKSClusterMetrics CPU/memory/throttling for ALL ama-metrics pods (including KSM), KSM cAdvisor telemetry from App Insights (CPU, memory, node placement via `ksmUsage`), and KSM scrape timeout detection (broken pipe errors).** |
+| `tsg_pods` | Pod restarts and health. **Includes per-pod restart detail, DaemonSet pod count by status, node status timeline, pod scheduling events, cluster autoscaler events, cluster autoscaler scale decisions, system node drain events (safeDrain with reasons), ama-metrics pod eviction events, NodeNotReady breakdown by node pool (system vs user vs windows), CoreDNS pod disruption during incident, and critical infrastructure pod evictions (CoreDNS/kube-proxy/azure-cns).** |
+| `tsg_logs` | Raw logs from specific component (replicaset, linux-daemonset, windows-daemonset, configreader) |
+| `tsg_control_plane` | Control plane metrics config and health |
+| `tsg_query` | Run arbitrary KQL against any data source (including `ARMProd` for ARM deployment logs). Accepts optional `cluster`, `timeRange`, `outputFile` (write ALL rows to CSV/JSON), `outputFormat`, and `maxRows` params |
+| `tsg_dashboard_link` | Get a link to the ADX dashboard pre-filtered for the cluster |
+| `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
+| `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_mdm_query` | Query any Prometheus metric from Geneva MDM for a specific cluster. Returns time series data with summary statistics (min/max/avg/latest, trend sparkline, significant changes). Use to verify a specific metric has recent data, check values over time, or investigate metric-specific issues. **Requires Geneva MDM MCP server running on localhost:5050.** Use `MDMAccountName` from `tsg_triage`. |
+| `tsg_me_diagnostics` | Check MetricsExtension internal QoS metrics (`MetricsExtension2` namespace) in the customer's MDM account. Queries `RawEventsDroppedCount`, `MetricAggregatesDroppedCount`, `MetricEventsDroppedCount`, and `MeErrorsCount`. When drops are detected, drills down by `Reason` dimension (e.g. `TooManyDimensions`, `Throttled`, `BlackListedMetric`, `OversizedHistogram`). Critical for diagnosing "scrape healthy but metrics missing in MDM" — ME may be silently dropping metrics. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_scrape_health` | Check scrape target health by querying `up`, `scrape_samples_scraped`, and `scrape_samples_post_metric_relabeling` from Geneva MDM. **Requires Geneva MDM MCP server running on localhost:5050.** |
+| `tsg_auth_check` | Validate credentials and connectivity to all data sources before running queries. Tests Azure credential, App Insights, Kusto clusters, and MDM MCP server. **Run this first if queries fail with 403 or connection errors.** |
+| `tsg_icm_page` | Scrape ICM incident page via Edge CDP. Works on both **Windows** (localhost:9222) and **WSL2** (port proxy on 9223). Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222`. On WSL2, also needs Windows port proxy on 9223. |
+| `tsg_dimension_analysis` | Analyze metric dimension counts, trends, and growth over time using `StorageInsightsUsageV2`. Shows max dimensions across all metrics in account, weekly dimension count trend for a specific metric, dimension name diffs (added/removed labels over time), and metrics with high dimension counts. Use when investigating missing metrics that may be silently dropped due to high dimension count — helps gather evidence for MDM team escalation. Takes `mdmAccountId` (required) and `metricName` (optional — omit for account-wide overview). |
+
+All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
+
+**Timeframe best practices:**
+- **Always use the incident timeframe**, not defaults. If the ICM started 2 days ago and was mitigated yesterday, use `"48h"` or `"24h"` — not `"7d"`
+- **Start narrow, widen if needed.** Use `"1h"` or `"6h"` first. Queries on busy clusters with `"7d"` frequently timeout
+- **If a query times out**, retry with a shorter `timeRange` (e.g. `"1h"` instead of `"7d"`)
+- **Past incidents** (>30 days old): App Insights data is gone. Only AKS/CCP Kusto queries may have data. Focus diagnosis on ICM metadata (`howFixed`, `mitigateData`, `customFields`)
+
+**⚠️ ARM Resource ID pitfalls:**
+- **Use the cluster resource group, NOT the node resource group.** ICMs often mention both. The cluster RG (e.g. `rg-myteam-prod-eus`) is what the addon telemetry uses. The node/MC RG (e.g. `MC_rg-myteam-prod-eus_mycluster_eastus`) will return **all queries empty** with no error
+- **Symptom of wrong ARM ID**: every `PrometheusAppInsights` query returns "No data returned" but `AKS` queries still work (or vice versa). If you see this, check the ICM authored summary for a different ARM ID
+- **Multiple ARM IDs in ICM**: ICMs often list multiple clusters or both the cluster RG and node RG. Always use the one with `Microsoft.ContainerService/managedClusters` in the path — NOT `Microsoft.Compute` or node resource groups
+
+#### Checking Scrape Target Health via Geneva MDM
+
+When investigating **intermittent missing metrics** for a specific target (e.g. kube-state-metrics), use `tsg_scrape_health` and `tsg_mdm_query`:
+
+1. Run `tsg_triage` → extract the `MDMAccountName` (e.g. `mac_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) and the cluster short name (the `cluster` label in MDM)
+2. Run `tsg_scrape_health` with `monitoringAccount`, `cluster`, and optionally `job` (e.g. `kube-state-metrics`):
+   - Without `job`: probes all common scrape targets in parallel, returns per-job summary table
+   - With `job`: detailed analysis of `up`, `scrape_samples_scraped`, `scrape_samples_post_metric_relabeling` for that job
+3. **Interpreting `tsg_scrape_health` results:**
+   - 100% success rate → scrape is healthy, issue is downstream (ME, MDSD, or MDM)
+   - Scrape failures (up=0) → target is unreachable or timing out, check target pod logs
+   - High relabeling drop rate (>50%) → many samples dropped by `metric_relabel_configs` or keep list
+   - Failure rate < 1% → transient scrape timeouts, usually self-healing
+   - Failure rate > 5% → persistent target health issue, check target pod logs
+4. **Verify the specific metric has recent data** — run `tsg_mdm_query` with the metric name:
+   - If `tsg_mdm_query` returns "Data exists" → metric is being ingested, issue may be query-side
+   - If `tsg_mdm_query` returns "No data" but `tsg_scrape_health` shows healthy scrapes → metric is being **scraped but silently dropped** downstream (ME dimension limit, keep list filtering, or MDM rejection). This is the key diagnostic signal
+   - **Test related metrics too** — if `kube_node_labels` has no data but `kube_node_info` does, the issue is specific to that metric (likely high dimension count)
+   - To filter by specific dimensions, pass `dimensions` as JSON: `{"job": ["kube-state-metrics"], "node": ["node1"]}`
+5. **Correlate with App Insights logs** — search for target-specific log tags:
+   - `prometheus.log.kubestatemetricscontainer` — KSM pod logs
+   - `prometheus.log.targetallocator.tacontainer` — target allocator logs
+   - `prometheus.log.prometheuscollectorcontainer` — otelcollector scrape logs (ReplicaSet)
+   - If a log tag has zero entries, that component isn't sending telemetry (may be crash-looping)
+
+**⚠️ When ALL queries return empty or "No data":**
+This is almost always one of these causes (check in order):
+1. **Wrong ARM resource ID** — verify you're using the cluster RG, not the node RG (see above)
+2. **Wrong timeframe** — incident was days/weeks ago but you're querying last 24h. Use `startTime`/`endTime` to target the incident window
+3. **Addon not installed** — the cluster may not have the monitoring addon enabled (no telemetry sent at all). Check with `tsg_config` → "Addon Enabled in AKS Profile"
+4. **App Insights data expired** — data older than ~30 days is purged. Only Kusto-backed data sources (AKS, AKS CCP) retain longer history
+5. **VPN/auth issue** — if ALL queries across ALL data sources fail, you're likely not connected to corpnet or credentials expired
+
+> **Detailed reference** for tsg_query, MDM account resolution, CCP cluster ID, node pool capacity, historical time ranges, versions, MetricsExtension deep-dives, and escalation contacts: see **`reference.md`** in this directory.
+
+---
+
+### Step 3: Identify Symptom Category and Follow TSG
+
+Based on triage results, identify the primary symptom category and follow the corresponding TSG file in the `tsgs/` directory.
+
+**For cluster investigations, always check versions first** — run `tsg_triage` → "Version" (addon image tag) and "Component Versions" (ME, OTel, Golang, Prometheus). See `reference.md` → "Checking Versions and Release Notes" for details.
+
+For scanner-generated CVE incidents, use the exact scanned artifact as the starting version and
+follow `tsgs/vulnerabilities.md`. Do not substitute the current source version or newest registry
+tag for the version embedded in the scanned VHD or other consumer.
+
+Use the [TSG index in SKILL.md](SKILL.md#tsg-index) to select the symptom guide.
+
+**For MetricsExtension (ME) deep-dives** — see `reference.md` → "Deep-Diving into MetricsExtension (ME) Issues".
+
+**For ad-hoc KQL queries** — see `reference.md` → "Using tsg_query for Ad-Hoc Investigation".
+
+---
+
+### Step 4: Summarize Findings
+
+**⚠️ Do NOT speculate.** Only state what the query data shows. If you don't know the origin or purpose of a Kubernetes resource (namespace, PodMonitor, ServiceMonitor, ConfigMap, etc.), say "I don't have data on this" rather than guessing. Common traps:
+- Don't claim resources are "auto-generated" unless you have documentation or code proving it
+- Don't infer intent from naming patterns (e.g., a GUID-prefixed namespace could be customer-created or platform-created — you don't know without evidence)
+- If a field or behavior is ambiguous, flag the uncertainty explicitly
+- **Don't speculate about mechanisms** — don't claim pods are "overwhelmed by timeouts" or "experiencing backpressure" without data showing it. Instead, check for concrete events: pod evictions (`tsg_pods` → "AMA-Metrics Pod Eviction Events"), node drains (`tsg_pods` → "System Node Drain Events"), or actual error logs
+- **When metrics are partially missing, check system node health first** — repeated system node drains (safeDrain) are a common, easily-missed cause of metric gaps. Always run `tsg_pods` and check the drain/eviction queries before theorizing about scrape timeouts, config issues, or capacity problems
+- **When RS pods show DNS errors or "connection refused" to TA, check both cert rotation and cluster infra health** — RS pods log `dial tcp: lookup ... no such host` during DNS failures OR during TLS cert rotation restarts. Check ConfigReader logs (`tsg_logs` → configreader) for `inotifyoutput-ta-server-cert-secret.txt has been updated` and `tsg_pods` → "CoreDNS Pod Disruption During Incident". If CoreDNS was NOT disrupted, the DNS error is transient from the RS pod restarting during cert rotation. If CoreDNS WAS evicted, it's a cluster infrastructure issue
+
+Present findings as:
+1. **Cluster Info** — version, region, state
+2. **Root Cause** — what the queries revealed, linked to TSG category
+3. **Errors Found** — list of error categories with counts
+4. **Configuration Issues** — any misconfigurations detected
+5. **Resource Health** — CPU/memory/queue status
+6. **Recommended Actions** — specific steps from the relevant TSG
+7. **Escalation Path** — if issue requires another team (see Escalation Contacts below)
+8. **Dashboard Link** — provide the direct link:
+   `https://dataexplorer.azure.com/dashboards/94da59c1-df12-4134-96bb-82c6b32e6199?p-_cluster=v-{CLUSTER_ARM_ID_URL_ENCODED}`
+9. **Reference Documentation** — search the learn.microsoft.com doc trees below for the most relevant page based on the customer's specific issue. Use `web_search` or `web_fetch` to find the right sub-page (e.g., custom scrape config, remote write, troubleshooting). Do NOT just link the overview — find and link the specific doc page that addresses the customer's problem:
+   - TOC root: [Azure Managed Prometheus](https://learn.microsoft.com/en-us/azure/azure-monitor/metrics/prometheus-metrics-overview) — covers configuration, collection, scrape configs, remote write
+   - TOC root: [Kubernetes monitoring](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-overview) — covers AKS addon setup, troubleshooting, managed Grafana
+
+For vulnerability incidents, use the evidence and conclusion format in
+`tsgs/vulnerabilities.md` instead of this cluster-health format.
+
+### Step 5: Improve the Tooling
+
+After each investigation, if you wrote any **ad-hoc KQL queries via `tsg_query`** that were useful for diagnosis, **add them to the MCP server** so future investigations benefit:
+
+1. Identify which ad-hoc queries produced actionable results during the investigation
+2. Add the query to the appropriate category in `tools/prom-collector-tsg-mcp/src/queries.ts`
+3. Wire it into the relevant tool in `tools/prom-collector-tsg-mcp/src/index.ts`
+4. Rebuild: `cd tools/prom-collector-tsg-mcp && npx tsc`
+
+When updating the SKILL.md or MCP tools with findings from an investigation:
+
+- **Generalize all content** — write for future investigations, not the current one. Describe the pattern, not the specific incident
+- **Never include customer-specific details** — no cluster names, ARM resource IDs, MDM account names, subscription IDs, or ICM numbers. Use generic placeholders (e.g. `mac_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) in examples
+- **Present unconfirmed findings as hypotheses** — if you observed a behavior but haven't confirmed the root cause with the owning team, use language like "may", "possible", "suggests" rather than asserting it as fact
+- **Include the investigation technique** — describe HOW to diagnose the issue (which tools to run, what to look for) not just what you found in one specific case
+- **Add escalation paths** — if the issue requires another team, include the verified ICM team public ID
+
+This ensures the tooling continuously improves — every investigation makes the next one faster.
+
+### Researching Internal Documentation via EngHub and ES Chat
+
+When TSG tools and logs aren't enough — e.g. you need to understand an internal component's behavior, find release notes, look up config options, or understand a codepath — use the **Engineering Systems (ES) Chat** MCP tools to search EngHub and internal wikis.
+
+#### Available ES Chat Tools
+
+| Tool | When to use | Example |
+|------|------------|---------|
+| `es-chat-es_search` | Keyword search across EngHub docs, ADO wikis, and internal KBs. Best for finding specific pages. | Find ME release notes, ConfigOverrides reference, diagnostic log docs |
+| `es-chat-es_ask` | Ask a natural language question. Best for "how does X work?" questions. | "How does MetricsExtension dimension trimming work?" |
+| `es-chat-es_resolve` | Resolve a specific identifier (URL, GUID) to entity info. | Resolve an EngHub doc URL to its content |
+
+**⚠️ IMPORTANT:** Do NOT prefix queries with "engineering systems" or "engsys" — the tools are already scoped to engineering. This misleads the search.
+
+#### Key EngHub Pages for MetricsExtension / Geneva Metrics
+
+Bookmark these — they are the most useful references for ME troubleshooting:
+
+| Topic | EngHub URL |
+|-------|-----------|
+| ME Release Notes | https://eng.ms/docs/products/geneva/metrics/metricsagentsdk/releasenotes |
+| ME ConfigOverrides Reference | https://eng.ms/docs/products/geneva/collect/metrics/metricsextconfigoverrides |
+| ME Diagnostic Logs Guide | https://eng.ms/docs/products/geneva/metrics/troubleshooting/me_diagnosticlogs |
+| Geneva Metrics Overview | https://eng.ms/docs/products/geneva/metrics/ |
+| MDM Ingestion Troubleshooting | https://eng.ms/docs/products/geneva/metrics/troubleshooting/ |
+| IFx Metrics Reference (dimension limits) | https://eng.ms/docs/products/geneva/collect/references/ifxref/ifxmetrics |
+| **ME Source Code (ADO)** | https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension?version=GBmaster |
+
+**Key source code paths in ME repo** (for deep investigation):
+
+| File | What it contains |
+|------|-----------------|
+| `src/NativeMetricsExtension/Lib/sources/SourceConstants.h` | `g_maxDimensions=74`, `g_maxDimensionNameSize=512`, `g_maxDimensionValueSize=1024` |
+| `src/NativeMetricsExtension/Lib/events/PreRawEvent.cpp` | `CheckDimensionLimits()` — enforces dimension count and size limits |
+| `src/NativeMetricsExtension/Lib/MetricAggregatorCollection.cpp` | `TrimDimensionValues()` — BloomFilter-based dimension trimming (only active with server config) |
+| `src/NativeMetricsExtension/Lib/sources/OtlpPromProcessor.cpp` | OTLP Prometheus ingestion — how labels become dimensions |
+| `src/NativeMetricsExtension/Lib/sources/RawMdmEventsQueue.cpp` | Event validation — 74-dim hard cap enforcement |
+| `src/NativeMetricsExtension/Lib/config/loaders/MetricConfigurationLoader.cpp` | BloomFilter download and local control channel mode logic |
+| `src/NativeMetricsExtension/Lib/config/loaders/ConfigurationLoadersManager.cpp` | "Do not try to load configurations from remote endpoint if local control channel is enabled" |
+| `src/NativeMetricsExtension/Lib/config/MetricsExtensionConfiguration.cpp` | Where `truncateLargeDimensions=true` is set for 3P scenarios |
+| `CHANGELOG.md` | Full history of all ME changes (more detail than EngHub release notes) |
+
+To clone the ME repo for source investigation:
+```powershell
+git clone --depth 1 https://msazure.visualstudio.com/One/_git/EngSys-MDA-MetricsExtension C:\temp\me-repo
+# Then search: Get-ChildItem -Recurse -Filter "*.cpp" | Select-String -Pattern "your_pattern"
+```
+
+#### How to Search Effectively
+
+1. **Finding ME release notes for a specific version or feature:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension release notes dimension trimming 2025",
+     question: "What MetricsExtension release notes mention dimension trimming changes?"
+   )
+   ```
+
+2. **Understanding an ME config option:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension ConfigOverrides enableDimensionTrimming maxDefaultDimensions",
+     question: "What does the enableDimensionTrimming ConfigOverride do and what is the default dimension limit?"
+   )
+   ```
+
+3. **Understanding ME diagnostic log fields:**
+   ```
+   es-chat-es_ask(
+     question: "What does ComboCount mean in MetricsExtension diagnostic logs? How does it relate to ReceivedEventCount?"
+   )
+   ```
+
+4. **Finding how a Geneva component works internally:**
+   ```
+   es-chat-es_search(
+     keywords: "Geneva ingestion gateway GIG dimension limit MStore metric auto-create",
+     question: "What is the max dimension count per metric enforced by the Geneva Ingestion Gateway?"
+   )
+   ```
+
+5. **Checking if a behavior changed in a specific ME version:**
+   ```
+   es-chat-es_search(
+     keywords: "MetricsExtension v2.2025.722.956 changes 3P OTLP Prometheus",
+     question: "What changes were in MetricsExtension version v2.2025.722.956?"
+   )
+   ```
+
+#### Search Tips
+
+- **Use multiple keyword variants** — EngHub search is keyword-based, not semantic. Include synonyms: "dimension trimming", "dimension limit", "maxDimensions", "maxDefaultDimensions"
+- **Include component names** — always include "MetricsExtension" or "ME" in keywords, plus "Geneva", "MDM", "GIG" as relevant
+- **Search iteratively** — if the first search doesn't find what you need, try different keyword combinations. EngHub docs use inconsistent terminology
+- **Cross-reference with code** — EngHub docs can be outdated. After finding a doc reference, verify against the actual ME config dump in debug logs or the ME binary behavior
+- **Check both `es_search` and `es_ask`** — `es_search` is better for finding specific doc pages; `es_ask` is better for synthesized answers to "how does X work?" questions
+- **EngHub results may reference internal bug numbers** (e.g. "bug #29894887") — these can be resolved via `es-chat-es_resolve` or looked up in ADO
+
+#### When EngHub Isn't Enough
+
+Some ME internals are not documented in EngHub (e.g. the exact dimension count limit for 3P/AMW accounts, the dimension trimming algorithm). In these cases:
+1. Check the ME debug logs for clues (ConfigOverrides dump, diagnostic trace output)
+2. Check the `me.config` files in `otelcollector/metricextension/` for any override that might apply
+3. Escalate to the ME team: `Geneva Monitoring/MDM-Support-Core-IngestionAndStorage-Tier2`
+
+## Escalation Contacts
+
+| Issue/Area | ICM Team |
+|------------|----------|
+| AMW Quota increases | Geneva Monitoring/MDM-Support-Manageability-Tier2 |
+| Query throttling (429 in Grafana) | Azure Monitor Essentials/Sev3 and 4 CRI – Metrics |
+| Query failures (Portal 503 / PQS) | Azure Monitor Essentials/Sev 3 and 4 CRI – PQS |
+| Remote-write errors (500, 4xx) | Geneva Monitoring/Ingestion Gateway Support - Tier 2 |
+| ARC Kubernetes ingestion | Container Insights/AzureManagedPrometheusAgent |
+| Prometheus Recording rules & alerts | Azure Log Search Alerts/Prometheus Alerts |
+| Grafana service issues | Azure Managed Grafana/Triage |
+| AMW RP issues | Azure Monitor Control Service/Triage |
+| AMCS (DCR/DCE/DCRA) | Azure Monitor Control Service/Triage |
+| MDM Store | Geneva Monitoring/MDM-Support-Core-IngestionAndStorage-Tier2 |
+| AKS addon/ARM/Policy/Bicep/Terraform | Container Insights/AzureManagedPrometheusAgent |
+
+---
+
+## Quick Reference
+
+| Symptom | MCP Tool | TSG Category |
+|---------|----------|--------------|
+| No metrics flowing | `tsg_triage` + `tsg_errors` + `tsg_mdm_throttling` | Missing Metrics |
+| Verify specific metric has data | `tsg_mdm_query` | Missing Metrics (confirm recent ingestion) |
+| Account throttling / drops | `tsg_mdm_throttling` | Missing Metrics (MDM quota) |
+| ME-level drops (TooManyDimensions, Throttled) | `tsg_me_diagnostics` | Missing Metrics (ME silent drops) |
+| Pod CrashLoopBackOff / OOM | `tsg_errors` + `tsg_workload` | Pod Restarts and OOMKills |
+| High CPU/Memory | `tsg_workload` | Pod Restarts / Resource Consumption |
+| Partial metrics / drops | `tsg_workload` + `tsg_me_diagnostics` + `tsg_mdm_throttling` | Missing Metrics (ME queue or MDM throttle) |
+| Config not applied / invalid | `tsg_config` | Missing Metrics (custom config) |
+| Config validation failed | `tsg_config` | Missing Metrics (check "Custom Config Validation Errors") |
+| Private link errors | `tsg_triage` (⚠️ Private Cluster Check + Missing DCE) → `tsg_errors` | Firewall / Network / Private Link |
+| TokenConfig.json missing / ME won't start | `tsg_errors` + `tsg_logs` | Firewall / Network (AMCS blocked) |
+| ARC cluster pod restarts | `tsg_errors` + `tsg_logs` | Firewall / Network (ARC/Azure Local) |
+| Proxy / auth proxy issues | `tsg_errors` + `tsg_config` | Proxy / Authenticated Proxy |
+| Target allocator errors | `tsg_errors` | Pod Restarts (operator-targets) |
+| TA crash loop / Reloader TLS storm | `tsg_pods` + `tsg_errors` | Pod Restarts (operator-targets cert rotation) |
+| Token/auth errors | `tsg_errors` | Missing Metrics (auth issues) |
+| Liveness probe 503 | `tsg_errors` | Liveness Probe Failures |
+| Control plane metrics missing | `tsg_control_plane` | Control Plane Metrics |
+| Spike in ingestion | `tsg_workload` + `tsg_config` + `tsg_metric_insights` + `tsg_mdm_throttling` | Spike in Metrics Ingested |
+| High cardinality / volume | `tsg_metric_insights` | Spike in Metrics (cardinality) |
+| High dimension count / silent drops | `tsg_dimension_analysis` | Missing Metrics (possible dimension limit) |
+| Dimension growth over time | `tsg_dimension_analysis` | Missing Metrics (label growth) |
+| AMW cost optimization | `tsg_metric_insights` + `tsg_config` | AMW Usage Optimization |
+| Pods not created | `tsg_triage` | Pods Not Created / Addon Not Deploying |
+| Duplicate label errors | `tsg_config` | Duplicate Labels (kube-state-metrics) |
+| DCR/DCE wrong region or missing | `tsg_triage` + `tsg_query` (ARM) | DCR/DCE Region Mismatch or Missing (**check private link first!**) |
+| Windows pod restarts | `tsg_errors` + `tsg_logs` | Windows Pod Restart |
+| Remote write failures | `tsg_errors` | Remote Write |
+| Metrics missing in non-default AMW | `tsg_triage` + `tsg_config` | Missing Metrics (Multi-AMW routing) |
+| CVE reported | `tsg_icm_page` + build, registry, and consumer evidence | Vulnerabilities (artifact-to-consumer trace) |
+| ARM64 missing labels | `tsg_config` | Node Exporter Missing Labels on ARM64 |
+| HPA scaled down | `tsg_workload` | Known Issues (expected behavior) |
+| HPA oscillating / OOMKill feedback loop | `tsg_workload` + `tsg_errors` + `tsg_pods` | Pod Restarts and OOMKills (HPA can't scale when OOM resets memory signal) |
+| Inconsistent scrape intervals | `tsg_config` + `tsg_workload` | Known Issues (cAdvisor timeout) |
+| Regression after addon update | `tsg_triage` + `tsg_config` | Known Issues (post-rollout) |
+| Node drain blocked | N/A | Known Issues (tolerations — fixed) |
+| Metrics missing after AKS upgrade | `tsg_triage` + `tsg_scrape_health` + `tsg_workload` | Missing Metrics (AKS upgrade / node exporter) |
+| TS explosion / cardinality spike | `tsg_workload` + `tsg_mdm_throttling` + `tsg_metric_insights` | Spike in Metrics (label churn / floodgate) |
+| Node exporter down (up=0) | `tsg_scrape_health` + `tsg_triage` | Missing Metrics (node image / NE version) |
+| System node drain / eviction loop | `tsg_pods` (System Node Drain Events + Pod Eviction) | Missing Metrics (node remediation) |
+| Metrics briefly return then drop again | `tsg_pods` (Drain Timeline + Eviction Events) | Missing Metrics (repeated drain loop on system pool) |
+| DNS resolution failures in RS logs | `tsg_pods` (CoreDNS Pod Disruption) + `tsg_logs` (configreader) | Missing Metrics (cert rotation or cluster DNS issue) |
+| Liveness 503 during cert rotation | `tsg_logs` (configreader) + `tsg_pods` | Pod Restarts (TLS cert rotation — brief ~4min disruption) |
+| Mass node reimage + metric gap | `tsg_pods` (NodeNotReady by Pool + NetworkNotReady) | Missing Metrics (DaemonSet pods cycling on reimaging nodes) |
+| Customer exporter pods crashing | ICM attachment `pods-all-wide.txt` + `nodes.txt` | Missing Metrics (customer app issue, not addon) |
+| RS pods evicted during node drain | ICM attachment `pods-all-wide.txt` (RS pod age/restarts) | Missing Metrics (addon also disrupted by drain) |
+| KSM scrape timeout (large cluster) | KSM logs: "broken pipe" + `tsg_config` (labels allowlist `[*]`) | Missing Metrics (KSM payload too large for scrape_timeout) |
+| Portal PromQL 503 / Grafana works | `tsg_errors` + `tsg_workload` (quick health check) | Known Issues (PQS query path — not our addon) |
+| MDSD ODS health upload DNS errors | `tsg_errors` (benign — ignore) | Known Issues (HEALTH_ datatype, not metrics pipeline) |
+
+---
+
+## Companion Files
+
+| File | Contents |
+|------|----------|
+| `tsgs/` | 16 individual TSG files — one per symptom category + Known Issues & FAQ |
+| `reference.md` | tsg_query guide, data sources, MDM/CCP resolution, versions, ME deep-dive, customer docs |
+| `SKILL.md` | Entry point, reference mode, guardrails, and TSG index |
