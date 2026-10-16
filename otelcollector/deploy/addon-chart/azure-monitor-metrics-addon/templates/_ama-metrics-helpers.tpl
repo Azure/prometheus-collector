@@ -1,3 +1,23 @@
+{{/* MCR repository base - returns cloud-specific MCR URL.
+     The cloud name is lowercased so that either casing matches. */}}
+{{- define "mcr_repository_base" }}
+{{- $cloud_environment := lower (.Values.global.commonGlobals.CloudEnvironment | default "azurepubliccloud") }}
+{{- if (eq $cloud_environment "azurechinacloud") }}
+{{- "mcr.azk8s.cn" }}
+{{- else if (eq $cloud_environment "usnat") }}
+{{- "mcr.microsoft.eaglex.ic.gov" }}
+{{- else if (eq $cloud_environment "ussec") }}
+{{- "mcr.microsoft.scloud" }}
+{{- else }}
+{{- "mcr.microsoft.com" }}
+{{- end }}
+{{- end }}
+
+{{/* MCR repository template for addon charts */}}
+{{- define "addon_mcr_repository_base" }}
+{{- template "mcr_repository_base" . }}
+{{- end }}
+
 {{/* HPA merge. */}}
 {{/* 
   1. Set the default HPA values for minReplicas, maxReplicas, and metrics. 

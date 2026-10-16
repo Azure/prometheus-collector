@@ -132,14 +132,27 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 		defer resp.Body.Close()
 	}
 
+	// HTTPS is enforced for the Collector <-> Target Allocator connection, so we never
+	// fall back to plaintext HTTP even if the pre-flight check above did not succeed
+	// (for example, the Target Allocator is not ready yet or its certs have not been
+	// mounted yet). The Collector's prometheus target_allocator receiver retries on its
+	// own interval and connects over HTTPS once the TA is reachable, and inotify + the
+	// liveness probe restart the container if the certs are written later. Falling back
+	// here would point the Collector at the (now removed) plaintext Target Allocator port
+	// and cause a silent, non-self-healing metrics outage.
 	if removeHttps {
-		// Fallback to starting without HTTPS
-		_ = RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
-	} else {
-		if err := os.Setenv("COLLECTOR_CONFIG_WITH_HTTPS", "true"); err != nil {
-			log.Printf("Unable to set environment variable COLLECTOR_CONFIG_WITH_HTTPS - %v\n", err)
-			return err
+		log.Printf("Pre-flight HTTPS check to Target Allocator did not succeed; keeping HTTPS configuration and relying on receiver retries instead of falling back to HTTP\n")
+		// Emit telemetry so we can measure how often the startup HTTPS pre-flight check
+		// fails and the Collector relies on the target_allocator receiver's retries instead
+		// of the (removed) plaintext fallback. This is best-effort observability, so a
+		// failure to set it must not block startup.
+		if err := os.Setenv("COLLECTOR_CONFIG_HTTPS_CHECK_FAILED", "true"); err != nil {
+			log.Printf("Unable to set environment variable COLLECTOR_CONFIG_HTTPS_CHECK_FAILED - %v\n", err)
 		}
+	}
+	if err := os.Setenv("COLLECTOR_CONFIG_WITH_HTTPS", "true"); err != nil {
+		log.Printf("Unable to set environment variable COLLECTOR_CONFIG_WITH_HTTPS - %v\n", err)
+		return err
 	}
 
 	return nil

@@ -40,7 +40,10 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+        - --listen-addr=127.0.0.1:8080
+{{- end }}
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -74,10 +77,11 @@ spec:
         - containerPort: 8081
           name: health-ta
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
-        - containerPort: 8080
-          name: http
         - containerPort: 8443
           name: https
+{{- else }}
+        - containerPort: 8080
+          name: http
 {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -107,7 +111,7 @@ spec:
           periodSeconds: 15
           failureThreshold: 3
       - name: config-reader
-        image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
         imagePullPolicy: IfNotPresent
         resources:
           limits:

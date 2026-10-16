@@ -121,7 +121,7 @@ func SetEnvVarsFromFile(filename string) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		parts := strings.Split(line, "=")
+		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
 			log.Printf("Skipping invalid line: %s\n", line)
 			continue

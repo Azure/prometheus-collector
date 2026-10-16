@@ -27,13 +27,10 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 	defer file.Close()
 
 	if podannotationNamespaceRegex != "" {
-		linuxPrefix := ""
-		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
-		//	linuxPrefix = "export "
-		//}
-		// Writes the variable to the file in the format: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='value'
-		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
-		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
+		// This file is parsed as KEY=value by the configmap parser, not sourced by a shell,
+		// so the value is written unquoted.
+		envVarString := fmt.Sprintf("%s=%s\n", envVariableTemplateName, podannotationNamespaceRegex)
+		envVarAnnotationsEnabled := fmt.Sprintf("%s=%s\n", envVariableAnnotationsEnabledName, "true")
 		log.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
 		if _, err := file.WriteString(envVarString); err != nil {

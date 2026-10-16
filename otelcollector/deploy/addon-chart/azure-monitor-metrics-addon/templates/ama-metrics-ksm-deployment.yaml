@@ -78,7 +78,7 @@ spec:
         imagePullPolicy: IfNotPresent
         {{- if .Values.AzureMonitorMetrics }}
         {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-        image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
         {{-  end  }}
         {{-  end  }}
         resources:
