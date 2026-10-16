@@ -2,16 +2,13 @@ module github.com/prometheus-collector/shared/configmap/mp
 
 replace github.com/prometheus-collector/shared => ../../../shared
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v2 v2.4.0
-
 )
 
 require (
@@ -34,10 +31,10 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/tools v0.26.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/tools v0.48.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
