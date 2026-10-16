@@ -19,6 +19,7 @@ type PrometheusCRConfig struct {
 	ProbeSelector                   *metav1.LabelSelector `yaml:"probe_selector,omitempty"`
 	ProbeNamespaceSelector          *metav1.LabelSelector `yaml:"probe_namespace_selector,omitempty"`
 	ScrapeInterval                  model.Duration        `yaml:"scrape_interval,omitempty"`
+	DenyFSAccessThroughSMs          bool                  `yaml:"deny_fs_access_through_sms,omitempty"`
 }
 
 type Config struct {
