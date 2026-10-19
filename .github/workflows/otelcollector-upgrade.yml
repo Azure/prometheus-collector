@@ -137,7 +137,7 @@ jobs:
 
       - name: Comment Build Failed on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'true' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
@@ -154,7 +154,7 @@ jobs:
 
       - name: Comment Build Succeeded on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
@@ -183,7 +183,7 @@ jobs:
 
       - name: Comment CVE changes on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           issue-number: ${{ steps.cpr.outputs.pull-request-number }}
