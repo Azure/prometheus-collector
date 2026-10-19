@@ -71,4 +71,5 @@ const (
 	ConfigProcessingBasicAuthSecretUpdate    = "config-processing-basic-auth-secret-update"
 	ConfigProcessingBasicAuthSmonV2          = "config-processing-basic-auth-smon-v2"
 	ConfigProcessingBasicAuthSecretUpdateV2  = "config-processing-basic-auth-secret-update-v2"
+	ConfigProcessingDenyFSAccess             = "config-processing-deny-fs-access"
 )
