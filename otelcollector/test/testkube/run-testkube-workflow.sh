@@ -193,6 +193,9 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-basic-auth-secret-update-v2-crs.yaml)
             workflows=(basicauthsecretupdatev2)
             ;;
+        testkube-config-test-deny-fs-access-crs.yaml)
+            workflows=(denyfsaccess)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1

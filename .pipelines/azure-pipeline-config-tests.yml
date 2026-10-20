@@ -821,6 +821,37 @@ stages:
             displayName: "Create TestKube Results Summary"
             condition: always()
 
+          # --- deny_fs_access_through_sms setting ---
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-deny-fs-access.yaml
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-deny-fs-access-crs.yaml" \
+                "testkube-config-test-deny-fs-access-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for deny_fs_access_through_sms"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="deny-fs-access"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-deny-fs-access.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
           # --- Partial ConfigMap Tests (no prometheus-collector-settings section) ---
           # v1 control + v2 regression test for the partial-configmap bug. A configmap that
           # omits the optional prometheus-collector-settings section must still have its
