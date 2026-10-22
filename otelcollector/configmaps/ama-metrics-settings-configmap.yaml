@@ -31,6 +31,12 @@ data:
       prometheuscollectorhealth = false
     pod-annotation-based-scraping: |-
       podannotationnamespaceregex = ""
+    # Relabel configs appended to the relabel_configs of every default scrape job. This is none by default.
+    # Ex: Uncomment the config below to set the 'team' label from the 'team' pod label.
+    default-targets-relabel-configs: |-
+      # - action: replace
+      #   source_labels: [__meta_kubernetes_pod_label_team]
+      #   target_label: team
     default-targets-metrics-keep-list: |-
       kubelet = ""
       coredns = ""

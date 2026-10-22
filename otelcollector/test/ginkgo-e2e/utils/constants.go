@@ -71,4 +71,6 @@ const (
 	ConfigProcessingBasicAuthSecretUpdate    = "config-processing-basic-auth-secret-update"
 	ConfigProcessingBasicAuthSmonV2          = "config-processing-basic-auth-smon-v2"
 	ConfigProcessingBasicAuthSecretUpdateV2  = "config-processing-basic-auth-secret-update-v2"
+	ConfigProcessingDefaultTargetsRelabelV1  = "config-processing-default-targets-relabel-v1"
+	ConfigProcessingDefaultTargetsRelabelV2  = "config-processing-default-targets-relabel-v2"
 )

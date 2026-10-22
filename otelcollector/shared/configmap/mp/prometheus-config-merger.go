@@ -1464,6 +1464,109 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 	return target
 }
 
+const defaultTargetsRelabelConfigsSection = "default-targets-relabel-configs"
+
+// loadDefaultTargetsRelabelConfigs returns the relabel configs from the default-targets-relabel-configs
+// setting: its own configmap key in schema v1, or a section of cluster-metrics in schema v2.
+func loadDefaultTargetsRelabelConfigs() []interface{} {
+	var setting interface{}
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		content, err := os.ReadFile(clusterMetricsMountPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				log.Printf("Error reading %s: %v\n", clusterMetricsMountPath, err)
+			}
+			return nil
+		}
+		// Only parse cluster-metrics as YAML when the section is used, so that formatting tolerated by the
+		// line-based settings parser does not cause errors for configmaps that don't use this setting.
+		if !strings.Contains(string(content), defaultTargetsRelabelConfigsSection) {
+			return nil
+		}
+		var clusterMetrics map[interface{}]interface{}
+		if err := yaml.Unmarshal(content, &clusterMetrics); err != nil {
+			log.Printf("Error parsing %s, %s will not be applied: %v\n", clusterMetricsMountPath, defaultTargetsRelabelConfigsSection, err)
+			return nil
+		}
+		setting = clusterMetrics[defaultTargetsRelabelConfigsSection]
+	} else {
+		content, err := os.ReadFile(defaultRelabelConfigsMountPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				log.Printf("Error reading %s: %v\n", defaultRelabelConfigsMountPath, err)
+			}
+			return nil
+		}
+		setting = string(content)
+	}
+
+	var relabelConfigs []interface{}
+	switch value := setting.(type) {
+	case nil:
+		return nil
+	case string:
+		if err := yaml.Unmarshal([]byte(value), &relabelConfigs); err != nil {
+			log.Printf("Error parsing %s, it must be a YAML list of relabel configs: %v\n", defaultTargetsRelabelConfigsSection, err)
+			return nil
+		}
+	case []interface{}:
+		relabelConfigs = value
+	default:
+		log.Printf("Error parsing %s, it must be a YAML list of relabel configs\n", defaultTargetsRelabelConfigsSection)
+		return nil
+	}
+	for _, relabelConfig := range relabelConfigs {
+		if _, ok := relabelConfig.(map[interface{}]interface{}); !ok {
+			log.Printf("Error parsing %s, every list entry must be a relabel config mapping\n", defaultTargetsRelabelConfigsSection)
+			return nil
+		}
+	}
+	return relabelConfigs
+}
+
+// appendGlobalRelabelConfigs appends the default-targets-relabel-configs setting to the relabel_configs of
+// every default scrape job. Custom scrape jobs are merged in afterwards and are not modified.
+func appendGlobalRelabelConfigs(mergedConfigs map[interface{}]interface{}) {
+	if len(mergedConfigs) == 0 {
+		return
+	}
+
+	globalRelabelConfigs := loadDefaultTargetsRelabelConfigs()
+	if len(globalRelabelConfigs) == 0 {
+		return
+	}
+
+	scrapeConfigs, ok := mergedConfigs["scrape_configs"].([]interface{})
+	if !ok {
+		return
+	}
+
+	updatedJobs := 0
+	for _, scrapeConfig := range scrapeConfigs {
+		scrapeConfigMap, ok := scrapeConfig.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+
+		var existingRelabelConfigs []interface{}
+		if existing := scrapeConfigMap["relabel_configs"]; existing != nil {
+			existingRelabelConfigs, ok = existing.([]interface{})
+			if !ok {
+				log.Printf("Not applying %s to job %v: its relabel_configs is not a list\n", defaultTargetsRelabelConfigsSection, scrapeConfigMap["job_name"])
+				continue
+			}
+		}
+
+		// Build a new slice per job so jobs never share a backing array.
+		relabelConfigs := make([]interface{}, 0, len(existingRelabelConfigs)+len(globalRelabelConfigs))
+		relabelConfigs = append(relabelConfigs, existingRelabelConfigs...)
+		scrapeConfigMap["relabel_configs"] = append(relabelConfigs, globalRelabelConfigs...)
+		updatedJobs++
+	}
+
+	log.Printf("Appended %d relabel config(s) from %s to %d default scrape job(s)\n", len(globalRelabelConfigs), defaultTargetsRelabelConfigsSection, updatedJobs)
+}
+
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
 	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
@@ -1475,6 +1578,7 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 			populateDefaultPrometheusConfig()
 		}
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+			appendGlobalRelabelConfigs(mergedDefaultConfigs)
 			log.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err != nil {

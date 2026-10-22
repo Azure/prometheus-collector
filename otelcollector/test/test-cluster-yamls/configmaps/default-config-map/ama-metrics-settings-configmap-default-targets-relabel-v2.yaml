@@ -1,0 +1,103 @@
+kind: ConfigMap
+apiVersion: v1
+# Fixture for the default-targets-relabel-configs test (schema-version v2).
+#
+# Same settings as the default v2 test settings configmap, plus a relabel config in the
+# default-targets-relabel-configs section of cluster-metrics. The agent must append it to
+# the relabel_configs of every default scrape job, so all default targets get the label
+# e2e_default_targets_relabel="v2". The value is the schema version, so this run can't pass
+# with stale v1 settings.
+data:
+  schema-version:
+    #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
+    v2
+  config-version:
+    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+    ver1
+  cluster-metrics: |-
+    default-targets-scrape-enabled: |-
+      kubelet = true
+      coredns = true
+      cadvisor = true
+      kubeproxy = true
+      apiserver = false
+      kubestate = true
+      nodeexporter = true
+      windowsexporter = true
+      windowskubeproxy = true
+      kappiebasic = true
+      networkobservabilityRetina = true
+      networkobservabilityHubble = true
+      networkobservabilityCilium = true
+      acstor-capacity-provisioner = true
+      acstor-metrics-exporter = true
+      prometheuscollectorhealth = false
+      local-csi-driver = true
+    pod-annotation-based-scraping: |-
+      podannotationnamespaceregex = ""
+    default-targets-relabel-configs: |-
+      - action: replace
+        target_label: e2e_default_targets_relabel
+        replacement: v2
+    default-targets-metrics-keep-list: |-
+      kubelet = ""
+      coredns = ""
+      cadvisor = ""
+      kubeproxy = ""
+      apiserver = ""
+      kubestate = ""
+      nodeexporter = ""
+      windowsexporter = ""
+      windowskubeproxy = ""
+      podannotations = ""
+      kappiebasic = ""
+      networkobservabilityRetina = ""
+      networkobservabilityHubble = ""
+      networkobservabilityCilium = ""
+      acstor-capacity-provisioner = ""
+      acstor-metrics-exporter = ""
+      local-csi-driver = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+    default-targets-scrape-interval-settings: |-
+      kubelet = "30s"
+      coredns = "30s"
+      cadvisor = "30s"
+      kubeproxy = "30s"
+      apiserver = "30s"
+      kubestate = "30s"
+      nodeexporter = "30s"
+      windowsexporter = "30s"
+      windowskubeproxy = "30s"
+      kappiebasic = "30s"
+      networkobservabilityRetina = "30s"
+      networkobservabilityHubble = "30s"
+      networkobservabilityCilium = "30s"
+      acstor-capacity-provisioner = "30s"
+      acstor-metrics-exporter = "30s"
+      prometheuscollectorhealth = "30s"
+      podannotations = "30s"
+      local-csi-driver = "30s"
+  controlplane-metrics: |-
+    default-targets-scrape-enabled: |-
+      apiserver = true
+      cluster-autoscaler = false
+      node-auto-provisioning = false
+      kube-scheduler = false
+      kube-controller-manager = false
+      etcd = true
+    default-targets-metrics-keep-list: |-
+      apiserver = ""
+      cluster-autoscaler = ""
+      node-auto-provisioning = ""
+      kube-scheduler = ""
+      kube-controller-manager = ""
+      etcd = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    debug-mode = "false"
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
