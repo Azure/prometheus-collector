@@ -337,8 +337,10 @@ Some highlights are that:
 - Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
   ```bash
   helm repo add kubeshop https://kubeshop.github.io/helm-charts
-  helm upgrade testkube kubeshop/testkube --install --create-namespace -f values.yaml -n testkube
+  helm upgrade testkube kubeshop/testkube --version 2.14.1 --install --create-namespace -f values.yaml -n testkube
   ```
+- The Build pipeline mirrors images from the pinned Testkube chart before running workflows. For a manual chart update, run `mirror-chart-images.py` with the same release file and values from an AzureCLI task using the Build service connection; it compares resolved digests and stops on import failures.
+- This repository has no pipeline deployment for the OpenTelemetry demo chart. From `otelcollector/test`, the same script supports it with `python3 testkube/mirror-chart-images.py --chart open-telemetry/opentelemetry-demo --version <pinned-version> --mirror-values testkube/otel-demo-mirror-values.yaml --mode list`; use `--mode mirror` from a Build-service-connected AzureCLI task with Docker Buildx available. It imports images by digest and skips existing mirror references and verified same-host cache rules; cache images populate on pull.
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
 - Create a test connected to the Github repository and branch. Tests are a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
@@ -460,7 +462,13 @@ All CI/CD cluster results will be sent to our [TestKube teams channel](https://t
 ### View Results from Merge Test Suite
 The merge tests are run on the dev CI/CD cluster as part of the `Deploy` stage of the [build pipeline](https://github-private.visualstudio.com/azure/_build?definitionId=440&_a=summary). The job will be named `Test: AKS testkube tests`. Scroll to the bottom of the logs to view the detailed results.
 
-### View Results from Nightly Test Suite
+### View Results from TestWorkflows
+Testkube 2.14.1 no longer exposes the legacy Test/TestSuite API endpoints. The current pipeline already uses TestWorkflows through [run-testkube-workflow.sh](./testkube/run-testkube-workflow.sh). Use `kubectl testkube get testworkflows` and `kubectl testkube get testworkflowexecution` for current definitions and results; preserve existing legacy CRs and database records rather than deleting them during the upgrade.
+
+Acceptance requires the existing suite to compile and execute its assertions, followed by stored-log and artifact retrieval. A Ready MinIO pod or successful read of old objects does not prove write capacity: verify free space on its `/data` mount and an actual artifact upload. If the existing volume is full, retain objects and obtain approval for a storage-preserving expansion instead of deleting results or lowering MinIO's free-space threshold.
+
+### Legacy Nightly Test Suite Results (before 2.14)
+The following commands describe the older API and do not work against 2.14.1.
 1. Connect to the CI/CD cluster to have your kubeconfig pointing to it in your terminal.
 2. Have the [TestKube CLI](https://docs.testkube.io/articles/install/cli) installed in your terminal.
 3. Run `testkube get testsuite` to get results similar to below:
@@ -569,8 +577,17 @@ The merge tests are run on the dev CI/CD cluster as part of the `Deploy` stage o
 ## Upgrading
 ### Upgrade Testkube version
 1. Connect to the CI/CD cluster to have your kubeconfig pointing to it in your terminal.
-2. Have the lasted version of the [TestKube CLI](https://docs.testkube.io/articles/install/cli) installed in your terminal.
-3. Run `testkube upgrade` to upgrade the TestKube helm chart to the latest version.
+2. Snapshot the Helm release, values, CRDs and test definitions. Quiesce execution writers and verify consistent MongoDB and stopped-MinIO-PVC backups with isolated restores before upgrading. Preserve PVCs, objects, results, credentials, MongoDB 8.2.5 and each database's verified live FCV; do not force the values file's FCV 8.0 onto a database already using FCV 8.2. The image update does not authorize a database migration.
+3. Use the complete chart release unit in [chart-release-2.14.1.yaml](./testkube/chart-release-2.14.1.yaml), including its package SHA-256, dependency versions, rendered CRD/RBAC/hook inventory, and image BOM. Render with the retained per-cluster values in [values.yaml](./testkube/values.yaml); preserve each live MongoDB FCV and existing NATS limit with target-specific overrides. Verify private pulls and approve any new RBAC explicitly. The golden kubectl 1.35.9 hook image supports the observed API-server minors 1.34 and 1.36; recheck the [one-minor skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl) before executing hooks. Successful private pulls do not establish TVM onboarding or vulnerability clearance.
+4. The chart disables some legacy served API versions. Save `kubectl get crds -o json` to a protected file, then pass `--post-renderer /usr/bin/python3 --post-renderer-args ./testkube/preserve-served-apis.py --post-renderer-args <saved-crds.json>` to both the render and upgrade commands. This retains existing served endpoints without changing storage versions. Validate existing objects against the candidate schemas and check server dry-runs before applying; do not delete/recreate CRDs.
+5. Upgrade using the reviewed chart/version and values rather than the unpinned `testkube upgrade` command. Run existing real workflows and retrieve their results, logs and artifacts before expanding the rollout. Do not overlap the liveness suite, which deliberately kills agent processes, with container-health assertions. A Ready API or MinIO pod alone is not acceptance.
+
+Testkube's API inspects workflow images independently of kubelet pulls. For the existing authorized node managed identity, configure `testkube-api.extraEnvVars` with that cluster's kubelet `AZURE_CLIENT_ID` and `AZURE_TENANT_ID`; the released API's native ACR helper supports managed identity authentication. Do not copy credentials or assume kubelet pull success proves API inspection works. Any missing registry permissions require separate approval.
+
+For NATS 2.12.x, follow the official [2.14 upgrade guide](https://docs.nats.io/release-notes/upgrade-to-2.14) and [2.15 upgrade guide](https://docs.nats.io/release-notes/upgrade-to-2.15), including the recommended 2.14.7 intermediate and a consistent JetStream backup/restore check. The `jetstream.limits.default_max_consumers` compatibility setting in these values applies only to 2.15; do not pass it to the intermediate release or change an already-2.15 installation's existing limit. Validate each rendered `nats.conf` with its exact candidate `nats-server -t -c <config>` binary; Helm rendering alone does not validate NATS configuration keys. Keep the upgrade held if a required intermediate image cannot be imported or verified.
+
+### Upgrade user-managed Retina
+The Build pipeline resolves GitHub's latest stable Retina release, pulls the matching OCI chart, and records verified image-index digests. PR builds only dry-run the mirror; main/upgrade deployments import images into the approved Build ACR. It auto-rolls within v1 and stops for compatibility review on a new major. Its [post-renderer](../deploy/retina/custom-files/pin-images.py) rejects any remaining upstream image, including the chart's BusyBox test hook. The imported Retina agent index must retain Linux amd64/arm64 and Windows amd64. This path updates only user-managed Retina in CI deployments; do not patch AKS-managed controllers. Review CRD compatibility separately (`--skip-crds` does not upgrade CRDs), and verify real collection and destination ingestion.
 
 ### Upgrade Golang Version
 1. The required Golang version in the `go.mod` files in the `ginkgo-e2e` directory will always need to be `<=` the Golang version of the TestKube Ginkgo runner.  

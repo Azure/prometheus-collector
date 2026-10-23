@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: basic-auth-ref-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
+          image: ${REFERENCE_APP_GOLANG_IMAGE}
           ports:
             - containerPort: 2114
               protocol: TCP

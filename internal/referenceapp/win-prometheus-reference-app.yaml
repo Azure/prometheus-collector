@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: win-prometheus-reference-app
 spec:
+  progressDeadlineSeconds: 1200
   selector:
     matchLabels:
       app: win-prometheus-reference-app
@@ -14,12 +15,14 @@ spec:
     spec:
       containers:
         - name: win-prometheus-reference-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win-ref-app-golang
+          image: ${REFERENCE_APP_WINDOWS_GOLANG_IMAGE}
           resources:
             limits:
               cpu: 2
               memory: 2Gi
           env:
+            - name: BASIC_AUTH_PORT
+              value: "2115"
             - name: RUN_PERF_TEST
               value: "true"
             - name: SCRAPE_INTERVAL
@@ -32,7 +35,7 @@ spec:
             - containerPort: 2113
               protocol: TCP
         - name: win-prometheus-reference-app-python
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win-ref-app-python
+          image: ${REFERENCE_APP_WINDOWS_PYTHON_IMAGE}
           resources:
             limits:
               cpu: 200m
@@ -42,6 +45,7 @@ spec:
             protocol: TCP
       nodeSelector:
         kubernetes.io/os: windows
+        kubernetes.io/arch: amd64
 ---
 apiVersion: v1
 kind: Service

@@ -65,6 +65,41 @@ stages:
             persistCredentials: true
 
           - bash: |
+              set -euo pipefail
+              python3 - <<'PY'
+              import json
+              import re
+              from datetime import datetime
+              from pathlib import Path
+              from urllib.request import urlopen
+
+              repository = "azuremonitor/containerinsights/cidev/prometheus-collector/images"
+              with urlopen(f"https://mcr.microsoft.com/v2/{repository}/tags/list?n=100000") as response:
+                  tags = json.load(response)["tags"]
+              candidates = []
+              for tag in tags:
+                  match = re.fullmatch(
+                      r"(\d+(?:\.\d+)+)-main-(\d{2}-\d{2}-\d{4})-[0-9a-f]{8}-ref-app-golang",
+                      tag,
+                  )
+                  if match:
+                      build_date = datetime.strptime(match.group(2), "%m-%d-%Y").date()
+                      candidates.append((build_date, tag))
+              if not candidates:
+                  raise RuntimeError("No main Go reference-app tags found in MCR")
+              image = f"mcr.microsoft.com/{repository}:{max(candidates)[1]}"
+              fixture = Path("otelcollector/test/test-cluster-yamls/basic-auth/deployment.yaml")
+              source = fixture.read_text()
+              placeholder = "${REFERENCE_APP_GOLANG_IMAGE}"
+              if source.count(placeholder) != 1:
+                  raise ValueError("Expected exactly one Go reference-app image placeholder")
+              fixture.write_text(source.replace(placeholder, image))
+              print(f"Using latest MCR main Go reference app: {image}")
+              PY
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Use latest published MCR Go reference app"
+
+          - bash: |
               # Try apt install first, fall back to official install script
               wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
               echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \

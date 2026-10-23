@@ -9,11 +9,14 @@ The [Dockerfile](./Dockerfile) for the image uses the Microsoft Golang base imag
 The Arc team only uses the file [arc-conformance.yaml](./arc-conformance.yaml) to run our plugin in the conformance test matrix. The latest image tag needs to be updated here whenever a new one is built.
 
 ## Building our Sonobuoy plugin image
+The pipeline passes the shared `GOLANG_VERSION` to this image, not the separate TestKube toolchain. Check it against every Ginkgo module before building with `python otelcollector/test/arc-conformance/check-toolchain.py`.
+
 From the repository root:
 ```bash
-sudo docker build -f otelcollector/test/arc-conformance/Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag> .
-az acr login -n containerinsightsprod -u containerinsightsprod -p <password>
-docker push containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag>
+sudo docker build --build-arg GOLANG_VERSION=1.26.9 -f otelcollector/test/arc-conformance/Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector/images:conf-<tag> .
+az login
+az acr login -n containerinsightsprod --subscription 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb
+docker push containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector/images:conf-<tag>
 ```
 
 ## Testing locally
@@ -54,4 +57,3 @@ The sonobuoy status command will have the number of tests that passed, failed, o
 3. Post in the [Teams channel](https://teams.microsoft.com/l/channel/19%3ArlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1%40thread.tacv2/General?groupId=a077ab34-99ea-490c-b204-358d31c24fbe&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47) asking for the conformance tests to be run. An example post is [here](https://teams.microsoft.com/l/message/19:rlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1@thread.tacv2/1715902653350?tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47&groupId=a077ab34-99ea-490c-b204-358d31c24fbe&parentMessageId=1715902653350&teamName=Azure%20Arc%20Conformance%20Testing&channelName=General&createdTime=1715902653350).
 4. Wait until the Arc team responds if the `Extension Plugin` tests have passed. The logs of the Ginkgo tests can be viewed by navigating to the test result page and downloading all logs.
 5. After the tests have passed, the extension can be released to the `Stable` release train by starting the `ARC Small Region` release task.
-

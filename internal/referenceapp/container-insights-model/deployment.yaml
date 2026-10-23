@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: container-insights-reference-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: container-insights-reference-app
+  template:
+    metadata:
+      labels:
+        app: container-insights-reference-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2112"
+        prometheus.io/path: /metrics
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      containers:
+        - name: prometheus-reference-app-golang
+          image: ${REFERENCE_APP_GOLANG_IMAGE}
+          env:
+            - name: RUN_PERF_TEST
+              value: "false"
+            - name: SCRAPE_INTERVAL
+              value: "15"
+            - name: METRIC_COUNT
+              value: "125000"
+            - name: BASIC_AUTH_PORT
+              value: "2115"
+          ports:
+            - name: weather-app
+              containerPort: 2112
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: weather-app

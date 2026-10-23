@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.25.9-1-nanoserver-ltsc2022-amd64
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.26.9-1-nanoserver-ltsc2022-amd64
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
@@ -27,7 +27,7 @@ RUN go build -o /dist/main.exe .
 #RUN copy "/build/main.exe" "/dist/main.exe"
 
 # Export necessary ports
-EXPOSE 2112 2113
+EXPOSE 2112 2113 2115
 
 # Command to run when starting the container
 CMD ["/dist/main.exe"]

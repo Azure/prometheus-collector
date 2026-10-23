@@ -15,8 +15,10 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
+          image: ${REFERENCE_APP_GOLANG_IMAGE}
           env:
+            - name: BASIC_AUTH_PORT
+              value: "2115"
             - name: RUN_PERF_TEST
               value: "false"
             - name: SCRAPE_INTERVAL
@@ -31,7 +33,7 @@ spec:
               protocol: TCP
               name: "untyped-metrics"
         - name: prometheus-reference-app-python
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
+          image: ${REFERENCE_APP_PYTHON_IMAGE}
           ports:
           - containerPort: 2114
             protocol: TCP

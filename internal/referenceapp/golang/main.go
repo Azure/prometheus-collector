@@ -593,6 +593,14 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	basicAuthPort := os.Getenv("BASIC_AUTH_PORT")
+	if basicAuthPort == "" {
+		basicAuthPort = "2114"
+	}
+	port, err := strconv.Atoi(basicAuthPort)
+	if err != nil || port < 1 || port > 65535 {
+		log.Fatalf("Invalid BASIC_AUTH_PORT %q: expected a port from 1 to 65535", basicAuthPort)
+	}
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
 	// keyFile := "/etc/prometheus/certs/client-key.pem"
@@ -609,7 +617,7 @@ func main() {
 		createGauges()
 		recordPerfMetrics()
 	} else {
-		//recordMetrics()
+		recordMetrics()
 		recordTestMetrics()
 	}
 
@@ -620,7 +628,11 @@ func main() {
 
 	handler := http.HandlerFunc(handleRequest)
 	http.Handle("/httpsmetrics", handler)
-	http.ListenAndServe(":2114", nil)
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
+			log.Fatalf("Basic auth HTTP server failed to start: %v", err)
+		}
+	}()
 
 	// Run server for metrics without a type
 	go func() {
@@ -634,7 +646,7 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	err := http.ListenAndServe(":2112", weatherServer)
+	err = http.ListenAndServe(":2112", weatherServer)
 	if err != nil {
 		log.Printf("HTTP server failed to start: %v", err)
 	}

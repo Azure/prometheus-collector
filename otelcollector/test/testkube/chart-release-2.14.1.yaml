@@ -1,0 +1,55 @@
+chart:
+  repository: https://kubeshop.github.io/helm-charts
+  name: testkube
+  version: 2.14.1
+  archiveSha256: a3d38c980696413cad72bdcb03a48cbc96ed56d1c755a6007e07bd9d42b00b71
+values: values.yaml
+dependencies:
+  enabled:
+    testkube-api: 2.14.1
+    mongodb: 8.3.11-0
+    nats: 1.2.6-4
+    global: 0.1.3
+  crdPackage: testkube-crds 0.1.0
+  disabled:
+    testkube-operator: 2.12.1
+    postgresql: 18.6-0
+    cloudnative-pg: 0.29.0
+    cluster: 0.8.1
+render:
+  testkubeCrds: 15
+  rbac:
+    clusterRoles: 2
+    clusterRoleBindings: 2
+    roles: 22
+    roleBindings: 22
+  hook:
+    job: testkube-api-server-builtin-templates
+    events: post-install,post-upgrade
+    image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/testkube-kubectl@sha256:e5f79fe5531e7aac8e21d450b4967c2268cea7d468aa0bd81241884b1fb09513
+images:
+  chart:
+    apiServer: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/testkube-api-server@sha256:ce04897e5ea200f9fe4a6baa550167234877632e5b6d623e9d65a5f470630c3a
+    mongodb: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/mongodb@sha256:206ba85c0189682693d10d23056af9c8fd6e79e4d6ad4db7c9c9e04f68718bc0
+    minio: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/minio@sha256:d8e1af6aca995ec6170742fb2b910d6214fea6aa0b32ed509fee17a88ae605c8
+    nats: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/nats@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4
+    natsReloader: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/nats-server-config-reloader@sha256:d758a82a9c20337e46c2f7356a413faa52cf4d6b02497c3ad81f72f1ba106464
+  workflowRuntime:
+    toolkit: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/testkube-tw-toolkit@sha256:7bbc6322a04b4744aa5ce9a68ecdc3a88dce8620dc7bd6b36034aa874160cda5
+    init: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/testkube-tw-init@sha256:8a6c818394c575438a366f83ee6e1012f882f695db467e64671911deea358e6f
+    ginkgo: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
+runtimeCompatibility:
+  mongodb:
+    imageVersion: 8.2.5
+    featureCompatibilityVersion: target-specific
+  nats:
+    imageVersion: 2.15.0
+    upgradePathFrom212: 2.14.7,2.15.0
+    defaultMaxConsumers: target-specific
+registry:
+  privatePullMirror: ciosstestimageacrmirror.azurecr.io
+  tvmCoverage: unknown
+newerChart:
+  version: 2.14.2
+  status: blocked
+  reason: testkube-tw-init import hit Docker Hub 429; no further retry is authorized.

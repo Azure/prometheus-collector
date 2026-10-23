@@ -24,7 +24,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.20.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_MAIN_BRANCH: $[or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/grwehner/eol-annotate-child-digests'))]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
@@ -277,16 +277,41 @@ extends:
           displayName: Install Helm version
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
-        - bash: |
-            # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
-            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION 
-            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-            mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-            echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
-          displayName: "CI/CD: Download Retina Chart"
-          retryCountOnTaskFailure: 5
+        - task: AzureCLI@2
+          displayName: "CI/CD: Resolve latest Retina release and mirror chart images"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            workingDirectory: $(Build.SourcesDirectory)
+            inlineScript: |
+              set -euo pipefail
+              RETINA_VERSION=$(curl -fsSL https://api.github.com/repos/microsoft/retina/releases/latest \
+                | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))')
+              if [[ "${RETINA_VERSION%%.*}" != "v1" ]]; then
+                echo "Latest Retina major $RETINA_VERSION needs compatibility review before rollout" >&2
+                exit 1
+              fi
+              echo "Latest stable Retina release: $RETINA_VERSION"
+              echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+              CHART_DIR="$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart"
+              CHART_PULL=$(helm pull oci://ghcr.io/microsoft/retina/charts/retina \
+                --version "$RETINA_VERSION" --untar --untardir "$CHART_DIR" 2>&1)
+              echo "$CHART_PULL"
+              grep -Fx "version: $RETINA_VERSION" "$CHART_DIR/retina/Chart.yaml"
+              CHART_DIGEST=$(echo "$CHART_PULL" | sed -n 's/^Digest: //p')
+              [[ "$CHART_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+              cp otelcollector/deploy/retina/custom-files/network-observability-service.yaml \
+                "$CHART_DIR/retina/templates/"
+              cp otelcollector/deploy/retina/custom-files/pin-images.py \
+                otelcollector/deploy/retina/custom-files/prepare-images.py "$CHART_DIR/retina/"
+              python3 "$CHART_DIR/retina/pin-images.py" --self-test
+              PREPARE_ARGS=()
+              if [ "$(IS_PR)" = "True" ]; then PREPARE_ARGS+=(--dry-run); fi
+              python3 "$CHART_DIR/retina/prepare-images.py" \
+                --chart "$CHART_DIR/retina" --version "$RETINA_VERSION" \
+                --output "$CHART_DIR/retina/retina-image-pins.json" "${PREPARE_ARGS[@]}"
+              echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
           name: setup
         - task: CopyFiles@2
           displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
@@ -305,6 +330,10 @@ extends:
 
       - job: TestKubeTestFiles
         displayName: "CI/CD: Export TestKube test files for Deploy stage"
+        dependsOn: Linux_Golang_Reference_App
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
+        variables:
+          REFERENCE_APP_GOLANG_IMAGE: $[ dependencies.Linux_Golang_Reference_App.outputs['refapp.IMAGE'] ]
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
@@ -326,6 +355,17 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+        - bash: |
+            set -euo pipefail
+            : "${REFERENCE_APP_GOLANG_IMAGE:?Missing same-build Go reference app image}"
+            fixture="$(Build.SourcesDirectory)/otelcollector/test/test-cluster-yamls/basic-auth/deployment.yaml"
+            if ! grep -Fq '${REFERENCE_APP_GOLANG_IMAGE}' "$fixture"; then
+              echo "The basic-auth fixture must use the same-build Go image placeholder" >&2
+              exit 1
+            fi
+            envsubst '${REFERENCE_APP_GOLANG_IMAGE}' < "$fixture" \
+              > "$(Build.ArtifactStagingDirectory)/testkube-files/test-cluster-yamls/basic-auth/deployment.yaml"
+          displayName: "Use the built Go image in the auth fixture artifact"
 
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
@@ -338,28 +378,49 @@ extends:
           skipComponentGovernanceDetection: true
           LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
         steps:
         - checkout: self
           persistCredentials: true
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
+            set -euo pipefail
             export DOCKER_BUILDKIT=1
             mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
             docker buildx inspect --bootstrap
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
-            docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+            if ! grep -Eq '^[[:space:]]*if err := http[.]ListenAndServe\(":2115", nil\); err != nil \{' main.go; then
+              echo "The reference app build must use the uniform Go auth port 2115" >&2
+              exit 1
+            fi
+            docker buildx build . --platform=linux/amd64,linux/arm64 --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+            digest=$(jq -er '."containerimage.digest"' "$(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json")
+            image="$(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            docker buildx imagetools inspect "${image%:*}@$digest" --raw \
+              | jq -e '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] | unique == ["amd64","arm64"]'
+            echo "##vso[task.setvariable variable=IMAGE;isOutput=true]$(MCR_REGISTRY)$(MCR_REPOSITORY)@$digest"
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
           displayName: "Build: build and push reference app golang linux image to dev ACR"
+          name: refapp
         - bash: |
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-            cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
-            {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-            EOF
+            set -euxo pipefail
+            curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+            mkdir -p oras-install/
+            tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+            sudo mv oras-install/oras /usr/local/bin/
+            rm -rf oras_1.0.0_*.tar.gz oras-install/
+            image="$(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            digest=$(jq -er '."containerimage.digest"' "$(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json")
+            descriptor=$(oras manifest fetch --descriptor "${image%:*}@$digest")
+            jq -n --argjson target "$descriptor" '{targetArtifact:($target | {mediaType,digest,size})}' \
+              > "$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json"
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
           displayName: "Build: Set values in payload.json for signing"
           condition: succeeded()
@@ -398,17 +459,14 @@ extends:
             PendingAnalysisWaitTimeoutMinutes: '5'
         - bash: |
             set -euxo pipefail
-            curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-            mkdir -p oras-install/
-            tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-            sudo mv oras-install/oras /usr/local/bin/
-            rm -rf oras_1.0.0_*.tar.gz oras-install/
-            oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
+            image="$(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            built="$(refapp.IMAGE)"
+            image="${image%:*}@${built##*@}"
+            oras attach "$image" \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
               -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-            image="$(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)"
-            children=$(oras manifest fetch "$image" | jq -r --arg repository "${image%:*}" '.manifests[]? | $repository + "@" + .digest')
+            children=$(oras manifest fetch "$image" | jq -r --arg repository "${image%@*}" '.manifests[]? | $repository + "@" + .digest')
             for reference in "$image" $children; do
               oras attach "$reference" \
                 --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
@@ -417,93 +475,110 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
           condition: succeeded()
-        # Disabled: pypi.org is unreachable from the 1ES CI agents, so 'pip install' in linux/Dockerfile fails with connect timeouts and breaks every build.
-        # Mirrors PR #1390, which disabled the Windows python reference app for the same reason. Re-enable once egress to pypi.org (or an approved mirror) is restored.
-        # - job: Linux_Python_Reference_App
-        #   displayName: "Build: linux python reference app image"
-        #   pool:
-        #     name: Azure-Pipelines-CI-Test-EO
-        #     image: ci-1es-managed-ubuntu-2204
-        #     os: linux
-        #   dependsOn: Image_Tags_and_Ev2_Artifacts
-        #   variables:
-        #     skipComponentGovernanceDetection: true
-        #     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-        #     DOCKER_BUILDKIT: 1
-        #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-        #   steps:
-        #   - checkout: self
-        #     persistCredentials: true
-        #   - bash: |
-        #       mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
-        #       docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-        #       docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-        #       docker buildx inspect --bootstrap
-        #       docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        #       docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
-        #       docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
-        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        #     displayName: "Build: build and push reference app python linux image to dev ACR"
-        #   - bash: |
-        #       MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        #       DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        #       SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-        #       cat <<EOF >>$(Build.ArtifactStagingDirectory)/refapppythonlinux/payload.json
-        #       {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-        #       EOF
-        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        #     displayName: "Build: Set values in payload.json for signing"
-        #     condition: succeeded()
-        #   - task: EsrpCodeSigning@5
-        #     displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
-        #     inputs:
-        #       ConnectedServiceName: "ESRPServiceConnectionPrometheus"
-        #       UseMSIAuthentication: true
-        #       AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-        #       AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-        #       EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-        #       AuthAKVName: 'ESRPPrometheusKVProd'
-        #       AuthCertName: 'ESRPContainerImageSignCert'
-        #       AuthSignCertName: 'ESRPReqPrometheusProdCert'
-        #       FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
-        #       Pattern: "*.json"
-        #       signConfigType: inlineSignParams
-        #       inlineOperation: |
-        #         [
-        #           {
-        #               "keyCode": "CP-469451",
-        #               "operationSetCode": "NotaryCoseSign",
-        #               "parameters": [
-        #                 {
-        #                   "parameterName": "CoseFlags",
-        #                   "parameterValue": "chainunprotected"
-        #                 }
-        #               ],
-        #               "toolName": "sign",
-        #               "toolVersion": "1.0"
-        #           }
-        #         ]
-        #       SessionTimeout: '60'
-        #       MaxConcurrency: '50'
-        #       MaxRetryAttempts: '5'
-        #       PendingAnalysisWaitTimeoutMinutes: '5'
-        #   - bash: |
-        #       set -euxo pipefail
-        #       curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-        #       mkdir -p oras-install/
-        #       tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-        #       sudo mv oras-install/oras /usr/local/bin/
-        #       rm -rf oras_1.0.0_*.tar.gz oras-install/
-        #       oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
-        #         --artifact-type 'application/vnd.cncf.notary.signature' \
-        #         ./payload.json:application/cose \
-        #         -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-        #       oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
-        #         --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-        #         --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
-        #     workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
-        #     displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refapppythonlinux/"
-        #     condition: succeeded()
+      - job: Linux_Python_Reference_App
+        displayName: "Build: linux python reference app image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        dependsOn: Image_Tags_and_Ev2_Artifacts
+        variables:
+          skipComponentGovernanceDetection: true
+          LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+          DOCKER_BUILDKIT: 1
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
+        steps:
+        - checkout: self
+          persistCredentials: true
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
+        - bash: |
+            set -euo pipefail
+            mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
+            docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+            docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+            docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use
+            docker buildx inspect --bootstrap
+            docker buildx build . --platform=linux/amd64,linux/arm64 --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/ --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+            digest=$(jq -er '."containerimage.digest"' "$(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json")
+            image="$(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)"
+            docker buildx imagetools inspect "${image%:*}@$digest" --raw \
+              | jq -e '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] | unique == ["amd64","arm64"]'
+            echo "##vso[task.setvariable variable=IMAGE;isOutput=true]$(MCR_REGISTRY)$(MCR_REPOSITORY)@$digest"
+          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+          displayName: "Build: build and push reference app python linux image to dev ACR"
+          name: refapp
+        - bash: |
+            set -euxo pipefail
+            curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+            mkdir -p oras-install/
+            tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+            sudo mv oras-install/oras /usr/local/bin/
+            rm -rf oras_1.0.0_*.tar.gz oras-install/
+            image="$(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)"
+            digest=$(jq -er '."containerimage.digest"' "$(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json")
+            descriptor=$(oras manifest fetch --descriptor "${image%:*}@$digest")
+            jq -n --argjson target "$descriptor" '{targetArtifact:($target | {mediaType,digest,size})}' \
+              > "$(Build.ArtifactStagingDirectory)/refapppythonlinux/payload.json"
+          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+          displayName: "Build: Set values in payload.json for signing"
+          condition: succeeded()
+        - task: EsrpCodeSigning@5
+          displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
+          inputs:
+            ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+            UseMSIAuthentication: true
+            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
+            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+            AuthAKVName: 'ESRPPrometheusKVProd'
+            AuthCertName: 'ESRPContainerImageSignCert'
+            AuthSignCertName: 'ESRPReqPrometheusProdCert'
+            FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+            Pattern: "*.json"
+            signConfigType: inlineSignParams
+            inlineOperation: |
+              [
+                {
+                    "keyCode": "CP-469451",
+                    "operationSetCode": "NotaryCoseSign",
+                    "parameters": [
+                      {
+                        "parameterName": "CoseFlags",
+                        "parameterValue": "chainunprotected"
+                      }
+                    ],
+                    "toolName": "sign",
+                    "toolVersion": "1.0"
+                }
+              ]
+            SessionTimeout: '60'
+            MaxConcurrency: '50'
+            MaxRetryAttempts: '5'
+            PendingAnalysisWaitTimeoutMinutes: '5'
+        - bash: |
+            set -euxo pipefail
+            image="$(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)"
+            built="$(refapp.IMAGE)"
+            image="${image%:*}@${built##*@}"
+            oras attach "$image" \
+              --artifact-type 'application/vnd.cncf.notary.signature' \
+              ./payload.json:application/cose \
+              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+            children=$(oras manifest fetch "$image" | jq -r --arg repository "${image%@*}" '.manifests[]? | $repository + "@" + .digest')
+            for reference in "$image" $children; do
+              oras attach "$reference" \
+                --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+                --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+            done
+          workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+          displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refapppythonlinux/"
+          condition: succeeded()
       - job: Golang_Windows_Reference_App
         displayName: "Build: windows golang reference app image"
         pool:
@@ -514,18 +589,38 @@ extends:
         variables:
           WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
         steps:
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - powershell: |
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refappgolangwindows" -ItemType "directory"
+            if ((Get-Content main.go -Raw) -notmatch '(?m)^\s*if err := http\.ListenAndServe\(":2115", nil\); err != nil \{') {
+              throw "The reference app build must use the uniform Go auth port 2115"
+            }
             docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-            docker pull $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { throw "Windows Go reference app build failed" }
+            $pushed = docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { throw "Windows Go reference app push failed" }
+            $pushed | Write-Host
+            $digest = [regex]::Match(($pushed -join "`n"), 'digest: (sha256:[0-9a-f]{64})').Groups[1].Value
+            if (-not $digest) { throw "Missing pushed Windows Go reference app digest" }
+            Write-Host "##vso[task.setvariable variable=WINDOWS_REFAPP_PUSHED_DIGEST]$digest"
+            $repository = "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)".Substring(0, "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)".LastIndexOf(':'))
+            docker pull "$repository@$digest"
+            if ($LASTEXITCODE -ne 0) { throw "Windows Go reference app pull failed" }
           displayName: "Build: build and push reference app golang windows image to dev ACR"
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
         - powershell: |
-            $output = docker manifest inspect -v $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) | ConvertFrom-Json
+            $image = "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            $image = "$($image.Substring(0, $image.LastIndexOf(':')))@$(WINDOWS_REFAPP_PUSHED_DIGEST)"
+            $output = docker manifest inspect -v $image | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Failed to inspect pushed Windows Go manifest" }
             $firstManifest = $output[0]
             $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
             $DIGEST = $firstManifest.Descriptor.digest
@@ -581,13 +676,16 @@ extends:
             New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
             Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
             $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-            oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-            $image = "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            $tag = "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)"
+            $repository = $tag.Substring(0, $tag.LastIndexOf(':'))
+            $image = "$repository@$(WINDOWS_REFAPP_PUSHED_DIGEST)"
+            oras attach $image --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+            if ($LASTEXITCODE -ne 0) { throw "Failed to attach Windows Go signature" }
             $manifest = oras manifest fetch $image
             if ($LASTEXITCODE -ne 0) { throw "Failed to fetch manifest for $image" }
             $references = @($image)
             foreach ($child in ($manifest | ConvertFrom-Json).manifests) {
-              $references += "$($image.Substring(0, $image.LastIndexOf(':')))@$($child.digest)"
+              $references += "$repository@$($child.digest)"
             }
             foreach ($reference in $references) {
               oras attach $reference --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"
@@ -596,89 +694,134 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
           displayName: "Download, install Oras and run oras attach"
           condition: succeeded()
-        # backlog: work item: 36496906
-        # - job: Windows_Python_Reference_App
-        #   displayName: "Build: windows python reference app image"
-        #   pool:
-        #     name: Azure-Pipelines-CI-Test-EO
-        #     image: ci-1es-managed-windows-2022
-        #     os: windows
-        #   dependsOn: Image_Tags_and_Ev2_Artifacts
-        #   variables:
-        #     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-        #     skipComponentGovernanceDetection: true
-        #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-        #   steps:
-        #   - powershell: |
-        #       New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
-        #       docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-        #       docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        #       docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-        #       docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-        #     displayName: "Build: build and push reference app python windows image to dev ACR"
-        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        #   - powershell: |
-        #       $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
-        #       $firstManifest = $output[0]
-        #       $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
-        #       $DIGEST = $firstManifest.Descriptor.digest
-        #       $SIZE = $firstManifest.Descriptor.size
-        #       $payload = @{
-        #           targetArtifact = @{
-        #               mediaType = $MEDIA_TYPE
-        #               digest = $DIGEST
-        #               size = $SIZE
-        #           }
-        #       } | ConvertTo-Json
-        #       $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
-        #     workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        #     displayName: "Build the payload json file"
-        #     condition: succeeded()
-        #   - task: EsrpCodeSigning@5
-        #     displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
-        #     inputs:
-        #       ConnectedServiceName: "ESRPServiceConnectionPrometheus"
-        #       UseMSIAuthentication: true
-        #       AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-        #       AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-        #       EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-        #       AuthAKVName: 'ESRPPrometheusKVProd'
-        #       AuthCertName: 'ESRPContainerImageSignCert'
-        #       AuthSignCertName: 'ESRPReqPrometheusProdCert'
-        #       FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-        #       Pattern: "*.json"
-        #       signConfigType: inlineSignParams
-        #       inlineOperation: |
-        #         [
-        #           {
-        #               "keyCode": "CP-469451",
-        #               "operationSetCode": "NotaryCoseSign",
-        #               "parameters": [
-        #                 {
-        #                   "parameterName": "CoseFlags",
-        #                   "parameterValue": "chainunprotected"
-        #                 }
-        #               ],
-        #               "toolName": "sign",
-        #               "toolVersion": "1.0"
-        #           }
-        #         ]
-        #       SessionTimeout: '60'
-        #       MaxConcurrency: '50'
-        #       MaxRetryAttempts: '5'
-        #       PendingAnalysisWaitTimeoutMinutes: '5'
-        #   - powershell: |
-        #       curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
-        #       $currentDirectory = Get-Location
-        #       Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
-        #       New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
-        #       Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
-        #       $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-        #       oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-        #       oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
-        #     workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-        #     displayName: "Download, install Oras and run oras attach"
-        #     condition: succeeded()
+        - powershell: |
+            $repository = "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)".Substring(0, "$(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)".LastIndexOf(':'))
+            $image = docker image inspect "$repository@$(WINDOWS_REFAPP_PUSHED_DIGEST)" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Failed to inspect built Windows reference app" }
+            if ($image.Os -ne 'windows' -or $image.Architecture -ne 'amd64' -or $image.OsVersion -notmatch '^10\.0\.20348\.\d+$') {
+              throw "Expected a Windows/amd64 LTSC2022 reference app"
+            }
+          displayName: "Verify built Windows Go reference app platform"
+      - job: Windows_Python_Reference_App
+        displayName: "Build: windows python reference app image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-windows-2022
+          os: windows
+        dependsOn: Image_Tags_and_Ev2_Artifacts
+        variables:
+          WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+          skipComponentGovernanceDetection: true
+        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
+        steps:
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
+        - powershell: |
+            New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
+            docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/
+            if ($LASTEXITCODE -ne 0) { throw "Windows Python reference app build failed" }
+            $pushed = docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { throw "Windows Python reference app push failed" }
+            $pushed | Write-Host
+            $digest = [regex]::Match(($pushed -join "`n"), 'digest: (sha256:[0-9a-f]{64})').Groups[1].Value
+            if (-not $digest) { throw "Missing pushed Windows Python reference app digest" }
+            Write-Host "##vso[task.setvariable variable=WINDOWS_REFAPP_PUSHED_DIGEST]$digest"
+            $repository = "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)".Substring(0, "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)".LastIndexOf(':'))
+            docker pull "$repository@$digest"
+            if ($LASTEXITCODE -ne 0) { throw "Windows Python reference app pull failed" }
+          displayName: "Build: build and push reference app python windows image to dev ACR"
+          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        - powershell: |
+            $image = "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)"
+            $image = "$($image.Substring(0, $image.LastIndexOf(':')))@$(WINDOWS_REFAPP_PUSHED_DIGEST)"
+            $output = docker manifest inspect -v $image | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Failed to inspect pushed Windows Python manifest" }
+            $firstManifest = $output[0]
+            $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+            $DIGEST = $firstManifest.Descriptor.digest
+            $SIZE = $firstManifest.Descriptor.size
+            $payload = @{
+                targetArtifact = @{
+                    mediaType = $MEDIA_TYPE
+                    digest = $DIGEST
+                    size = $SIZE
+                }
+            } | ConvertTo-Json
+            $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
+          workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+          displayName: "Build the payload json file"
+          condition: succeeded()
+        - task: EsrpCodeSigning@5
+          displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
+          inputs:
+            ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+            UseMSIAuthentication: true
+            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
+            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+            AuthAKVName: 'ESRPPrometheusKVProd'
+            AuthCertName: 'ESRPContainerImageSignCert'
+            AuthSignCertName: 'ESRPReqPrometheusProdCert'
+            FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+            Pattern: "*.json"
+            signConfigType: inlineSignParams
+            inlineOperation: |
+              [
+                {
+                    "keyCode": "CP-469451",
+                    "operationSetCode": "NotaryCoseSign",
+                    "parameters": [
+                      {
+                        "parameterName": "CoseFlags",
+                        "parameterValue": "chainunprotected"
+                      }
+                    ],
+                    "toolName": "sign",
+                    "toolVersion": "1.0"
+                }
+              ]
+            SessionTimeout: '60'
+            MaxConcurrency: '50'
+            MaxRetryAttempts: '5'
+            PendingAnalysisWaitTimeoutMinutes: '5'
+        - powershell: |
+            curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+            $currentDirectory = Get-Location
+            Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+            New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+            Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+            $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+            $tag = "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)"
+            $repository = $tag.Substring(0, $tag.LastIndexOf(':'))
+            $image = "$repository@$(WINDOWS_REFAPP_PUSHED_DIGEST)"
+            oras attach $image --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+            if ($LASTEXITCODE -ne 0) { throw "Failed to attach Windows Python signature" }
+            $manifest = oras manifest fetch $image
+            if ($LASTEXITCODE -ne 0) { throw "Failed to fetch manifest for $image" }
+            $references = @($image)
+            foreach ($child in ($manifest | ConvertFrom-Json).manifests) {
+              $references += "$repository@$($child.digest)"
+            }
+            foreach ($reference in $references) {
+              oras attach $reference --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"
+              if ($LASTEXITCODE -ne 0) { throw "Failed to attach lifecycle annotation to $reference" }
+            }
+          workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+          displayName: "Download, install Oras and run oras attach"
+          condition: succeeded()
+        - powershell: |
+            $repository = "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)".Substring(0, "$(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)".LastIndexOf(':'))
+            $image = docker image inspect "$repository@$(WINDOWS_REFAPP_PUSHED_DIGEST)" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Failed to inspect built Windows Python reference app" }
+            if ($image.Os -ne 'windows' -or $image.Architecture -ne 'amd64' -or $image.OsVersion -notmatch '^10\.0\.20348\.\d+$') {
+              throw "Expected a Windows/amd64 LTSC2022 Python reference app"
+            }
+          displayName: "Verify built Windows Python reference app platform"
       - job: Arc_Conformace_Test_Image
         displayName: "Build: Arc Conformance Test Image"
         pool:
@@ -694,12 +837,18 @@ extends:
         steps:
         - checkout: self
           persistCredentials: true
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
             docker buildx inspect --bootstrap
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx build . -f otelcollector/test/arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
+            docker buildx build . -f otelcollector/test/arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --push
             docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
           workingDirectory: $(Build.SourcesDirectory)/
           displayName: "Build: build and push Arc conformance test image to dev ACR"
@@ -827,6 +976,16 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate root Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -euo pipefail
+              az acr login --name containerinsightsprod --expose-token --query accessToken --output tsv |
+                sudo docker login containerinsightsprod.azurecr.io --username 00000000-0000-0000-0000-000000000000 --password-stdin
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -849,7 +1008,6 @@ extends:
             sudo docker builder prune --all --force
             echo "=== Disk usage after Docker cleanup ==="
             df -h
-            sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -882,6 +1040,13 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             echo "=== Docker Version Info (AMD64 Agent) ==="
             docker version
@@ -890,7 +1055,6 @@ extends:
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
             docker system prune --all -f
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENTBIT_GOLANG_VERSION=$(FLUENTBIT_GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -934,9 +1098,15 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
               echo "Error: Docker buildx imagetools create failed."
@@ -1155,13 +1325,19 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
             sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
             docker system prune --all -f
             docker images -q --filter "dangling=true" | xargs docker rmi
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
@@ -1333,9 +1509,15 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
 
             echo "=== Docker Version Info (AMD64 Agent) ==="
             sudo docker version
@@ -1376,6 +1558,16 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate root Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -euo pipefail
+              az acr login --name containerinsightsprod --expose-token --query accessToken --output tsv |
+                sudo docker login containerinsightsprod.azurecr.io --username 00000000-0000-0000-0000-000000000000 --password-stdin
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -1393,7 +1585,6 @@ extends:
             echo "==========================================="
 
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
-            sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
             if [ $? -ne 0 ]; then
               echo "Error: Docker build failed."
@@ -1430,9 +1621,15 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             
             docker buildx imagetools create -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
@@ -1598,6 +1795,13 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1607,7 +1811,6 @@ extends:
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
             docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
             docker buildx inspect --bootstrap
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
             docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
             MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
@@ -1869,8 +2072,14 @@ extends:
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
               docker rm pushContainer
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - powershell: |
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
       - job: Windows2022_Prometheus_Collector
@@ -2043,8 +2252,14 @@ extends:
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
               docker rm pushContainer
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Docker to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: az acr login --name containerinsightsprod
         - powershell: |
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
       - job: WindowsMultiArch_Prometheus_Collector
@@ -2080,61 +2295,64 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
-        - bash: |
-            export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
-            export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
-            export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2019_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
-                  sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
-                exit 1
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              az acr login --name containerinsightsprod || exit $?
+              export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
+              export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
+              export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
+              docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+              if [ $? -ne 0 ]; then
+                echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+                IMAGES_ARE_PUBLISHED=0
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                    if (echo $output | grep $WINDOWS_2019_TAG)
+                    then
+                      echo "Images are published to mcr"
+                      IMAGES_ARE_PUBLISHED=1
+                      break
+                    fi
+                    sleep 30
+                  done
+                if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
+                  echo "Images are not published to mcr within the timeout"
+                  exit 1
+                fi
+                az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
               fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
-            fi
-            export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2022_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
-                  sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
-                exit 1
+              export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
+              docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+              if [ $? -ne 0 ]; then
+                echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
+                IMAGES_ARE_PUBLISHED=0
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                    if (echo $output | grep $WINDOWS_2022_TAG)
+                    then
+                      echo "Images are published to mcr"
+                      IMAGES_ARE_PUBLISHED=1
+                      break
+                    fi
+                    sleep 30
+                  done
+                if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
+                  echo "Images are not published to mcr within the timeout"
+                  exit 1
+                fi
+                az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
               fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
-            fi
           displayName: "Build: ensure images are present in ACR"
           retryCountOnTaskFailure: 3
         - powershell: |
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
             @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
             docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -2273,8 +2491,17 @@ extends:
             helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
           displayName: "Build: package helm chart (aks + arc-tagged variant)"
+        - task: AzureCLI@2
+          displayName: "Build: authenticate Helm to ACR with Entra"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -euo pipefail
+              az acr login --name containerinsightsprod --expose-token --query accessToken --output tsv |
+                helm registry login containerinsightsprod.azurecr.io --username 00000000-0000-0000-0000-000000000000 --password-stdin
         - bash: |
-            helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
             helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
             mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
@@ -2292,7 +2519,7 @@ extends:
         - Aks_Arc_Helm_Chart
         - Linux_Prometheus_Collector
         - WindowsMultiArch_Prometheus_Collector
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
         variables:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
@@ -2420,6 +2647,10 @@ extends:
                     az extension add --name k8s-extension --version 1.6.7 --only-show-errors
                     az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
                   retryCountOnTaskFailure: 2
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ci-dev-arc-wcus
+                  clusterName: ci-dev-arc-wcus
 
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy/Validate: AKS dev cluster"
@@ -2501,6 +2732,10 @@ extends:
                   releaseName: 'ama-metrics'
                   waitForExecution: false
                   arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ci-dev-aks-mac-eus-rg
+                  clusterName: ci-dev-aks-mac-eus
               - task: HelmDeploy@1
                 displayName: "Deploy/Validate: retina onto ci-dev-aks-mac-eus cluster"
                 inputs:
@@ -2514,7 +2749,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2598,6 +2833,11 @@ extends:
                   arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
 
 
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ci-dev-aks-tests
+                  clusterName: ci-dev-aks-tests
+
       - deployment: Deploy_AKS_Chart_OTel_Cluster
         displayName: "Deploy/Validate: AKS OTEL cluster"
         environment: Prometheus-Collector
@@ -2678,6 +2918,10 @@ extends:
                   releaseName: 'ama-metrics'
                   waitForExecution: false
                   arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml $(HELM_DRY_RUN_FLAG)
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ciprom-dev-aks-otlp
+                  clusterName: ciprom-dev-aks-otlp
               - task: HelmDeploy@1
                 displayName: "Deploy/Validate: retina onto ciprom-dev-aks-otlp cluster"
                 inputs:
@@ -2691,7 +2935,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2763,6 +3007,10 @@ extends:
                   releaseName: 'ama-metrics'
                   waitForExecution: false
                   arguments: --dependency-update --values $(Pipeline.Workspace)/azure-monitor-metrics-addon/values.yaml
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ciprom-upgrade-bot
+                  clusterName: ciprom-upgrade-bot
               - task: HelmDeploy@1
                 displayName: "Deploy: retina onto ciprom-upgrade-bot cluster"
                 inputs:
@@ -2776,7 +3024,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
@@ -2802,6 +3050,25 @@ extends:
           runOnce:
             deploy:
               steps:
+              - task: HelmInstaller@1
+                displayName: Install Helm for Testkube image mirroring
+                inputs:
+                  helmVersionToInstall: $(HELM_VERSION)
+              - task: AzureCLI@2
+                displayName: Mirror images for the pinned Testkube chart
+                inputs:
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  workingDirectory: $(Pipeline.Workspace)
+                  inlineScript: |
+                    python3 ./testkube/mirror-chart-images.py \
+                      --release-file ./testkube/chart-release-2.14.1.yaml \
+                      --values ./testkube/values.yaml \
+                      --source-set global.imageRegistry= \
+                      --source-set nats.container.image.registry=docker.io \
+                      --source-set nats.reloader.image.registry=docker.io \
+                      --mode mirror
               - task: AzureCLI@1
                 displayName: Get kubeconfig
                 inputs:

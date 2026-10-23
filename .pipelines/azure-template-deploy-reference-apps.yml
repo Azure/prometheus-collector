@@ -1,0 +1,56 @@
+parameters:
+- name: resourceGroup
+  type: string
+- name: clusterName
+  type: string
+
+steps:
+- checkout: self
+- task: AzureCLI@2
+  displayName: "Apply reference apps: ${{ parameters.clusterName }}"
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  inputs:
+    azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -euo pipefail
+      export KUBECONFIG="$(Agent.TempDirectory)/refapp-$(System.JobId).kubeconfig"
+      trap 'rm -f "$KUBECONFIG"' EXIT
+      az aks get-credentials --subscription 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb \
+        --resource-group "$REFAPP_RESOURCE_GROUP" --name "$REFAPP_CLUSTER_NAME" \
+        --file "$KUBECONFIG"
+      tag_list=$(curl -fsSL https://mcr.microsoft.com/v2/azuremonitor/containerinsights/cidev/prometheus-collector/images/tags/list)
+      latest_tag() {
+        local suffix="$1" tag date date_key latest_date="" selected=""
+        while IFS= read -r tag; do
+          if [[ "$tag" =~ ^[0-9]+(\.[0-9]+)*-main-([0-9]{2}-[0-9]{2}-[0-9]{4})-[0-9a-f]{8}-${suffix}$ ]]; then
+            date="${BASH_REMATCH[2]}"
+            date_key="${date:6:4}${date:0:2}${date:3:2}"
+            if [[ "$date_key" > "$latest_date" || ( "$date_key" == "$latest_date" && "$tag" > "$selected" ) ]]; then
+              latest_date="$date_key"
+              selected="$tag"
+            fi
+          fi
+        done < <(grep -oE '"[0-9]+(\.[0-9]+)*-main-[0-9]{2}-[0-9]{2}-[0-9]{4}-[0-9a-f]{8}-[^"]+"' <<< "$tag_list" | tr -d '"')
+        if [[ -z "$selected" ]]; then
+          echo "No published main reference-app tag found for $suffix" >&2
+          return 1
+        fi
+        printf 'mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:%s' "$selected"
+      }
+      REFERENCE_APP_GOLANG_IMAGE=$(latest_tag ref-app-golang)
+      REFERENCE_APP_PYTHON_IMAGE=$(latest_tag ref-app-python)
+      REFERENCE_APP_WINDOWS_GOLANG_IMAGE=$(latest_tag win-ref-app-golang)
+      REFERENCE_APP_WINDOWS_PYTHON_IMAGE=$(latest_tag win-ref-app-python)
+      sed \
+        -e "s|\${REFERENCE_APP_GOLANG_IMAGE}|$REFERENCE_APP_GOLANG_IMAGE|g" \
+        -e "s|\${REFERENCE_APP_PYTHON_IMAGE}|$REFERENCE_APP_PYTHON_IMAGE|g" \
+        internal/referenceapp/prometheus-reference-app.yaml | kubectl apply -f -
+      sed \
+        -e "s|\${REFERENCE_APP_WINDOWS_GOLANG_IMAGE}|$REFERENCE_APP_WINDOWS_GOLANG_IMAGE|g" \
+        -e "s|\${REFERENCE_APP_WINDOWS_PYTHON_IMAGE}|$REFERENCE_APP_WINDOWS_PYTHON_IMAGE|g" \
+        internal/referenceapp/win-prometheus-reference-app.yaml | kubectl apply -f -
+  env:
+    REFAPP_RESOURCE_GROUP: ${{ parameters.resourceGroup }}
+    REFAPP_CLUSTER_NAME: ${{ parameters.clusterName }}

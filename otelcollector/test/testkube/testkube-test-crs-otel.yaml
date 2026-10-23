@@ -17,7 +17,7 @@ spec:
     - name: Run test
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
-        image: cerebro31/ginkgo-test:latest
+        image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
         env:
         - name: GOTOOLCHAIN
           value: "auto"
@@ -47,7 +47,7 @@ spec:
     - name: Run test
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
-        image: cerebro31/ginkgo-test:latest
+        image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
         env:
         - name: GOTOOLCHAIN
           value: "auto"
@@ -77,7 +77,7 @@ spec:
     - name: Run test
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
-        image: cerebro31/ginkgo-test:latest
+        image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
         env:
         - name: GOTOOLCHAIN
           value: "auto"
@@ -107,7 +107,7 @@ spec:
     - name: Run test
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
-        image: cerebro31/ginkgo-test:latest
+        image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
         env:
         - name: GOTOOLCHAIN
           value: "auto"
@@ -137,7 +137,7 @@ spec:
     - name: Run test
       container:
         workingDir: /data/repo/otelcollector/test/ginkgo-e2e
-        image: cerebro31/ginkgo-test:latest
+        image: ciosstestimageacrmirror.azurecr.io/thirdparty/testkube/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57
         env:
         - name: AMW_QUERY_ENDPOINT
           value: "$AMW_QUERY_ENDPOINT"

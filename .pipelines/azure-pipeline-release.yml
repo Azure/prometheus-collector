@@ -200,6 +200,10 @@ extends:
                 target:
                   container: host
                 displayName: Deploy to ci-prod-aks-mac-weu
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ci-prod-aks-mac-weu-rg
+                  clusterName: ci-prod-aks-mac-weu
               - task: AzureCLI@2
                 env:
                   # Arc consumes the chart pushed under the '-arc' OCI tag
@@ -310,3 +314,7 @@ extends:
                 target:
                   container: host
                 displayName: Install extension on ci-prod-arc-wcus
+              - template: azure-template-deploy-reference-apps.yml
+                parameters:
+                  resourceGroup: ci-prod-arc-wcus
+                  clusterName: ci-prod-arc-wcus
