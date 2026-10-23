@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 10-22-2026
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-main-10-22-2026-<TBD>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-main-10-22-2026-<TBD>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-main-10-22-2026-<TBD>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-main-10-22-2026-<TBD>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-22-2026-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-22-2026-<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-22-2026-<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-22-2026-<TBD>-cfg`
 * AKS and Arc Container Images :
   + Base image refresh only (no code changes since 7.4.0): rebuilt on patched Azure Linux / Windows base images to remove the compromised eMudhra intermediate CA roots (emSign ECC Root CA - G3, AAA Certificate Services) from the trust store.
 
