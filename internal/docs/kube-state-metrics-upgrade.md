@@ -2,9 +2,46 @@
 
 This document describes how the `kube-state-metrics` (KSM) image shipped with the
 Azure Monitor Metrics addon is versioned, how to upgrade it, and it records the
-most recent upgrade (**v2.19.1-2 → v2.20.0-4**).
+most recent upgrades: the dalec revision-only bump **v2.20.0-4 → v2.20.0-10**
+(7.4.1 hotfix) and the upstream upgrade **v2.19.1-2 → v2.20.0-4**.
 
-## TL;DR — what this upgrade changed
+## Latest: v2.20.0-4 → v2.20.0-10 (dalec revision-only bump, 7.4.1 hotfix)
+
+Same upstream source (`v2.20.0`, commit `4ffeda2`), rebuilt by dalec. `-10` is the first
+revision built on the patched Azure Linux base whose trust store
+(`/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem`) no longer contains the two roots
+called out in the 7.4.1 release notes (`emSign ECC Root CA - G3`, `AAA Certificate Services`).
+`-9` and earlier still trust both. Verified for `linux/amd64` and `linux/arm64`; the `-10`
+bundle is byte-identical to the one in `mcr.microsoft.com/azurelinux/distroless/base:3.0`.
+
+| | Before | After |
+|---|---|---|
+| Image tag | `v2.20.0-4` | `v2.20.0-10` |
+| Upstream KSM version | `v2.20.0` | `v2.20.0` (unchanged) |
+| prometheus-community Helm chart | `8.4.0` | `8.4.0` (unchanged) |
+| Go toolchain (dalec build) | `go1.26.7` | `go1.27.3` |
+| `golang.org/x/net` | `v0.57.0` | `v0.60.0` |
+| `golang.org/x/crypto` | `v0.55.0` | `v0.56.0` |
+| `google.golang.org/grpc` | `v1.82.1` | `v1.83.2` |
+| `go.opentelemetry.io/otel/sdk` / `otlptrace` | `v1.43.0` / `v1.40.0` | `v1.45.0` / `v1.45.0` |
+| Trusts `emSign ECC Root CA - G3` / `AAA Certificate Services` | yes | no |
+
+Image: `mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.20.0-10`
+
+Dalec revisions picked up (from the spec `changelog`; each entry lists CVEs found in the
+previous revision and fixed in the next):
+
+- `-5`: gRPC CVE-2026-84304; `golang.org/x/crypto` CVE-2026-56855, CVE-2026-78662
+- `-6`: gRPC CVE-2026-84445
+- `-7`: OpenTelemetry-Go CVE-2026-81870
+- `-8`: `golang.org/x/net` HTTP/2 CVEs (CVE-2026-78659, -78660, -78663, -78669, -97032)
+- `-9`: OpenSSL (`3.3.7-6.azl3`) and Go stdlib `1.27.1` CVEs
+- `-10`: Go stdlib `crypto/x509` CVE-2026-111943; rebuilt on the patched Azure Linux base (trust-store fix)
+
+Only the image tag changed. The upstream version is unchanged, so the chart-version comment,
+the `app.kubernetes.io/version: 2.20.0` labels, RBAC, and container args stay as they are.
+
+## TL;DR — upstream upgrade v2.19.1-2 → v2.20.0-4
 
 | | Before | After |
 |---|---|---|
@@ -54,7 +91,7 @@ label that should track the **upstream** version (no `v`, no dalec revision):
    (Invoke-RestMethod "https://mcr.microsoft.com/v2/oss/v2/kubernetes/kube-state-metrics/tags/list").tags |
      Where-Object { $_ -like "v2.20*" } | Sort-Object
    ```
-   Pick the highest `v<version>-<revision>` tag (here: `v2.20.0-4`).
+   Pick the highest `v<version>-<revision>` tag (currently: `v2.20.0-10`).
 4. **Map the upstream version to the prometheus-community Helm chart** version for the comment in `values-template.yaml` (see [helm-charts/charts/kube-state-metrics](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics) — `Chart.yaml` `appVersion`). KSM `2.20.0` first shipped in chart `8.4.0`.
 5. **Update both files** above to the new tag, and bump the `app.kubernetes.io/version` label in the `ama-metrics-ksm-*.yaml` manifests to the new upstream version.
 6. **Collect the upstream changelog** (`git compare <old>...<new>`) for the PR description — see below.
