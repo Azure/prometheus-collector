@@ -951,6 +951,111 @@ var _ = DescribeTable("The Prometheus UI API should honor a partial v2 configmap
 		Label(utils.ConfigProcessingPartialNoPcsV2)),
 )
 
+// Default targets relabel configs — v1 and v2.
+//
+// Both fixtures set default-targets-relabel-configs to one replace rule that sets the
+// e2e_default_targets_relabel label to the schema version. The agent must append the rule to the
+// relabel_configs of every default scrape job, after the job's own relabel configs, so each default
+// job's served scrape config ends with the rule and its targets carry the label. The checked jobs
+// include jobs with (kube-dns, kubelet, cadvisor) and without (kube-state-metrics) relabel configs.
+const defaultTargetsRelabelLabelName = "e2e_default_targets_relabel"
+
+func assertDefaultTargetsRelabelConfigApplied(schemaVersion string, namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, isReplicaSet bool, expectedJobs []string) {
+	time.Sleep(120 * time.Second)
+	var apiResponse utils.APIResponse
+	err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(apiResponse.Data).NotTo(BeNil())
+
+	var prometheusConfigResult v1.ConfigResult
+	Expect(json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)).To(Succeed())
+	Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+	prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(prometheusConfig).NotTo(BeNil())
+
+	for _, jobName := range expectedJobs {
+		var scrapeJob *config.ScrapeConfig
+		for _, job := range prometheusConfig.ScrapeConfigs {
+			if job.JobName == jobName {
+				scrapeJob = job
+				break
+			}
+		}
+		Expect(scrapeJob).NotTo(BeNil(), "%s job should be present", jobName)
+
+		ruleCount := 0
+		for _, relabelConfig := range scrapeJob.RelabelConfigs {
+			if relabelConfig.TargetLabel == defaultTargetsRelabelLabelName {
+				ruleCount++
+			}
+		}
+		Expect(ruleCount).To(Equal(1), "%s job should contain the default-targets-relabel-configs rule exactly once", jobName)
+
+		lastRelabelConfig := scrapeJob.RelabelConfigs[len(scrapeJob.RelabelConfigs)-1]
+		Expect(lastRelabelConfig.TargetLabel).To(Equal(defaultTargetsRelabelLabelName), "%s job should end with the default-targets-relabel-configs rule", jobName)
+		Expect(string(lastRelabelConfig.Action)).To(Equal("replace"))
+		Expect(lastRelabelConfig.Replacement).To(Equal(schemaVersion))
+		GinkgoWriter.Printf("[DefaultTargetsRelabel-%s] %s job has %d relabel config(s), ending with the default-targets-relabel-configs rule\n", schemaVersion, jobName, len(scrapeJob.RelabelConfigs))
+	}
+
+	// The target allocator spreads a replica set's targets across its pods, so query all of them.
+	pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pods).NotTo(BeEmpty())
+	targetsResponses := make([]*utils.APIResponse, len(pods))
+	err = utils.QueryPromUIFromPods(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/targets", isLinux, isReplicaSet, targetsResponses)
+	Expect(err).NotTo(HaveOccurred())
+
+	var activeTargets []v1.ActiveTarget
+	for _, targetsResponse := range targetsResponses {
+		if targetsResponse == nil {
+			continue
+		}
+		var targetsResult v1.TargetsResult
+		Expect(json.Unmarshal([]byte(targetsResponse.Data), &targetsResult)).To(Succeed())
+		activeTargets = append(activeTargets, targetsResult.Active...)
+	}
+
+	for _, jobName := range expectedJobs {
+		jobTargets := 0
+		for _, target := range activeTargets {
+			if target.ScrapePool != jobName {
+				continue
+			}
+			jobTargets++
+			Expect(string(target.Labels[defaultTargetsRelabelLabelName])).To(Equal(schemaVersion), "target %s of the %s job should have the %s label", target.ScrapeURL, jobName, defaultTargetsRelabelLabelName)
+		}
+		Expect(jobTargets).To(BeNumerically(">", 0), "%s job should have at least one active target", jobName)
+		GinkgoWriter.Printf("[DefaultTargetsRelabel-%s] %d active %s target(s) have %s=%q\n", schemaVersion, jobTargets, jobName, defaultTargetsRelabelLabelName, schemaVersion)
+	}
+}
+
+var _ = DescribeTable("The Prometheus UI API should show the default-targets-relabel-configs from a v1 configmap on every default job",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, isReplicaSet bool, expectedJobs []string) {
+		assertDefaultTargetsRelabelConfigApplied("v1", namespace, controllerLabelName, controllerLabelValue, containerName, isLinux, isReplicaSet, expectedJobs)
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV1)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV1)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV1)),
+)
+
+var _ = DescribeTable("The Prometheus UI API should show the default-targets-relabel-configs from a v2 configmap on every default job",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, isReplicaSet bool, expectedJobs []string) {
+		assertDefaultTargetsRelabelConfigApplied("v2", namespace, controllerLabelName, controllerLabelValue, containerName, isLinux, isReplicaSet, expectedJobs)
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV2)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV2)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultTargetsRelabelV2)),
+)
+
 // Basic auth ServiceMonitor — verify RBAC, config, and targets
 var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
 	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {

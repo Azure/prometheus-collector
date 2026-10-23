@@ -10,6 +10,8 @@ var (
 	defaultSettingsMountPath                     = "/etc/config/settings/default-scrape-settings-enabled"
 	defaultSettingsMountPathv2                   = "/etc/config/settings/default-targets-scrape-enabled"
 	defaultSettingsEnvVarPath                    = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
+	defaultRelabelConfigsMountPath               = "/etc/config/settings/default-targets-relabel-configs"
+	clusterMetricsMountPath                      = "/etc/config/settings/cluster-metrics"
 	configMapMountPathForPodAnnotation           = "/etc/config/settings/pod-annotation-based-scraping"
 	podAnnotationEnvVarPath                      = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
 	collectorSettingsMountPath                   = "/etc/config/settings/prometheus-collector-settings"
