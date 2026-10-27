@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "annotations": {
+      "kubernetes.io/change-cause": "CVE-2026-111497 (brotli): grafana/grafana:13.1.0 -> mcr.microsoft.com/oss/v2/grafana/grafana:v13.2.2-1, GF_PLUGINS_PREINSTALL_DISABLED=false, GF_PLUGINS_PREINSTALL_AUTO_UPDATE=false"
+    }
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "grafana",
+            "image": "mcr.microsoft.com/oss/v2/grafana/grafana:v13.2.2-1",
+            "env": [
+              {
+                "name": "GF_PLUGINS_PREINSTALL_DISABLED",
+                "value": "false"
+              },
+              {
+                "name": "GF_PLUGINS_PREINSTALL_AUTO_UPDATE",
+                "value": "false"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

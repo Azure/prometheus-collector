@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "annotations": {
+      "kubernetes.io/change-cause": "CVE-2026-111497 (brotli): demo:3.0.0-fraud-detection -> demo:3.0.0-fraud-detection-mcr-openjdk17-20261026 (base mcr.microsoft.com/openjdk/jdk:17-distroless)"
+    }
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "fraud-detection",
+            "image": "rashmiotlp0e4773a2.azurecr.io/open-telemetry/demo:3.0.0-fraud-detection-mcr-openjdk17-20261026"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+apiVersion: eraser.sh/v1
+kind: ImageList
+metadata:
+  name: imagelist
+spec:
+  images:
+    - rashmiotlp0e4773a2.azurecr.io/grafana/grafana:13.1.0
+    - docker.io/grafana/grafana:13.1.0
+    - rashmiotlp0e4773a2.azurecr.io/open-telemetry/demo:3.0.0-fraud-detection
