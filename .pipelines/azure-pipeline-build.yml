@@ -1100,6 +1100,7 @@ extends:
           os: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
+          GOLANG_VERSION: '1.26.10'
           LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         templateContext:
