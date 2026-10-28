@@ -46,15 +46,31 @@ catch {
 Write-Host ('Finished installing fluentbit')
 ############################################################################################
 Write-Host ('Installing Visual C++ Redistributable Package')
-$vcRedistLocation = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
+$vcRedistLocation = 'https://aka.ms/vc14/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
 $vcArgs = "/install /quiet /norestart"
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation
-Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait
-Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin
+Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
+$signature = Get-AuthenticodeSignature -FilePath $vcInstallerLocation
+if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') {
+    throw "Visual C++ installer must have a valid Microsoft signature"
+}
+$installerVersion = (Get-Item -LiteralPath $vcInstallerLocation -ErrorAction Stop).VersionInfo
+if ([version]::new($installerVersion.FileMajorPart, $installerVersion.FileMinorPart, $installerVersion.FileBuildPart, $installerVersion.FilePrivatePart) -lt [version]'14.40.33816.0') {
+    throw "Visual C++ installer is older than the CVE-2024-43590 fix"
+}
+$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait -PassThru -ErrorAction Stop
+if ($vcInstaller.ExitCode -notin @(0, 3010)) {
+    throw "Visual C++ installation failed with exit code $($vcInstaller.ExitCode)"
+}
+$runtimeVersion = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64' -ErrorAction Stop).Version
+if ([version]$runtimeVersion.TrimStart('v') -lt [version]'14.40.33816.0') {
+    throw "Installed Visual C++ runtime is older than the CVE-2024-43590 fix"
+}
+foreach ($dll in @('msvcp140.dll', 'vccorlib140.dll', 'vcruntime140.dll')) {
+    Copy-Item -Path "/Windows/System32/$dll" -Destination /opt/fluent-bit/bin -ErrorAction Stop
+    Write-Host "$dll version: $((Get-Item -LiteralPath "/opt/fluent-bit/bin/$dll" -ErrorAction Stop).VersionInfo.FileVersion)"
+}
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ############################################################################################
 Write-Host ('Installing Telegraf');
