@@ -105,6 +105,18 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Build: install golang $(GOLANG_VERSION)"
 
+          - task: HelmInstaller@1
+            displayName: "Install Helm for chart regression tests"
+            inputs:
+              helmVersionToInstall: '3.12.3'
+
+          - bash: |
+              set -euo pipefail
+              # Reuse existing dependencies without running the cluster-backed Ginkgo suite.
+              go test -v ../../helmchart/helm_chart_test.go
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/ginkgo-e2e/configprocessing
+            displayName: "Test HPA compatibility and KSM chart arguments"
+
           - task: AzureCLI@2
             displayName: Get kubeconfig
             inputs:
