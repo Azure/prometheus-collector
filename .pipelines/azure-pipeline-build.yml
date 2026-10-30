@@ -278,8 +278,32 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
+            # Use the newest stable retina release whose images and chart are all published to ghcr.io.
+            # A GitHub release can exist without its images (e.g. v1.3.1, whose image release job failed),
+            # which leaves the dev clusters' retina pods in ImagePullBackOff.
+            ghcr_manifest() {
+              local token
+              token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/$1:pull" | jq -r '.token') || return 1
+              curl -sfL -H "Authorization: Bearer $token" \
+                -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json" \
+                "https://ghcr.io/v2/microsoft/retina/$1/manifests/$2"
+            }
+            RETINA_VERSION=""
+            for candidate in $(curl -sfL https://api.github.com/repos/microsoft/retina/releases | jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' | head -n 5); do
+              # The Windows daemonset uses the same retina-agent tag, so its index must have both Linux and Windows images
+              if ghcr_manifest retina-agent "$candidate" | jq -e 'any(.manifests[]?; .platform.os == "linux") and any(.manifests[]?; .platform.os == "windows")' > /dev/null \
+                && ghcr_manifest retina-init "$candidate" > /dev/null \
+                && ghcr_manifest retina-operator "$candidate" > /dev/null \
+                && ghcr_manifest charts/retina "$candidate" > /dev/null; then
+                RETINA_VERSION=$candidate
+                break
+              fi
+              echo "##vso[task.logissue type=warning]Skipping retina $candidate: its images or chart are not published to ghcr.io"
+            done
+            if [ -z "$RETINA_VERSION" ]; then
+              echo "##vso[task.logissue type=error]None of the latest retina releases have their images and chart published to ghcr.io"
+              exit 1
+            fi
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
             echo $RETINA_VERSION 
             helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
