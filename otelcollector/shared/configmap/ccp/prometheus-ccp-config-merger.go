@@ -8,13 +8,17 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
 const (
+	replicasetControllerType    = "replicaset"
+	defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
+)
+
+var (
 	mergedDefaultConfigPath               = "/opt/defaultsMergedConfig.yml"
-	replicasetControllerType              = "replicaset"
-	defaultPromConfigPathPrefix           = "/opt/microsoft/otelcollector/default-prom-configs/"
 	regexHashFile                         = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	controlplaneApiserverDefaultFile      = defaultPromConfigPathPrefix + "controlplane_apiserver.yml"
 	controlplaneKubeSchedulerDefaultFile  = defaultPromConfigPathPrefix + "controlplane_kube_scheduler.yml"
@@ -286,6 +290,9 @@ func writeDefaultScrapeTargetsFile() {
 		loadRegexHash()
 		populateDefaultPrometheusConfig()
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+			if err := shared.ApplyDefaultScrapeMetricsAccount(mergedDefaultConfigs, defaultScrapeMetricsAccountPath); err != nil {
+				fmt.Printf("%v; default targets metrics account will not be added\n", err)
+			}
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err == nil {
