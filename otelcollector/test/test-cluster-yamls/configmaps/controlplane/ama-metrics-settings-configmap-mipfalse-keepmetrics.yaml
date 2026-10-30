@@ -26,6 +26,10 @@ data:
     controlplane-etcd = true
     acstor-capacity-provisioner = true
     acstor-metrics-exporter = true
+  default-targets-relabel-configs: |-
+    # - action: replace
+    #   source_labels: [__meta_kubernetes_pod_label_team]
+    #   target_label: team
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""

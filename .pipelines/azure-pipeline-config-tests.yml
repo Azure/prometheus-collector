@@ -907,6 +907,102 @@ stages:
             displayName: "Create TestKube Results Summary and restore default settings configmap"
             condition: always()
 
+          # --- Default Targets Relabel Configs Tests ---
+          # The default-targets-relabel-configs setting (a v1 configmap key, or a v2 cluster-metrics section)
+          # must be appended to the relabel_configs of every default scrape job on the replicaset and both daemonsets.
+
+          # v1
+          - bash: |
+              # Delete the existing settings configmap first so no keys from the previous fixture are left behind.
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-default-targets-relabel-v1.yaml
+
+              # Force a clean re-parse of the settings configmap on startup in every workload the test checks,
+              # including the target allocator that serves the replicaset's scrape configs.
+              kubectl rollout restart deployment/ama-metrics -n kube-system
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-targets-relabel-v1-crs.yaml" \
+                "testkube-config-test-default-targets-relabel-v1-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default targets relabel configs (v1 configmap)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-relabel-v1"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-relabel-v1.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary (default targets relabel v1)"
+            condition: always()
+
+          # v2
+          - bash: |
+              # Delete the existing settings configmap first so no keys from the previous fixture are left behind.
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-default-targets-relabel-v2.yaml
+
+              # Force a clean re-parse of the settings configmap on startup in every workload the test checks,
+              # including the target allocator that serves the replicaset's scrape configs.
+              kubectl rollout restart deployment/ama-metrics -n kube-system
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics -n kube-system --timeout=300s
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-targets-relabel-v2-crs.yaml" \
+                "testkube-config-test-default-targets-relabel-v2-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default targets relabel configs (v2 configmap)"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="default-targets-relabel-v2"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-targets-relabel-v2.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+
+              # Restore the default settings configmap for subsequent runs.
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary and restore default settings configmap (default targets relabel v2)"
+            condition: always()
+
           # List created files
           - bash: |
               echo "Results files created:"

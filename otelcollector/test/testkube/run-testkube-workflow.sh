@@ -193,6 +193,12 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-basic-auth-secret-update-v2-crs.yaml)
             workflows=(basicauthsecretupdatev2)
             ;;
+        testkube-config-test-default-targets-relabel-v1-crs.yaml)
+            workflows=(defaulttargetsrelabelv1)
+            ;;
+        testkube-config-test-default-targets-relabel-v2-crs.yaml)
+            workflows=(defaulttargetsrelabelv2)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1
