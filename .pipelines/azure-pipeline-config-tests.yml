@@ -65,6 +65,12 @@ stages:
             persistCredentials: true
 
           - bash: |
+              set -euo pipefail
+              bash ./otelcollector/test/testkube/run-testkube-workflow-test.sh
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Test ConfigTests workflow setup"
+
+          - bash: |
               # Try apt install first, fall back to official install script
               wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
               echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \
