@@ -23,12 +23,22 @@ allowed-tools:
 3. For TestKube failures, get the "Run TestKube workflow" task log and identify which test workflows passed/failed and why.
 4. Record the CI results for all stages: Build, Deploy (all clusters), TestKube AKS, TestKube OTel, TestKube ARC.
 
+### Phase 1b: Config-Processing Pipeline Check (required)
+- Check the latest `main` run of [Azure.prometheus-collector.config.tests, definition 979](https://github-private.visualstudio.com/azure/_build?definitionId=979), project `azure`, org `github-private.visualstudio.com`. This is separate from build pipeline 440.
+- Record its run ID/link, source commit, start/finish times, status, and result. Inspect the task timeline and per-scenario logs/results, not just the overall result: `continueOnError: true` can produce `partiallySucceeded` despite failing tests.
+- Report each config scenario's failed/passed workflows, including both `configprocessingcommon` and the scenario-specific workflow. Check the invalid settings, custom config, and external-label scenarios explicitly. A workflow apply error (especially `metadata.resourceVersion`) invalidates the run even if an old workflow reports success.
+- Correlate the run with the candidate image deployed to `ci-dev-aks-tests` using deployment records/logs. The pipeline source commit alone does not identify the deployed collector image. For candidate-specific evidence, the tests must run after that image was deployed.
+- Mark this check PASS only for a completed, successful run with all scenarios passing and verified candidate-image coverage. Failed/partially successful runs are FAIL; missing, inaccessible, running, stale, or image-mismatched runs are unverified. Do not silently substitute an older green run or declare READY with failed/unverified coverage.
+- Include these results in the report below. Do not automatically rerun this pipeline as a read-only check: it modifies configmaps on the shared test cluster.
+
 ### Phase 1.5: ADO API Fallback
 If the ADO MCP tools (`list_builds`, `get_build`, etc.) fail with 401/403 or are unavailable, fall back to **direct ADO REST API calls** using `$env:ADO_PAT` with Basic auth:
 ```powershell
 $base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$env:ADO_PAT"))
 $headers = @{ "Authorization" = "Basic $base64Auth" }
 Invoke-RestMethod -Uri "https://github-private.visualstudio.com/azure/_apis/build/builds?definitions=440&branchName=refs/heads/main&`$top=1&api-version=7.1" -Headers $headers
+# Query config-processing runs with the same authentication:
+Invoke-RestMethod -Uri "https://github-private.visualstudio.com/azure/_apis/build/builds?definitions=979&branchName=refs/heads/main&`$top=1&api-version=7.1" -Headers $headers
 ```
 If `$env:ADO_PAT` is also missing, stop and ask the user to provide it.
 
@@ -93,6 +103,7 @@ Then execute **every** step below:
 | Testkube_OTel | ✅/❌ | <list each workflow result> |
 | Testkube_ARC | ✅/❌ | <list each workflow result> |
 | TestKube_Summary | ✅/❌ | |
+| Config processing (979) | PASS/FAIL/UNVERIFIED | <run ID/link, source commit, times, status/result, candidate image/deployment evidence, and each scenario's workflow results; include setup/apply failures> |
 
 ### Phase 2: Manual Validation Results
 | Step | Result | Evidence |
@@ -115,6 +126,7 @@ Then execute **every** step below:
 
 #### How to determine pass/fail for each step
 
+- **Config processing (979)**: PASS only when the latest run is completed/successful, every scenario passed without setup/apply errors, and its tested collector image is verified to match the candidate. Otherwise report FAIL or UNVERIFIED as described in Phase 1b; this blocks READY.
 - **Pod Status**: PASS if all pods across all 3 types (RS, DS, Win DS) are `Running` with `READY` matching expected container count and the image tag matches the expected release version.
 - **Pod Restarts**: PASS if all restart counts are 0. WARN if restarts occurred but root cause is identified as transient (e.g., node scaling). FAIL if restarts are ongoing or unexplained.
 - **Container Logs**: PASS if no error-level log entries exist after deployment time. WARN if only transient startup errors exist (e.g., target allocator connection refused during pod init) that resolved within seconds. FAIL if ongoing errors exist.
@@ -554,6 +566,7 @@ Before declaring an image ready for production:
 
 **CI Pipeline (automated)**
 - [ ] CI pipeline build completed (build stage succeeded)
+- [ ] Config-processing pipeline 979 passed all scenarios for the candidate image, with run/deployment evidence recorded and no stale workflow execution
 - [ ] All images published to cidev MCR
 - [ ] `Deploy_AKS_Chart` succeeded — Helm upgrade on ci-dev-aks-mac-eus
 - [ ] `Testkube` (AKS) — all 5 workflows passed
