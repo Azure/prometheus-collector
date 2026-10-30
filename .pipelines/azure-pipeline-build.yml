@@ -29,8 +29,8 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.26.9'
-  FLUENTBIT_GOLANG_VERSION: '1.26.5'
-  TESTKUBE_GOLANG_VERSION: '1.26.9'
+  FLUENTBIT_GOLANG_VERSION: '1.26.10'
+  TESTKUBE_GOLANG_VERSION: '1.26.10'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -363,7 +363,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
           displayName: "Build: Set values in payload.json for signing"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -537,7 +537,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
           displayName: "Build the payload json file"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -975,7 +975,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: Set values in payload.json for signing'
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Linux"
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1152,7 +1152,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: Set values in payload.json for signing"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Linux CCP"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -1486,7 +1486,7 @@ extends:
             fi
           workingDirectory: $(Build.SourcesDirectory)
           displayName: "Build: run trivy scan"
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for TargetAllocator"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -1603,7 +1603,7 @@ extends:
             fi
           workingDirectory: $(Build.SourcesDirectory)
           displayName: "Build: run trivy scan"
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Config Reader"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -1691,7 +1691,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2019 image"
           retryCountOnTaskFailure: 2
@@ -1727,7 +1727,7 @@ extends:
               ls .       
         - script: dir $(Build.ArtifactStagingDirectory)
           displayName: 'List files in Staging Directory'
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
             UseMSIAuthentication: true
@@ -1767,7 +1767,7 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
             UseMSIAuthentication: true
@@ -1865,7 +1865,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2022 image"
           retryCountOnTaskFailure: 2
@@ -1901,7 +1901,7 @@ extends:
               ls .       
         - script: dir $(Build.ArtifactStagingDirectory)
           displayName: 'List files in Staging Directory'
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
             UseMSIAuthentication: true
@@ -1941,7 +1941,7 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
             UseMSIAuthentication: true
@@ -2116,7 +2116,7 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/windows
           displayName: "Build the payload json file"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
