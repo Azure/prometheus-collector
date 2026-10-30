@@ -1671,10 +1671,11 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1686,6 +1687,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1845,10 +1847,11 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1860,6 +1863,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -2030,10 +2034,11 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - bash: |
             export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
             export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
