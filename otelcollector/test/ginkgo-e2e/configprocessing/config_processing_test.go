@@ -1337,3 +1337,22 @@ var _ = Describe("Basic auth secret update (v2)", Label(utils.ConfigProcessingBa
 		GinkgoWriter.Printf("[BasicAuthSecretUpdateV2] Secret update verification passed\n")
 	})
 })
+
+/*
+ * When the settings configmap sets deny_fs_access_through_sms = true, the config-reader must write
+ * deny_fs_access_through_sms: true into the TargetAllocator config so ServiceMonitor/PodMonitor
+ * scrape configs that read local files (bearerTokenFile, ca/cert/key files) are dropped.
+ */
+var _ = Describe("deny_fs_access_through_sms setting", Label(utils.ConfigProcessingDenyFSAccess), func() {
+	It("is written to the TargetAllocator config by the config-reader", func() {
+		Eventually(func() (string, error) {
+			pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics-operator-targets")
+			if err != nil {
+				return "", err
+			}
+			stdout, _, err := utils.ExecCmd(K8sClient, Cfg, pods[0].Name, "config-reader", "kube-system",
+				[]string{"cat", "/ta-configuration/targetallocator.yaml"})
+			return stdout, err
+		}, 5*time.Minute, 15*time.Second).Should(ContainSubstring("deny_fs_access_through_sms: true"))
+	})
+})

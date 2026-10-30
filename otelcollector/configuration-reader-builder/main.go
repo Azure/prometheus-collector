@@ -158,6 +158,9 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 		log.Printf("Kubernetes version %s < 1.37: watching all namespaces for secrets\n", kubeVersion)
 	}
 
+	denyFSAccessThroughSMs := os.Getenv("AZMON_DENY_FS_ACCESS_THROUGH_SMS") == "true"
+	log.Printf("DenyFSAccessThroughSMs: %t\n", denyFSAccessThroughSMs)
+
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
 		targetAllocatorConfig = shared.Config{
@@ -174,6 +177,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				ServiceMonitorSelector:  &metav1.LabelSelector{},
 				PodMonitorSelector:      &metav1.LabelSelector{},
 				SecretsAccessNamespaces: secretsAccessNamespaces,
+				DenyFSAccessThroughSMs:  denyFSAccessThroughSMs,
 			},
 			HTTPS: shared.HTTPSServerConfig{
 				Enabled:         true,
@@ -199,6 +203,7 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 				ServiceMonitorSelector:  &metav1.LabelSelector{},
 				PodMonitorSelector:      &metav1.LabelSelector{},
 				SecretsAccessNamespaces: secretsAccessNamespaces,
+				DenyFSAccessThroughSMs:  denyFSAccessThroughSMs,
 			},
 		}
 	}
