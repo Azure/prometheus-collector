@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 10-23-2026
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-23-2026-8e5d8995`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-23-2026-8e5d8995-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-23-2026-8e5d8995-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.1-hotfix-7-4-1-10-23-2026-8e5d8995-cfg`
+* AKS and Arc Container Images :
+  + Base image refresh only (no code changes since 7.4.0): rebuilt on patched Azure Linux / Windows base images to remove the compromised eMudhra intermediate CA roots (emSign ECC Root CA - G3, AAA Certificate Services) from the trust store.
+  + build(deps): Upgrade kube-state-metrics from v2.20.0-4 to v2.20.0-10: same upstream v2.20.0, rebuilt on the patched Azure Linux base with the same trust-store fix, plus Microsoft (dalec) CVE patches (Go 1.27.3, golang.org/x/net, golang.org/x/crypto, gRPC, OpenTelemetry, OpenSSL).
+
 ## Release 09-11-2026
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-11-2026-<TBD>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.4.0-main-09-11-2026-<TBD>-win`
