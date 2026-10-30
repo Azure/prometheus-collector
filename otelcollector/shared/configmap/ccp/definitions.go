@@ -1,5 +1,7 @@
 package ccpconfigmapsettings
 
+var defaultScrapeMetricsAccountPath = "/etc/config/settings/default-scrape-metrics-account"
+
 type RegexValues struct {
 	ControlplaneKubeControllerManager string
 	ControlplaneKubeScheduler         string
