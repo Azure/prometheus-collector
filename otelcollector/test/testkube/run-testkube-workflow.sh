@@ -93,7 +93,25 @@ fi
 
 # Apply the generated files
 kubectl apply -f ./testkube/api-server-permissions.yaml
-kubectl apply -f "./testkube/$TARGET_OUTPUT"
+
+# Apply the TestWorkflow definitions.
+# Client-side `kubectl apply` can be rejected by the TestWorkflow API with
+# "metadata.resourceVersion: Invalid value: 0: must be specified for an update".
+# When that happens the previous definition stays in the cluster, and because many
+# CR files share workflow names (e.g. configprocessingcommon) the run silently uses a
+# stale label filter from another scenario. Fall back to server-side apply, then to
+# replace --force, and abort if the definitions still cannot be updated.
+if ! kubectl apply -f "./testkube/$TARGET_OUTPUT"; then
+    echo "WARNING: client-side apply of TestWorkflows failed; retrying with server-side apply"
+    if ! kubectl apply --server-side --force-conflicts -f "./testkube/$TARGET_OUTPUT"; then
+        echo "WARNING: server-side apply failed; recreating TestWorkflows with replace --force"
+        if ! kubectl replace --force -f "./testkube/$TARGET_OUTPUT"; then
+            echo "##vso[task.logissue type=error]Failed to apply TestWorkflow definitions from $TARGET_OUTPUT; aborting to avoid running stale workflows"
+            exit 1
+        fi
+    fi
+fi
+echo "✓ Applied TestWorkflow definitions from $TARGET_OUTPUT"
 
 if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
     # Apply common configmaps
