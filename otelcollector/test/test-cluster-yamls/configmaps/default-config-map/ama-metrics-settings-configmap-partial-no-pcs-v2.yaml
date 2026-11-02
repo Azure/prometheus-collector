@@ -14,6 +14,8 @@ apiVersion: v1
 # kube-state-metrics scrape job uses them; if it is discarded (the bug), it falls
 # back to the 30s default and the minimal keep-list without the PV/PVC metrics.
 data:
+  # Empty disables metrics-account routing for built-in scrapes.
+  default-scrape-metrics-account: ""
   schema-version:
     #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
     v2

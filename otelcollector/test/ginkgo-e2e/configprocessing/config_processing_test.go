@@ -951,6 +951,106 @@ var _ = DescribeTable("The Prometheus UI API should honor a partial v2 configmap
 		Label(utils.ConfigProcessingPartialNoPcsV2)),
 )
 
+// Metrics-account routing is a single literal value, not a custom relabel rule.
+// Distinct v1/v2 values detect stale configuration. Disabled cases run after
+// enabled cases and verify that generated rules and active target labels vanish.
+const defaultScrapeMetricsAccountLabel = "microsoft_metrics_account"
+
+func assertDefaultScrapeMetricsAccount(expectedAccount, namespace, controllerLabelName, controllerLabelValue, containerName string, isLinux, isReplicaSet bool, expectedJobs []string) {
+	Eventually(func(g Gomega) {
+		var response utils.APIResponse
+		g.Expect(utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &response)).To(Succeed())
+		var result v1.ConfigResult
+		g.Expect(json.Unmarshal([]byte(response.Data), &result)).To(Succeed())
+		g.Expect(result.YAML).NotTo(BeEmpty())
+		parsed, err := config.Load(result.YAML, nil)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(parsed).NotTo(BeNil())
+
+		wantRules := 0
+		if expectedAccount != "" {
+			wantRules = 1
+		}
+		for _, jobName := range expectedJobs {
+			var job *config.ScrapeConfig
+			for _, candidate := range parsed.ScrapeConfigs {
+				if candidate.JobName == jobName {
+					job = candidate
+					break
+				}
+			}
+			g.Expect(job).NotTo(BeNil(), "%s job must be present", jobName)
+			count := 0
+			for _, rule := range job.RelabelConfigs {
+				if rule.TargetLabel == defaultScrapeMetricsAccountLabel {
+					count++
+				}
+			}
+			g.Expect(count).To(Equal(wantRules), "%s must have exactly %d routing assignment(s)", jobName, wantRules)
+			if expectedAccount != "" {
+				last := job.RelabelConfigs[len(job.RelabelConfigs)-1]
+				g.Expect(last.TargetLabel).To(Equal(defaultScrapeMetricsAccountLabel), "%s routing assignment must follow existing rules", jobName)
+				g.Expect(string(last.Action)).To(Equal("replace"))
+				g.Expect(last.Replacement).To(Equal(expectedAccount))
+			}
+		}
+
+		// ReplicaSet targets may be spread across pods by the target allocator.
+		pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(pods).NotTo(BeEmpty())
+		responses := make([]*utils.APIResponse, len(pods))
+		g.Expect(utils.QueryPromUIFromPods(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/targets", isLinux, isReplicaSet, responses)).To(Succeed())
+		var targets []v1.ActiveTarget
+		for _, response := range responses {
+			if response == nil {
+				continue
+			}
+			var result v1.TargetsResult
+			g.Expect(json.Unmarshal([]byte(response.Data), &result)).To(Succeed())
+			targets = append(targets, result.Active...)
+		}
+		for _, jobName := range expectedJobs {
+			count := 0
+			for _, target := range targets {
+				if target.ScrapePool != jobName {
+					continue
+				}
+				count++
+				if expectedAccount == "" {
+					_, present := target.Labels[defaultScrapeMetricsAccountLabel]
+					g.Expect(present).To(BeFalse(), "%s target must lose its old routing label", jobName)
+				} else {
+					g.Expect(string(target.Labels[defaultScrapeMetricsAccountLabel])).To(Equal(expectedAccount), "%s target must have its configured account", jobName)
+				}
+			}
+			g.Expect(count).To(BeNumerically(">", 0), "%s must have active targets", jobName)
+		}
+	}).WithTimeout(3 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+}
+
+var _ = DescribeTable("Built-in scrapes should use the configured metrics account",
+	assertDefaultScrapeMetricsAccount,
+	Entry("v1 ReplicaSet", "service-v1", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v1 Linux DaemonSet", "service-v1", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v1 Windows DaemonSet", "service-v1", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v2 ReplicaSet", "service-v2", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("v2 Linux DaemonSet", "service-v2", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("v2 Windows DaemonSet", "service-v2", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("disabled ReplicaSet", "", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
+	Entry("disabled Linux DaemonSet", "", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
+	Entry("disabled Windows DaemonSet", "", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
+)
+
 // Basic auth ServiceMonitor — verify RBAC, config, and targets
 var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcessingBasicAuthSmon), func() {
 	It("should have the correct ClusterRole permissions, config, and healthy targets for the basic-auth ServiceMonitor", func() {

@@ -1,6 +1,8 @@
 kind: ConfigMap
 apiVersion: v1
 data:
+  # Empty disables metrics-account routing for built-in scrapes.
+  default-scrape-metrics-account: ""
   schema-version:
     #string.used by agent to parse config. supported versions are {v1}. Configs with other schema versions will be rejected by the agent.
     my-schema

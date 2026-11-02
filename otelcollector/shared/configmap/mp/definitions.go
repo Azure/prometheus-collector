@@ -1,6 +1,7 @@
 package configmapsettings
 
 var (
+	defaultScrapeMetricsAccountPath              = "/etc/config/settings/default-scrape-metrics-account"
 	schemaVersionFile                            = "/etc/config/settings/schema-version"
 	configVersionFile                            = "/etc/config/settings/config-version"
 	configMapDebugMountPath                      = "/etc/config/settings/debug-mode"

@@ -1,6 +1,8 @@
 kind: ConfigMap
 apiVersion: v1
 data:
+  # Empty disables metrics-account routing for built-in scrapes.
+  default-scrape-metrics-account: ""
   config-version: ver1
   debug-mode: enabled = false
   default-scrape-settings-enabled: |-
