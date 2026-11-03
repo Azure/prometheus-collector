@@ -81,6 +81,8 @@ extends:
           submodules: true
         - bash: bash .pipelines/tests/windows-image-restore-test.sh
           displayName: "Build: test Windows image recovery"
+        - bash: bash .pipelines/tests/trivy-install-test.sh
+          displayName: "Build: test Trivy installation"
         - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
@@ -1051,8 +1053,8 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
           condition: succeeded()
+        - template: azure-template-install-trivy.yml
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
@@ -1228,8 +1230,8 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
           condition: succeeded()
+        - template: azure-template-install-trivy.yml
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1487,8 +1489,8 @@ extends:
             echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
+        - template: azure-template-install-trivy.yml
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1604,8 +1606,8 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
           condition: succeeded()
+        - template: azure-template-install-trivy.yml
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
