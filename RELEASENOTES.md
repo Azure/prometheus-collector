@@ -25,6 +25,7 @@
   + build(deps): bump actions/create-release from 1 to 1 (https://github.com/Azure/prometheus-collector/pull/1797)
   + feat: make DenyFSAccessThroughSMs opt-in via configmap setting (https://github.com/Azure/prometheus-collector/pull/1773)
   + fix: addon chart HPA lookup guard and quote KSM args (https://github.com/Azure/prometheus-collector/pull/1775)
+  + fix: configure Application Insights telemetry for Delos cloud (https://github.com/Azure/prometheus-collector/pull/1807)
 
 * Pipeline/Docs/Templates Updates:
   + Ignore Dependabot updates for upstream-vendored Go modules (https://github.com/Azure/prometheus-collector/pull/1756)
