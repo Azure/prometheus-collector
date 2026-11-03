@@ -609,7 +609,7 @@ func main() {
 		createGauges()
 		recordPerfMetrics()
 	} else {
-		//recordMetrics()
+		recordMetrics()
 		recordTestMetrics()
 	}
 
@@ -620,7 +620,12 @@ func main() {
 
 	handler := http.HandlerFunc(handleRequest)
 	http.Handle("/httpsmetrics", handler)
-	http.ListenAndServe(":2114", nil)
+	// Must not block: :2113 and :2112 below would never start. Fails harmlessly if the python app already owns :2114.
+	go func() {
+		if err := http.ListenAndServe(":2114", nil); err != nil {
+			log.Printf("HTTP server on :2114 failed to start: %v", err)
+		}
+	}()
 
 	// Run server for metrics without a type
 	go func() {
