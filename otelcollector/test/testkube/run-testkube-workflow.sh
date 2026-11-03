@@ -54,6 +54,12 @@ add_result() {
     cat "$RESULTS_FILE"
 }
 
+fail_setup() {
+    echo "Error: $1" >&2
+    add_result "$TARGET_ENV" "failed" "$1" ""
+    exit 1
+}
+
 echo "================================================="
 echo "Starting TestKube deployment and testing workflow"
 echo "================================================="
@@ -86,14 +92,31 @@ export BRANCH_NAME
 
 # Generate the test CRs from template
 if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
-    envsubst < "./testkube/config-processing-test-crs/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
+    envsubst < "./testkube/config-processing-test-crs/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT" \
+        || fail_setup "Failed to generate ConfigTests workflows"
 else
-    envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT"
+    envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT" \
+        || fail_setup "Failed to generate TestKube workflows"
 fi
 
 # Apply the generated files
-kubectl apply -f ./testkube/api-server-permissions.yaml
-kubectl apply -f "./testkube/$TARGET_OUTPUT"
+kubectl apply -f ./testkube/api-server-permissions.yaml \
+    || fail_setup "Failed to apply TestKube API permissions"
+
+if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+    existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
+        || fail_setup "Failed to list existing ConfigTests workflows"
+    # Exported last-applied metadata can make apply try to delete resourceVersion.
+    # Reset only the workflows in this scenario, without deleting their history.
+    while IFS= read -r workflow; do
+        [[ -z "$workflow" ]] && continue
+        kubectl annotate --namespace testkube "$workflow" kubectl.kubernetes.io/last-applied-configuration- \
+            || fail_setup "Failed to reset last-applied metadata for $workflow"
+    done <<< "$existing_workflows"
+fi
+
+kubectl apply -f "./testkube/$TARGET_OUTPUT" \
+    || fail_setup "Failed to apply TestKube workflows; refusing to run stale definitions"
 
 if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
     # Apply common configmaps

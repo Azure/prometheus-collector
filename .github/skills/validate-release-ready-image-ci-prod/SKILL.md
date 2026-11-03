@@ -1,6 +1,6 @@
 ---
 name: validate-release-ready-image-ciprod
-description: Validate a prometheus-collector release image on the CI prod cluster (ci-prod-aks-mac-weu), ensuring it's healthy and ready for production. Manual validation only — no build pipeline checks. Use when "validate prod image", "check ci-prod cluster", "verify prod deployment", or "is the prod image healthy".
+description: Validate a prometheus-collector release image on the CI prod cluster (ci-prod-aks-mac-weu), including config-processing CI results and manual cluster validation. No image-build pipeline checks. Use when "validate prod image", "check ci-prod cluster", "verify prod deployment", or "is the prod image healthy".
 allowed-tools:
   - run_in_terminal
   - read_file
@@ -13,6 +13,22 @@ allowed-tools:
 ## Agent Execution Plan
 
 **IMPORTANT**: You MUST execute ALL of the following steps in order. Do NOT skip any step. Do NOT declare the image "ready" until every step is complete.
+
+### Config-Processing Pipeline Check (required)
+- Check the latest `main` run of [Azure.prometheus-collector.config.tests, definition 979](https://github-private.visualstudio.com/azure/_build?definitionId=979), project `azure`, org `github-private.visualstudio.com`. This checks CI config processing on `ci-dev-aks-tests`, not on the prod cluster; it does not replace the manual prod checks below.
+- Record its run ID/link, source commit, start/finish times, status, and result. Inspect the task timeline and per-scenario logs/results, not just the overall result: `continueOnError: true` can produce `partiallySucceeded` despite failing tests.
+- Report each config scenario's failed/passed workflows, including both `configprocessingcommon` and the scenario-specific workflow. Check the invalid settings, custom config, and external-label scenarios explicitly. A workflow apply error (especially `metadata.resourceVersion`) invalidates the run even if an old workflow reports success.
+- Correlate the run with the candidate image deployed to `ci-dev-aks-tests` using deployment records/logs. The pipeline source commit alone does not identify the deployed collector image. Verify that the tested image corresponds to the prod candidate (including matching build provenance if promoted under a different tag); a run against another dev image is not prod-candidate evidence.
+- Mark this check PASS only for a completed, successful run with all scenarios passing after the matching image was deployed. Failed/partially successful runs are FAIL; missing, inaccessible, running, stale, or image-mismatched runs are unverified. Do not silently substitute an older green run or declare READY with failed/unverified coverage.
+- Include these results in the report below. Do not automatically rerun this pipeline as a read-only check: it modifies configmaps on the shared test cluster.
+
+If ADO tools are unavailable, query the REST API using an Azure CLI access token without printing it:
+```powershell
+$token = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
+$headers = @{ Authorization = "Bearer $token" }
+Invoke-RestMethod -Uri "https://dev.azure.com/github-private/azure/_apis/build/builds?definitions=979&branchName=refs/heads/main&`$top=1&api-version=7.1" -Headers $headers
+```
+Then query `builds/<runId>/timeline` and `builds/<runId>/logs/<logId>` with the same headers to inspect scenario results. If authentication fails, report this check as UNVERIFIED rather than skipping it.
 
 ### Validation (ALL steps required)
 Get credentials for `ci-prod-aks-mac-weu` cluster. Before running any kubectl commands, **verify the subscription and kubectl context** are correct:
@@ -87,6 +103,7 @@ Then execute **every** step below:
 ### Validation Results
 | Step | Result | Evidence |
 |------|--------|----------|
+| Config processing (979) | PASS/FAIL/UNVERIFIED | <run ID/link, source commit, times, status/result, candidate image/build-provenance evidence, and each scenario's workflow results; include setup/apply failures> |
 | 1. Pod Status | ✅/❌ | <# of RS pods, DS pods, Win DS pods running. Image tag confirmed.> |
 | 2. Pod Restarts | ✅/❌ | <restart counts for each pod type. If >0, root cause.> |
 | 3. Container Logs | ✅/❌/⚠️ | <errors found? In which container/pod type? Transient or ongoing? Timestamp of errors vs deployment time.> |
@@ -106,6 +123,7 @@ Then execute **every** step below:
 
 #### How to determine pass/fail for each step
 
+- **Config processing (979)**: PASS only when the latest run is completed/successful, every scenario passed without setup/apply errors, and its tested image/build provenance matches the prod candidate. Otherwise report FAIL or UNVERIFIED as described above; this blocks READY.
 - **Pod Status**: PASS if all pods across all 3 types (RS, DS, Win DS) are `Running` with `READY` matching expected container count and the image tag matches the expected release version.
 - **Pod Restarts**: PASS if all restart counts are 0. WARN if restarts occurred but root cause is identified as transient (e.g., node scaling). FAIL if restarts are ongoing or unexplained.
 - **Container Logs**: PASS if no error-level log entries exist after deployment time. WARN if only transient startup errors exist (e.g., target allocator connection refused during pod init) that resolved within seconds. FAIL if ongoing errors exist.
@@ -407,6 +425,7 @@ With the Playwright MCP server configured, the agent can automate visual Grafana
 
 Before declaring an image ready for production:
 
+- [ ] Config-processing pipeline 979 passed all scenarios for the candidate image/build provenance, with run/deployment evidence recorded and no stale workflow execution
 - [ ] All ama-metrics pods running (replicaset, linux daemonset, windows daemonset) with correct image tags
 - [ ] No pod restarts after new version deployed; if restarts occurred, root cause identified and resolved
 - [ ] Container logs show no errors across all pod types and containers (prometheus-collector, addon-token-adapter, config-reader)
