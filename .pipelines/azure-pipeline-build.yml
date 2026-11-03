@@ -1053,7 +1053,7 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
           condition: succeeded()
-        - template: azure-template-install-trivy.yml
+        - template: /.pipelines/azure-template-install-trivy.yml@self
         - bash: |
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
@@ -1230,7 +1230,7 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
           condition: succeeded()
-        - template: azure-template-install-trivy.yml
+        - template: /.pipelines/azure-template-install-trivy.yml@self
         - bash: |
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
@@ -1489,7 +1489,7 @@ extends:
             echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
-        - template: azure-template-install-trivy.yml
+        - template: /.pipelines/azure-template-install-trivy.yml@self
         - bash: |
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
@@ -1606,7 +1606,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
           condition: succeeded()
-        - template: azure-template-install-trivy.yml
+        - template: /.pipelines/azure-template-install-trivy.yml@self
         - bash: |
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
