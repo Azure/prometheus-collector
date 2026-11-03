@@ -79,6 +79,8 @@ extends:
         steps:
         - checkout: self
           submodules: true
+        - bash: bash .pipelines/tests/windows-image-restore-test.sh
+          displayName: "Build: test Windows image recovery"
         - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
@@ -1671,10 +1673,11 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1686,6 +1689,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1845,10 +1849,11 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1860,6 +1865,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -2030,61 +2036,44 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - bash: |
-            export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
-            export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
-            export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2019_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
+            set -euo pipefail
+            printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
+            for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)"; do
+              acr_image="$(WINDOWS_FULL_IMAGE_NAME)-$base_version"
+              mcr_image="$(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$base_version"
+              if docker pull "$acr_image"; then
+                continue
+              fi
+
+              echo "Failed to pull $acr_image. Waiting for $mcr_image."
+              restored=0
+              for attempt in {1..20}; do
+                if docker pull "$mcr_image"; then
+                  docker tag "$mcr_image" "$acr_image"
+                  docker push "$acr_image"
+                  restored=1
+                  break
+                fi
+                if [ "$attempt" -lt 20 ]; then
                   sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
+                fi
+              done
+              if [ "$restored" -eq 0 ]; then
+                echo "Image $mcr_image was not published within the timeout"
                 exit 1
               fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
-            fi
-            export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2022_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
-                  sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
-                exit 1
-              fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
-            fi
+            done
           displayName: "Build: ensure images are present in ACR"
           retryCountOnTaskFailure: 3
+          env:
+            ACR_USERNAME: $(ACR_USERNAME)
+            ACR_PASSWORD: $(ACR_PASSWORD)
         - powershell: |
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
             @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
