@@ -1,0 +1,11 @@
+{
+  "id": "secret-transitions-v1",
+  "description": "Schema v1 authenticated scrape recovery after credential reload, then allowlist empty/removal/restore; not two-valid-password rotation.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": ["operator"]},
+  "configmaps": ["allowed.yaml"],
+  "customResources": ["../auth-targets.yaml"],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-secret-transitions-v1"],
+  "expectedOutcome": "healthy"
+}

@@ -27,7 +27,8 @@ spec:
     - name: reference-app
       image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
       ports:
-        - containerPort: 2112
+        - name: metrics
+          containerPort: 2112
       resources:
         requests:
           cpu: 10m
@@ -55,7 +56,8 @@ spec:
     - name: reference-app
       image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
       ports:
-        - containerPort: 2112
+        - name: metrics
+          containerPort: 2112
       resources:
         requests:
           cpu: 10m

@@ -1,0 +1,11 @@
+{
+  "id": "customer-transitions-v2",
+  "description": "Sequential alias change/clear across monitor and Windows metrics, then annotation namespace update/removal, schema v2.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows", "operator"]},
+  "configmaps": ["initial.yaml"],
+  "customResources": ["../annotation-targets.yaml", "../monitor-targets.yaml"],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-customer-transitions-v2"],
+  "expectedOutcome": "healthy"
+}

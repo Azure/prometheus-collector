@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ama-settings-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: settings-auth-creds
+  namespace: ama-settings-auth
+type: Opaque
+stringData:
+  username: deliberately-invalid-test-user
+  password: pwd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: settings-auth-target
+  namespace: ama-settings-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ama-settings-auth-target
+  template:
+    metadata:
+      labels:
+        app: ama-settings-auth-target
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      containers:
+        - name: reference-app
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
+          ports:
+            - name: auth-metrics
+              containerPort: 2114
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settings-auth-target
+  namespace: ama-settings-auth
+  labels:
+    app: ama-settings-auth-target
+spec:
+  selector:
+    app: ama-settings-auth-target
+  ports:
+    - name: auth-metrics
+      port: 2114
+      targetPort: auth-metrics
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: settings-auth
+  namespace: ama-settings-auth
+spec:
+  selector:
+    matchLabels:
+      app: ama-settings-auth-target
+  endpoints:
+    - port: auth-metrics
+      path: /httpsmetrics
+      interval: 15s
+      basicAuth:
+        username:
+          name: settings-auth-creds
+          key: username
+        password:
+          name: settings-auth-creds
+          key: password
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: settings-auth
+  namespace: ama-settings-auth
+spec:
+  selector:
+    matchLabels:
+      app: ama-settings-auth-target
+  podMetricsEndpoints:
+    - port: auth-metrics
+      path: /httpsmetrics
+      interval: 15s
+      basicAuth:
+        username:
+          name: settings-auth-creds
+          key: username
+        password:
+          name: settings-auth-creds
+          key: password
