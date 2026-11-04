@@ -2,20 +2,21 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 
 	"k8s.io/client-go/kubernetes"
 
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-
-	"fmt"
 )
 
 /*
  * The format of the response from the Prometheus UI API paths: /api/v1/*
  */
 type APIResponse struct {
+	PodName   string          `json:"-"`
 	Status    string          `json:"status"`
 	Data      json.RawMessage `json:"data"`
 	ErrorType v1.ErrorType    `json:"errorType"`
@@ -37,85 +38,68 @@ type PrometheusConfigData struct {
 	PrometheusConfigYAML string `json:"yaml"`
 }
 
-/*
- * Exec into the container in a pod with the specified namespace and label and curl the Prometheus UI with the specified path.
- */
+// QueryPromUIFromPod queries one pod; use QueryPromUIFromPods to assert every replica or node.
 func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, isLinux bool, result *APIResponse) error {
 	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
 	if err != nil {
 		return err
 	}
 
-	for _, pod := range pods {
-		// Execute the command and capture the output
-		var command []string
-		if isLinux {
-			command = []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
-		} else {
-			command = []string{"powershell", "-c", fmt.Sprintf("(curl \"http://localhost:9090%s\" %s).Content", queryPath, "-UseBasicParsing")}
-		}
-		stdout, _, err := ExecCmd(clientset, cfg, pod.Name, containerName, namespace, command)
-		if err != nil {
-			return err
-		}
-
-		if stdout == "" {
-			return fmt.Errorf("Curl for %s was empty", queryPath)
-		}
-
-		err = json.Unmarshal([]byte(stdout), &result)
-		if err != nil {
-			return fmt.Errorf("Failed to unmarshal the json: %s", err.Error())
-		}
-
-		if result.Status != "success" {
-			return fmt.Errorf("Failed to query from Prometheus UI: %s", stdout)
-		}
-
-	}
-
-	return nil
-}
-
-/*
- * Exec into the container in a pod with the specified namespace and label and curl the Prometheus UI with the specified path.
- */
-func QueryPromUIFromPods(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, isLinux bool, isReplicaSet bool, result []*APIResponse) error {
-	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
+	response, err := queryPromUIPod(clientset, cfg, namespace, pods[0].Name, containerName, queryPath, isLinux)
 	if err != nil {
 		return err
 	}
-
-	for i, pod := range pods {
-		// Execute the command and capture the output
-		var command []string
-		if isLinux {
-			command = []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
-		} else {
-			command = []string{"powershell", "-c", fmt.Sprintf("(curl \"http://localhost:9090%s\" %s).Content", queryPath, "-UseBasicParsing")}
-		}
-		stdout, _, err := ExecCmd(clientset, cfg, pod.Name, containerName, namespace, command)
-		if err != nil {
-			return err
-		}
-
-		if stdout == "" {
-			return fmt.Errorf("Curl for %s was empty", queryPath)
-		}
-
-		err = json.Unmarshal([]byte(stdout), &result[i])
-		if err != nil {
-			return fmt.Errorf("Failed to unmarshal the json: %s", err.Error())
-		}
-
-		if result[i].Status != "success" {
-			return fmt.Errorf("Failed to query from Prometheus UI: %s", stdout)
-		}
-
-		if !isReplicaSet {
-			return nil
-		}
-	}
-
+	*result = *response
 	return nil
+}
+
+func QueryPromUIFromPods(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, isLinux bool) ([]*APIResponse, error) {
+	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
+	if err != nil {
+		return nil, err
+	}
+	return queryPromUIPods(pods, func(podName string) (*APIResponse, error) {
+		return queryPromUIPod(clientset, cfg, namespace, podName, containerName, queryPath, isLinux)
+	})
+}
+
+func queryPromUIPods(pods []corev1.Pod, query func(string) (*APIResponse, error)) ([]*APIResponse, error) {
+	if len(pods) == 0 {
+		return nil, fmt.Errorf("no collector pods selected")
+	}
+	responses := make([]*APIResponse, 0, len(pods))
+	for _, pod := range pods {
+		response, err := query(pod.Name)
+		if err != nil {
+			return nil, fmt.Errorf("pod %s: %w", pod.Name, err)
+		}
+		if response == nil {
+			return nil, fmt.Errorf("pod %s returned no Prometheus response", pod.Name)
+		}
+		responses = append(responses, response)
+	}
+	return responses, nil
+}
+
+func queryPromUIPod(clientset *kubernetes.Clientset, cfg *rest.Config, namespace, podName, containerName, queryPath string, isLinux bool) (*APIResponse, error) {
+	var command []string
+	if isLinux {
+		command = []string{"curl", "--fail", "--silent", "--show-error", "--noproxy", "*", "--max-time", "30",
+			"http://localhost:9090" + queryPath}
+	} else {
+		command = []string{"powershell", "-c", fmt.Sprintf("(Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 \"http://localhost:9090%s\").Content", queryPath)}
+	}
+	stdout, _, err := ExecCmd(clientset, cfg, podName, containerName, namespace, command)
+	if err != nil {
+		return nil, err
+	}
+	var response APIResponse
+	if err := json.Unmarshal([]byte(stdout), &response); err != nil {
+		return nil, fmt.Errorf("invalid Prometheus response from pod %s: %w", podName, err)
+	}
+	if response.Status != "success" {
+		return nil, fmt.Errorf("Prometheus query failed in pod %s: status=%q error=%q", podName, response.Status, response.Error)
+	}
+	response.PodName = podName
+	return &response, nil
 }

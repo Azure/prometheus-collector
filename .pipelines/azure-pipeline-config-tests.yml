@@ -65,12 +65,6 @@ stages:
             persistCredentials: true
 
           - bash: |
-              set -euo pipefail
-              bash ./otelcollector/test/testkube/run-testkube-workflow-test.sh
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Test ConfigTests workflow setup"
-
-          - bash: |
               # Try apt install first, fall back to official install script
               wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
               echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \
@@ -123,6 +117,28 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/ginkgo-e2e/configprocessing
             displayName: "Test HPA compatibility and KSM chart arguments"
 
+          - bash: |
+              set -euo pipefail
+              go test -v ../../scenarios/settings/customer_helm_test.go
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/ginkgo-e2e/configprocessing
+            displayName: "Test customer Helm values"
+
+          - task: UsePythonVersion@0
+            displayName: "Select Python for customer settings checks"
+            inputs:
+              versionSpec: '3.11'
+
+          - bash: |
+              set -euo pipefail
+              python3 -m venv "$(Agent.TempDirectory)/settings-checks"
+              "$(Agent.TempDirectory)/settings-checks/bin/python" -m pip install -r ./scenarios/settings/requirements.txt
+              "$(Agent.TempDirectory)/settings-checks/bin/python" ./scenarios/settings/test_catalog.py -v
+              export PYTHON="$(Agent.TempDirectory)/settings-checks/bin/python"
+              "$PYTHON" -m unittest discover -s ./testkube -p workflow_evidence_test.py
+              bash ./testkube/run-testkube-workflow-test.sh
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Test customer settings catalog and TestKube evidence guards"
+
           - task: AzureCLI@2
             displayName: Get kubeconfig
             inputs:
@@ -134,7 +150,7 @@ stages:
           - bash: |
               mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
             displayName: "Prepare TestKube results directory"
-          
+
           - bash: |
               # Delete all the configmaps to test the no configmaps case
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
@@ -171,7 +187,7 @@ stages:
 
           - bash: |
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
-              
+
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
@@ -387,7 +403,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-              
+
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
@@ -646,7 +662,7 @@ stages:
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml
-              
+
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
               export SYSTEM_JOBID="$(System.JobId)"
@@ -781,6 +797,8 @@ stages:
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on-v2.yaml
 
               export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
               export BUILD_BUILDID="$(Build.BuildId)"
@@ -956,6 +974,101 @@ stages:
             displayName: "Create TestKube Results Summary and restore default settings configmap"
             condition: always()
 
+          - bash: |
+              set -euo pipefail
+              umask 077
+              snapshot="$(mktemp -d "$(Agent.TempDirectory)/customer-settings.XXXXXX")"
+              configmaps=(ama-metrics-settings-configmap ama-metrics-prometheus-config ama-metrics-prometheus-config-node ama-metrics-prometheus-config-node-windows)
+              for ns in ama-settings-included ama-settings-excluded; do
+                existing="$(kubectl get namespace "$ns" --ignore-not-found -o name)"
+                if [[ -n "$existing" ]]; then
+                  echo "Refusing to overwrite existing namespace $ns" >&2
+                  exit 1
+                fi
+              done
+              for cm in "${configmaps[@]}"; do
+                kubectl get configmap "$cm" -n kube-system --ignore-not-found -o json \
+                  | jq 'del(.metadata.resourceVersion,.metadata.uid,.metadata.creationTimestamp,.metadata.managedFields,.metadata.annotations."kubectl.kubernetes.io/last-applied-configuration")' \
+                  > "$snapshot/$cm.json"
+              done
+              restore() {
+                local failed=0
+                kubectl delete -f ./scenarios/settings/annotation-targets.yaml --ignore-not-found || failed=1
+                for cm in "${configmaps[@]}"; do
+                  if [[ -s "$snapshot/$cm.json" ]]; then
+                    kubectl apply -f "$snapshot/$cm.json" || failed=1
+                    cmp -s <(jq -S '{data,binaryData}' "$snapshot/$cm.json") \
+                      <(kubectl get configmap "$cm" -n kube-system -o json | jq -S '{data,binaryData}') || failed=1
+                  else
+                    kubectl delete configmap "$cm" -n kube-system --ignore-not-found || failed=1
+                    remaining="$(kubectl get configmap "$cm" -n kube-system --ignore-not-found -o name)" || failed=1
+                    [[ -z "$remaining" ]] || failed=1
+                  fi
+                done
+                if [[ "$failed" == 0 ]]; then
+                  for cm in "${configmaps[@]}"; do rm -f -- "$snapshot/$cm.json"; done
+                  rmdir "$snapshot"
+                else
+                  echo "Customer settings cleanup failed; snapshots retained in $snapshot" >&2
+                fi
+                return "$failed"
+              }
+              trap 'rc=$?; trap - EXIT; restore || rc=1; exit "$rc"' EXIT
+              trap 'exit 130' INT
+              trap 'exit 143' TERM
+              kubectl apply -f ./scenarios/settings/annotation-targets.yaml
+              for cm in "${configmaps[@]}"; do
+                kubectl delete configmap "$cm" -n kube-system --ignore-not-found
+              done
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+              failed=0
+              for version in v1 v2; do
+                kubectl apply -f "./scenarios/settings/customer-settings-$version/settings.yaml"
+                if bash ./testkube/run-testkube-workflow.sh \
+                  "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                  "${{ parameters.AZURE_CLIENT_ID }}" \
+                  "testkube-config-test-customer-settings-$version-crs.yaml" \
+                  "testkube-config-test-customer-settings-$version-crs.yaml" \
+                  false 480 ConfigTests "${{ parameters.branch }}"; then
+                  echo "Customer settings $version passed"
+                else
+                  failed=1
+                fi
+                jq --arg environment "customer-settings-$version" '.environment=$environment' \
+                  "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" \
+                  > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-customer-settings-$version.json"
+                rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              done
+              exit "$failed"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run customer ConfigMap alias and annotation scenarios (v1 and v2)"
+            continueOnError: true
+
+          - bash: |
+              set -euo pipefail
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-dcgm.yaml
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              bash ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-dcgm-crs.yaml" \
+                "testkube-config-test-dcgm-crs.yaml" false 480 ConfigTests \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run DCGM custom interval and keep-list configuration assertions"
+            continueOnError: true
+
+          - bash: |
+              set -euo pipefail
+              jq '.environment="dcgm-custom"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" \
+                > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-dcgm-custom.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Save DCGM TestKube result"
+            condition: always()
+
           # List created files
           - bash: |
               echo "Results files created:"
@@ -978,3 +1091,36 @@ stages:
             displayName: "Send TestKube Summary Notification"
             env:
               TEAMS_WEBHOOK_URL: $(TEAMS_WEBHOOK_URL)
+            condition: always()
+
+          - bash: |
+              set -euo pipefail
+              python3 ./otelcollector/test/testkube/workflow_evidence.py gate \
+                "$(Build.ArtifactStagingDirectory)/testkube-results" \
+                no-configmaps all-targets-disabled default-targets-on \
+                all-rs-targets-enabled all-ds-targets-enabled all-targets-enabled \
+                only-custom-configmap global-settings custom-node-configmap \
+                basic-auth-smon basic-auth-secret-update basic-auth-smon-v2 basic-auth-secret-update-v2 \
+                settings-error custom-configmap-error global-ext-labels-error controlplane-istio \
+                default-targets-on-v2 mip-false deny-fs-access partial-no-pcs-v1 partial-no-pcs-v2 \
+                customer-settings-v1 customer-settings-v2 dcgm-custom
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Require every ConfigTests scenario and retained execution evidence to pass"
+            condition: always()
+
+          - task: PublishTestResults@2
+            displayName: "Publish TestKube Ginkgo JUnit"
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: '$(Build.ArtifactStagingDirectory)/testkube-executions/**/junit.xml'
+              failTaskOnFailedTests: true
+              failTaskOnMissingResultsFile: true
+              testRunTitle: ConfigTests
+
+          - task: PublishPipelineArtifact@1
+            displayName: "Retain TestKube submissions, executions and reports"
+            condition: always()
+            inputs:
+              targetPath: $(Build.ArtifactStagingDirectory)
+              artifact: configtests-evidence

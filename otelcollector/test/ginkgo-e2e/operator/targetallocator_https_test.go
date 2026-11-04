@@ -1,20 +1,27 @@
 package operator
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"os"
 	"strings"
+	"testing"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"prometheus-collector/otelcollector/test/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-// These e2e tests validate the MSRC 122861 hardening against the deployed target allocator:
-//   - the plaintext scrape-config port 8080 is reachable only on localhost (so only the in-pod
-//     config-reader sidecar can read it, not any other pod), and
-//   - moving that listener to loopback did not break the target allocator liveness probe, whose
-//     health endpoint (port 8081) must stay reachable on the pod IP for the kubelet.
 const (
 	taNamespace     = "kube-system"
 	taLabelKey      = "rsName"
@@ -24,36 +31,67 @@ const (
 	taListenAddrArg = "--listen-addr=127.0.0.1:8080"
 )
 
+func targetAllocatorHTTPS(pod corev1.Pod, required bool) (bool, error) {
+	enabled, loopback := false, false
+	for _, c := range pod.Spec.Containers {
+		for _, port := range c.Ports {
+			enabled = enabled || (c.Name == taContainerName && port.ContainerPort == 8443)
+		}
+		for _, mount := range c.VolumeMounts {
+			enabled = enabled || mount.MountPath == "/etc/operator-targets/client/certs"
+		}
+		for _, arg := range c.Args {
+			loopback = loopback || (c.Name == taContainerName && arg == taListenAddrArg)
+		}
+	}
+	if required && !enabled {
+		return false, fmt.Errorf("HTTPS is required but pod %s has neither the HTTPS port nor client certificate mount", pod.Name)
+	}
+	if enabled && !loopback {
+		return true, fmt.Errorf("HTTPS pod %s is missing %s", pod.Name, taListenAddrArg)
+	}
+	return enabled, nil
+}
+
+func TestTargetAllocatorHTTPS(t *testing.T) {
+	pod := corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{{
+		Name:  taContainerName,
+		Ports: []corev1.ContainerPort{{ContainerPort: 8443}},
+		Args:  []string{taListenAddrArg},
+	}}}}
+	if enabled, err := targetAllocatorHTTPS(pod, true); !enabled || err != nil {
+		t.Fatalf("hardened HTTPS pod: enabled=%t err=%v", enabled, err)
+	}
+	pod.Spec.Containers[0].Args = nil
+	if _, err := targetAllocatorHTTPS(pod, true); err == nil {
+		t.Fatal("removing the hardening argument must fail, not skip")
+	}
+	pod.Spec.Containers[0].Ports = nil
+	if _, err := targetAllocatorHTTPS(pod, true); err == nil {
+		t.Fatal("required HTTPS must not silently skip")
+	}
+	if enabled, err := targetAllocatorHTTPS(pod, false); enabled || err != nil {
+		t.Fatalf("explicit HTTP compatibility lane: enabled=%t err=%v", enabled, err)
+	}
+}
+
 var _ = Describe("Target Allocator port hardening (MSRC 122861)", Label(utils.OperatorLabel), func() {
 
-	// hardenedTAPod returns the target allocator pod's name and IP, skipping the spec when the
-	// cluster runs with HTTPS disabled (the loopback --listen-addr is only set in HTTPS mode).
 	hardenedTAPod := func() (podName, podIP string) {
 		pods, err := utils.GetPodsWithLabel(K8sClient, taNamespace, taLabelKey, taLabelValue)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pods).NotTo(BeEmpty(), "expected at least one ama-metrics-operator-targets pod")
 		pod := pods[0]
 
-		hardened := false
-		for _, c := range pod.Spec.Containers {
-			if c.Name == taContainerName {
-				for _, a := range c.Args {
-					if a == taListenAddrArg {
-						hardened = true
-					}
-				}
-			}
-		}
-		if !hardened {
-			Skip("OperatorTargetsHttpsEnabled is false on this cluster; the port-8080 hardening only applies in HTTPS mode")
+		enabled, err := targetAllocatorHTTPS(pod, os.Getenv("EXPECT_OPERATOR_HTTPS") == "true")
+		Expect(err).NotTo(HaveOccurred())
+		if !enabled {
+			Skip("HTTP compatibility lane: no HTTPS port or client certificate mount")
 		}
 		Expect(pod.Status.PodIP).NotTo(BeEmpty(), "pod IP should be assigned")
 		return pod.Name, pod.Status.PodIP
 	}
 
-	// curlStatus execs curl in the config-reader sidecar and returns the HTTP status code. When
-	// the connection is refused (nothing listening on that address) curl exits non-zero, which
-	// ExecCmd surfaces as an error.
 	curlStatus := func(podName, url string) (string, error) {
 		cmd := []string{"curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "--noproxy", "*", "--max-time", "5", url}
 		stdout, _, err := utils.ExecCmd(K8sClient, Cfg, podName, taSidecarName, taNamespace, cmd)
@@ -81,5 +119,44 @@ var _ = Describe("Target Allocator port hardening (MSRC 122861)", Label(utils.Op
 		status, err := curlStatus(podName, fmt.Sprintf("http://%s:8081/health-ta", podIP))
 		Expect(err).NotTo(HaveOccurred(), "the liveness endpoint on :8081 must stay reachable on the pod IP")
 		Expect(status).To(Equal("200"))
+	})
+
+	It("requires a trusted client certificate for HTTPS scrape configs", func() {
+		podName, _ := hardenedTAPod()
+		base := []string{"curl", "--silent", "--show-error", "--noproxy", "*", "--max-time", "10",
+			"--output", "/dev/null", "--write-out", "%{http_code}",
+			"--cacert", "/etc/operator-targets/client/certs/ca.crt"}
+		endpoint := "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
+		trusted := append(append([]string{}, base...), "--cert", "/etc/operator-targets/client/certs/client.crt",
+			"--key", "/etc/operator-targets/client/certs/client.key", endpoint)
+		status, _, err := utils.ExecCmd(K8sClient, Cfg, podName, taSidecarName, taNamespace, trusted)
+		Expect(err).NotTo(HaveOccurred(), "trusted mTLS client must reach the allocator")
+		Expect(strings.TrimSpace(status)).To(Equal("200"))
+		status, stderr, err := utils.ExecCmd(K8sClient, Cfg, podName, taSidecarName, taNamespace, append(base, endpoint))
+		Expect(err).To(HaveOccurred(), "client without a certificate must fail the TLS handshake (HTTP %s)", status)
+		Expect(strings.TrimSpace(status)).To(Equal("000"))
+		Expect(stderr).To(Or(ContainSubstring("SSL"), ContainSubstring("TLS"), ContainSubstring("certificate")))
+
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		Expect(err).NotTo(HaveOccurred())
+		template := &x509.Certificate{
+			SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "ama-e2e-untrusted-client"},
+			NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(time.Hour),
+			KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		}
+		certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+		Expect(err).NotTo(HaveOccurred())
+		keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+		Expect(err).NotTo(HaveOccurred())
+		cert := base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}))
+		privateKey := base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}))
+		script := `set -eu; d=$(mktemp -d); trap 'rm -f "$d/client.crt" "$d/client.key"; rmdir "$d"' EXIT; ` +
+			fmt.Sprintf(`printf %%s %s | base64 -d > "$d/client.crt"; printf %%s %s | base64 -d > "$d/client.key"; `, cert, privateKey) +
+			`curl --silent --show-error --noproxy '*' --max-time 10 --output /dev/null --write-out '%{http_code}' ` +
+			`--cacert /etc/operator-targets/client/certs/ca.crt --cert "$d/client.crt" --key "$d/client.key" ` + endpoint
+		status, stderr, err = utils.ExecCmd(K8sClient, Cfg, podName, taSidecarName, taNamespace, []string{"sh", "-c", script})
+		Expect(err).To(HaveOccurred(), "self-signed untrusted client must fail the TLS handshake")
+		Expect(strings.TrimSpace(status)).To(Equal("000"))
+		Expect(stderr).To(Or(ContainSubstring("SSL"), ContainSubstring("TLS"), ContainSubstring("certificate")))
 	})
 })

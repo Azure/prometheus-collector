@@ -1,23 +1,53 @@
 package querymetrics
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/model"
-
-	// "github.com/prometheus/common/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"prometheus-collector/otelcollector/test/utils"
 )
 
 var _ = Describe("Query Metrics Test Suite", func() {
+	It("ingests the configured alias and only the admitted annotation namespace after this suite starts", Label("cluster-identity"), func() {
+		Expect(os.Getenv("EXPECTED_CLUSTER")).To(Equal("Customer_Config_POC"), "use the customer-settings alias fixture and an independent expected identity")
+		Eventually(func(g Gomega) {
+			for _, target := range []struct{ metric, job string }{
+				{"up", "kubelet"}, {"weather_temperature", "kubernetes-pods"},
+			} {
+				selector := fmt.Sprintf("%s{job=%q,cluster=%q}", target.metric, target.job, ExpectedCluster)
+				if target.job == "kubernetes-pods" {
+					selector = fmt.Sprintf("%s{job=%q,cluster=%q,kubernetes_namespace=%q,kubernetes_pod_name=%q}",
+						target.metric, target.job, ExpectedCluster, "ama-settings-included", "annotation-target")
+				}
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, freshQuery(selector, suiteStarted))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, target.metric, target.job, ExpectedCluster, time.Now(), target.metric == "up")).To(Succeed())
+			}
+			excluded := fmt.Sprintf("weather_temperature{job=%q,cluster=%q,kubernetes_namespace=%q,kubernetes_pod_name=%q}",
+				"kubernetes-pods", ExpectedCluster, "ama-settings-excluded", "annotation-target")
+			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, freshQuery(excluded, suiteStarted))
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(warnings).To(BeEmpty())
+			samples, ok := result.(model.Vector)
+			g.Expect(ok).To(BeTrue())
+			g.Expect(samples).To(BeEmpty(), "excluded namespace must not ingest after this slot's query suite starts")
+		}, 8*time.Minute, 15*time.Second).Should(Succeed())
+	})
 
 	DescribeTable("should return the expected results for specified Prometheus metrics in each job",
 		func(job string, expectedMetrics []string) {
 			for _, metric := range expectedMetrics {
-				query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
+				query := metricQuery(metric, job)
 
 				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
 				Expect(err).NotTo(HaveOccurred())
@@ -27,32 +57,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
 				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
 
-				found := false
-				noClusterLabel := false
-				noJobLabel := false
-				noInstanceLabel := false
-				for _, sample := range vectorResult {
-					if string(sample.Metric["__name__"]) == metric {
-						found = true
-						break
-					}
-					if val, ok := sample.Metric["cluster"]; !ok || val == "" {
-						noClusterLabel = true
-						break
-					}
-					if val, ok := sample.Metric["job"]; !ok || val == "" {
-						noJobLabel = true
-						break
-					}
-					if val, ok := sample.Metric["instance"]; !ok || val == "" {
-						noInstanceLabel = true
-						break
-					}
-				}
-				Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
-				Expect(noClusterLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
-				Expect(noJobLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
-				Expect(noInstanceLabel).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
+				Expect(utils.ValidateMetricSamples(vectorResult, metric, job, ExpectedCluster, time.Now(), false)).To(Succeed())
 			}
 		},
 		Entry("default job 'cadvisor'", "cadvisor", []string{
@@ -253,9 +258,73 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		}),
 	)
 
+	It("ingests fresh Windows exporter CPU, memory and container sentinels from every Windows collector node", Label(utils.WindowsLabel, "cluster-network"), func() {
+		if os.Getenv("EXPECT_WINDOWS_EXPORTER") != "true" {
+			Skip("Windows exporter is not enabled for this lane")
+		}
+		pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-win-node")
+		Expect(err).NotTo(HaveOccurred())
+		for _, metric := range []string{"windows_cpu_time_total", "windows_memory_available_bytes", "windows_container_cpu_usage_seconds_total"} {
+			Eventually(func(g Gomega) {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery(metric, "windows-exporter"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, metric, "windows-exporter", ExpectedCluster, time.Now(), false)).To(Succeed())
+				for _, pod := range pods {
+					found := false
+					for _, sample := range samples {
+						found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
+					}
+					g.Expect(found).To(BeTrue(), "node %s has no fresh %s sample", pod.Spec.NodeName, metric)
+				}
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		}
+	})
+
+	It("scrapes and ingests the Cilium and Hubble jobs on a provisioned managed ACNS lane", Label("managed-acns"), func() {
+		service, err := K8sClient.CoreV1().Services("kube-system").Get(context.Background(), "network-observability", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred(), "managed ACNS network-observability service is a required independent fixture")
+		ports := map[string]bool{}
+		for _, port := range service.Spec.Ports {
+			ports[port.Name] = port.Port > 0
+		}
+		Expect(ports["cilium"]).To(BeTrue())
+		Expect(ports["hubble"]).To(BeTrue())
+		pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-node")
+		Expect(err).NotTo(HaveOccurred())
+		for _, target := range []struct{ job, metric string }{
+			{"networkobservability-cilium", "cilium_forward_bytes_total"},
+			{"networkobservability-hubble", "hubble_dns_queries_total"},
+		} {
+			Eventually(func(g Gomega) {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery("up", target.job))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, "up", target.job, ExpectedCluster, time.Now(), true)).To(Succeed())
+				for _, pod := range pods {
+					found := false
+					for _, sample := range samples {
+						found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
+					}
+					g.Expect(found).To(BeTrue(), "node %s has no fresh healthy %s scrape", pod.Spec.NodeName, target.job)
+				}
+				warnings, result, err = utils.InstantQuery(PrometheusQueryClient, metricQuery(target.metric, target.job))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok = result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, target.metric, target.job, ExpectedCluster, time.Now(), false)).To(Succeed())
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		}
+	})
+
 	DescribeTable("should return the expected labels for specified metrics in each job",
 		func(job string, metric string, labels map[string]string) {
-			query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
+			query := metricQuery(metric, job)
 
 			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
 			Expect(err).NotTo(HaveOccurred())
@@ -264,6 +333,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			vectorResult, ok := result.(model.Vector)
 			Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
 			Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
+			Expect(utils.ValidateMetricSamples(vectorResult, metric, job, ExpectedCluster, time.Now(), false)).To(Succeed())
 
 			for _, sample := range vectorResult {
 				for label, expectedValue := range labels {
@@ -310,11 +380,36 @@ var _ = Describe("Query Metrics Test Suite", func() {
 	)
 
 	Context("When querying metrics", func() {
+		DescribeTable("has fresh healthy kubelet data from every collector node", Label("cluster-network"),
+			func(controller string) {
+				pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", controller)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(func(g Gomega) {
+					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery("up", "kubelet"))
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(warnings).To(BeEmpty())
+					samples, ok := result.(model.Vector)
+					g.Expect(ok).To(BeTrue())
+					g.Expect(utils.ValidateMetricSamples(samples, "up", "kubelet", ExpectedCluster, time.Now(), true)).To(Succeed())
+					for _, pod := range pods {
+						g.Expect(pod.Spec.NodeName).NotTo(BeEmpty())
+						found := false
+						for _, sample := range samples {
+							found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
+						}
+						g.Expect(found).To(BeTrue(), "node %s has no fresh kubelet sample", pod.Spec.NodeName)
+					}
+				}, 8*time.Minute, 15*time.Second).Should(Succeed())
+			},
+			Entry("Linux", "ama-metrics-node"),
+			Entry("Windows", "ama-metrics-win-node", Label(utils.WindowsLabel)),
+		)
+
 		DescribeTable("should return the expected results for up=1 for all jobs",
 			func(jobs []string) {
 				for _, job := range jobs {
 					// Run the query for the job
-					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, fmt.Sprintf("up{job=\"%s\"} == 1", job))
+					warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery("up", job))
 					Expect(err).NotTo(HaveOccurred(), "failed to execute query for job %s", job)
 
 					// Ensure there are no warnings
@@ -326,10 +421,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 					Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty for job %s", job)
 
 					// Ensure that all results have the 'up' metric with a value of 1
-					for _, sample := range vectorResult {
-						Expect(string(sample.Metric["__name__"])).To(Equal("up"), "metric name should be 'up' for job %s", job)
-						Expect(sample.Value.String()).To(Equal("1"), "metric value should be '1' for job %s", job)
-					}
+					Expect(utils.ValidateMetricSamples(vectorResult, "up", job, ExpectedCluster, time.Now(), true)).To(Succeed())
 				}
 			},
 			Entry("AKS jobs", []string{"kubelet", "cadvisor", "kube-state-metrics", "node", "networkobservability-retina"}, Label(utils.RetinaLabel)),
@@ -351,7 +443,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			}
 
 			for _, metric := range metrics {
-				query := fmt.Sprintf("{\"%s\"}", metric)
+				query := freshQuery(fmt.Sprintf("{%q,cluster=%q}", metric, ExpectedCluster), time.Time{})
 
 				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
 				Expect(err).NotTo(HaveOccurred())
@@ -375,8 +467,8 @@ var _ = Describe("Query Metrics Test Suite", func() {
 						cumulativeLabelFound = true
 					}
 
-					_, ok = sample.Metric[model.LabelName("cluster")]
-					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", "cluster", metric))
+					Expect(string(sample.Metric["cluster"])).To(Equal(ExpectedCluster))
+					Expect(time.Since(sample.Timestamp.Time())).To(BeNumerically("<", 5*time.Minute))
 				}
 
 				Expect(deltaLabelFound).To(BeTrue(), fmt.Sprintf("Expected metric %q to have a sample with delta temporality label", metric))
