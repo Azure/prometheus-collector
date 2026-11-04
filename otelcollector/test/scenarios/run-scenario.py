@@ -514,6 +514,8 @@ def settings_slot(host, variant):
     for kind, name, namespace in identities:
         output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
                            private=True)
+        if kind == "Namespace" and output.strip():
+            raise ValueError(f"Fixture namespace already exists; refusing mutation: {name}")
         originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
     error = None
     try:
