@@ -1,0 +1,11 @@
+{
+  "id": "invalid-config",
+  "description": "Existing ConfigTests invalid settings fallback, retaining the existing workflow's common checks. Does not add an error-log assertion.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-error.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps", "config-processing-settings-error"],
+  "expectedOutcome": "config-error"
+}

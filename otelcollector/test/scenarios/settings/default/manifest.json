@@ -1,0 +1,11 @@
+{
+  "id": "default",
+  "description": "Existing ConfigTests default targets enabled, schema v1.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps", "config-processing-default-targets-enabled"],
+  "expectedOutcome": "healthy"
+}

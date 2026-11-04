@@ -1,0 +1,11 @@
+{
+  "id": "collector-controls",
+  "description": "Collector/operator and KSM inputs. Filesystem-denial and common health assertions do not prove every input's runtime behavior.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows", "operator"]},
+  "configmaps": ["settings.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-deny-fs-access"],
+  "expectedOutcome": "healthy"
+}

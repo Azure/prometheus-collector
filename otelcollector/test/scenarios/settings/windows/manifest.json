@@ -1,0 +1,16 @@
+{
+  "id": "windows",
+  "description": "Existing custom-node ConfigTests including Windows node custom scrape configuration.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml",
+    "../../../test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml",
+    "../../../test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps", "config-processing-settings-node-config-map"],
+  "expectedOutcome": "healthy"
+}

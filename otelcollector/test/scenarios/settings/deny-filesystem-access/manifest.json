@@ -1,0 +1,21 @@
+{
+  "id": "deny-filesystem-access",
+  "description": "Existing ConfigTests deny-fs-access scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "operator"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-deny-fs-access.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-deny-fs-access"
+  ],
+  "expectedOutcome": "healthy"
+}

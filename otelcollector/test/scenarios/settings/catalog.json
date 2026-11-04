@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "pathBase": "manifest-directory",
+  "variants": [
+    {
+      "id": "default",
+      "manifest": "default/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-default-targets-on-crs.yaml"
+    },
+    {
+      "id": "all-targets-enabled",
+      "manifest": "all-targets-enabled/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-targets-enabled-crs.yaml"
+    },
+    {
+      "id": "custom-scrape",
+      "manifest": "custom-scrape/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-only-custom-configmap-crs.yaml"
+    },
+    {
+      "id": "invalid-config",
+      "manifest": "invalid-config/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-settings-error-crs.yaml"
+    },
+    {
+      "id": "windows",
+      "manifest": "windows/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-custom-node-configmap-crs.yaml"
+    },
+    {
+      "id": "customer-settings-v1",
+      "manifest": "customer-settings-v1/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v1-crs.yaml"
+    },
+    {
+      "id": "customer-settings-v2",
+      "manifest": "customer-settings-v2/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v2-crs.yaml"
+    },
+    {
+      "id": "helm-customer-values",
+      "manifest": "helm-customer-values/manifest.json",
+      "schedule": "weekly",
+      "surface": "customer-helm",
+      "test": "go test -v ../../scenarios/settings/customer_helm_test.go",
+      "verification": "render-only"
+    },
+    {
+      "id": "defaults-v1",
+      "manifest": "defaults-v1/manifest.json",
+      "schedule": "weekly",
+      "surface": "configmap"
+    },
+    {
+      "id": "defaults-v2",
+      "manifest": "defaults-v2/manifest.json",
+      "schedule": "weekly",
+      "surface": "configmap"
+    },
+    {
+      "id": "collector-controls",
+      "manifest": "collector-controls/manifest.json",
+      "schedule": "weekly",
+      "surface": "configmap"
+    },
+    {
+      "id": "collector-controls-v1",
+      "manifest": "collector-controls-v1/manifest.json",
+      "schedule": "weekly",
+      "surface": "configmap"
+    },
+    {
+      "id": "all-targets-disabled",
+      "manifest": "all-targets-disabled/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-targets-disabled-crs.yaml"
+    },
+    {
+      "id": "rs-targets-enabled",
+      "manifest": "rs-targets-enabled/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-rs-targets-enabled-crs.yaml"
+    },
+    {
+      "id": "ds-targets-enabled",
+      "manifest": "ds-targets-enabled/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-ds-targets-enabled-crs.yaml"
+    },
+    {
+      "id": "global-labels",
+      "manifest": "global-labels/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-global-settings-crs.yaml"
+    },
+    {
+      "id": "custom-config-error",
+      "manifest": "custom-config-error/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-custom-configmap-error-crs.yaml"
+    },
+    {
+      "id": "global-labels-error",
+      "manifest": "global-labels-error/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-global-ext-labels-error-crs.yaml"
+    },
+    {
+      "id": "controlplane-istio",
+      "manifest": "controlplane-istio/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-controlplane-istio-crs.yaml"
+    },
+    {
+      "id": "minimal-ingestion-disabled",
+      "manifest": "minimal-ingestion-disabled/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-mip-false-crs.yaml"
+    },
+    {
+      "id": "partial-v1",
+      "manifest": "partial-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-partial-no-pcs-v1-crs.yaml"
+    },
+    {
+      "id": "partial-v2",
+      "manifest": "partial-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-partial-no-pcs-v2-crs.yaml"
+    },
+    {
+      "id": "deny-filesystem-access",
+      "manifest": "deny-filesystem-access/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-deny-fs-access-crs.yaml"
+    },
+    {
+      "id": "default-targets-v2",
+      "manifest": "default-targets-v2/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-default-targets-on-v2-crs.yaml"
+    },
+    {
+      "id": "dcgm-custom",
+      "manifest": "dcgm-custom/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-dcgm-crs.yaml"
+    },
+    {
+      "id": "all-targets-disabled-v2",
+      "manifest": "all-targets-disabled-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap"
+    },
+    {
+      "id": "all-targets-enabled-v2",
+      "manifest": "all-targets-enabled-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap"
+    },
+    {
+      "id": "no-configmaps",
+      "manifest": "no-configmaps/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-no-configmaps-crs.yaml"
+    }
+  ],
+  "lifecycle": {
+    "resetConfigMaps": [
+      "ama-metrics-settings-configmap",
+      "ama-metrics-prometheus-config",
+      "ama-metrics-prometheus-config-node",
+      "ama-metrics-prometheus-config-node-windows"
+    ],
+    "namespace": "kube-system",
+    "restoreOriginalResources": true,
+    "labelCombination": "OR",
+    "notes": "Save original resources, remove only named ConfigMaps, apply the selected fixtures, wait for propagation, run the existing workflow, restore originals even on failure. Never apply incompatible variants concurrently."
+  }
+}

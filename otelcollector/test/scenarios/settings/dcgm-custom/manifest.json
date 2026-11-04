@@ -1,0 +1,11 @@
+{
+  "id": "dcgm-custom",
+  "description": "Existing DCGM config assertion with explicit 60s interval and three-metric keep-list; this checks generated configuration, not GPU ingestion.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": []},
+  "configmaps": ["../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-dcgm.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-dcgm-exporter-enabled"],
+  "expectedOutcome": "healthy"
+}

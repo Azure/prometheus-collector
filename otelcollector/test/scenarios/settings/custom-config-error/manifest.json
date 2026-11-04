@@ -1,0 +1,27 @@
+{
+  "id": "custom-config-error",
+  "description": "Existing ConfigTests custom-configmap-error scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "windows"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-common",
+    "config-processing-common-with-error-config-maps",
+    "config-processing-custom-config-map-error"
+  ],
+  "expectedOutcome": "config-error"
+}

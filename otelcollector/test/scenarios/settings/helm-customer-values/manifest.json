@@ -1,0 +1,12 @@
+{
+  "id": "helm-customer-values",
+  "description": "Customer chart values exercised by TestCustomerHelmSettings. Render-only evidence; live execution requires an isolated Helm adapter.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["isolated-customer-helm", "windows"]},
+  "configmaps": [],
+  "customResources": [],
+  "addonParams": {},
+  "helmValues": ["values.yaml"],
+  "ginkgoLabels": [],
+  "expectedOutcome": "healthy"
+}

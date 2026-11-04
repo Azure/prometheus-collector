@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ama-metrics customer settings variant",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "description", "platforms", "requires", "configmaps", "customResources", "addonParams", "ginkgoLabels", "expectedOutcome"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "description": {"type": "string", "minLength": 1},
+    "platforms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["linux", "windows"]}},
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clusterFeatures"],
+      "properties": {"clusterFeatures": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}
+    },
+    "configmaps": {"$ref": "#/$defs/paths"},
+    "customResources": {"$ref": "#/$defs/paths"},
+    "addonParams": {"type": "object"},
+    "helmValues": {"$ref": "#/$defs/paths"},
+    "ginkgoLabels": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "expectedOutcome": {"enum": ["healthy", "config-error"]}
+  },
+  "anyOf": [
+    {"properties": {"ginkgoLabels": {"minItems": 1}}},
+    {"required": ["helmValues"], "properties": {"helmValues": {"minItems": 1}}}
+  ],
+  "$defs": {
+    "paths": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "\\.ya?ml$"}}
+  }
+}

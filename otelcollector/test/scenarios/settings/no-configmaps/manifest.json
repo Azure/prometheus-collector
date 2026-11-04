@@ -1,0 +1,11 @@
+{
+  "id": "no-configmaps",
+  "description": "Unconfigured baseline: reset all four customer ConfigMaps and reuse the existing no-configmaps workflow.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": [],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-no-config-maps", "config-processing-no-config-maps"],
+  "expectedOutcome": "healthy"
+}

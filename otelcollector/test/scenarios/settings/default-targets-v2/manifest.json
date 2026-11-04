@@ -1,0 +1,11 @@
+{
+  "id": "default-targets-v2",
+  "description": "Explicit schema-v2 default target switches with the same RS/Linux/Windows job assertions as schema v1.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on-v2.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps-v2", "config-processing-default-targets-enabled"],
+  "expectedOutcome": "healthy"
+}

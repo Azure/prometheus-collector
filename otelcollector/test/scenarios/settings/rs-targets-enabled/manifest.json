@@ -1,0 +1,24 @@
+{
+  "id": "rs-targets-enabled",
+  "description": "Existing ConfigTests all-rs-targets-enabled scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "windows"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-rs-targets-enabled.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-common",
+    "config-processing-common-with-config-maps",
+    "config-processing-rs-targets-enabled"
+  ],
+  "expectedOutcome": "healthy"
+}

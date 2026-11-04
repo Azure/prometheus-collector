@@ -1,0 +1,2884 @@
+{
+  "configmap.v1.config-version": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "collector-controls-v1",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.debug-mode.enabled": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "collector-controls-v1",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.acstor-capacity-provisioner": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.acstor-metrics-exporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.apiserver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.cadvisor": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-apiserver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-cluster-autoscaler": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-etcd": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-istio": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-kube-controller-manager": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-kube-scheduler": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.controlplane-node-auto-provisioning": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.coredns": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.dcgmexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.istio-cni": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.kappiebasic": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.kubelet": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.kubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.kubestate": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.local-csi-driver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.networkobservabilityCilium": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.networkobservabilityHubble": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.networkobservabilityRetina": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.nodeexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.prometheuscollectorhealth": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "collector-controls-v1",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.windowsexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.windowskubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-scrape-settings-enabled.ztunnel": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.acstor-capacity-provisioner": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.acstor-metrics-exporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.apiserver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.cadvisor": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-apiserver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-cluster-autoscaler": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-etcd": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-istio": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-kube-controller-manager": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-kube-scheduler": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.controlplane-node-auto-provisioning": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.coredns": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.dcgmexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.istio-cni": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.kappiebasic": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.kubelet": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.kubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.kubestate": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.local-csi-driver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.minimalingestionprofile": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.networkobservabilityCilium": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.networkobservabilityHubble": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.networkobservabilityRetina": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.nodeexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.podannotations": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.windowsexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.windowskubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-metrics-keep-list.ztunnel": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.acstor-capacity-provisioner": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.acstor-metrics-exporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.apiserver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.cadvisor": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.coredns": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.dcgmexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.istio-cni": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.kappiebasic": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.kubelet": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.kubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.kubestate": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.local-csi-driver": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.networkobservabilityCilium": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.networkobservabilityHubble": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.networkobservabilityRetina": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.nodeexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.podannotations": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.prometheuscollectorhealth": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.windowsexporter": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.windowskubeproxy": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.default-targets-scrape-interval-settings.ztunnel": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "custom-scrape",
+      "default",
+      "defaults-v1",
+      "global-labels",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.ksm-config.annotations_allow_list": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.ksm-config.labels_allow_list": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.ksm-config.resources": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.opentelemetry-metrics.enabled": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-opentelemetry-metrics.go"
+  },
+  "configmap.v1.pod-annotation-based-scraping.podannotationnamespaceregex": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.prometheus-collector-settings.cluster_alias": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "collector-controls-v1",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.prometheus-collector-settings.default_metric_account_name": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
+  },
+  "configmap.v1.prometheus-collector-settings.deny_fs_access_through_sms": {
+    "variants": [
+      "collector-controls-v1",
+      "defaults-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.prometheus-collector-settings.https_config": {
+    "variants": [
+      "collector-controls-v1",
+      "defaults-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.prometheus-collector-settings.operator_enabled": {
+    "variants": [
+      "collector-controls-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
+  },
+  "configmap.v1.prometheus-collector-settings.secrets_access_namespaces": {
+    "variants": [
+      "collector-controls-v1",
+      "defaults-v1"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v1.schema-version": {
+    "variants": [
+      "all-targets-disabled",
+      "all-targets-enabled",
+      "collector-controls-v1",
+      "controlplane-istio",
+      "custom-scrape",
+      "customer-settings-v1",
+      "dcgm-custom",
+      "default",
+      "defaults-v1",
+      "ds-targets-enabled",
+      "global-labels",
+      "minimal-ingestion-disabled",
+      "partial-v1",
+      "rs-targets-enabled",
+      "windows"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.acstor-capacity-provisioner": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.acstor-metrics-exporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.apiserver": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.cadvisor": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.coredns": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.dcgmexporter": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.istio-cni": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.kappiebasic": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.kubelet": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.kubeproxy": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.kubestate": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.local-csi-driver": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.networkobservabilityCilium": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.networkobservabilityHubble": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.networkobservabilityRetina": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.nodeexporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.podannotations": {
+    "variants": [
+      "customer-settings-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.windowsexporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.windowskubeproxy": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.ztunnel": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.acstor-capacity-provisioner": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.acstor-metrics-exporter": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.apiserver": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.cadvisor": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.coredns": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.dcgmexporter": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.istio-cni": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.kappiebasic": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.kubelet": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.kubeproxy": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.kubestate": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.local-csi-driver": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.networkobservabilityCilium": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.networkobservabilityHubble": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.networkobservabilityRetina": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.nodeexporter": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.prometheuscollectorhealth": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "collector-controls",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.windowsexporter": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.windowskubeproxy": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-enabled.ztunnel": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "default-targets-v2",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.acstor-capacity-provisioner": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.acstor-metrics-exporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.apiserver": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.cadvisor": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.coredns": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.dcgmexporter": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.istio-cni": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.kappiebasic": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.kubelet": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.kubeproxy": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.kubestate": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.local-csi-driver": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.networkobservabilityCilium": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.networkobservabilityHubble": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.networkobservabilityRetina": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.nodeexporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.podannotations": {
+    "variants": [
+      "customer-settings-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.prometheuscollectorhealth": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.windowsexporter": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.windowskubeproxy": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.ztunnel": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.minimal-ingestion-profile.enabled": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "collector-controls",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.cluster-metrics.opentelemetry-metrics.enabled": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-opentelemetry-metrics.go"
+  },
+  "configmap.v2.cluster-metrics.pod-annotation-based-scraping.podannotationnamespaceregex": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "customer-settings-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.config-version": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "collector-controls",
+      "customer-settings-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.apiserver": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.cluster-autoscaler": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.etcd": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.istio": {
+    "variants": [
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.kube-controller-manager": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.kube-scheduler": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-metrics-keep-list.node-auto-provisioning": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.apiserver": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.cluster-autoscaler": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.etcd": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.istio": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.kube-controller-manager": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.kube-scheduler": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.default-targets-scrape-enabled.node-auto-provisioning": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.controlplane-metrics.minimal-ingestion-profile.enabled": {
+    "variants": [
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.ksm-config.annotations_allow_list": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.ksm-config.labels_allow_list": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.ksm-config.resources": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.prometheus-collector-settings.cluster_alias": {
+    "variants": [
+      "collector-controls",
+      "customer-settings-v2",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [
+      "customer_settings_test.go"
+    ],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.prometheus-collector-settings.debug-mode": {
+    "variants": [
+      "collector-controls",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.prometheus-collector-settings.default_metric_account_name": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
+  },
+  "configmap.v2.prometheus-collector-settings.deny_fs_access_through_sms": {
+    "variants": [
+      "collector-controls",
+      "defaults-v2",
+      "deny-filesystem-access"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.prometheus-collector-settings.https_config": {
+    "variants": [
+      "collector-controls",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.prometheus-collector-settings.operator_enabled": {
+    "variants": [
+      "collector-controls"
+    ],
+    "assertions": [],
+    "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
+  },
+  "configmap.v2.prometheus-collector-settings.secrets_access_namespaces": {
+    "variants": [
+      "collector-controls",
+      "defaults-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "configmap.v2.schema-version": {
+    "variants": [
+      "all-targets-disabled-v2",
+      "all-targets-enabled-v2",
+      "collector-controls",
+      "customer-settings-v2",
+      "default-targets-v2",
+      "defaults-v2",
+      "deny-filesystem-access",
+      "partial-v2"
+    ],
+    "assertions": [],
+    "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
+  },
+  "helm.azureKeyVault.aad-pod-identity": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.clientId": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.clientSecret": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.cloudName": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.name": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.pfxCertNames": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.tenantId": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.useManagedIdentity": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureKeyVault.userAssignedIdentityID": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureMetricAccount.defaultAccountName": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureResourceId": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.azureResourceRegion": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.clusterAlias": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.clusterName": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.customEnvironment": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.daemonsetPriorityClass": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.debugMode.enabled": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.deploymentPriorityClass": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.deploymentProgressDeadlineSeconds": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.image.pullPolicy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.image.repository": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.image.tag": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.image.windows.tag": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.apiServer": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.cAdvisor": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.coreDns": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.kubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.kubeState": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.kubelet": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.nodeExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.windowsExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.keepListRegexes.windowsKubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.kube-state-metrics.metricAnnotationsAllowList": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.kube-state-metrics.metricLabelsAllowlist": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.kube-state-metrics.nodeSelector.kubernetes.io/arch": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.kube-state-metrics.nodeSelector.kubernetes.io/os": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.minimalIngestionProfile": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.mode.advanced": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.podAnnotations": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.podLabels": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.prometheus-node-exporter.nodeSelector.kubernetes.io/arch": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.prometheus-node-exporter.nodeSelector.kubernetes.io/os": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.prometheusConfig": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSet.limits.cpu": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSet.limits.memory": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSet.requests.cpu": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSet.requests.memory": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSetWindows.limits.cpu": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.daemonSetWindows.limits.memory": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.deployment.limits.cpu": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.deployment.limits.memory": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.deployment.requests.cpu": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.resources.deployment.requests.memory": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.apiServer": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.cAdvisor": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.coreDns": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.kubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.kubeState": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.kubelet": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.nodeExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.prometheusCollectorHealth": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.windowsExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeIntervalTargets.windowsKubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.apiServer": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.cAdvisor": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.coreDns": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.kubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.kubeState": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.kubelet": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.nodeExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.prometheusCollectorHealth": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.windowsExporter": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.scrapeTargets.windowsKubeProxy": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.useMonitoringAccount": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  },
+  "helm.windowsDaemonset": {
+    "variants": [
+      "helm-customer-values"
+    ],
+    "assertions": [],
+    "source": "otelcollector/deploy/chart/prometheus-collector/values-template.yaml"
+  }
+}
