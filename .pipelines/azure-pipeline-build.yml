@@ -2283,6 +2283,11 @@ extends:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
         steps:
+        # Explicit checkout with persisted credentials so `git push` below can authenticate.
+        # Without it the push fails with "could not read Username for 'https://github.com'"
+        # (main build 130965, after 1ES PT template / NetIso task updates on Nov 4 2026).
+        - checkout: self
+          persistCredentials: true
         - bash: |
             git config --global user.name "AzureDevOps Agent"
             git tag "v$(HELM_SEMVER)"
