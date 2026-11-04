@@ -1,0 +1,235 @@
+{
+  "$schema": "./matrix.schema.json",
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "default",
+      "cluster": "clusters/default.bicepparam",
+      "clusterFeatures": ["aks", "windows", "workload-identity", "operator"],
+      "settingsVariants": ["default", "custom-scrape", "invalid-config", "windows", "all-targets-enabled"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "pr"
+    },
+    {
+      "id": "linux",
+      "cluster": "clusters/linux.bicepparam",
+      "clusterFeatures": ["aks", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "deny-filesystem-access", "dcgm-custom"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "nightly"
+    },
+    {
+      "id": "settings",
+      "cluster": "clusters/default.bicepparam",
+      "clusterFeatures": ["aks", "windows", "workload-identity", "operator"],
+      "settingsVariants": [
+        "default", "all-targets-enabled", "custom-scrape", "invalid-config", "windows",
+        "customer-settings-v1", "customer-settings-v2", "defaults-v1", "defaults-v2",
+        "collector-controls", "collector-controls-v1", "all-targets-disabled",
+        "rs-targets-enabled", "ds-targets-enabled", "global-labels", "custom-config-error",
+        "global-labels-error", "controlplane-istio", "minimal-ingestion-disabled",
+        "partial-v1", "partial-v2", "deny-filesystem-access", "default-targets-v2", "dcgm-custom",
+        "all-targets-disabled-v2", "all-targets-enabled-v2", "no-configmaps"
+      ],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "nightly"
+    },
+    {
+      "id": "operator-secret-watch",
+      "cluster": "clusters/linux.bicepparam",
+      "clusterFeatures": ["aks", "workload-identity", "operator", "secrets-watch-enforcement"],
+      "settingsVariants": ["empty-secret-namespaces-v1", "empty-secret-namespaces-v2", "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "classic-azure-cni",
+      "cluster": "clusters/classic-azure-cni.bicepparam",
+      "clusterFeatures": ["aks", "windows", "workload-identity", "operator", "classic-azure-cni"],
+      "settingsVariants": ["default", "windows"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "nightly"
+    },
+    {
+      "id": "mixed",
+      "cluster": "clusters/mixed.bicepparam",
+      "clusterFeatures": ["aks", "windows", "windows2025", "azure-linux", "arm64", "fips", "workload-identity", "operator"],
+      "settingsVariants": ["default", "windows", "customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "autoscaler",
+      "cluster": "clusters/autoscaler.bicepparam",
+      "clusterFeatures": ["aks", "windows", "autoscaler", "workload-identity", "operator"],
+      "settingsVariants": ["default", "windows"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "uai",
+      "cluster": "clusters/uai.bicepparam",
+      "clusterFeatures": ["aks", "windows", "user-assigned-identity", "workload-identity", "operator"],
+      "settingsVariants": ["default", "windows"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "cilium",
+      "cluster": "clusters/cilium.bicepparam",
+      "clusterFeatures": ["aks", "cilium", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "dcgm-custom"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "kubenet",
+      "cluster": "clusters/kubenet.bicepparam",
+      "clusterFeatures": ["aks", "kubenet", "user-assigned-identity", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "dcgm-custom"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "no-workload-identity",
+      "cluster": "clusters/no-workload-identity.bicepparam",
+      "clusterFeatures": ["aks", "windows", "operator"],
+      "settingsVariants": ["default"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "TestKube query authentication without workload identity/OIDC is not implemented; do not enable either and silently change this baseline."
+    },
+    {
+      "id": "private",
+      "cluster": "clusters/private.bicepparam",
+      "clusterFeatures": ["aks", "windows", "private-api", "workload-identity", "operator"],
+      "settingsVariants": ["default"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires an authorized VNet-connected orchestrator and verified private-API access."
+    },
+    {
+      "id": "ampls",
+      "cluster": "clusters/ampls.bicepparam",
+      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "workload-identity", "operator"],
+      "settingsVariants": ["default", "customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Independent DCE/DCRA, private-DNS, approved endpoint and public-bypass denial proofs are not implemented."
+    },
+    {
+      "id": "private-ampls",
+      "cluster": "clusters/private-ampls.bicepparam",
+      "clusterFeatures": ["aks", "windows", "private-api", "ampls", "private-query", "workload-identity", "operator"],
+      "settingsVariants": ["default"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires private orchestrator access plus independent AMPLS/private-query proofs."
+    },
+    {
+      "id": "proxy",
+      "cluster": "clusters/proxy.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Owned proxy infrastructure exists; private access, explicit collector env, route logs and NO_PROXY proofs are not implemented."
+    },
+    {
+      "id": "proxy-custom-ca",
+      "cluster": "clusters/proxy-custom-ca.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "custom-ca", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires proxy path/trust injection and deliberate CA failure/recovery proof; template TLS interception alone is not validation."
+    },
+    {
+      "id": "ampls-proxy",
+      "cluster": "clusters/ampls-proxy.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "ampls", "private-query", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires both private AMPLS/query and forced-proxy/NO_PROXY proofs from a VNet-connected orchestrator."
+    },
+    {
+      "id": "acns",
+      "cluster": "clusters/acns.bicepparam",
+      "clusterFeatures": ["aks", "windows", "managed-acns", "workload-identity", "operator"],
+      "settingsVariants": ["default"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Managed non-Cilium ACNS enablement/traffic/target proof is not implemented; CI Helm Retina is a different installation."
+    },
+    {
+      "id": "acns-cilium",
+      "cluster": "clusters/acns-cilium.bicepparam",
+      "clusterFeatures": ["aks", "cilium", "managed-acns", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns"],
+      "tier": "weekly",
+      "blockedReason": "Requires independently verified managed ACNS plus controlled DNS/forward traffic before the managed-acns selector."
+    },
+    {
+      "id": "ampls-acns",
+      "cluster": "clusters/ampls-acns.bicepparam",
+      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "managed-acns", "workload-identity", "operator"],
+      "settingsVariants": ["default"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires independent AMPLS and non-Cilium managed ACNS proofs."
+    },
+    {
+      "id": "customer-helm",
+      "cluster": "clusters/customer-helm.bicepparam",
+      "clusterFeatures": ["aks", "windows", "workload-identity", "operator", "isolated-customer-helm", "helmChartInstall"],
+      "settingsVariants": ["helm-customer-values"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Requires isolated customer Helm installation/assertions, not candidate-addon substitution."
+    },
+    {
+      "id": "otlp",
+      "cluster": "clusters/otlp.bicepparam",
+      "clusterFeatures": ["aks", "workload-identity", "operator", "otlp"],
+      "settingsVariants": [],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly",
+      "blockedReason": "Infrastructure only: actual OTLP enablement, producer and fresh ingestion proof are not implemented."
+    }
+  ],
+  "coverageGaps": [
+    "No live candidate evidence exists until a source-bound digest receipt is supplied and the scenario finishes.",
+    "Compiled infrastructure is not live coverage. blockedReason prevents provisioning before its missing execution/proof adapter exists.",
+    "Operator empty/omitted-secret watch enforcement requires the runtime official regional default to be at least Kubernetes1.37; unsupported/skipped is not a pass and no older version is pinned.",
+    "The mixed profile requires source-bound ARM64 and both Windows2022/2025 candidate image build families before provisioning.",
+    "Windows2019 is unsupported on currently supported official Kubernetes versions; do not pin older Kubernetes to recreate it.",
+    "Arc onboarding and CCP standalone health validation require their separate authorized adapters; ordinary AKS is not equivalent.",
+    "regionTests requires region/rule parameters and is not included in the cluster health suite.",
+    "Customer Helm installation requires an isolated helmChartInstall target; never apply customer Helm values to the managed-addon backdoor chart.",
+    "Per-profile measured time/cost and Azure what-if/live proof are pending; tier recommendations do not imply successful executions."
+  ]
+}
