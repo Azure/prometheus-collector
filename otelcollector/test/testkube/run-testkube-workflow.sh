@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo pipefail
 
 # Comprehensive TestKube deployment and testing script
 # Parameters:
@@ -12,7 +13,7 @@
 
 if [ $# -lt 4 ]; then
     echo "Usage: $0 <AMW_QUERY_ENDPOINT> <AZURE_CLIENT_ID> <SOURCE_TEMPLATE> <TARGET_OUTPUT> [APPLY_SETTINGS_CONFIGMAP] [SLEEP_DURATION] [TARGET_ENV]"
-    exit 0
+    exit 2
 fi
 
 AMW_QUERY_ENDPOINT="$1"
@@ -23,6 +24,16 @@ APPLY_SETTINGS_CONFIGMAP="${5:-true}"
 SLEEP_DURATION="${6:-360}"
 TARGET_ENV="${7:-Unknown}"
 BRANCH_NAME="${8:-main}"
+[[ "$TARGET_ENV" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "Unsafe environment name" >&2; exit 2; }
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PYTHON="${PYTHON:-python3}"
+CANDIDATE_MODE=false
+if [[ -n "${CANDIDATE_TEST_SOURCE_SHA:-}${CANDIDATE_RUNNER_IMAGE:-}${SELECTED_WORKFLOW:-}${GINKGO_LABEL_FILTER:-}" ]]; then
+    CANDIDATE_MODE=true
+fi
+: "${BUILD_ARTIFACTSTAGINGDIRECTORY:?Set an artifact staging directory}"
+mkdir -p "$BUILD_ARTIFACTSTAGINGDIRECTORY"
+BUILD_ARTIFACTSTAGINGDIRECTORY=$(cd "$BUILD_ARTIFACTSTAGINGDIRECTORY" && pwd -P)
 
 # Define shared results file  
 RESULTS_FILE="${BUILD_ARTIFACTSTAGINGDIRECTORY}/testkube-results-${TARGET_ENV}.json"
@@ -32,9 +43,10 @@ init_results_file() {
     # Create the artifact staging directory if it doesn't exist
     mkdir -p "$(dirname "$RESULTS_FILE")"
     
-    if [ ! -f "$RESULTS_FILE" ]; then
-        echo '{"environment": "'$TARGET_ENV'", "start_time": "'$(date -u '+%Y-%m-%d %H:%M:%S UTC')'", "status": "running"}' > "$RESULTS_FILE"
-    fi
+    jq -n --arg env "$TARGET_ENV" --arg start "$(date -u '+%Y-%m-%d %H:%M:%S UTC')" \
+        --arg sha "${CANDIDATE_TEST_SOURCE_SHA:-}" --arg image "${CANDIDATE_RUNNER_IMAGE:-}" \
+        '{environment:$env, start_time:$start, status:"running", test_source_sha:$sha,
+          runner_image:$image, executions:[]}' > "$RESULTS_FILE"
 }
 
 # Function to add result to file
@@ -45,10 +57,11 @@ add_result() {
     local link="$4"
     
     # Create temporary file with updated results
-    local temp_file=$(mktemp)
+    local temp_file="${RESULTS_FILE}.tmp.$$"
     jq --arg env "$env" --arg status "$status" --arg message "$message" --arg link "$link" \
        '.status = $status | .message = $message | .link = $link' \
-       "$RESULTS_FILE" > "$temp_file" && mv "$temp_file" "$RESULTS_FILE"
+       "$RESULTS_FILE" > "$temp_file" || { echo "Failed to write TestKube result" >&2; exit 1; }
+    mv "$temp_file" "$RESULTS_FILE" || { echo "Failed to retain TestKube result" >&2; exit 1; }
     
     echo "Result saved to: $RESULTS_FILE"
     cat "$RESULTS_FILE"
@@ -66,9 +79,19 @@ echo "================================================="
 
 # Initialize results file
 init_results_file
+trap 'fail_setup "TestKube runner command failed at line $LINENO"' ERR
+
+[[ "$SOURCE_TEMPLATE" =~ ^[A-Za-z0-9_-]+\.yaml$ ]] || fail_setup "Use an existing template filename"
+[[ "$TARGET_OUTPUT" =~ ^[A-Za-z0-9_-]+\.yaml$ ]] || fail_setup "Use a generated output filename"
+if [[ "$CANDIDATE_MODE" == true ]]; then
+    [[ -n "${CANDIDATE_TEST_SOURCE_SHA:-}" && -n "${CANDIDATE_RUNNER_IMAGE:-}" && -n "${SELECTED_WORKFLOW:-}" ]] \
+        || fail_setup "Candidate mode requires source SHA, runner digest and selected workflow together"
+    [[ "$APPLY_SETTINGS_CONFIGMAP" == false && "$SLEEP_DURATION" == 0 ]] \
+        || fail_setup "Candidate fixture lifecycle and readiness belong to the caller; use false 0"
+fi
 
 # Step 1: Install TestKube CLI only if not ConfigTests
-if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+if [[ "$TARGET_ENV" != "ConfigTests" && "$CANDIDATE_MODE" != true ]]; then
     echo "Step 1: Installing TestKube CLI..."
     wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
     echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
@@ -91,19 +114,42 @@ export AZURE_CLIENT_ID
 export BRANCH_NAME
 
 # Generate the test CRs from template
-if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
-    envsubst < "./testkube/config-processing-test-crs/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT" \
-        || fail_setup "Failed to generate ConfigTests workflows"
+if [[ "$SOURCE_TEMPLATE" == testkube-config-test-*-crs.yaml ]]; then
+    template="./testkube/config-processing-test-crs/$SOURCE_TEMPLATE"
 else
-    envsubst < "./testkube/$SOURCE_TEMPLATE" > "./testkube/$TARGET_OUTPUT" \
-        || fail_setup "Failed to generate TestKube workflows"
+    template="./testkube/$SOURCE_TEMPLATE"
 fi
+if [[ "$CANDIDATE_MODE" == true && "$template" == "./testkube/$TARGET_OUTPUT" ]]; then
+    fail_setup "Candidate output must not overwrite its source template"
+fi
+rendered=$(mktemp)
+envsubst '${AMW_QUERY_ENDPOINT} ${AZURE_CLIENT_ID} ${BRANCH_NAME}' < "$template" > "$rendered" \
+    || { rm -f "$rendered"; fail_setup "Failed to generate TestKube workflows"; }
+if [[ "$CANDIDATE_MODE" == true ]]; then
+    label_args=()
+    if [[ -v GINKGO_LABEL_FILTER ]]; then
+        label_args=(--label-filter "$GINKGO_LABEL_FILTER")
+    fi
+    for expectation in EXPECTED_CLUSTER EXPECT_OPERATOR_HTTPS EXPECT_WINDOWS_EXPORTER; do
+        if [[ -v "$expectation" ]]; then
+            option=${expectation,,}
+            label_args+=("--${option//_/-}" "${!expectation}")
+        fi
+    done
+    "$PYTHON" "$SCRIPT_DIR/workflow_evidence.py" render "$rendered" \
+        "$SELECTED_WORKFLOW" "$CANDIDATE_TEST_SOURCE_SHA" "$CANDIDATE_RUNNER_IMAGE" \
+        "${label_args[@]}" > "./testkube/$TARGET_OUTPUT" \
+        || { rm -f "$rendered"; fail_setup "Candidate workflow validation failed"; }
+else
+    cp "$rendered" "./testkube/$TARGET_OUTPUT"
+fi
+rm -f "$rendered"
 
 # Apply the generated files
 kubectl apply -f ./testkube/api-server-permissions.yaml \
     || fail_setup "Failed to apply TestKube API permissions"
 
-if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+if [[ "$TARGET_ENV" == "ConfigTests" || "$CANDIDATE_MODE" == true ]]; then
     existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
         || fail_setup "Failed to list existing ConfigTests workflows"
     # Exported last-applied metadata can make apply try to delete resourceVersion.
@@ -118,7 +164,7 @@ fi
 kubectl apply -f "./testkube/$TARGET_OUTPUT" \
     || fail_setup "Failed to apply TestKube workflows; refusing to run stale definitions"
 
-if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+if [[ "$TARGET_ENV" != "ConfigTests" && "$CANDIDATE_MODE" != true ]]; then
     # Apply common configmaps
     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
@@ -133,7 +179,7 @@ else
     echo "⚠ Skipped settings configmap (disabled)"
 fi
 
-if [[ "$TARGET_ENV" != "ConfigTests" ]]; then
+if [[ "$TARGET_ENV" != "ConfigTests" && "$CANDIDATE_MODE" != true ]]; then
     # Apply reference app
     kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
     echo "✓ TestKube environment setup completed"
@@ -149,7 +195,9 @@ echo "Step 4: Starting TestKube workflow execution..."
 
 
 echo "Run testkube testworkflows"
-if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+if [[ "$CANDIDATE_MODE" == true ]]; then
+    workflows=("$SELECTED_WORKFLOW")
+elif [[ "$TARGET_ENV" == "ConfigTests" ]]; then
     echo "Running in ConfigTests environment"
     # Build workflow list for ConfigTests environment via template name
     case "$SOURCE_TEMPLATE" in
@@ -219,6 +267,15 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-deny-fs-access-crs.yaml)
             workflows=(denyfsaccess)
             ;;
+        testkube-config-test-customer-settings-v1-crs.yaml)
+            workflows=(customersettingsv1)
+            ;;
+        testkube-config-test-customer-settings-v2-crs.yaml)
+            workflows=(customersettingsv2)
+            ;;
+        testkube-config-test-dcgm-crs.yaml)
+            workflows=(dcgmexporter)
+            ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"
             exit 1
@@ -226,7 +283,13 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
     esac
 else 
     # Build workflow list dynamically from cluster (exclude livenessprobe)
-    mapfile -t workflows < <(kubectl testkube get testworkflows -o json | jq -r '.[].workflow.name')
+    workflow_json=$(kubectl testkube get testworkflows -o json) \
+        || fail_setup "Failed to list TestKube workflows"
+    if ! jq -e 'type == "array" and all(.[]; (.workflow.name | type == "string" and length > 0))' \
+        <<< "$workflow_json" >/dev/null; then
+        fail_setup "TestKube workflow list is invalid or contains empty names"
+    fi
+    mapfile -t workflows < <(jq -r '.[].workflow.name' <<< "$workflow_json")
     if [[ ${#workflows[@]} -gt 0 ]]; then
         if [[ "$TARGET_ENV" != *Nightly* ]]; then
             # Filter out livenessprobe workflow without leaving empty entries
@@ -252,54 +315,75 @@ else
     fi
 fi
 if [[ ${#workflows[@]} -eq 0 ]]; then
-    echo "No testworkflows found via kubectl testkube get testworkflows"
-    exit 1
+    fail_setup "No TestWorkflows selected"
 fi
 failed_workflows=()
 successful_workflows=()
 
 for wf in "${workflows[@]}"; do
+    [[ "$wf" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail_setup "Unsafe TestWorkflow name"
     echo "Running workflow: $wf"
-    kubectl testkube run testworkflow "$wf"
-
-    echo "Waiting for execution to be created..."
-    sleep 5
-
-    echo "Fetching testworkflow executions for $wf..."
-    kubectl testkube get testworkflowexecution
-    execution_id=$(kubectl testkube get testworkflowexecution | grep -i "$wf" | head -n 1 | awk '{print $1}')
+    submission_output=$(kubectl testkube run testworkflow "$wf" --output json) \
+        || fail_setup "Failed to submit TestKube workflow $wf"
+    execution_id=$(jq -er 'if type == "object" and (.id | type == "string" and length > 0) then .id else empty end' \
+        <<< "$submission_output" 2>/dev/null) \
+        || fail_setup "TestKube submission for $wf returned no execution ID"
+    [[ "$execution_id" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || fail_setup "Unsafe execution ID"
 
     echo "Execution ID: $execution_id"
+    case_dir="${BUILD_ARTIFACTSTAGINGDIRECTORY}/testkube-executions/${TARGET_ENV}/${wf}/${execution_id}"
+    mkdir -p "$case_dir" || fail_setup "Failed to create evidence directory for $wf"
+    printf '%s\n' "$submission_output" > "$case_dir/submission.json"
 
-    # Check if execution_id is empty
-    if [[ -z "$execution_id" ]]; then
-        echo "Error: Could not find execution ID for $wf"
-        exit 1
-    fi
+    # Watch the exact execution returned by the submission command.
+    watch_status=0
+    kubectl testkube watch testworkflowexecution "$execution_id" || watch_status=$?
 
-    # Watch until the testworkflow finishes
-    kubectl testkube watch testworkflowexecution $execution_id
-
-    # Get the results as a formatted json file
-    kubectl testkube get testworkflowexecution $execution_id --output json > "testkube-results-${TARGET_ENV}-${wf}.json"
+    # Keep the exact execution result alongside its submission metadata.
+    execution_file="$case_dir/execution.json"
+    kubectl testkube get testworkflowexecution "$execution_id" --output json > "$execution_file" \
+        || fail_setup "Failed to fetch execution $execution_id for $wf"
 
     # Verify the JSON is valid
-    if ! jq empty "testkube-results-${TARGET_ENV}-${wf}.json" 2>/dev/null; then
-        echo "Error: Failed to get valid JSON results from testkube for $wf"
-        echo "Contents of testkube-results-${TARGET_ENV}-${wf}.json:"
-        cat "testkube-results-${TARGET_ENV}-${wf}.json"
-        exit 1
+    if ! jq -e --arg id "$execution_id" --arg workflow "$wf" \
+        'type == "object" and .id == $id and .workflow.name == $workflow' "$execution_file" >/dev/null 2>&1; then
+        fail_setup "TestKube returned invalid or mismatched execution evidence for $wf ($execution_id)"
     fi
 
-    # For any test that has failed, print out the logs
-    if [[ $(jq -r '.result.status' "testkube-results-${TARGET_ENV}-${wf}.json") == "failed" ]]; then
+    execution_status=$(jq -er '.result.status | strings | select(length > 0)' "$execution_file" 2>/dev/null) \
+        || execution_status=""
+    case_dir_record="$case_dir/record.json"
+    jq -n --arg workflow "$wf" --arg execution_id "$execution_id" --arg status "$execution_status" \
+        '{workflow: $workflow, execution_id: $execution_id, status: $status}' > "$case_dir_record"
 
-        echo "$wf TestWorkflow failed. Execution ID: $execution_id"
+    evidence_passed=true
+    if [[ "$TARGET_ENV" == "ConfigTests" || "$CANDIDATE_MODE" == true ]]; then
+        artifact_dir="$case_dir/artifacts"
+        mkdir -p "$artifact_dir" || fail_setup "Failed to create artifact directory for $wf"
+        kubectl testkube download artifacts "$execution_id" --download-dir "$artifact_dir" --format folder \
+            || fail_setup "Failed to download artifacts for $wf ($execution_id)"
 
+        if ! counts=$("$PYTHON" "$SCRIPT_DIR/workflow_evidence.py" reports "$artifact_dir"); then
+            echo "$wf has missing, empty, failed or mismatched reports for $execution_id" >&2
+            evidence_passed=false
+        else
+            artifact_path=$("$PYTHON" -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve())' "$artifact_dir")
+            jq --argjson counts "$counts" --arg dir "$artifact_path" \
+                '. + $counts + {artifact_dir:$dir}' "$case_dir_record" > "$case_dir_record.tmp"
+            mv "$case_dir_record.tmp" "$case_dir_record"
+        fi
+    fi
+
+    if [[ "$execution_status" != "passed" || "$watch_status" -ne 0 || "$evidence_passed" != true ]]; then
+        echo "$wf TestWorkflow did not pass (status: ${execution_status:-missing}, execution ID: $execution_id)"
         failed_workflows+=("${wf}")
+        jq '.status="failed"' "$case_dir_record" > "$case_dir_record.tmp"
+        mv "$case_dir_record.tmp" "$case_dir_record"
     else
         successful_workflows+=("${wf}")
     fi
+    jq --slurpfile record "$case_dir_record" '.executions += $record' "$RESULTS_FILE" > "$RESULTS_FILE.tmp"
+    mv "$RESULTS_FILE.tmp" "$RESULTS_FILE"
 done
 
 echo "\n========== TestWorkflow Summary =========="

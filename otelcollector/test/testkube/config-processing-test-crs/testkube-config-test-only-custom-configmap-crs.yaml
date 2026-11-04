@@ -26,7 +26,14 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r -p --label-filter "(config-processing-common, config-processing-common-with-config-maps)" ./configprocessing
+        mkdir -p /data/reports
+        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r -p --label-filter "(config-processing-common, config-processing-common-with-config-maps)" ./configprocessing
+    - name: Retain Ginkgo evidence
+      condition: always
+      artifacts:
+        workingDir: /data/reports
+        paths:
+          - "**/*"
   pod:
     nodeSelector:
       kubernetes.io/os: linux
@@ -60,7 +67,14 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r -p --label-filter "(config-processing-only-config-map-all-actions)" ./configprocessing
+        mkdir -p /data/reports
+        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r -p --label-filter "(config-processing-only-config-map-all-actions)" ./configprocessing
+    - name: Retain Ginkgo evidence
+      condition: always
+      artifacts:
+        workingDir: /data/reports
+        paths:
+          - "**/*"
   pod:
     nodeSelector:
       kubernetes.io/os: linux

@@ -289,9 +289,9 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 			}
 		}
 	},
-	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingNoConfigMaps)),
-	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingNoConfigMaps)),
-	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingNoConfigMaps)),
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingDefaultTargetsEnabled)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingDefaultTargetsEnabled)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingDefaultTargetsEnabled)),
 )
 
 // All Rs targets turned on in settings configmap
@@ -1070,8 +1070,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping", Label(utils.ConfigProcess
 
 		// Query targets from both RS pods since the basic-auth target may be assigned to either one
 		GinkgoWriter.Printf("[BasicAuth] Querying targets from both RS pods...\n")
-		var targetsResponses = make([]*utils.APIResponse, 2)
-		err = utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, true, targetsResponses)
+		targetsResponses, err := utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true)
 		Expect(err).NotTo(HaveOccurred())
 		GinkgoWriter.Printf("[BasicAuth] Successfully queried targets from RS pods\n")
 
@@ -1260,8 +1259,7 @@ var _ = Describe("Basic auth ServiceMonitor scraping (v2)", Label(utils.ConfigPr
 		time.Sleep(60 * time.Second)
 
 		GinkgoWriter.Printf("[BasicAuthV2] Querying targets from both RS pods...\n")
-		var targetsResponses = make([]*utils.APIResponse, 2)
-		err = utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true, true, targetsResponses)
+		targetsResponses, err := utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics", "prometheus-collector", "/api/v1/targets", true)
 		Expect(err).NotTo(HaveOccurred())
 		GinkgoWriter.Printf("[BasicAuthV2] Successfully queried targets from RS pods\n")
 
@@ -1338,11 +1336,7 @@ var _ = Describe("Basic auth secret update (v2)", Label(utils.ConfigProcessingBa
 	})
 })
 
-/*
- * When the settings configmap sets deny_fs_access_through_sms = true, the config-reader must write
- * deny_fs_access_through_sms: true into the TargetAllocator config so ServiceMonitor/PodMonitor
- * scrape configs that read local files (bearerTokenFile, ca/cert/key files) are dropped.
- */
+// The companion monitor-access specs check enforcement, not just this configuration toggle.
 var _ = Describe("deny_fs_access_through_sms setting", Label(utils.ConfigProcessingDenyFSAccess), func() {
 	It("is written to the TargetAllocator config by the config-reader", func() {
 		Eventually(func() (string, error) {

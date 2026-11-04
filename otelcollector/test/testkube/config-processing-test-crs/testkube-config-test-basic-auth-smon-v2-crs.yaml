@@ -26,7 +26,14 @@ spec:
         - name: GOTOOLCHAIN
           value: "auto"
       shell: |
-        ginkgo run -r -v -p --label-filter "(config-processing-basic-auth-smon-v2)" ./configprocessing
+        mkdir -p /data/reports
+        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r -v -p --label-filter "(config-processing-basic-auth-smon-v2)" ./configprocessing
+    - name: Retain Ginkgo evidence
+      condition: always
+      artifacts:
+        workingDir: /data/reports
+        paths:
+          - "**/*"
   pod:
     nodeSelector:
       kubernetes.io/os: linux

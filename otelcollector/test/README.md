@@ -1,6 +1,30 @@
 # TestKube workflow setup regression tests
 
-Run `bash otelcollector/test/testkube/run-testkube-workflow-test.sh` from the repository root with Bash, `jq`, and `envsubst` installed. These tests mock `kubectl` and require no cluster access. They cover resetting exported last-applied metadata, creating new workflows, and stopping with failed JSON results before workflow execution when generation, permissions, discovery, annotation repair, or application fails. Pipeline 979 runs them before accessing the cluster.
+Run `python3 -m unittest discover -s otelcollector/test/testkube -p workflow_evidence_test.py` and `bash otelcollector/test/testkube/run-testkube-workflow-test.sh` from the repository root with Python/PyYAML, Bash, `jq`, and `envsubst` installed. Set `PYTHON` if the Python executable is not `python3`. These tests mock `kubectl` and require no cluster access. They reject setup errors, missing/mismatched execution IDs, nonpassed terminal statuses, empty or failed reports, and mutable candidate inputs. Pipeline 979 runs them before accessing the cluster.
+
+## Immutable candidate execution
+
+The existing TestKube TestWorkflow remains the executor; candidate mode does not run Ginkgo on the host. First verify the protected runner receipt and candidate deployment. The receipt must bind a full test-source commit to the runner digest and successful producer build/artifact, not free-form image fields. Candidate mode reuses the existing runner image, resolves the suite's Go toolchain and Ginkgo module versions, and runs that explicit CLI version with the same Go toolchain without modifying module manifests. The runner is scheduled on Linux/amd64. Toolchain/module downloads require outbound access from the TestKube namespace, independently of collector ingestion egress.
+
+From `otelcollector/test`, after the caller applies the scenario and waits for readiness:
+
+```bash
+export CANDIDATE_TEST_SOURCE_SHA=<full-lowercase-40-hex-commit>
+export CANDIDATE_RUNNER_IMAGE=<repository@sha256:64-hex-digest>
+export SELECTED_WORKFLOW=<existing-TestWorkflow-metadata.name>
+export BUILD_ARTIFACTSTAGINGDIRECTORY=<per-slot-absolute-output-directory>
+# Optional: GINKGO_LABEL_FILTER overrides the existing workflow's labels.
+bash ./testkube/run-testkube-workflow.sh "$AMW_QUERY_ENDPOINT" "$AZURE_CLIENT_ID" \
+  testkube-test-crs.yaml candidate-health.yaml false 0 ConfigTests "$CANDIDATE_TEST_SOURCE_SHA"
+```
+
+Config CR filenames (`testkube-config-test-*-crs.yaml`) resolve under `config-processing-test-crs`; health templates resolve under `testkube`. Candidate mode requires all three provenance/selection variables, executes exactly the selected workflow, and never applies customer ConfigMaps/reference apps. The caller owns snapshot/apply/restore. Without candidate variables, existing workflow selection/setup remains available.
+
+`testkube-results-ConfigTests.json` contains exact `test_source_sha`, `runner_image`, and `executions[]` records with `workflow`, `execution_id`, `status`, `specs`, `passed`, `skipped`, `failed`, and `artifact_dir`. Counts include only Ginkgo `It` specs, not suite setup; skipped specs are allowed but at least one must pass. Dry runs, failed setup/specs, and mismatched JUnit evidence fail. Each native absolute `artifact_dir` is rooted at `<staging>/testkube-executions/ConfigTests/<workflow>/<exact-id>/artifacts`; it must contain exactly one recursive `ginkgo.json` and one `junit.xml`. Its parent retains `submission.json`, `execution.json`, and `record.json`. Consumers must validate confinement, exact identity/status, provenance equality, and the applied workflow's Git revision/image; an adapter summary alone is not a trusted producer receipt.
+
+Optional assertion expectations are `EXPECTED_CLUSTER`, `EXPECT_OPERATOR_HTTPS=true|false`, and `EXPECT_WINDOWS_EXPORTER=true|false`. Operator candidates require HTTPS by default; `false` is only for an intentional HTTP compatibility lane. Select querymetrics `cluster-identity` with `EXPECTED_CLUSTER=Customer_Config_POC` for the customer alias/annotation fixtures; it requires post-suite-start ingestion, not standard reference-app fixtures. `cluster-network` selects per-node ingestion for supported Linux/Windows lanes. `managed-acns` requires independently verified managed ACNS provisioning, the Cilium/Hubble service, and seeded forwarding/DNS traffic. These environment-specific labels do not establish AMPLS or proxy routing without independent host/network evidence. Windows exporter sentinels run only when explicitly enabled.
+
+The ConfigTests pipeline always publishes JUnit and execution artifacts, and independently gates the complete expected scenario set against retained execution IDs, terminal passed statuses and nonempty matching reports. A Teams notification or a successful workflow with no executed specs cannot satisfy that gate.
 
 # Current Tests
 - Container Status

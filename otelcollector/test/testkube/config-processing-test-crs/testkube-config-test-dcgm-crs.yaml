@@ -1,0 +1,36 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: dcgmexporter
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: $BRANCH_NAME
+      paths:
+        - otelcollector/test/ginkgo-e2e
+  steps:
+    - name: Run test
+      container:
+        workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+        image: cerebro31/ginkgo-test:latest
+        env:
+          - name: GOTOOLCHAIN
+            value: auto
+      shell: |
+        mkdir -p /data/reports
+        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r --label-filter "config-processing-dcgm-exporter-enabled" ./configprocessing
+    - name: Retain Ginkgo evidence
+      condition: always
+      artifacts:
+        workingDir: /data/reports
+        paths:
+          - "**/*"
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
