@@ -195,6 +195,60 @@ class SettingsCatalogTests(unittest.TestCase):
                         self.assertNotIn(prefix + "secrets_access_namespaces", values)
                     self.assertIn("config-processing-empty-secret-namespaces", manifest["ginkgoLabels"])
 
+    def test_transition_inputs_preserve_settings_and_resource_ownership(self):
+        auth = list(yaml.safe_load_all((ROOT / "auth-targets.yaml").read_text()))
+        identities = {(doc["kind"], doc["metadata"].get("namespace"), doc["metadata"]["name"]) for doc in auth}
+        recovered = yaml.safe_load((ROOT / "auth-recovered.yaml").read_text())
+        self.assertIn((recovered["kind"], recovered["metadata"]["namespace"], recovered["metadata"]["name"]), identities)
+        initial_secret = next(doc for doc in auth if doc["kind"] == "Secret")
+        self.assertNotEqual(initial_secret["stringData"]["username"], recovered["stringData"]["username"])
+        self.assertEqual(recovered["stringData"], {"username": "admin", "password": "pwd"})
+        for version in ("v1", "v2"):
+            directory = ROOT / f"customer-transitions-{version}"
+            prefix = f"configmap.{version}."
+            metrics = prefix + ("cluster-metrics." if version == "v2" else "")
+            alias = prefix + "prometheus-collector-settings.cluster_alias"
+            namespaces = metrics + "pod-annotation-based-scraping.podannotationnamespaceregex"
+            target = "default-scrape-settings-enabled" if version == "v1" else "default-targets-scrape-enabled"
+            expected = [
+                ("initial", "Customer Config POC", "^ama-settings-included$"),
+                ("alias-updated", "Customer Config Updated", "^ama-settings-included$"),
+                ("alias-cleared", "", "^ama-settings-included$"),
+                ("namespace-updated", "", "^ama-settings-excluded$"),
+                ("namespace-removed", "", None),
+            ]
+            baseline = None
+            for phase, cluster, regex in expected:
+                with self.subTest(version=version, phase=phase):
+                    doc = yaml.safe_load((directory / f"{phase}.yaml").read_text())
+                    self.assertEqual(doc["metadata"], {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"})
+                    values = config_settings(doc["data"])
+                    self.assertEqual(values.pop(alias), cluster)
+                    self.assertEqual(values.pop(namespaces, None), regex)
+                    values.pop(prefix + "config-version")
+                    self.assertIs(values[metrics + target + ".windowskubeproxy"], True)
+                    self.assertIs(values[prefix + "prometheus-collector-settings.operator_enabled"], True)
+                    if baseline is None:
+                        baseline = values
+                    self.assertEqual(values, baseline)
+            for phase in ("allowed", "empty", "omitted"):
+                with self.subTest(version=version, secret_phase=phase):
+                    doc = yaml.safe_load((ROOT / f"secret-transitions-{version}" / f"{phase}.yaml").read_text())
+                    values = config_settings(doc["data"])
+                    setting = prefix + "prometheus-collector-settings.secrets_access_namespaces"
+                    if phase == "omitted":
+                        self.assertNotIn(setting, values)
+                    else:
+                        self.assertEqual(values[setting], "ama-settings-auth" if phase == "allowed" else "")
+                    self.assertIs(values[prefix + "prometheus-collector-settings.operator_enabled"], True)
+                    self.assertEqual(doc["metadata"], {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"})
+            manifest = json.loads((ROOT / f"secret-transitions-{version}" / "manifest.json").read_text())
+            self.assertEqual(manifest["customResources"], ["../auth-targets.yaml"])
+        windows = config_settings(yaml.safe_load((ROOT / "windows-kube-proxy" / "settings.yaml").read_text())["data"])
+        self.assertIs(windows["configmap.v2.cluster-metrics.default-targets-scrape-enabled.windowskubeproxy"], True)
+        self.assertEqual(windows["configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.windowskubeproxy"], "15s")
+        self.assertEqual(windows["configmap.v2.cluster-metrics.default-targets-metrics-keep-list.windowskubeproxy"], "kubeproxy_sync_proxy_rules_duration_seconds.*")
+
     def test_empty_labels_cannot_select_every_suite(self):
         path = ROOT / "default/manifest.json"
         manifest = json.loads(path.read_text())

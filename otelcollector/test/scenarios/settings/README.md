@@ -57,6 +57,12 @@ expect unhealthy pods.
 
 ## Add a scenario
 
+For existing same-invocation alias, namespace and secret transitions, see
+[the precise phase/apply/reset contracts](TRANSITIONS.md). These reuse the
+selected ConfigTests spec and declare all mutable identities initially.
+The credential cases prove reload/recovery only. True two-valid-password
+rotation is explicitly deferred by the user and excluded from coverage claims.
+
 1. Check existing ConfigTests fixtures, workflow label expressions and assertions.
    Reuse a case when it already proves the requested behavior.
 2. Add `<id>/manifest.json` and only the missing input YAML. Add its entry and

@@ -1,22 +1,24 @@
 {
   "configmap.v1.config-version": {
     "variants": [
-      "empty-secret-namespaces-v1",
-      "omitted-secret-namespaces-v1",
       "all-targets-disabled",
       "all-targets-enabled",
       "collector-controls-v1",
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "dcgm-custom",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
+      "empty-secret-namespaces-v1",
       "global-labels",
       "minimal-ingestion-disabled",
+      "omitted-secret-namespaces-v1",
       "partial-v1",
       "rs-targets-enabled",
+      "secret-transitions-v1",
       "windows"
     ],
     "assertions": [],
@@ -483,6 +485,7 @@
       "all-targets-enabled",
       "controlplane-istio",
       "custom-scrape",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -934,6 +937,7 @@
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -972,6 +976,7 @@
       "all-targets-enabled",
       "controlplane-istio",
       "custom-scrape",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -1282,6 +1287,7 @@
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -1338,6 +1344,7 @@
       "all-targets-enabled",
       "controlplane-istio",
       "custom-scrape",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -1398,6 +1405,7 @@
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -1420,6 +1428,7 @@
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
@@ -1459,8 +1468,10 @@
   "configmap.v1.prometheus-collector-settings.operator_enabled": {
     "variants": [
       "collector-controls-v1",
+      "customer-transitions-v1",
       "empty-secret-namespaces-v1",
-      "omitted-secret-namespaces-v1"
+      "omitted-secret-namespaces-v1",
+      "secret-transitions-v1"
     ],
     "assertions": [],
     "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
@@ -1469,29 +1480,32 @@
     "variants": [
       "collector-controls-v1",
       "defaults-v1",
-      "empty-secret-namespaces-v1"
+      "empty-secret-namespaces-v1",
+      "secret-transitions-v1"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
   },
   "configmap.v1.schema-version": {
     "variants": [
-      "empty-secret-namespaces-v1",
-      "omitted-secret-namespaces-v1",
       "all-targets-disabled",
       "all-targets-enabled",
       "collector-controls-v1",
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
+      "customer-transitions-v1",
       "dcgm-custom",
       "default",
       "defaults-v1",
       "ds-targets-enabled",
+      "empty-secret-namespaces-v1",
       "global-labels",
       "minimal-ingestion-disabled",
+      "omitted-secret-namespaces-v1",
       "partial-v1",
       "rs-targets-enabled",
+      "secret-transitions-v1",
       "windows"
     ],
     "assertions": [],
@@ -1640,6 +1654,7 @@
   "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.podannotations": {
     "variants": [
       "customer-settings-v2",
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access",
       "partial-v2"
@@ -1660,9 +1675,11 @@
   },
   "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.windowskubeproxy": {
     "variants": [
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access",
-      "partial-v2"
+      "partial-v2",
+      "windows-kube-proxy"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
@@ -1891,10 +1908,12 @@
     "variants": [
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
+      "customer-transitions-v2",
       "default-targets-v2",
       "defaults-v2",
       "deny-filesystem-access",
-      "partial-v2"
+      "partial-v2",
+      "windows-kube-proxy"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
@@ -2052,6 +2071,7 @@
   "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.podannotations": {
     "variants": [
       "customer-settings-v2",
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access",
       "partial-v2"
@@ -2081,9 +2101,11 @@
   },
   "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.windowskubeproxy": {
     "variants": [
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access",
-      "partial-v2"
+      "partial-v2",
+      "windows-kube-proxy"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
@@ -2120,6 +2142,7 @@
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
       "customer-settings-v2",
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access",
       "partial-v2"
@@ -2131,16 +2154,19 @@
   },
   "configmap.v2.config-version": {
     "variants": [
-      "empty-secret-namespaces-v2",
-      "omitted-secret-namespaces-v2",
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
       "collector-controls",
       "customer-settings-v2",
+      "customer-transitions-v2",
       "default-targets-v2",
       "defaults-v2",
       "deny-filesystem-access",
-      "partial-v2"
+      "empty-secret-namespaces-v2",
+      "omitted-secret-namespaces-v2",
+      "partial-v2",
+      "secret-transitions-v2",
+      "windows-kube-proxy"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
@@ -2295,6 +2321,7 @@
     "variants": [
       "collector-controls",
       "customer-settings-v2",
+      "customer-transitions-v2",
       "defaults-v2",
       "deny-filesystem-access"
     ],
@@ -2339,8 +2366,10 @@
   "configmap.v2.prometheus-collector-settings.operator_enabled": {
     "variants": [
       "collector-controls",
+      "customer-transitions-v2",
       "empty-secret-namespaces-v2",
-      "omitted-secret-namespaces-v2"
+      "omitted-secret-namespaces-v2",
+      "secret-transitions-v2"
     ],
     "assertions": [],
     "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
@@ -2349,23 +2378,27 @@
     "variants": [
       "collector-controls",
       "defaults-v2",
-      "empty-secret-namespaces-v2"
+      "empty-secret-namespaces-v2",
+      "secret-transitions-v2"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
   },
   "configmap.v2.schema-version": {
     "variants": [
-      "empty-secret-namespaces-v2",
-      "omitted-secret-namespaces-v2",
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
       "collector-controls",
       "customer-settings-v2",
+      "customer-transitions-v2",
       "default-targets-v2",
       "defaults-v2",
       "deny-filesystem-access",
-      "partial-v2"
+      "empty-secret-namespaces-v2",
+      "omitted-secret-namespaces-v2",
+      "partial-v2",
+      "secret-transitions-v2",
+      "windows-kube-proxy"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"

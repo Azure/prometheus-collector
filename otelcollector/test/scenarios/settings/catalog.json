@@ -1,7 +1,53 @@
 {
   "schemaVersion": 1,
   "pathBase": "manifest-directory",
+  "deferredCoverage": [
+    {
+      "behavior": "true-two-valid-password-rotation",
+      "reason": "Explicitly user-deferred; current reference endpoint uses fixed public admin/pwd credentials. Secret transition variants cover reload/recovery only."
+    }
+  ],
   "variants": [
+    {
+      "id": "customer-transitions-v1",
+      "manifest": "customer-transitions-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v1-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "customer-transitions-v2",
+      "manifest": "customer-transitions-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v2-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "secret-transitions-v1",
+      "manifest": "secret-transitions-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "secret-transitions-v2",
+      "manifest": "secret-transitions-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "windows-kube-proxy",
+      "manifest": "windows-kube-proxy/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-custom-node-configmap-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
     {
       "id": "default",
       "manifest": "default/manifest.json",
