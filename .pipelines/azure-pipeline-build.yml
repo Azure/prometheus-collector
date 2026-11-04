@@ -918,7 +918,7 @@ extends:
             taskExceptionStatus: failed
             dockerfile: '$(Build.SourcesDirectory)/otelcollector/build/linux/Dockerfile'
             useBuildKit: true
-            skipContainerdCheck: false
+            skipContainerdCheck: true
       - job: Linux_Prometheus_Collector
         displayName: 'Build: linux prometheus-collector image'
         pool:
