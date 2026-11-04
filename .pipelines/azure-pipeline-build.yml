@@ -11,6 +11,12 @@ pr:
     include:
     - main
 
+parameters:
+- name: runCometTrial
+  displayName: 'Run isolated CoMET trial'
+  type: boolean
+  default: false
+
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
   AKS_ARC_HELM_CHART_NAME: 'ama-metrics'
@@ -895,6 +901,24 @@ extends:
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push image to dev ACR"
+        - bash: |
+            set -euo pipefail
+            docker pull "$(LINUX_AMD64_FULL_IMAGE_NAME)"
+            printf 'CoMET image reference: %s\n' "$(LINUX_AMD64_FULL_IMAGE_NAME)"
+            docker image inspect --format 'CoMET image ID: {{.Id}}' "$(LINUX_AMD64_FULL_IMAGE_NAME)"
+            cat "$(Build.ArtifactStagingDirectory)/linux/metadata.json"
+          displayName: 'Pull and identify Linux AMD64 image for CoMET'
+          condition: and(succeeded(), eq('${{ parameters.runCometTrial }}', 'true'))
+        - task: ContainerSecurityCopacetic@0
+          displayName: 'Scan Linux AMD64 image with Qualys CoMET'
+          condition: and(succeeded(), eq('${{ parameters.runCometTrial }}', 'true'))
+          inputs:
+            image: '$(LINUX_AMD64_FULL_IMAGE_NAME)'
+            action: scan
+            taskExceptionStatus: failed
+            dockerfile: '$(Build.SourcesDirectory)/otelcollector/build/linux/Dockerfile'
+            useBuildKit: true
+            skipContainerdCheck: false
       - job: Linux_Prometheus_Collector
         displayName: 'Build: linux prometheus-collector image'
         pool:
