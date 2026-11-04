@@ -370,6 +370,22 @@ class Contracts(unittest.TestCase):
                 host.args.evidence = Path(temporary)
                 runner.settings_slot(host, manifest)
 
+    def test_existing_fixture_namespace_is_refused_before_any_mutation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "namespace.yaml"
+            path.write_text("apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ama-settings-auth\n")
+            host = Mock()
+            host.scenario = scenario()
+            host.args.evidence = Path(temporary)
+            host.args.settle_seconds = 0
+            host.kube.return_value = '{"kind":"Namespace","metadata":{"name":"ama-settings-auth"}}'
+            manifest = dict(variant(), customResources=[path])
+            with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                    runner, "run_suite", return_value={"executed": 1}):
+                with self.assertRaisesRegex(ValueError, "already exists"):
+                    runner.settings_slot(host, manifest)
+            self.assertTrue(all(call.args[0] == "get" for call in host.kube.call_args_list))
+
     def test_alias_ingestion_runs_only_identity_case_before_restoring_slot(self):
         with tempfile.TemporaryDirectory() as temporary:
             host = Mock()
@@ -684,6 +700,7 @@ def mutations():
         "verified-runner-bytes": ('hashlib.sha256(runner_path.read_bytes()).hexdigest() != expected["receiptSha256"]', "False"),
         "producer-component": ('image["name"] = "cfg"', "pass"),
         "producer-index": ('image["manifestRef"] = image["indexRef"]', "pass"),
+        "fixture-namespace": ('if kind == "Namespace" and output.strip():', "if False:"),
         "override-authorization": ("if type(override) is not bool:", "if False:"),
         "sku-quota": ("current + cores > limit", "False"),
         "quota-numeric-strings": ('int(str(row["currentValue"]))', 'row["currentValue"]'),

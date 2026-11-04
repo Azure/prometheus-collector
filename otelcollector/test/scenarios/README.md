@@ -129,6 +129,9 @@ propagation, runs its OR-combined existing configprocessing labels, and restores
 and reads back the baseline even after failure. Restoration failure aborts the
 batch. Negative config cases run their existing expected-error assertions; a
 generic unhealthy cluster does not count as success.
+Fixture-declared namespaces must not already exist. Transition specs may change
+initially declared resource identities within the selected workflow; no separate
+phase executor or manifest fields are supported.
 Customer v1/v2 alias slots also run only `querymetrics` / `cluster-identity` with
 `EXPECTED_CLUSTER=Customer_Config_POC` **before restoration**. This proves fresh
 alias/annotation-namespace ingestion; configprocessing alone does not.
