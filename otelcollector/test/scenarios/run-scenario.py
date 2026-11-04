@@ -954,6 +954,10 @@ def verified_candidate(args, commands):
             or runner["source"]["commit"] != test_source or runner["imageRef"] != expected["imageRef"]
             or hashlib.sha256(runner_path.read_bytes()).hexdigest() != expected["receiptSha256"]):
         raise ValueError("Verified candidate output does not match product/test checkouts and protected runner bytes")
+    for image in candidate["images"]:
+        if image["name"] == "config-reader":
+            image["name"] = "cfg"
+        image["manifestRef"] = image["indexRef"]
     return candidate, runner
 
 

@@ -424,6 +424,13 @@ class Contracts(unittest.TestCase):
                    "imageRef": "example.invalid/runner@sha256:" + "1" * 64}
             receipt = {"source": raw["source"], "testRunner": {"testSource": raw["source"],
                        "imageRef": raw["imageRef"], "receiptSha256": ""}}
+            receipt["images"] = [
+                {"name": name, "os": "linux", "arch": arch,
+                 "ref": f"example.invalid/{name}@sha256:" + child * 64,
+                 "indexRef": f"example.invalid/{name}@sha256:" + index * 64}
+                for name, index in (("collector", "1"), ("targetallocator", "2"), ("config-reader", "3"))
+                for arch, child in (("amd64", "4"), ("arm64", "5"))
+            ]
             tamper = None
 
             def invoke(command, **kwargs):
@@ -448,6 +455,12 @@ class Contracts(unittest.TestCase):
             verified, runtime = runner.verified_candidate(args, commands)
             self.assertEqual(runtime, raw)
             self.assertEqual(verified["source"]["commit"], "a" * 40)
+            images, mapping = runner.candidate_receipt(verified, "a" * 40, ["linux"], ["arm64"])
+            self.assertEqual(len(images), 6)
+            self.assertEqual(mapping[("cfg", "linux")], receipt["images"][-1]["indexRef"])
+            self.assertEqual(mapping[("collector", "linux")], receipt["images"][0]["indexRef"])
+            persisted = runner.load(args.evidence / "verified-candidate/candidate-build.json")
+            self.assertEqual(persisted["images"], receipt["images"])
             for tamper in ("source", "runner-bytes"):
                 with self.subTest(tamper=tamper), self.assertRaisesRegex(ValueError, "protected runner bytes"):
                     runner.verified_candidate(args, commands)
@@ -669,6 +682,8 @@ def mutations():
         "workflow-count": ("if len(executions) != 1:", "if False:"),
         "verified-output-source": ('candidate["source"]["commit"] != source', "False"),
         "verified-runner-bytes": ('hashlib.sha256(runner_path.read_bytes()).hexdigest() != expected["receiptSha256"]', "False"),
+        "producer-component": ('image["name"] = "cfg"', "pass"),
+        "producer-index": ('image["manifestRef"] = image["indexRef"]', "pass"),
         "override-authorization": ("if type(override) is not bool:", "if False:"),
         "sku-quota": ("current + cores > limit", "False"),
         "quota-numeric-strings": ('int(str(row["currentValue"]))', 'row["currentValue"]'),
