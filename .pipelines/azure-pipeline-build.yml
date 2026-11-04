@@ -16,6 +16,10 @@ parameters:
   displayName: 'Run isolated CoMET trial'
   type: boolean
   default: false
+- name: runWindowsCometTrial
+  displayName: 'Run Windows CoMET trial'
+  type: boolean
+  default: false
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -871,6 +875,13 @@ extends:
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
           LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish Linux AMD64 CoMET reports'
+            condition: and(succeededOrFailed(), eq('${{ parameters.runCometTrial }}', 'true'))
+            targetPath: '$(Build.ArtifactStagingDirectory)/comet/linux-amd64'
+            artifactName: 'comet-linux-amd64'
         steps:
         - checkout: self
           submodules: true
@@ -909,16 +920,19 @@ extends:
             cat "$(Build.ArtifactStagingDirectory)/linux/metadata.json"
           displayName: 'Pull and identify Linux AMD64 image for CoMET'
           condition: and(succeeded(), eq('${{ parameters.runCometTrial }}', 'true'))
-        - task: ContainerSecurityCopacetic@0
-          displayName: 'Scan Linux AMD64 image with Qualys CoMET'
+        - bash: bash .pipelines/scripts/scan-linux-with-comet.sh
+          displayName: 'Scan Linux AMD64 image with Qualys CoMET (SCA enabled)'
           condition: and(succeeded(), eq('${{ parameters.runCometTrial }}', 'true'))
-          inputs:
-            image: '$(LINUX_AMD64_FULL_IMAGE_NAME)'
-            action: scan
-            taskExceptionStatus: failed
-            dockerfile: '$(Build.SourcesDirectory)/otelcollector/build/linux/Dockerfile'
-            useBuildKit: true
-            skipContainerdCheck: true
+          env:
+            COMET_IMAGE: $(LINUX_AMD64_FULL_IMAGE_NAME)
+            COMET_RESULTS_DIR: $(Build.ArtifactStagingDirectory)/comet/linux-amd64
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            SYSTEM_COLLECTIONURI: $(System.CollectionUri)
+            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
+            SYSTEM_PLANID: $(System.PlanId)
+            SYSTEM_JOBID: $(System.JobId)
+            BUILD_BUILDID: $(Build.BuildId)
+            SYSTEM_JOBATTEMPT: $(System.JobAttempt)
       - job: Linux_Prometheus_Collector
         displayName: 'Build: linux prometheus-collector image'
         pool:
@@ -1717,6 +1731,13 @@ extends:
           WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish Windows 2019 CoMET reports'
+            condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+            targetPath: '$(Build.ArtifactStagingDirectory)\comet-windows-2019'
+            artifactName: 'comet-windows-2019'
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -1879,6 +1900,19 @@ extends:
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
+        - task: PowerShell@2
+          displayName: 'Scan built Windows 2019 image with Qualys CoMET'
+          inputs:
+            targetType: filePath
+            filePath: '$(Build.SourcesDirectory)\.pipelines\scripts\scan-windows-with-comet.ps1'
+            arguments: '-Image "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)" -ResultsDirectory "$(Build.ArtifactStagingDirectory)\comet-windows-2019"'
+          condition: and(succeeded(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            SYSTEM_COLLECTIONURI: $(System.CollectionUri)
+            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
+            SYSTEM_PLANID: $(System.PlanId)
+            SYSTEM_JOBID: $(System.JobId)
       - job: Windows2022_Prometheus_Collector
         displayName: "Build: windows 2022 prometheus-collector image"
         pool:
@@ -1893,6 +1927,13 @@ extends:
           WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'Publish Windows 2022 CoMET reports'
+            condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+            targetPath: '$(Build.ArtifactStagingDirectory)\comet-windows-2022'
+            artifactName: 'comet-windows-2022'
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -2055,6 +2096,19 @@ extends:
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
+        - task: PowerShell@2
+          displayName: 'Scan built Windows 2022 image with Qualys CoMET'
+          inputs:
+            targetType: filePath
+            filePath: '$(Build.SourcesDirectory)\.pipelines\scripts\scan-windows-with-comet.ps1'
+            arguments: '-Image "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)" -ResultsDirectory "$(Build.ArtifactStagingDirectory)\comet-windows-2022"'
+          condition: and(succeeded(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            SYSTEM_COLLECTIONURI: $(System.CollectionUri)
+            SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
+            SYSTEM_PLANID: $(System.PlanId)
+            SYSTEM_JOBID: $(System.JobId)
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:
