@@ -113,6 +113,10 @@ class ReceiptTests(unittest.TestCase):
             self.assertEqual(len(receipt["images"]), 5)
             self.assertEqual(receipt["status"], "built-not-e2e-validated")
             self.assertEqual(receipt["testRunner"]["testSource"], receipt["source"])
+            legacy_runner = {**runner, "artifactUrl": runner["artifactUrl"].replace(
+                "https://dev.azure.com/github-private/", "https://github-private.visualstudio.com/")}
+            self.assertEqual(build_receipt.emit(build, pushes, legacy_runner, runner_hash)["testRunner"]["artifactUrl"],
+                             legacy_runner["artifactUrl"])
             for field, value in (("result", "failed"), ("sourceVersion", "c" * 40)):
                 with self.assertRaises(ValueError):
                     build_receipt.emit({**build, field: value}, pushes, runner, runner_hash)

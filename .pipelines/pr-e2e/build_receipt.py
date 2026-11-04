@@ -85,9 +85,11 @@ def emit(build, pushes, runner, runner_sha256):
     source = build_source(build)
     images = []
     expected_artifact = build["url"] + "/artifacts?artifactName=sre-testkube-runner&api-version=7.1"
+    artifact_url = runner["artifactUrl"].casefold().replace(
+        "https://github-private.visualstudio.com/", "https://dev.azure.com/github-private/")
     if (runner["schemaVersion"] != 1 or runner["artifactPath"] != "runner.json"
             or not re.fullmatch(r"[0-9a-f]{64}", runner_sha256)
-            or runner["source"] != source or runner["artifactUrl"].casefold() != expected_artifact.casefold()):
+            or runner["source"] != source or artifact_url != expected_artifact.casefold()):
         raise ValueError("TestKube runner artifact is not bound to this build")
     runner_images = resolve_images("testkube-runner", runner["imageRef"])
     if (runner["images"] != runner_images
