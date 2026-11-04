@@ -69,7 +69,10 @@ def build_source(build):
     if (build["status"] != "completed" or build["result"] != "succeeded"
             or build["definition"]["id"] != 440):
         raise ValueError("Expected a successful completed pipeline 440 build")
-    if build["repository"]["name"] != "Azure/prometheus-collector":
+    repository = build["repository"]
+    if (repository.get("id") != "Azure/prometheus-collector"
+            or repository.get("type") != "GitHub"
+            or repository.get("name", "Azure/prometheus-collector") != "Azure/prometheus-collector"):
         raise ValueError("Build repository mismatch")
     if not re.fullmatch(r"refs/heads/[^/]+/ama-metrics-sre-[^/]+", build["sourceBranch"]):
         raise ValueError("Expected an SRE campaign branch build")

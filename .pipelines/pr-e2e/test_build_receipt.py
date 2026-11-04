@@ -80,7 +80,7 @@ class ReceiptTests(unittest.TestCase):
     def test_exact_complete_build_is_required(self):
         build = {"status": "completed", "result": "succeeded", "id": 123,
                  "definition": {"id": 440}, "sourceVersion": "a" * 40,
-                 "repository": {"name": "Azure/prometheus-collector"},
+                 "repository": {"id": "Azure/prometheus-collector", "type": "GitHub"},
                  "url": "https://dev.azure.com/github-private/project/_apis/build/builds/123",
                  "sourceBranch": "refs/heads/bot/ama-metrics-sre-test",
                  "_links": {"web": {"href": "https://example.invalid/build/123"}}}

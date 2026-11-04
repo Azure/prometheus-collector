@@ -19,13 +19,17 @@ class FetchTests(unittest.TestCase):
         source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
         build = {"status": "completed", "result": "succeeded", "id": 123,
                  "definition": {"id": 440}, "sourceVersion": source["commit"],
-                 "repository": {"name": source["repo"]},
+                 "repository": {"id": source["repo"], "type": "GitHub"},
                  "sourceBranch": "refs/heads/bot/ama-metrics-sre-test",
                  "url": fetch_candidate.ADO_PROJECT + "/_apis/build/builds/123"}
         for field, value in ((None, None), ("sourceVersion", "b" * 40),
                              ("result", "failed"), ("id", 999), ("url", "https://example.invalid/build"),
                              ("definition", {"id": 999}), ("sourceVersion", "short"),
-                             ("repository", {"name": "other/repo"}), ("sourceBranch", "refs/heads/main")):
+                             ("repository", {"id": "other/repo", "type": "GitHub"}),
+                             ("repository", {"id": source["repo"], "type": "TfsGit"}),
+                             ("repository", {"id": source["repo"], "type": "GitHub", "name": "other/repo"}),
+                             ("repository", {"name": source["repo"]}),
+                             ("sourceBranch", "refs/heads/main")):
             with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
                 candidate_build = copy.deepcopy(build)
                 if field:
