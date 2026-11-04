@@ -13,6 +13,7 @@ require (
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/ccp v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
+	k8s.io/api v0.32.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
