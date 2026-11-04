@@ -70,6 +70,9 @@ provisioning. It checks the build's full source SHA and downloads all five
 same-build protected image/runner artifacts, retaining the entire
 `verified-candidate` evidence directory. Local JSON, a URL or a bare digest is
 not accepted as a substitute.
+Only after authenticated verification, the adapter maps producer `config-reader`
+to its internal `cfg` component and `indexRef` to `manifestRef`. Downloaded receipts
+remain unchanged; the common index is deployed and child digests verify runtime images.
 
 `--source-root C:\path\to\candidate-checkout` uses an existing clean
 candidate checkout without changing this worktree's branch; by default the source
