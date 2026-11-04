@@ -95,7 +95,11 @@ def stage(evidence, output, source_sha, producer_build_id, environment=None):
                     manifest["verifiedSource"] = source
                 if name == "result.json" and value.get("sourceSha") != source_sha:
                     raise ValueError("Harness result source differs from requested candidate")
-                if (relative.parts[0] in {"settings", "health"} and path.name == "execution.json"):
+                execution_path = (relative.parts[0] == "health"
+                                  or (len(relative.parts) > 2
+                                      and relative.parts[1] in {"configprocessing", "alias-ingestion"}
+                                      and relative.parts[2] == "testkube-executions"))
+                if execution_path and path.name == "execution.json":
                     manifest["executions"].append({
                         "path": name, "id": value["id"],
                         "workflow": value["workflow"]["name"],

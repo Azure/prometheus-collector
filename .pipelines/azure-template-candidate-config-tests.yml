@@ -163,7 +163,8 @@ steps:
     testResultsFormat: JUnit
     searchFolder: $(candidatePublication)
     testResultsFiles: |
-      settings/**/artifacts/**/junit.xml
+      */configprocessing/testkube-executions/**/artifacts/**/junit.xml
+      */alias-ingestion/testkube-executions/**/artifacts/**/junit.xml
       health/**/artifacts/**/junit.xml
     failTaskOnFailedTests: true
     failTaskOnMissingResultsFile: true
