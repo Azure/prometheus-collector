@@ -1,0 +1,11 @@
+{
+  "id": "empty-secret-namespaces-v2",
+  "description": "Schema v2 operator watch-nothing behavior with an explicitly empty secret namespace list.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": ["operator"]},
+  "configmaps": ["settings.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-empty-secret-namespaces"],
+  "expectedOutcome": "healthy"
+}
