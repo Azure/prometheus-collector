@@ -26,6 +26,12 @@ Optional assertion expectations are `EXPECTED_CLUSTER`, `EXPECT_OPERATOR_HTTPS=t
 
 The ConfigTests pipeline always publishes JUnit and execution artifacts, and independently gates the complete expected scenario set against retained execution IDs, terminal passed statuses and nonempty matching reports. A Teams notification or a successful workflow with no executed specs cannot satisfy that gate.
 
+### Durable candidate mode in the existing ConfigTests pipeline
+
+Opt in with `candidateMode: true`, `candidateBuildId: <successful pipeline-440 build ID>`, and `candidateSourceSha: <full lowercase commit>`. The pipeline's own reviewed checkout supplies the trusted receipt verifier/scanner; PR execution and attempt retries are rejected. The separate clean candidate checkout must match the requested SHA, and authenticated producer receipts are verified before invoking that checkout's existing scenario harness. The legacy shared-cluster job is disabled in this mode. The service connection must target the approved build subscription and retain its existing scoped resource, caller-object lookup and AMW role-assignment permissions.
+
+The harness owns the sole disposable environment and fixture lifecycle. An always-run ownership-guarded cleanup retry precedes scanning; cleanup failure remains a failed run. SRE's scanner separately authenticates the same producer build/source and retains the fixed-baseline comparison. The pipeline always stages filtered evidence, excludes kubeconfig/credentials/scanner caches, and publishes actual settings/health TestKube JUnit plus the evidence tree. `publication.json` binds producer/source, validation build, verified source and exact TestKube execution IDs, recording original versus published hashes when filtering changes bytes. Publication cannot turn missing tests, failed cleanup or a failed/blocked scan into success. Evidence is not committed back to Git.
+
 # Current Tests
 - Container Status
   - Each container on each pod that we deploy has status `Running`. Pods include:

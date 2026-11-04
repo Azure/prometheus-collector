@@ -27,6 +27,18 @@ parameters:
   displayName: 'Branch to run tests from'
   type: string
   default: 'main'
+- name: candidateMode
+  displayName: 'Run the protected candidate scenario instead of legacy shared-cluster tests'
+  type: boolean
+  default: false
+- name: candidateBuildId
+  displayName: 'Successful pipeline 440 producer build ID'
+  type: number
+  default: 0
+- name: candidateSourceSha
+  displayName: 'Full candidate source commit'
+  type: string
+  default: ''
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -54,7 +66,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: succeeded()
+    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'))
     variables:
       skipComponentGovernanceDetection: true
     strategy:
@@ -1124,3 +1136,30 @@ stages:
             inputs:
               targetPath: $(Build.ArtifactStagingDirectory)
               artifact: configtests-evidence
+
+  - deployment: CandidateTestkube
+    displayName: "Test: receipt-bound disposable candidate"
+    environment: Prometheus-Collector-Tests
+    timeoutInMinutes: 600
+    cancelTimeoutInMinutes: 60
+    variables:
+      candidateAttempt: $(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)
+      candidateRoot: $(Agent.TempDirectory)/candidate-$(candidateAttempt)
+      candidateEvidence: $(Agent.TempDirectory)/candidate-evidence-$(candidateAttempt)
+      candidateTools: $(Agent.TempDirectory)/candidate-tools-$(candidateAttempt)
+      candidatePython: $(Agent.TempDirectory)/candidate-python-$(candidateAttempt)
+      candidatePublication: $(Build.ArtifactStagingDirectory)/candidate-$(candidateAttempt)
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'True'))
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - template: azure-template-candidate-config-tests.yml
+            parameters:
+              producerBuildId: ${{ parameters.candidateBuildId }}
+              sourceSha: ${{ parameters.candidateSourceSha }}
+              azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
