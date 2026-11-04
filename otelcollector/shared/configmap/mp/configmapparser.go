@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -186,14 +187,14 @@ func Configmapparser() {
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
+	configDir := filepath.Dir(schemaVersionFile)
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		filePaths := []string{filepath.Join(configDir, "cluster-metrics"), filepath.Join(configDir, "prometheus-collector-settings")}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			log.Printf("Using defaults as error parsing files: %v\n", err)
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			log.Printf("Using defaults as error parsing config: %v\n", err)
@@ -207,7 +208,7 @@ func Configmapparser() {
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		configmapVer = "v2"
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
-		files, err := os.ReadDir("/etc/config/settings")
+		files, err := os.ReadDir(configDir)
 		if err == nil {
 			for _, file := range files {
 				if file.IsDir() || strings.HasPrefix(file.Name(), ".") {

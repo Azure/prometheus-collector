@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - bot/otelcollector-upgrade-*
+    - '*/ama-metrics-sre-*'
     - dependabot*
     
 pr:
@@ -31,6 +32,7 @@ variables:
   GOLANG_VERSION: '1.26.10'
   FLUENTBIT_GOLANG_VERSION: '1.26.5'
   TESTKUBE_GOLANG_VERSION: '1.26.9'
+  SRE_TESTKUBE_RUNNER_IMAGE: 'docker.io/cerebro31/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
   HELM_VERSION: '3.12.3'
@@ -111,6 +113,9 @@ extends:
             VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
             SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
             LINUX_IMAGE_TAG=$SEMVER
+            if [[ "$BUILD_SOURCEBRANCH" == refs/heads/*/ama-metrics-sre-* ]]; then
+              LINUX_IMAGE_TAG="sre-$(Build.BuildId)-$SEMVER"
+            fi
             # Truncating to 128 characters as it is required by docker
             LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
             #Truncating this to 128 to add the arm/amd suffix
@@ -369,6 +374,29 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+
+      - job: SRE_TestKube_Runner_Receipt
+        displayName: "SRE: pin existing TestKube runner and test source"
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+        variables:
+          skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'SRE: publish existing TestKube runner receipt'
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-testkube-runner'
+            artifactName: sre-testkube-runner
+        steps:
+        - checkout: self
+        - task: PythonScript@0
+          displayName: 'SRE: verify pinned runner manifest and test checkout'
+          inputs:
+            scriptSource: filePath
+            scriptPath: '$(Build.SourcesDirectory)/.pipelines/pr-e2e/runner_receipt.py'
+            workingDirectory: '$(Build.SourcesDirectory)'
+            arguments: >-
+              --image "$(SRE_TESTKUBE_RUNNER_IMAGE)"
+              --output "$(Build.ArtifactStagingDirectory)/sre-testkube-runner/runner.json"
 
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
@@ -935,6 +963,11 @@ extends:
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)'
             artifactName: linux-drop
+          - output: pipelineArtifact
+            displayName: 'SRE: publish Linux push receipt'
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
+            artifactName: sre-push-linux
         steps:
         - checkout: self
           submodules: true
@@ -951,7 +984,7 @@ extends:
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx imagetools create -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
+            docker buildx imagetools create --metadata-file $(Build.ArtifactStagingDirectory)/linux/push-metadata.json -t $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
               echo "Error: Docker buildx imagetools create failed."
               exit 1
@@ -959,6 +992,11 @@ extends:
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: 'Build: build and push image to dev ACR'
+        - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
+          parameters:
+            component: collector
+            image: $(LINUX_FULL_IMAGE_NAME)
+            evidenceArguments: '--metadata "$(Build.ArtifactStagingDirectory)/linux/push-metadata.json"'
         - bash: |
             echo "=== Verifying multi-arch manifest list ==="
             MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(LINUX_FULL_IMAGE_NAME) --raw 2>&1)
@@ -1431,6 +1469,13 @@ extends:
           TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'SRE: publish targetallocator push receipt'
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
+            artifactName: sre-push-targetallocator
         steps:
         - checkout: self
           persistCredentials: true
@@ -1446,7 +1491,7 @@ extends:
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             
-            docker buildx imagetools create -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+            docker buildx imagetools create --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/push-metadata.json -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
             if [ $? -ne 0 ]; then
               echo "Error: Docker buildx imagetools create failed."
               exit 1
@@ -1466,6 +1511,11 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
           displayName: "Build: build and push target allocator image to dev ACR"
           condition: succeeded()
+        - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
+          parameters:
+            component: targetallocator
+            image: $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+            evidenceArguments: '--metadata "$(Build.ArtifactStagingDirectory)/targetallocator/push-metadata.json"'
         - bash: |
             echo "=== Verifying multi-arch manifest list ==="
             MANIFEST_VERBOSE=$(docker buildx imagetools inspect $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --raw 2>&1)
@@ -1600,6 +1650,13 @@ extends:
           LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'SRE: publish cfg push receipt'
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
+            artifactName: sre-push-cfg
         steps:
         - bash: |
             set -e
@@ -1631,6 +1688,11 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
           condition: succeeded()
+        - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
+          parameters:
+            component: config-reader
+            image: $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+            evidenceArguments: '--metadata "$(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json"'
         - template: /.pipelines/azure-template-install-trivy.yml@self
           parameters:
             version: $(TRIVY_VERSION)
@@ -1898,6 +1960,13 @@ extends:
           WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: 'SRE: publish Windows2022 push receipt'
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
+            artifactName: sre-push-windows2022
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -2058,8 +2127,15 @@ extends:
               docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            $digest = docker push --quiet $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            if ($LASTEXITCODE -ne 0) { throw "Windows2022 push failed: $LASTEXITCODE" }
+            $digest | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows2022-push-digest.txt"
           displayName: "Build: push image to dev ACR"
+        - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
+          parameters:
+            component: collector
+            image: $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            evidenceArguments: '--digest-file "$(Build.ArtifactStagingDirectory)/windows2022-push-digest.txt"'
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:

@@ -2,6 +2,7 @@ package shared
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"log"
 	"os"
@@ -22,12 +23,12 @@ var (
 	meEventsProcessedRegex = regexp.MustCompile(`EventsProcessedLastPeriod: (\d+)`)
 )
 
-// TailMELogFile tails the ME log file (e.g. /MetricsExtensionConsoleDebugLog.log)
-// line by line, parsing ProcessedCount/EventsProcessedLastPeriod lines to feed the
-// shared health metric globals (TimeseriesReceivedTotal, TimeseriesSentTotal, BytesSentTotal).
-// ME writes to this file when started with -Logger File.
-// This replaces the fluent-bit ME log parsing pipeline for CCP mode.
+// TailMELogFile reads newly appended ME log lines into the shared health counters.
 func TailMELogFile(filePath string) {
+	tailMELogFile(context.Background(), filePath, nil)
+}
+
+func tailMELogFile(ctx context.Context, filePath string, ready chan<- struct{}) {
 	log.Printf("Waiting for ME log file: %s", filePath)
 
 	// Wait for the file to exist
@@ -35,7 +36,11 @@ func TailMELogFile(filePath string) {
 		if _, err := os.Stat(filePath); err == nil {
 			break
 		}
-		time.Sleep(5 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	log.Printf("Starting ME log tailer: %s", filePath)
@@ -48,14 +53,32 @@ func TailMELogFile(filePath string) {
 	defer file.Close()
 
 	// Seek to end — we only care about new lines
-	file.Seek(0, io.SeekEnd)
+	if _, err := file.Seek(0, io.SeekEnd); err != nil {
+		log.Printf("Error seeking ME log file: %v", err)
+		return
+	}
+	if ready != nil {
+		close(ready)
+	}
 
 	reader := bufio.NewReader(file)
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			// EOF — wait and retry (file is being appended to)
-			time.Sleep(1 * time.Second)
+			if err != io.EOF {
+				log.Printf("Error reading ME log file: %v", err)
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
 			continue
 		}
 

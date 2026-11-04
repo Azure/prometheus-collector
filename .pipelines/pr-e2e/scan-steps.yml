@@ -1,0 +1,45 @@
+parameters:
+- name: onboardingVerified
+  type: boolean
+  default: false
+- name: scannerImage
+  type: string
+- name: trivyVersion
+  type: string
+
+steps:
+# Artifacts are immutable per run; retries must not mix attempts.
+- pwsh: |
+    if ('$(System.JobAttempt)' -ne '1' -or '$(System.StageAttempt)' -ne '1') { throw 'BLOCKED: scan retries unsupported; start a new run' }
+    Write-Host "##vso[task.setvariable variable=scanOutputOwned]false"
+    Write-Host "##vso[task.setvariable variable=scanOutputOwner]"
+    Write-Host "##vso[task.setvariable variable=scanOutputPublishable]false"
+  displayName: Fail closed on job or stage retry
+- checkout: self
+- download: current
+  artifact: scan-targets
+- pwsh: |
+    if ('${{ parameters.onboardingVerified }}' -ne 'True') {
+      throw 'BLOCKED: CoMET onboarding, OIDC acceptance, exclusive Docker daemon and Hyper-V/arm64 proof are unverified'
+    }
+    & .pipelines/pr-e2e/scan.ps1
+  displayName: Per-child-digest CoMET OIDC scan; Trivy Linux supplemental
+  env:
+    TARGETS: $(Pipeline.Workspace)/scan-targets/scan-targets.json
+    TARGET_INDEX: $(targetIndex)
+    SCANNER_IMAGE: ${{ parameters.scannerImage }}
+    TRIVY_VERSION: ${{ parameters.trivyVersion }}
+    SCAN_OUTPUT: $(Build.ArtifactStagingDirectory)/scan-$(targetIndex)
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    BUILD_BUILDID: $(Build.BuildId)
+- pwsh: |
+    & .pipelines/pr-e2e/scan.ps1 -VerifyOutputOwnership
+  displayName: Verify persistent output claim before publication
+  condition: and(always(), eq(variables['System.JobAttempt'], '1'), eq(variables['System.StageAttempt'], '1'), eq(variables['scanOutputOwned'], 'true'))
+  env:
+    SCAN_OUTPUT: $(Build.ArtifactStagingDirectory)/scan-$(targetIndex)
+    SCAN_OUTPUT_OWNER: $(scanOutputOwner)
+    BUILD_BUILDID: $(Build.BuildId)
+- publish: $(Build.ArtifactStagingDirectory)/scan-$(targetIndex)
+  artifact: scan-$(targetIndex)
+  condition: and(always(), eq(variables['System.JobAttempt'], '1'), eq(variables['System.StageAttempt'], '1'), eq(variables['scanOutputOwned'], 'true'), eq(variables['scanOutputPublishable'], 'true'))

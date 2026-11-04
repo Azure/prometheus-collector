@@ -1,231 +1,92 @@
 package configmapsettings
 
 import (
-	"fmt"
-	"io"
-	"math/rand"
 	"os"
+	"path/filepath"
 
 	ginkgo "github.com/onsi/ginkgo/v2"
 	gomega "github.com/onsi/gomega"
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
 var _ = ginkgo.Describe("When parsing debug mode settings", func() {
-	ginkgo.Context("when debug mode is enabled", func() {
+	var settings map[string]map[string]string
 
-		ginkgo.BeforeEach(func() {
-			suffix := createRandomString(5)
-			err := createTempFiles(suffix, `enabled = true`)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	ginkgo.BeforeEach(func() {
+		oldEnvPath, oldConfigPath := debugModeEnvVarPath, replicaSetCollectorConfig
+		ginkgo.DeferCleanup(func() {
+			debugModeEnvVarPath, replicaSetCollectorConfig = oldEnvPath, oldConfigPath
 		})
+		directory := ginkgo.GinkgoT().TempDir()
+		debugModeEnvVarPath = filepath.Join(directory, "debug-env")
+		replicaSetCollectorConfig = filepath.Join(directory, "collector.yml")
+		content, err := os.ReadFile("testdata/collector-config-replicaset.yml")
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		gomega.Expect(os.WriteFile(replicaSetCollectorConfig, content, 0600)).To(gomega.Succeed())
+		ginkgo.GinkgoT().Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", "v1")
+		ginkgo.GinkgoT().Setenv("CONTROLLER_TYPE", "ReplicaSet")
+		ginkgo.GinkgoT().Setenv("OS_TYPE", "linux")
+		settings = map[string]map[string]string{"debug-mode": {"enabled": "true"}}
+	})
 
-		ginkgo.It("should configure debug mode settings for a linux replica", func() {
-			os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
-			os.Setenv("OS_TYPE", "linux")
-
-			err := ConfigureDebugModeSettings()
+	ginkgo.DescribeTable("configures enabled debug mode for the parsed schema and controller",
+		func(schema, controller, platform string) {
+			ginkgo.GinkgoT().Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", schema)
+			ginkgo.GinkgoT().Setenv("CONTROLLER_TYPE", controller)
+			ginkgo.GinkgoT().Setenv("OS_TYPE", platform)
+			if schema == "v2" {
+				settings = map[string]map[string]string{"prometheus-collector-settings": {"debug-mode": "true"}}
+			}
+			original, err := os.ReadFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify that the environment variable file is created
-			_, err = os.Stat(debugModeEnvVarPath)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify the content of the environment variable file
+			gomega.Expect(ConfigureDebugModeSettings(settings)).To(gomega.Succeed())
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-
-			// Verify the modification of the YAML configuration file
-			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
+			content, err = os.ReadFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
-		})
+			if controller == "ReplicaSet" {
+				var config shared.OtelConfig
+				gomega.Expect(yaml.Unmarshal(content, &config)).To(gomega.Succeed())
+				gomega.Expect(config.Service.Pipelines.Metrics.Exporters).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
+			} else {
+				gomega.Expect(content).To(gomega.Equal(original))
+			}
+		},
+		ginkgo.Entry("v1 Linux replica", "v1", "ReplicaSet", "linux"),
+		ginkgo.Entry("v1 Linux daemonset", "v1", "DaemonSet", "linux"),
+		ginkgo.Entry("v1 Windows daemonset", "v1", "DaemonSet", "windows"),
+		ginkgo.Entry("v2 Linux replica", "v2", "ReplicaSet", "linux"),
+		ginkgo.Entry("v2 Linux daemonset", "v2", "DaemonSet", "linux"),
+		ginkgo.Entry("v2 Windows daemonset", "v2", "DaemonSet", "windows"),
+	)
 
-		ginkgo.It("should configure debug mode settings for a linux daemonset", func() {
-			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
-			os.Setenv("OS_TYPE", "linux")
-
-			err := ConfigureDebugModeSettings()
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify that the environment variable file is created
-			_, err = os.Stat(debugModeEnvVarPath)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify the content of the environment variable file
-			content, err := os.ReadFile(debugModeEnvVarPath)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-
-			// Verify the modification of the YAML configuration file
-			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
-		})
-
-		ginkgo.It("should configure debug mode settings for a windows daemonset", func() {
-			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
-			os.Setenv("OS_TYPE", "windows")
-
-			err := ConfigureDebugModeSettings()
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify that the environment variable file is created
-			_, err = os.Stat(debugModeEnvVarPath)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			// Verify the content of the environment variable file
-			content, err := os.ReadFile(debugModeEnvVarPath)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
-
-			// Verify the modification of the YAML configuration file
-			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp_grpc", "prometheus"}))
-		})
-
-		ginkgo.AfterEach(func() {
-			os.Unsetenv("CONTROLLER_TYPE")
-			os.Unsetenv("OS_TYPE")
-			configMapDebugMountPath = ""
-			debugModeEnvVarPath = ""
-			replicaSetCollectorConfig = ""
-			fmt.Println("Cleaning up temp files")
-			cleanupTempFiles()
-		})
+	ginkgo.It("rejects a missing parsed config map", func() {
+		err := ConfigureDebugModeSettings(nil)
+		gomega.Expect(err).To(gomega.HaveOccurred())
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("configmap section not mounted"))
 	})
 
-	ginkgo.It("should handle a missing config map file", func() {
-		os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
-		suffix := createRandomString(5)
-		ginkgo.DeferCleanup(func() {
-			cleanupTempFiles()
-		})
-		err := createTempFiles(suffix, "")
+	ginkgo.It("leaves debug mode disabled for an unrecognized setting", func() {
+		settings["debug-mode"]["enabled"] = "invalid"
+		gomega.Expect(ConfigureDebugModeSettings(settings)).To(gomega.Succeed())
+		content, err := os.ReadFile(debugModeEnvVarPath)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		err = os.Remove(fmt.Sprintf("temp/debug-mode-%s", suffix))
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-		err = ConfigureDebugModeSettings()
-		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("configmap section not mounted, using defaults"))
+		gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=false\n"))
 	})
 
-	ginkgo.It("should handle an error while parsing config map", func() {
-		os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
-		suffix := createRandomString(5)
-		ginkgo.DeferCleanup(func() {
-			cleanupTempFiles()
-		})
-		err := createTempFiles(suffix, `		[ invalid_key = true		`)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-		err = ConfigureDebugModeSettings()
+	ginkgo.It("reports an unwritable environment variable file", func() {
+		debugModeEnvVarPath = filepath.Join(ginkgo.GinkgoT().TempDir(), "missing", "env")
+		err := ConfigureDebugModeSettings(settings)
 		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("exception while parsing config map for debug mode"))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while opening file for writing"))
 	})
 
-	ginkgo.It("should handle an error while opening environment variable file", func() {
-		os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
-		suffix := createRandomString(5)
-		ginkgo.DeferCleanup(func() {
-			cleanupTempFiles()
-		})
-		err := createTempFiles(suffix, `enabled = true`)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		debugModeEnvVarPath = "/nonexistant-path/envvarpath"
-
-		err = ConfigureDebugModeSettings()
+	ginkgo.It("reports an unreadable replica config", func() {
+		replicaSetCollectorConfig = filepath.Join(ginkgo.GinkgoT().TempDir(), "missing.yml")
+		err := ConfigureDebugModeSettings(settings)
 		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while opening file for writing prometheus-collector config environment variables"))
-	})
-
-	ginkgo.It("should handle an error while reading the replicaset collector config file", func() {
-		os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
-		suffix := createRandomString(5)
-		ginkgo.DeferCleanup(func() {
-			cleanupTempFiles()
-		})
-		err := createTempFiles(suffix, `enabled = true`)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		replicaSetCollectorConfig = "/nonexistant-path/replicasetconfig"
-
-		err = ConfigureDebugModeSettings()
-		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled"))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while setting prometheus"))
 	})
 })
-
-func parseYAMLConfigFile(filePath string) (map[string]interface{}, error) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("Exception while reading YAML config file: %v", err)
-	}
-
-	var config map[string]interface{}
-	err = yaml.Unmarshal(content, &config)
-	if err != nil {
-		return nil, fmt.Errorf("Exception while parsing YAML config file: %v", err)
-	}
-
-	return config, nil
-}
-
-func createTempFiles(suffix string, debugModeString string) error {
-	err := os.Mkdir("temp", os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	configMapDebugMountPath = fmt.Sprintf("temp/debug-mode-%s", suffix)
-	debugModeEnvVarPath = fmt.Sprintf("temp/config_debug_mode_env_var-%s", suffix)
-	replicaSetCollectorConfig = fmt.Sprintf("temp/collector-config-replicaset-%s.yml", suffix)
-	sourceFile := "testdata/collector-config-replicaset.yml"
-
-	source, err := os.Open(sourceFile)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-	destination, err := os.Create(replicaSetCollectorConfig)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-	_, err = io.Copy(destination, source)
-	if err != nil {
-		return err
-	}
-
-	debugModeFile, err := os.Create(configMapDebugMountPath)
-	if err != nil {
-		return err
-	}
-	defer debugModeFile.Close()
-
-	_, err = debugModeFile.WriteString(debugModeString)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func cleanupTempFiles() error {
-	return os.RemoveAll("temp")
-}
-
-func createRandomString(length int) string {
-	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, length)
-	for i := 0; i < length; i++ {
-		result[i] = charset[rand.Intn(len(charset))]
-	}
-
-	return string(result)
-}

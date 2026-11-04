@@ -1,0 +1,21 @@
+parameters:
+- name: component
+  type: string
+- name: image
+  type: string
+- name: evidenceArguments
+  type: string
+
+steps:
+- task: PythonScript@0
+  displayName: 'SRE: record exact candidate push digest'
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+  inputs:
+    scriptSource: filePath
+    scriptPath: '$(Build.SourcesDirectory)/.pipelines/pr-e2e/push_receipt.py'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    arguments: >-
+      --name "${{ parameters.component }}"
+      --image "${{ parameters.image }}"
+      ${{ parameters.evidenceArguments }}
+      --output "$(Build.ArtifactStagingDirectory)/sre-push/push.json"

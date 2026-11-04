@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -197,12 +198,18 @@ func TestTailMELogFile(t *testing.T) {
 	BytesSentTotal = 0
 	TimeseriesVolumeMutex.Unlock()
 
+	MEDroppedMutex.Lock()
+	origDropped := MEDroppedCount
+	MEDroppedMutex.Unlock()
 	defer func() {
 		TimeseriesVolumeMutex.Lock()
 		TimeseriesReceivedTotal = origReceived
 		TimeseriesSentTotal = origSent
 		BytesSentTotal = origBytes
 		TimeseriesVolumeMutex.Unlock()
+		MEDroppedMutex.Lock()
+		MEDroppedCount = origDropped
+		MEDroppedMutex.Unlock()
 	}()
 
 	// Create temp file to simulate ME log
@@ -212,12 +219,10 @@ func TestTailMELogFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer f.Close()
 
-	// Start the tailer in background
-	go TailMELogFile(logFile)
-
-	// Give tailer time to open and seek to end
-	time.Sleep(200 * time.Millisecond)
+	stop := startMELogTailer(t, logFile)
+	defer stop()
 
 	// Write ME log lines (these appear AFTER the tailer seeks to end)
 	lines := []string{
@@ -229,12 +234,24 @@ func TestTailMELogFile(t *testing.T) {
 		"2026-02-18 12:00:40.000 Info EventsProcessedLastPeriod: 150 TotalEventsProcessed: 1150\n",
 	}
 	for _, line := range lines {
-		f.WriteString(line)
+		if _, err := f.WriteString(line); err != nil {
+			t.Fatal(err)
+		}
 	}
-	f.Sync()
+	if err := f.Sync(); err != nil {
+		t.Fatal(err)
+	}
 
-	// Wait for tailer to process (polls every 1s)
-	time.Sleep(3 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		TimeseriesVolumeMutex.Lock()
+		complete := TimeseriesReceivedTotal == 450 && TimeseriesSentTotal == 570 && BytesSentTotal == 13134
+		TimeseriesVolumeMutex.Unlock()
+		if complete || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 
 	TimeseriesVolumeMutex.Lock()
 	defer TimeseriesVolumeMutex.Unlock()
@@ -253,7 +270,6 @@ func TestTailMELogFile(t *testing.T) {
 	if TimeseriesReceivedTotal != 450 {
 		t.Errorf("TimeseriesReceivedTotal = %f, want 450", TimeseriesReceivedTotal)
 	}
-	f.Close()
 }
 
 func TestTailMELogFile_NoNewContent(t *testing.T) {
@@ -274,12 +290,15 @@ func TestTailMELogFile_NoNewContent(t *testing.T) {
 	dir := t.TempDir()
 	logFile := filepath.Join(dir, "MetricsExtensionConsoleDebugLog.log")
 	// Write some content BEFORE the tailer starts — it should seek past this
-	err := os.WriteFile(logFile, []byte("preexisting content\n"), 0644)
+	err := os.WriteFile(logFile, []byte(
+		"2026-02-18 12:00:10.000 Info DefaultAccount ProcessedCount: 480 ProcessedBytes: 12345 SentToPublicationCount: 475 SentToPublicationBytes: 11234\n"+
+			"EventsProcessedLastPeriod: 300\n"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	go TailMELogFile(logFile)
+	stop := startMELogTailer(t, logFile)
+	defer stop()
 
 	// Wait — tailer should skip existing content, no new content arrives
 	time.Sleep(2 * time.Second)
@@ -293,6 +312,31 @@ func TestTailMELogFile_NoNewContent(t *testing.T) {
 	if TimeseriesSentTotal != 0 {
 		t.Errorf("TimeseriesSentTotal = %f, want 0", TimeseriesSentTotal)
 	}
+}
+
+func startMELogTailer(t *testing.T, path string) func() {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	ready, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		tailMELogFile(ctx, path, ready)
+	}()
+	stop := func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Error("ME log tailer did not stop")
+		}
+	}
+	select {
+	case <-ready:
+	case <-time.After(5 * time.Second):
+		stop()
+		t.Fatal("ME log tailer did not become ready")
+	}
+	return stop
 }
 
 func TestParseMEProcessedCountLine_PartialMatch(t *testing.T) {

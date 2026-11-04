@@ -78,7 +78,7 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 		for i := 0; i <= retries_https; i++ {
 			certPEM, err := ioutil.ReadFile(caCertPath)
 			if err != nil {
-				log.Printf("Failed to read CA cert file from path: %s - (%d/%d): %v\n", caCertPath, i+1, retries_https)
+				log.Printf("Failed to read CA cert file from path: %s - (%d/%d): %v\n", caCertPath, i+1, retries_https, err)
 				removeHttps = true
 				// break
 			} else {
