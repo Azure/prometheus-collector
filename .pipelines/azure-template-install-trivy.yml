@@ -1,7 +1,6 @@
 parameters:
 - name: version
   type: string
-  default: '0.76.1'
 
 steps:
 - bash: |
