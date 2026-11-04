@@ -126,7 +126,9 @@ class SettingsCatalogTests(unittest.TestCase):
         schema = json.loads((ROOT / "manifest.schema.json").read_text())
         catalog = json.loads((ROOT / "catalog.json").read_text())
         ids = set()
-        labels = (COLLECTOR / "test/ginkgo-e2e/utils/constants.go").read_text() + (COLLECTOR / "test/ginkgo-e2e/configprocessing/customer_settings_test.go").read_text()
+        labels = (COLLECTOR / "test/ginkgo-e2e/utils/constants.go").read_text()
+        labels += "".join(path.read_text() for path in (COLLECTOR / "test/ginkgo-e2e/configprocessing").glob("*.go"))
+        labels = set(re.findall(r'"(config-processing[-a-z0-9]+)"', labels))
         paths = set()
         for entry in catalog["variants"]:
             path = contained_file(ROOT, entry["manifest"])
@@ -138,14 +140,21 @@ class SettingsCatalogTests(unittest.TestCase):
             paths.add(path)
             self.assertIn(entry["schedule"], ("pr", "nightly", "weekly"))
             for label in manifest["ginkgoLabels"]:
-                self.assertIn(f'"{label}"', labels)
+                self.assertIn(label, labels, entry["id"])
+            if manifest["ginkgoLabels"]:
+                self.assertIn("workflow", entry, entry["id"])
+            override = entry.get("overrideWorkflowLabels", False)
+            self.assertIsInstance(override, bool)
             if "workflow" in entry:
                 workflow = contained_file(COLLECTOR / "test/testkube/config-processing-test-crs", entry["workflow"])
                 selected = set()
                 for doc in yaml.safe_load_all(workflow.read_text()):
                     for step in doc["spec"]["steps"]:
                         selected.update(re.findall(r"config-processing[-a-z0-9]+", step.get("shell", "")))
-                self.assertEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
+                if override:
+                    self.assertNotEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
+                else:
+                    self.assertEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
         self.assertEqual(paths, set(ROOT.glob("*/manifest.json")))
 
     def test_every_documented_setting_has_a_real_variant(self):
@@ -169,6 +178,22 @@ class SettingsCatalogTests(unittest.TestCase):
         manifest["configmaps"] = ["does-not-exist.yaml"]
         with self.assertRaisesRegex(ValueError, "Missing"):
             validate_manifest(path, manifest, json.loads((ROOT / "manifest.schema.json").read_text()))
+
+    def test_empty_secret_scenarios_select_watch_nothing_inputs(self):
+        for version in ("v1", "v2"):
+            for mode in ("empty", "omitted"):
+                variant = f"{mode}-secret-namespaces-{version}"
+                with self.subTest(variant=variant):
+                    path = ROOT / variant / "manifest.json"
+                    manifest = json.loads(path.read_text())
+                    values = configured_settings(path, manifest)
+                    prefix = f"configmap.{version}.prometheus-collector-settings."
+                    self.assertIs(values[prefix + "operator_enabled"], True)
+                    if mode == "empty":
+                        self.assertEqual(values[prefix + "secrets_access_namespaces"], "")
+                    else:
+                        self.assertNotIn(prefix + "secrets_access_namespaces", values)
+                    self.assertIn("config-processing-empty-secret-namespaces", manifest["ginkgoLabels"])
 
     def test_empty_labels_cannot_select_every_suite(self):
         path = ROOT / "default/manifest.json"

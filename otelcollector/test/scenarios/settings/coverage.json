@@ -1,6 +1,8 @@
 {
   "configmap.v1.config-version": {
     "variants": [
+      "empty-secret-namespaces-v1",
+      "omitted-secret-namespaces-v1",
       "all-targets-disabled",
       "all-targets-enabled",
       "collector-controls-v1",
@@ -1456,7 +1458,9 @@
   },
   "configmap.v1.prometheus-collector-settings.operator_enabled": {
     "variants": [
-      "collector-controls-v1"
+      "collector-controls-v1",
+      "empty-secret-namespaces-v1",
+      "omitted-secret-namespaces-v1"
     ],
     "assertions": [],
     "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
@@ -1464,13 +1468,16 @@
   "configmap.v1.prometheus-collector-settings.secrets_access_namespaces": {
     "variants": [
       "collector-controls-v1",
-      "defaults-v1"
+      "defaults-v1",
+      "empty-secret-namespaces-v1"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v1.yaml"
   },
   "configmap.v1.schema-version": {
     "variants": [
+      "empty-secret-namespaces-v1",
+      "omitted-secret-namespaces-v1",
       "all-targets-disabled",
       "all-targets-enabled",
       "collector-controls-v1",
@@ -2124,6 +2131,8 @@
   },
   "configmap.v2.config-version": {
     "variants": [
+      "empty-secret-namespaces-v2",
+      "omitted-secret-namespaces-v2",
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
       "collector-controls",
@@ -2329,7 +2338,9 @@
   },
   "configmap.v2.prometheus-collector-settings.operator_enabled": {
     "variants": [
-      "collector-controls"
+      "collector-controls",
+      "empty-secret-namespaces-v2",
+      "omitted-secret-namespaces-v2"
     ],
     "assertions": [],
     "source": "otelcollector/shared/configmap/mp/tomlparser-prometheus-collector-settings.go"
@@ -2337,13 +2348,16 @@
   "configmap.v2.prometheus-collector-settings.secrets_access_namespaces": {
     "variants": [
       "collector-controls",
-      "defaults-v2"
+      "defaults-v2",
+      "empty-secret-namespaces-v2"
     ],
     "assertions": [],
     "source": "otelcollector/configmaps/ama-metrics-settings-configmap-v2.yaml"
   },
   "configmap.v2.schema-version": {
     "variants": [
+      "empty-secret-namespaces-v2",
+      "omitted-secret-namespaces-v2",
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
       "collector-controls",

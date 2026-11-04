@@ -63,25 +63,33 @@
       "id": "defaults-v1",
       "manifest": "defaults-v1/manifest.json",
       "schedule": "weekly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-default-targets-on-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "defaults-v2",
       "manifest": "defaults-v2/manifest.json",
       "schedule": "weekly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-default-targets-on-v2-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "collector-controls",
       "manifest": "collector-controls/manifest.json",
       "schedule": "weekly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-deny-fs-access-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "collector-controls-v1",
       "manifest": "collector-controls-v1/manifest.json",
       "schedule": "weekly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-deny-fs-access-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "all-targets-disabled",
@@ -178,13 +186,17 @@
       "id": "all-targets-disabled-v2",
       "manifest": "all-targets-disabled-v2/manifest.json",
       "schedule": "nightly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-targets-disabled-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "all-targets-enabled-v2",
       "manifest": "all-targets-enabled-v2/manifest.json",
       "schedule": "nightly",
-      "surface": "configmap"
+      "surface": "configmap",
+      "workflow": "testkube-config-test-all-targets-enabled-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "no-configmaps",
@@ -192,6 +204,38 @@
       "schedule": "pr",
       "surface": "configmap",
       "workflow": "testkube-config-test-no-configmaps-crs.yaml"
+    },
+    {
+      "id": "empty-secret-namespaces-v1",
+      "manifest": "empty-secret-namespaces-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "empty-secret-namespaces-v2",
+      "manifest": "empty-secret-namespaces-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "omitted-secret-namespaces-v1",
+      "manifest": "omitted-secret-namespaces-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "omitted-secret-namespaces-v2",
+      "manifest": "omitted-secret-namespaces-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
+      "overrideWorkflowLabels": true
     }
   ],
   "lifecycle": {

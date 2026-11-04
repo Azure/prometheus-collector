@@ -1,0 +1,11 @@
+{
+  "id": "omitted-secret-namespaces-v1",
+  "description": "Schema v1 operator watch-nothing behavior when secret namespaces are omitted, not allowlisted.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": ["operator"]},
+  "configmaps": ["settings.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-empty-secret-namespaces"],
+  "expectedOutcome": "healthy"
+}

@@ -47,6 +47,9 @@ variant, then restored even when a test fails. Absent original ConfigMaps must
 remain absent afterward. Shared cluster variants run sequentially.
 The new v1/v2 cases also create two explicitly named namespaces; execution must
 refuse to overwrite pre-existing namespaces and remove only its own fixtures.
+The empty/omitted-secret variants require the operator and the
+`config-processing-empty-secret-namespaces` spec in the combined candidate.
+They run on the current cluster; a version-gated skip is not enforcement proof.
 
 `expectedOutcome: config-error` means the collector should report the expected
 configuration error and use its fallback. It does not mean skip assertions or
@@ -59,6 +62,9 @@ expect unhealthy pods.
 2. Add `<id>/manifest.json` and only the missing input YAML. Add its entry and
    PR/nightly/weekly schedule to `catalog.json`. Use `requires.clusterFeatures`
    for prerequisites, never provision infrastructure in settings fixtures.
+   Every Ginkgo variant needs an existing `workflow` source CR filename.
+   If its source selectors differ, set catalog `overrideWorkflowLabels: true`;
+   execution replaces them with the manifest's OR labels, never appends them.
 3. Map each exercised customer setting in the coverage table, keeping configured
    inputs distinct from runtime-asserted behavior.
 4. For missing behavior, add a labeled spec to the existing `configprocessing`
