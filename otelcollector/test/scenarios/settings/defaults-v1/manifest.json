@@ -1,0 +1,11 @@
+{
+  "id": "defaults-v1",
+  "description": "Complete published v1 settings example. Common health checks only; see coverage for unasserted field behavior.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["../../../../configmaps/ama-metrics-settings-configmap-v1.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common"],
+  "expectedOutcome": "healthy"
+}

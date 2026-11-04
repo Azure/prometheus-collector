@@ -1,0 +1,11 @@
+{
+  "id": "customer-settings-v2",
+  "description": "Assert effective normalized cluster alias, annotation namespace inclusion/exclusion, keep-list and non-default scrape interval, schema v2.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": []},
+  "configmaps": ["settings.yaml"],
+  "customResources": ["../annotation-targets.yaml"],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-customer-settings-v2"],
+  "expectedOutcome": "healthy"
+}

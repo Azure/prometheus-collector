@@ -1,0 +1,11 @@
+{
+  "id": "defaults-v2",
+  "description": "Complete published v2 settings example. Common health checks only; unsupported fields are not claimed as runtime coverage.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["../../../../configmaps/ama-metrics-settings-configmap-v2.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common"],
+  "expectedOutcome": "healthy"
+}

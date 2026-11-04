@@ -1,0 +1,25 @@
+{
+  "id": "global-labels",
+  "description": "Existing ConfigTests global-settings scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "windows"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+    "../../../test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-common",
+    "config-processing-common-with-config-maps",
+    "config-processing-global-settings"
+  ],
+  "expectedOutcome": "healthy"
+}

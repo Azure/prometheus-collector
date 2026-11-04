@@ -1,0 +1,23 @@
+{
+  "id": "partial-v2",
+  "description": "Existing ConfigTests partial-no-pcs-v2 scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "windows"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-partial-no-pcs-v2.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-common",
+    "config-processing-partial-no-pcs-v2"
+  ],
+  "expectedOutcome": "healthy"
+}

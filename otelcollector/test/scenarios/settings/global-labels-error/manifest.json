@@ -1,0 +1,25 @@
+{
+  "id": "global-labels-error",
+  "description": "Existing ConfigTests global-ext-labels-error scenario; reuses its exact workflow labels and fixtures.",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "requires": {
+    "clusterFeatures": [
+      "windows"
+    ]
+  },
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+    "../../../test-cluster-yamls/configmaps/global-settings/ama-metrics-prometheus-config-configmap-with-global-error.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": [
+    "config-processing-common",
+    "config-processing-common-with-error-config-maps",
+    "config-processing-global-settings-error"
+  ],
+  "expectedOutcome": "config-error"
+}

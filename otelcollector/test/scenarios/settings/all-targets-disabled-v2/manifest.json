@@ -1,0 +1,11 @@
+{
+  "id": "all-targets-disabled-v2",
+  "description": "Schema-v2 disabled targets, reusing the existing zero-job assertions for RS/Linux/Windows rather than duplicating specs.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": ["settings.yaml"],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps-v2", "config-processing-all-targets-disabled"],
+  "expectedOutcome": "healthy"
+}

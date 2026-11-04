@@ -1,0 +1,54 @@
+clusterName: settings-chart-test
+clusterAlias: Customer Config POC
+azureMetricAccount:
+  defaultAccountName: settings-test
+scrapeTargets:
+  kubelet: false
+  coreDns: false
+  cAdvisor: true
+  kubeProxy: false
+  apiServer: true
+  kubeState: false
+  nodeExporter: false
+  windowsExporter: true
+  windowsKubeProxy: true
+  prometheusCollectorHealth: false
+scrapeIntervalTargets:
+  coreDns: 45s
+  kubelet: 45s
+  cAdvisor: 45s
+  kubeProxy: 45s
+  apiServer: 45s
+  kubeState: 45s
+  nodeExporter: 45s
+  windowsExporter: 45s
+  windowsKubeProxy: 45s
+  prometheusCollectorHealth: 45s
+keepListRegexes:
+  coreDns: coredns_.*
+  kubelet: kubelet_.*
+  cAdvisor: container_.*
+  kubeProxy: kubeproxy_.*
+  apiServer: apiserver_.*
+  kubeState: kube_.*
+  nodeExporter: node_.*
+  windowsExporter: windows_.*
+  windowsKubeProxy: kubeproxy_.*
+minimalIngestionProfile: false
+debugMode:
+  enabled: true
+mode:
+  advanced: true
+windowsDaemonset: true
+podLabels:
+  settings-test: customer
+podAnnotations:
+  settings-test: customer
+resources:
+  deployment:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+deploymentPriorityClass: settings-priority
+daemonsetPriorityClass: settings-priority
+deploymentProgressDeadlineSeconds: 700

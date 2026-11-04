@@ -1,0 +1,14 @@
+{
+  "id": "custom-scrape",
+  "description": "Existing ConfigTests replica custom scrape configuration with supported relabel actions.",
+  "platforms": ["linux", "windows"],
+  "requires": {"clusterFeatures": ["windows"]},
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-common", "config-processing-common-with-config-maps", "config-processing-only-config-map-all-actions"],
+  "expectedOutcome": "healthy"
+}
