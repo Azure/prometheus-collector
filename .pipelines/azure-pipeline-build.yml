@@ -1737,7 +1737,7 @@ extends:
             displayName: 'Publish Windows 2019 CoMET reports'
             condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
             targetPath: '$(Build.ArtifactStagingDirectory)\comet-windows-2019'
-            artifactName: 'comet-windows-2019'
+            artifactName: 'comet-windows-2019-$(System.JobAttempt)'
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -1933,7 +1933,7 @@ extends:
             displayName: 'Publish Windows 2022 CoMET reports'
             condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
             targetPath: '$(Build.ArtifactStagingDirectory)\comet-windows-2022'
-            artifactName: 'comet-windows-2022'
+            artifactName: 'comet-windows-2022-$(System.JobAttempt)'
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"

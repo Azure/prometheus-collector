@@ -49,6 +49,47 @@ $dockerArgs = @(
 )
 & docker @dockerArgs
 $scanExitCode = $LASTEXITCODE
+Write-Host "CoMET Docker exit code: $scanExitCode"
+@{
+  image = $Image
+  targetDigests = @($repoDigests)
+  scannerDigests = @($scannerDigests)
+  dockerExitCode = $scanExitCode
+} | ConvertTo-Json | Set-Content -Path (Join-Path $ResultsDirectory 'scan-exit.json') -Encoding UTF8
+
+if ($scanExitCode -ne 0) {
+  # Keep Qualys diagnostics without copying its large manifest database or binaries.
+  $copyDiagnostics = @'
+$ErrorActionPreference = 'Stop'
+foreach ($source in 'C:\internal', 'C:\qualys_binaries') {
+  $files = @(Get-ChildItem -LiteralPath $source -Recurse -File)
+  $files | Select-Object FullName, Length | ConvertTo-Json -Depth 3 | Set-Content ("C:\results\" + (Split-Path $source -Leaf) + "-files.json")
+  foreach ($file in $files) {
+    if ($file.Extension -notin '.log', '.txt', '.json', '.xml', '.out', '.err') { continue }
+    $destination = Join-Path 'C:\results\diagnostics' $file.FullName.Substring(3)
+    New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $destination
+  }
+}
+'@
+  $encodedDiagnostics = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($copyDiagnostics))
+  docker run --rm --isolation=hyperv --entrypoint powershell `
+    -v 'scanutilitywin:C:\internal:ro' `
+    -v 'qualys_binaries_volume:C:\qualys_binaries:ro' `
+    -v "$($ResultsDirectory):C:\results" `
+    $scanner -NoProfile -EncodedCommand $encodedDiagnostics
+  $diagnosticsExitCode = $LASTEXITCODE
+  if ($diagnosticsExitCode -ne 0) {
+    Write-Host "##vso[task.logissue type=warning]Could not preserve Qualys diagnostics: Docker exit $diagnosticsExitCode."
+  }
+  $diagnosticsDirectory = Join-Path $ResultsDirectory 'diagnostics'
+  if (Test-Path $diagnosticsDirectory) {
+    Get-ChildItem -LiteralPath $diagnosticsDirectory -Recurse -File | ForEach-Object {
+      $content = [System.IO.File]::ReadAllText($_.FullName)
+      [System.IO.File]::WriteAllText($_.FullName, $content.Replace($jwt, '[REDACTED]'))
+    }
+  }
+}
 
 $xmlPath = Join-Path $ResultsDirectory 'result.xml'
 $jsonPath = Join-Path $ResultsDirectory 'result.json'
