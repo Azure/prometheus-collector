@@ -42,6 +42,11 @@ and cluster mutations. The agent never approves or merges its own PR.
   successful build against the requested full source SHA, downloads its five
   protected receipt artifacts and calls the receipt verifier. Retains the raw
   producer files and build response beside `candidate-build.json`.
+- `scan_candidate.py`: authenticates that same build before selecting its collector
+  child, rescans the released baseline, reuses its private hashed DB for the candidate,
+  and retains raw scans plus `comparison.json`, including failed/blocked verdicts.
+  Run it in the producing validation pipeline and publish its evidence there;
+  a local report does not acquire a protected pipeline producer by being copied.
 
 These are executable repository components, **not a deployed Azure SRE Agent
 integration or an end-to-end passing campaign**.
@@ -53,6 +58,7 @@ python .pipelines\pr-e2e\compare_trivy.py --baseline <fresh-baseline-run> --cand
 python .pipelines\pr-e2e\normalize.py --targets <candidate-targets.json> --scans <candidate-lanes> --baseline-targets <baseline-targets.json> --baseline-scans <baseline-lanes> --output <new-report-directory>
 python .pipelines\pr-e2e\build_receipt.py --build <ado-build.json> --pushes <linux-push.json> <windows-push.json> <allocator-push.json> <cfg-push.json> --runner-receipt <runner.json> --output .pipelines\pr-e2e\candidate-build.json
 python .pipelines\pr-e2e\fetch_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --output <new-evidence-directory>
+python .pipelines\pr-e2e\scan_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --baseline-image <released-ama-metrics-child@sha256> --platform linux/amd64 --cve CVE-2026-63209 --output <new-scan-evidence-directory>
 python -m unittest discover -s .pipelines\pr-e2e -p 'test_*.py' -v
 ```
 
