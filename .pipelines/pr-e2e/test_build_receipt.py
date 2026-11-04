@@ -3,12 +3,14 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import shlex
 import subprocess
 import tempfile
 import inspect
 import unittest
 from unittest.mock import patch
+import yaml
 
 import build_receipt
 import push_receipt
@@ -16,6 +18,21 @@ import runner_receipt
 
 
 class ReceiptTests(unittest.TestCase):
+    def test_config_reader_push_metadata_is_created_and_consumed(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        steps = next(job["steps"] for stage in pipeline["extends"]["parameters"]["stages"]
+                     for job in stage.get("jobs", [])
+                     if job.get("displayName") == "Build: config reader image")
+        script = next(step["bash"] for step in steps
+                      if step.get("displayName") == "Build: build and push configuration reader image to dev ACR")
+        metadata = shlex.split(script.split("--metadata-file ", 1)[1])[0]
+        directories = [shlex.split(line)[2] for line in script.splitlines() if line.startswith("mkdir -p ")]
+        self.assertIn(str(PurePosixPath(metadata).parent), directories)
+        arguments = next(step["parameters"]["evidenceArguments"] for step in steps
+                         if step.get("parameters", {}).get("component") == "config-reader")
+        self.assertEqual(shlex.split(arguments), ["--metadata", metadata])
+        self.assertEqual(script.splitlines()[0], "set -e")
+
     def test_worker_accepts_build_and_imagetools_metadata(self):
         digest = "sha256:" + "b" * 64
         for metadata in ({"containerimage.digest": digest},
