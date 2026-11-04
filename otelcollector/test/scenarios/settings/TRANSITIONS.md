@@ -49,10 +49,12 @@ independently from actual collector `CLUSTER`: for `MAC=true`, use its last
 slash-separated segment; otherwise use `CLUSTER` unchanged. Do not infer the
 expected fallback by reading `AZMON_CLUSTER_LABEL` after clearing.
 
-For each alias phase require new ingested samples from both
+For each alias phase require new ingested samples with exported job labels
+`ama-settings-included/settings-alias` (PM) and `settings-monitor-target` (SM)
+and the expected `cluster`, plus the Windows kube-proxy metric below for every
+Windows node. The canonical scrape pools in config/targets are
 `podMonitor/ama-settings-included/settings-alias/0` and
-`serviceMonitor/ama-settings-included/settings-alias/0` with the expected
-`cluster`, plus the Windows kube-proxy metric below for every Windows node.
+`serviceMonitor/ama-settings-included/settings-alias/0`, not exported job labels.
 Check the `cluster` label on ingested metrics, not only generated config or
 collector environment. PM/SM target the included pod regardless of annotation
 namespace selection; they must remain healthy when annotations move or stop.
@@ -77,9 +79,10 @@ basic-auth-smon workflow with label replacement.
 2. Replace Secret `ama-settings-auth/settings-auth-creds` with
    `auth-recovered.yaml`. Without restarting the collector or endpoint, await
    both generated auth configurations and authenticated target recovery.
-   Require fresh ingested `my_metric` samples from both monitor jobs:
-   `podMonitor/ama-settings-auth/settings-auth/0` and
-   `serviceMonitor/ama-settings-auth/settings-auth/0`.
+   Require fresh ingested `my_metric` samples with exported job labels
+   `ama-settings-auth/settings-auth` (PM) and `settings-auth-target` (SM).
+   Inspect canonical pools `podMonitor/ama-settings-auth/settings-auth/0` and
+   `serviceMonitor/ama-settings-auth/settings-auth/0` in config/targets only.
 3. On the supported scoped-secret path only (Kubernetes >=1.37), replace the
    settings ConfigMap with the variant's `empty.yaml`, then `omitted.yaml`.
    After each transition, prove both authenticated monitors lose secret access;
