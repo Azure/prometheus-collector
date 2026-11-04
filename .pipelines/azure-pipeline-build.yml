@@ -82,6 +82,23 @@ extends:
         - bash: bash .pipelines/tests/windows-image-restore-test.sh
           displayName: "Build: test Windows image recovery"
         - bash: |
+            set -euo pipefail
+            release_file=$(mktemp)
+            trap 'rm -f "$release_file"' EXIT
+            curl --fail --show-error --silent --location \
+              --retry 4 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
+              --connect-timeout 15 --max-time 120 \
+              --output "$release_file" https://api.github.com/repos/aquasecurity/trivy/releases/latest
+            version=$(jq -er '
+              select(.draft == false and .prerelease == false)
+              | .tag_name | sub("^v"; "")
+              | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
+            ' "$release_file")
+            echo "Selected Trivy version: $version"
+            echo "##vso[task.setvariable variable=TRIVY_VERSION;isOutput=true]$version"
+          name: trivyVersion
+          displayName: "Build: resolve latest stable Trivy version"
+        - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else
@@ -906,6 +923,7 @@ extends:
         - Linux_Prometheus_Collector_AMD64
         - Linux_Prometheus_Collector_ARM64
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
           LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
           LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
@@ -1051,8 +1069,10 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
@@ -1125,6 +1145,7 @@ extends:
           os: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         templateContext:
@@ -1228,8 +1249,10 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1402,6 +1425,7 @@ extends:
         - Linux_Target_Allocator_ARM64
         - Linux_Target_Allocator_AMD64
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
           TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
           TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
@@ -1487,8 +1511,10 @@ extends:
             echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1570,6 +1596,7 @@ extends:
           os: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
@@ -1604,8 +1631,10 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
