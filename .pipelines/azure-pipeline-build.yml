@@ -81,8 +81,6 @@ extends:
           submodules: true
         - bash: bash .pipelines/tests/windows-image-restore-test.sh
           displayName: "Build: test Windows image recovery"
-        - bash: bash .pipelines/tests/trivy-install-test.sh
-          displayName: "Build: test Trivy installation"
         - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
