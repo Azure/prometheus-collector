@@ -31,7 +31,9 @@
         "rs-targets-enabled", "ds-targets-enabled", "global-labels", "custom-config-error",
         "global-labels-error", "controlplane-istio", "minimal-ingestion-disabled",
         "partial-v1", "partial-v2", "deny-filesystem-access", "default-targets-v2", "dcgm-custom",
-        "all-targets-disabled-v2", "all-targets-enabled-v2", "no-configmaps"
+        "all-targets-disabled-v2", "all-targets-enabled-v2", "no-configmaps",
+        "customer-transitions-v1", "customer-transitions-v2",
+        "secret-transitions-v1", "secret-transitions-v2", "windows-kube-proxy"
       ],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
