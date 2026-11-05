@@ -19,6 +19,41 @@ import runner_receipt
 
 
 class ReceiptTests(unittest.TestCase):
+    def test_windows_push_captures_one_exact_tag_digest(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        steps = next(job["steps"] for stage in pipeline["extends"]["parameters"]["stages"]
+                     for job in stage.get("jobs", [])
+                     if job.get("displayName") == "Build: windows 2022 prometheus-collector image")
+        script = next(step["powershell"] for step in steps
+                      if step.get("displayName") == "Build: push image to dev ACR")
+        image = "containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector/images:candidate-win"
+        digest = "sha256:" + "b" * 64
+        line = "candidate-win-ltsc2022: digest: " + digest + " size: 1234"
+        for output, passed in (([line], True), ([image], False), ([line, line], False),
+                               ([line.replace("candidate-win", "another-tag")], False)):
+            with tempfile.TemporaryDirectory() as directory:
+                body = script
+                for key, value in {"WINDOWS_FULL_IMAGE_NAME": image, "WINDOWS_2022_BASE_IMAGE_VERSION": "ltsc2022",
+                                   "Build.ArtifactStagingDirectory": directory, "ACR_USERNAME": "dummy",
+                                   "ACR_PASSWORD": "dummy"}.items():
+                    body = body.replace("$(" + key + ")", value)
+                stub = "$ErrorActionPreference='Stop'\n$lines=@(" + ",".join("'" + value + "'" for value in output) + ")\n"
+                stub += """function docker {
+    $global:LASTEXITCODE=0
+    if ($args[0] -eq 'push') {
+        if ($args -contains '--quiet') { 'mutable-tag' } else { $script:lines }
+    }
+}
+"""
+                result = subprocess.run([shutil.which("pwsh"), "-NoProfile", "-NonInteractive",
+                                         "-Command", stub + body], text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, passed, result.stderr)
+                path = Path(directory) / "windows2022-push-digest.txt"
+                if passed:
+                    self.assertEqual(path.read_text(encoding="utf-8-sig").strip(), digest)
+                else:
+                    self.assertFalse(path.exists())
+
     def test_config_reader_push_metadata_is_created_and_consumed(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
         steps = next(job["steps"] for stage in pipeline["extends"]["parameters"]["stages"]

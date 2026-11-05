@@ -2124,9 +2124,13 @@ extends:
               docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            $digest = docker push --quiet $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            $pushOutput = @(docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION))
             if ($LASTEXITCODE -ne 0) { throw "Windows2022 push failed: $LASTEXITCODE" }
-            $digest | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows2022-push-digest.txt"
+            $pushOutput
+            $tag = "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)".Split(':')[-1]
+            $digests = @($pushOutput | Select-String -Pattern ("^" + [regex]::Escape($tag) + ': digest: (sha256:[0-9a-f]{64}) size: [0-9]+$'))
+            if ($digests.Count -ne 1) { throw "Expected one exact-tag digest from the successful Windows2022 push" }
+            $digests[0].Matches[0].Groups[1].Value | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows2022-push-digest.txt"
           displayName: "Build: push image to dev ACR"
         - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
           parameters:
