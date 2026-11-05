@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -27,11 +29,12 @@ import (
 )
 
 type transitionTarget struct {
-	ScrapePool string            `json:"scrapePool"`
-	Labels     map[string]string `json:"labels"`
-	Health     string            `json:"health"`
-	LastError  string            `json:"lastError"`
-	LastScrape time.Time         `json:"lastScrape"`
+	ScrapePool       string            `json:"scrapePool"`
+	Labels           map[string]string `json:"labels"`
+	DiscoveredLabels map[string]string `json:"discoveredLabels"`
+	Health           string            `json:"health"`
+	LastError        string            `json:"lastError"`
+	LastScrape       time.Time         `json:"lastScrape"`
 }
 
 func transitionFixture(parts ...string) []byte {
@@ -232,8 +235,49 @@ func expectWindowsKubeProxy(api promv1.API, cluster string, after time.Time) {
 	}
 }
 
-func expectAnnotationNamespace(api promv1.API, cluster, allowed string, after time.Time) {
-	check := func() error {
+type annotationExpectation struct {
+	regex      string
+	namespaces []string
+}
+
+func validateAnnotationTargets(targets []transitionTarget, allowed []string, after time.Time) error {
+	found := map[string]bool{}
+	for _, target := range targets {
+		pod := target.Labels["kubernetes_pod_name"]
+		if discovered := target.DiscoveredLabels["__meta_kubernetes_pod_name"]; discovered != "" {
+			pod = discovered
+		}
+		if target.ScrapePool != "kubernetes-pods" || (pod != "annotation-target" && pod != "unannotated-target") {
+			continue
+		}
+		namespace := target.Labels["kubernetes_namespace"]
+		if discovered := target.DiscoveredLabels["__meta_kubernetes_namespace"]; discovered != "" {
+			namespace = discovered
+		}
+		if !slices.Contains([]string{"ama-settings-included", "ama-settings-excluded", "ama-settings-included-similar"}, namespace) {
+			continue
+		}
+		if target.Labels["kubernetes_namespace"] != namespace || target.Labels["kubernetes_pod_name"] != pod {
+			return fmt.Errorf("annotation fixture %s/%s is missing its exported identity labels", namespace, pod)
+		}
+		if pod == "unannotated-target" || !slices.Contains(allowed, namespace) {
+			return fmt.Errorf("excluded annotation fixture %s/%s remains active", namespace, pod)
+		}
+		if target.Health != "up" || target.LastScrape.Before(after) {
+			return fmt.Errorf("annotation fixture %s/%s has no fresh healthy scrape", namespace, pod)
+		}
+		found[namespace] = true
+	}
+	for _, namespace := range allowed {
+		if !found[namespace] {
+			return fmt.Errorf("missing admitted annotation target in %s", namespace)
+		}
+	}
+	return nil
+}
+
+func expectAnnotationNamespaces(api promv1.API, cluster string, expected annotationExpectation, after time.Time) {
+	checkTargets := func() error {
 		responses, err := utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics",
 			"prometheus-collector", "/api/v1/status/config", true)
 		if err != nil {
@@ -248,7 +292,7 @@ func expectAnnotationNamespace(api promv1.API, cluster, allowed string, after ti
 			if err != nil {
 				return err
 			}
-			if err := validateAnnotationConfig(cfg.ScrapeConfigs, allowed); err != nil {
+			if err := validateAnnotationConfig(cfg.ScrapeConfigs, expected.regex); err != nil {
 				return err
 			}
 		}
@@ -256,27 +300,24 @@ func expectAnnotationNamespace(api promv1.API, cluster, allowed string, after ti
 		if err != nil {
 			return err
 		}
-		included := allowed == ""
-		for _, target := range targets {
-			if target.ScrapePool != "kubernetes-pods" || target.Labels["kubernetes_pod_name"] != "annotation-target" {
-				continue
-			}
-			if target.Labels["kubernetes_namespace"] != allowed {
-				return fmt.Errorf("annotation target from excluded namespace remains active")
-			}
-			included = included || (target.Health == "up" && !target.LastScrape.Before(after))
+		return validateAnnotationTargets(targets, expected.namespaces, after)
+	}
+	Eventually(checkTargets, 8*time.Minute, 15*time.Second).Should(Succeed())
+	// Samples scraped before reload converges are not evidence of continued excluded ingestion.
+	after = time.Now()
+	AddReportEntry("annotation-observation-start", after.UTC().Format(time.RFC3339Nano))
+	check := func() error {
+		if err := checkTargets(); err != nil {
+			return err
 		}
-		if !included {
-			return fmt.Errorf("expected admitted annotation target has no fresh healthy scrape")
-		}
-		for _, namespace := range []string{"ama-settings-included", "ama-settings-excluded"} {
+		for _, namespace := range []string{"ama-settings-included", "ama-settings-excluded", "ama-settings-included-similar"} {
 			selector := fmt.Sprintf("weather_temperature{job=%q,cluster=%q,kubernetes_namespace=%q,kubernetes_pod_name=%q}",
 				"kubernetes-pods", cluster, namespace, "annotation-target")
 			samples, err := freshTransitionSamples(api, selector, after)
 			if err != nil {
 				return err
 			}
-			if namespace == allowed {
+			if slices.Contains(expected.namespaces, namespace) {
 				if err := utils.ValidateMetricSamples(samples, "weather_temperature", "kubernetes-pods", cluster, time.Now(), false); err != nil {
 					return err
 				}
@@ -284,29 +325,38 @@ func expectAnnotationNamespace(api promv1.API, cluster, allowed string, after ti
 				return fmt.Errorf("excluded annotation namespace %s still ingests new samples", namespace)
 			}
 		}
+		samples, err := freshTransitionSamples(api,
+			fmt.Sprintf("weather_temperature{job=%q,cluster=%q,kubernetes_pod_name=%q}",
+				"kubernetes-pods", cluster, "unannotated-target"), after)
+		if err != nil {
+			return err
+		}
+		if len(samples) != 0 {
+			return fmt.Errorf("unannotated negative control ingests new samples")
+		}
 		return nil
 	}
 	Eventually(check, 8*time.Minute, 15*time.Second).Should(Succeed())
 	Consistently(check, time.Minute, 15*time.Second).Should(Succeed())
 }
 
-func validateAnnotationConfig(jobs []*config.ScrapeConfig, namespace string) error {
+func validateAnnotationConfig(jobs []*config.ScrapeConfig, expression string) error {
 	for _, job := range jobs {
 		if job.JobName != "kubernetes-pods" {
 			continue
 		}
-		if namespace == "" {
+		if expression == "" {
 			return fmt.Errorf("removed annotation job remains configured")
 		}
 		for _, rule := range job.RelabelConfigs {
 			if string(rule.Action) == "keep" && rule.SourceLabels.String() == "__meta_kubernetes_namespace" &&
-				rule.Regex.String() == "^"+namespace+"$" {
+				rule.Regex.String() == expression {
 				return nil
 			}
 		}
 		return fmt.Errorf("annotation namespace selector has not converged")
 	}
-	if namespace != "" {
+	if expression != "" {
 		return fmt.Errorf("admitted annotation job missing from config")
 	}
 	return nil
@@ -345,7 +395,92 @@ var _ = Describe("Customer alias and annotation transitions", Serial, func() {
 						expectTransitionMetric(api, "up", job, phase.cluster, "", started)
 					}
 					expectWindowsKubeProxy(api, phase.cluster, started)
-					expectAnnotationNamespace(api, phase.cluster, phase.namespace, started)
+					expected := annotationExpectation{}
+					if phase.namespace != "" {
+						expected = annotationExpectation{regex: "^" + phase.namespace + "$", namespaces: []string{phase.namespace}}
+					}
+					expectAnnotationNamespaces(api, phase.cluster, expected, started)
+				}
+			})
+	}
+})
+
+var _ = Describe("Annotation namespace regex edges", Serial, func() {
+	for _, variant := range []struct{ schema, label string }{
+		{"v1", utils.ConfigProcessingAnnotationRegexEdgesV1},
+		{"v2", utils.ConfigProcessingAnnotationRegexEdgesV2},
+	} {
+		schema := variant.schema
+		It("handles absent, empty, alternation, wildcard and invalid regex on normal reload in "+schema,
+			Label(variant.label), func() {
+				restoreSettingsAfterTransition()
+				api, cluster := transitionAPI(), transitionCluster()
+				collectors, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics")
+				Expect(err).NotTo(HaveOccurred())
+				for _, fixture := range []struct{ namespace, pod string }{
+					{"ama-settings-included", "annotation-target"},
+					{"ama-settings-excluded", "annotation-target"},
+					{"ama-settings-included-similar", "annotation-target"},
+					{"ama-settings-included", "unannotated-target"},
+				} {
+					Eventually(func(g Gomega) {
+						pod, err := K8sClient.CoreV1().Pods(fixture.namespace).Get(context.Background(), fixture.pod, metav1.GetOptions{})
+						g.Expect(err).NotTo(HaveOccurred())
+						g.Expect(pod.Status.PodIP).NotTo(BeEmpty())
+						g.Expect(pod.Annotations["prometheus.io/scrape"] == "true").To(Equal(fixture.pod == "annotation-target"))
+						url := "http://" + net.JoinHostPort(pod.Status.PodIP, "2112") + "/metrics"
+						out, _, err := utils.ExecCmd(K8sClient, Cfg, collectors[0].Name, "prometheus-collector",
+							"kube-system", []string{"curl", "--fail", "--silent", "--show-error", "--noproxy", "*", "--max-time", "30", url})
+						g.Expect(err).NotTo(HaveOccurred())
+						g.Expect(out).To(MatchRegexp(`(?m)^weather_temperature(?:\{|[ \t])`))
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+				}
+				for _, phase := range []struct {
+					file     string
+					expected annotationExpectation
+				}{
+					{"default.yaml", annotationExpectation{}},
+					{"empty.yaml", annotationExpectation{}},
+					{"invalid.yaml", annotationExpectation{}},
+					{"alternation.yaml", annotationExpectation{
+						regex:      "^(ama-settings-included|ama-settings-excluded)$",
+						namespaces: []string{"ama-settings-included", "ama-settings-excluded"},
+					}},
+					{"wildcard.yaml", annotationExpectation{
+						regex: ".*", namespaces: []string{"ama-settings-included", "ama-settings-excluded", "ama-settings-included-similar"},
+					}},
+					{"invalid.yaml", annotationExpectation{}},
+				} {
+					started := settingsPhase("annotation-regex-edges-"+schema, phase.file)
+					if phase.file == "invalid.yaml" {
+						Eventually(func(g Gomega) {
+							for _, source := range []struct{ label, container string }{
+								{"ama-metrics", "prometheus-collector"}, {"ama-metrics-operator-targets", "config-reader"},
+							} {
+								pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", source.label)
+								g.Expect(err).NotTo(HaveOccurred())
+								for _, pod := range pods {
+									startedAt := time.Time{}
+									for _, status := range pod.Status.ContainerStatuses {
+										if status.Name == source.container && status.Ready && status.State.Running != nil {
+											startedAt = status.State.Running.StartedAt.Time
+										}
+									}
+									g.Expect(startedAt.After(started)).To(BeTrue(),
+										"%s/%s must reload through its normal fresh-process lifecycle", pod.Name, source.container)
+									logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pod.Name, &corev1.PodLogOptions{
+										Container: source.container, SinceTime: &metav1.Time{Time: started},
+									}).DoRaw(context.Background())
+									g.Expect(err).NotTo(HaveOccurred())
+									g.Expect(strings.Contains(string(logs), "Invalid namespace regex for pod annotations: [")).To(BeTrue(),
+										"%s/%s must report the invalid annotation regex", pod.Name, source.container)
+								}
+							}
+						}, 8*time.Minute, 15*time.Second).Should(Succeed())
+						AddReportEntry("invalid-annotation-regex", "diagnostic verified after normal collector/reader reload")
+					}
+					expectAnnotationNamespaces(api, cluster, phase.expected, started)
+					expectTransitionMetric(api, "up", "kubelet", cluster, "", started)
 				}
 			})
 	}
@@ -521,7 +656,7 @@ func TestSettingsTransitionGuards(t *testing.T) {
 	if err := validateAnnotationConfig(nil, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := validateAnnotationConfig(nil, "ama-settings-included"); err == nil {
+	if err := validateAnnotationConfig(nil, "^ama-settings-included$"); err == nil {
 		t.Fatal("missing admitted annotation job must fail")
 	}
 	if err := validateAnnotationConfig([]*config.ScrapeConfig{{JobName: "kubernetes-pods"}}, ""); err == nil {
@@ -538,14 +673,65 @@ scrape_configs:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validateAnnotationConfig(cfg.ScrapeConfigs, "ama-settings-included"); err != nil {
+	if err := validateAnnotationConfig(cfg.ScrapeConfigs, "^ama-settings-included$"); err != nil {
 		t.Fatal(err)
 	}
-	if err := validateAnnotationConfig(cfg.ScrapeConfigs, "ama-settings-excluded"); err == nil {
+	if err := validateAnnotationConfig(cfg.ScrapeConfigs, "^ama-settings-excluded$"); err == nil {
 		t.Fatal("stale annotation namespace selector must fail")
 	}
-	cfg.ScrapeConfigs[0].RelabelConfigs[0].Regex = relabel.MustNewRegexp("^$")
+	cfg.ScrapeConfigs[0].RelabelConfigs[0].Regex = relabel.MustNewRegexp("")
 	if err := validateAnnotationConfig(cfg.ScrapeConfigs, ""); err == nil {
 		t.Fatal("an empty namespace selector does not remove the annotation job")
+	}
+}
+
+func TestAnnotationTargetSet(t *testing.T) {
+	now := time.Now()
+	target := func(namespace, pod string) transitionTarget {
+		return transitionTarget{
+			ScrapePool: "kubernetes-pods", Health: "up", LastScrape: now,
+			Labels:           map[string]string{"kubernetes_namespace": namespace, "kubernetes_pod_name": pod},
+			DiscoveredLabels: map[string]string{"__meta_kubernetes_namespace": namespace, "__meta_kubernetes_pod_name": pod},
+		}
+	}
+	allowed := []string{"ama-settings-included", "ama-settings-excluded"}
+	valid := []transitionTarget{target(allowed[0], "annotation-target"), target(allowed[1], "annotation-target")}
+	if err := validateAnnotationTargets(valid, allowed, now); err != nil {
+		t.Fatal(err)
+	}
+	wildcard := append(slices.Clone(valid), target("ama-settings-included-similar", "annotation-target"),
+		target("unrelated-workload", "annotation-target"))
+	if err := validateAnnotationTargets(wildcard, append(slices.Clone(allowed), "ama-settings-included-similar"), now); err != nil {
+		t.Fatal(err)
+	}
+	unhealthy := slices.Clone(valid)
+	unhealthy[1].Health = "down"
+	stale := slices.Clone(valid)
+	stale[1].LastScrape = now.Add(-time.Second)
+	missingIdentity := slices.Clone(valid)
+	missingIdentity[1].Labels = nil
+	for _, test := range []struct {
+		name    string
+		targets []transitionTarget
+		allowed []string
+	}{
+		{"missing-all", nil, allowed},
+		{"missing-second-alternative", valid[:1], allowed},
+		{"similar-prefix", wildcard, allowed},
+		{"unannotated", append(slices.Clone(valid), target(allowed[0], "unannotated-target")), allowed},
+		{"unhealthy-second", unhealthy, allowed},
+		{"stale-second", stale, allowed},
+		{"missing-exported-identity", missingIdentity, allowed},
+		{"missing-exported-identity-disabled", missingIdentity[1:], nil},
+		{"retained-after-disabled", valid, nil},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if err := validateAnnotationTargets(test.targets, test.allowed, now); err == nil {
+				t.Fatal("wrong fixture target set must fail")
+			}
+		})
+	}
+	if err := validateAnnotationTargets(nil, nil, now); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -28,7 +28,7 @@ The ConfigTests pipeline always publishes JUnit and execution artifacts, and ind
 
 ### Same-invocation settings transitions
 
-The existing configprocessing carriers select the five settings variants below. Their fixtures must come from the same verified Git revision as the suite; the renderer includes `scenarios/settings`, passes the scoped AMW query identity, and labels the workflow pod for workload identity. The harness must configure that pod's service account and AMW role assignment. Each invocation restores its original ConfigMap/Secret on exit; the harness still owns outer resource cleanup.
+The existing configprocessing carriers select the seven settings variants below. Their fixtures must come from the same verified Git revision as the suite; the renderer includes `scenarios/settings`, passes the scoped AMW query identity, and labels the workflow pod for workload identity. The harness must configure that pod's service account and AMW role assignment. Each invocation restores its original ConfigMap/Secret on exit; the harness still owns outer resource cleanup.
 
 | Label | Assertions |
 |---|---|
@@ -37,6 +37,10 @@ The existing configprocessing carriers select the five settings variants below. 
 | `config-processing-secret-transitions-v1` | Invalid dummy username to existing `admin`/`pwd` reload/auth recovery without collector/allocator/endpoint restarts; allowed to empty/omitted to restored Secret allowlist |
 | `config-processing-secret-transitions-v2` | The same recovery/enforcement with v2 settings |
 | `config-processing-windows-kube-proxy-ingestion` | Actual Windows node endpoint plus fresh `up` and `kubeproxy_sync_proxy_rules_duration_seconds_count`, exact Windows job/cluster/node |
+| `config-processing-annotation-regex-edges-v1` | Absent/empty/invalid disabled fallback, two anchored alternatives, similar-prefix exclusion, wildcard inclusion, unannotated negative control, and invalid-after-valid normal reload |
+| `config-processing-annotation-regex-edges-v2` | The same regex edge cases with v2 settings |
+
+Regex edge cases verify that all declared endpoints are live, inspect every replica's generated annotation job, and require exact fixture target sets plus post-convergence AMW samples. Invalid phases must produce the diagnostic after a normal fresh collector/reader process restart; the spec never forces a restart. Missing/empty/invalid input disables annotation scraping on this lifecycle path, not a last-valid wildcard fallback. A separate fresh kubelet `up` control proves healthy fallback. Negative ingestion observations start after configuration/target convergence so historical or pre-reload samples do not become false continued-ingestion failures.
 
 Scoped allowlist enforcement skips as unsupported below Kubernetes 1.37; auth recovery remains a separate spec. True two-valid-password credential rotation is **deferred by user**, not covered by recovery. A compile, label dry-run, or unsupported skip is not live candidate-image evidence.
 

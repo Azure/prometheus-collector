@@ -25,6 +25,8 @@
     - [ ] `config-processing-secret-transitions-v1`
     - [ ] `config-processing-secret-transitions-v2`
     - [ ] `config-processing-windows-kube-proxy-ingestion`
+    - [ ] `config-processing-annotation-regex-edges-v1`
+    - [ ] `config-processing-annotation-regex-edges-v2`
 - [ ] Have new tests been added? For features, have tests been added for this feature? For fixes, is there a test that could have caught this issue and could validate that the fix works?
   - [ ] Is a new scrape job needed?
     - [ ] The scrape job was added to the folder [test-cluster-yamls](/otelcollector/test/test-cluster-yamls/) in the correct configmap or as a CR. 

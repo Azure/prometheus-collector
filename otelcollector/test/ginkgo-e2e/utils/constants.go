@@ -77,4 +77,6 @@ const (
 	ConfigProcessingSecretTransitionsV1      = "config-processing-secret-transitions-v1"
 	ConfigProcessingSecretTransitionsV2      = "config-processing-secret-transitions-v2"
 	ConfigProcessingWindowsKubeProxy         = "config-processing-windows-kube-proxy-ingestion"
+	ConfigProcessingAnnotationRegexEdgesV1   = "config-processing-annotation-regex-edges-v1"
+	ConfigProcessingAnnotationRegexEdgesV2   = "config-processing-annotation-regex-edges-v2"
 )
