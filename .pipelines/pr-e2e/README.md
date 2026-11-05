@@ -233,6 +233,12 @@ store. Verify actual adapter authentication support rather than promising MSI.
 
 ### Remaining deployment prerequisites
 
+Read-only verification of the existing ci-sre found it Running in review mode,
+with a GitHub OAuth connector. Its complete repository inventory did not include
+`Azure/prometheus-collector`. Configure and test this repository separately;
+an existing Docker-Provider integration is not a shared implementation or proof
+of access to this repository. No agent configuration was changed by the POC.
+
 Verify the existing ci-sre resource and its repository integration, approve branch
 writes and pipeline publication, and verify effective 1ES expansion.
 Configure/test the actual pipeline read/queue adapter and least-privilege identities; approve
