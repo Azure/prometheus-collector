@@ -211,15 +211,15 @@ The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
 The matrix contains 22 cases sharing 20 infrastructure profiles. `default` is the
-small PR lane; `settings` runs all 32 version-independent Ginkgo settings on one
+small PR lane; `settings` runs all 34 version-independent Ginkgo settings on one
 mixed host. Four empty/omitted-secret inputs share a Linux-only
 `operator-secret-watch` lane: the current regional default must be at least 1.37,
 otherwise preflight reports unsupported without provisioning. No historical
-version is selected. Customer Helm is separately blocked, giving 37 catalog inputs
-without claiming 37 live passes. Deferred true password rotation is metadata,
+version is selected. Customer Helm is separately blocked, giving 39 catalog inputs
+without claiming 39 live passes. Deferred true password rotation is metadata,
 not an executable settings assignment.
 
-The default 360-second settle alone costs 192 minutes for 32 settings slots;
+The default 360-second settle alone costs 204 minutes for 34 settings slots;
 provisioning and TestKube execution are additional. Review the explicit
 `--max-run-seconds` budget before a full-settings campaign. No measured Azure cost
 or duration is claimed yet.

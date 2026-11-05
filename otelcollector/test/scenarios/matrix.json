@@ -33,7 +33,8 @@
         "partial-v1", "partial-v2", "deny-filesystem-access", "default-targets-v2", "dcgm-custom",
         "all-targets-disabled-v2", "all-targets-enabled-v2", "no-configmaps",
         "customer-transitions-v1", "customer-transitions-v2",
-        "secret-transitions-v1", "secret-transitions-v2", "windows-kube-proxy"
+        "secret-transitions-v1", "secret-transitions-v2", "windows-kube-proxy",
+        "annotation-regex-edges-v1", "annotation-regex-edges-v2"
       ],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
