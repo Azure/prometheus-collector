@@ -79,6 +79,8 @@ class CandidateEvidenceTest(unittest.TestCase):
             stage(self.evidence, self.evidence / "nested", self.sha, 1, {})
         with self.assertRaisesRegex(ValueError, "No candidate evidence"):
             stage(self.root / "absent", self.root / "missing-output", self.sha, 1, {})
+        early = json.loads((self.root / "missing-output" / "publication.json").read_text())
+        self.assertEqual((early["publicationError"], early["executions"]), ("No candidate evidence was produced", []))
 
     def test_pipeline_separates_legacy_and_candidate_and_always_retains_results(self):
         directory = Path(__file__).parent
@@ -99,7 +101,14 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(scenario["default"], "default")
         self.assertEqual(scenario["values"], ["default", "settings"])
         steps = template["steps"]
-        run = next(i for i, step in enumerate(steps) if "Run authenticated candidate" in step.get("displayName", ""))
+        prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
+        helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
+        self.assertLess(prereqs, helm)
+        for required in ("unzip jq gettext-base", "command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash",
+                         "29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634",
+                         "for tool in unzip az kubectl jq envsubst"):
+            self.assertIn(required, steps[prereqs]["bash"])
+        run =  next(i for i, step in enumerate(steps) if "Run authenticated candidate" in step.get("displayName", ""))
         cleanup = next(i for i, step in enumerate(steps) if "retry ownership" in step.get("displayName", ""))
         scan = next(i for i, step in enumerate(steps) if "SRE-owned authenticated" in step.get("displayName", ""))
         self.assertEqual(cleanup, run + 1)

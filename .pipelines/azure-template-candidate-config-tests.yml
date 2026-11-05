@@ -44,6 +44,21 @@ steps:
     versionSpec: '3.11'
   displayName: "Select candidate harness Python"
 
+- bash: |
+    set -euo pipefail
+    # The managed candidate image lacks unzip for HelmInstaller and az for AzureCLI tasks.
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends unzip jq gettext-base
+    command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
+    if ! command -v kubectl; then
+      curl --fail --silent --show-error --location --retry 3 \
+        https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl -o "$AGENT_TEMPDIRECTORY/kubectl"
+      echo "29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634  $AGENT_TEMPDIRECTORY/kubectl" | sha256sum --check
+      sudo install -m 0755 "$AGENT_TEMPDIRECTORY/kubectl" /usr/local/bin/kubectl
+    fi
+    for tool in unzip az kubectl jq envsubst; do command -v "$tool"; done
+  displayName: "Install candidate host prerequisites"
+
 - task: HelmInstaller@1
   inputs:
     helmVersionToInstall: '3.12.3'
