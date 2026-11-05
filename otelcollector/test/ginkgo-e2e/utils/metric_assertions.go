@@ -7,6 +7,15 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+func FreshMetricQuery(selector string, notBefore time.Time) string {
+	query := fmt.Sprintf("(%s) and (timestamp(%s) > time() - 300) and (timestamp(%s) < time() + 30)",
+		selector, selector, selector)
+	if !notBefore.IsZero() {
+		query += fmt.Sprintf(" and (timestamp(%s) >= %.3f)", selector, float64(notBefore.UnixMilli())/1000)
+	}
+	return query
+}
+
 func ValidateMetricSamples(samples model.Vector, metric, job, cluster string, now time.Time, requireUp bool) error {
 	if cluster == "" || len(samples) == 0 {
 		return fmt.Errorf("expected cluster and nonempty samples for %s/%s", job, metric)

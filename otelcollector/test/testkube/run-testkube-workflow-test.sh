@@ -123,7 +123,11 @@ for scenario in existing-workflows new-workflows permissions-failure list-failur
             jq -e --arg sha "$CANDIDATE_TEST_SOURCE_SHA" --arg image "$CANDIDATE_RUNNER_IMAGE" --arg wf "$SELECTED_WORKFLOW" \
                 '.test_source_sha == $sha and .runner_image == $image and (.executions | length == 1) and .executions[0].workflow == $wf' "$result" > /dev/null
             jq -e --arg sha "$CANDIDATE_TEST_SOURCE_SHA" --arg image "$CANDIDATE_RUNNER_IMAGE" \
-                '.spec.content.git.revision == $sha and .spec.steps[0].container.image == $image' "$MOCK_DIR/applied" > /dev/null
+                '.spec.content.git.revision == $sha and .spec.steps[0].container.image == $image
+                and .spec.pod.serviceAccountName == "testkube-api-server-tests-job"
+                and .spec.pod.labels["azure.workload.identity/use"] == "true"
+                and any(.spec.steps[0].container.env[]; .name == "AMW_QUERY_ENDPOINT" and .value == "https://example.invalid")
+                and any(.spec.steps[0].container.env[]; .name == "AZURE_CLIENT_ID" and .value == "test-client")' "$MOCK_DIR/applied" > /dev/null
             if grep -q 'apply -f ./test-cluster-yamls' "$MOCK_DIR/commands"; then
                 echo "FAIL: candidate performed a second fixture lifecycle" >&2; exit 1
             fi

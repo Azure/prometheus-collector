@@ -72,4 +72,9 @@ const (
 	ConfigProcessingBasicAuthSmonV2          = "config-processing-basic-auth-smon-v2"
 	ConfigProcessingBasicAuthSecretUpdateV2  = "config-processing-basic-auth-secret-update-v2"
 	ConfigProcessingDenyFSAccess             = "config-processing-deny-fs-access"
+	ConfigProcessingCustomerTransitionsV1    = "config-processing-customer-transitions-v1"
+	ConfigProcessingCustomerTransitionsV2    = "config-processing-customer-transitions-v2"
+	ConfigProcessingSecretTransitionsV1      = "config-processing-secret-transitions-v1"
+	ConfigProcessingSecretTransitionsV2      = "config-processing-secret-transitions-v2"
+	ConfigProcessingWindowsKubeProxy         = "config-processing-windows-kube-proxy-ingestion"
 )

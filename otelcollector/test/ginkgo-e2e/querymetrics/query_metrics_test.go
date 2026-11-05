@@ -26,7 +26,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 					selector = fmt.Sprintf("%s{job=%q,cluster=%q,kubernetes_namespace=%q,kubernetes_pod_name=%q}",
 						target.metric, target.job, ExpectedCluster, "ama-settings-included", "annotation-target")
 				}
-				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, freshQuery(selector, suiteStarted))
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, utils.FreshMetricQuery(selector, suiteStarted))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(warnings).To(BeEmpty())
 				samples, ok := result.(model.Vector)
@@ -35,7 +35,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			}
 			excluded := fmt.Sprintf("weather_temperature{job=%q,cluster=%q,kubernetes_namespace=%q,kubernetes_pod_name=%q}",
 				"kubernetes-pods", ExpectedCluster, "ama-settings-excluded", "annotation-target")
-			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, freshQuery(excluded, suiteStarted))
+			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, utils.FreshMetricQuery(excluded, suiteStarted))
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(warnings).To(BeEmpty())
 			samples, ok := result.(model.Vector)
@@ -443,7 +443,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			}
 
 			for _, metric := range metrics {
-				query := freshQuery(fmt.Sprintf("{%q,cluster=%q}", metric, ExpectedCluster), time.Time{})
+				query := utils.FreshMetricQuery(fmt.Sprintf("{%q,cluster=%q}", metric, ExpectedCluster), time.Time{})
 
 				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
 				Expect(err).NotTo(HaveOccurred())

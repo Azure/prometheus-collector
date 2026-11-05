@@ -3,7 +3,6 @@ package configprocessing
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -56,12 +55,12 @@ var _ = Describe("Customer ConfigMap identity and annotation selection",
 						found = true
 						namespaceFilter, keepList := false, false
 						for _, rule := range job.RelabelConfigs {
-							if string(rule.Action) == "keep" && fmt.Sprint(rule.SourceLabels) == "[__meta_kubernetes_namespace]" && rule.Regex.String() == "^ama-settings-included$" {
+							if string(rule.Action) == "keep" && rule.SourceLabels.String() == "__meta_kubernetes_namespace" && rule.Regex.String() == "^ama-settings-included$" {
 								namespaceFilter = true
 							}
 						}
 						for _, rule := range job.MetricRelabelConfigs {
-							if string(rule.Action) == "keep" && fmt.Sprint(rule.SourceLabels) == "[__name__]" && rule.Regex.MatchString("weather_temperature") && !rule.Regex.MatchString("unrelated_metric") {
+							if string(rule.Action) == "keep" && rule.SourceLabels.String() == "__name__" && rule.Regex.MatchString("weather_temperature") && !rule.Regex.MatchString("unrelated_metric") {
 								keepList = true
 							}
 						}

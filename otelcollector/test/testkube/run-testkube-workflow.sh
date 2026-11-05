@@ -138,6 +138,7 @@ if [[ "$CANDIDATE_MODE" == true ]]; then
     done
     "$PYTHON" "$SCRIPT_DIR/workflow_evidence.py" render "$rendered" \
         "$SELECTED_WORKFLOW" "$CANDIDATE_TEST_SOURCE_SHA" "$CANDIDATE_RUNNER_IMAGE" \
+        --amw-query-endpoint "$AMW_QUERY_ENDPOINT" --azure-client-id "$AZURE_CLIENT_ID" \
         "${label_args[@]}" > "./testkube/$TARGET_OUTPUT" \
         || { rm -f "$rendered"; fail_setup "Candidate workflow validation failed"; }
 else

@@ -29,6 +29,11 @@ def render_candidate(source, workflow, sha, image, label_filter=None, expectatio
     spec.setdefault("pod", {}).setdefault("nodeSelector", {}).update({
         "kubernetes.io/os": "linux", "kubernetes.io/arch": "amd64",
     })
+    spec["pod"].setdefault("labels", {})["azure.workload.identity/use"] = "true"
+    spec["pod"]["serviceAccountName"] = "testkube-api-server-tests-job"
+    paths = spec["content"]["git"].setdefault("paths", [])
+    if "otelcollector/test/scenarios/settings" not in paths:
+        paths.append("otelcollector/test/scenarios/settings")
     runs = 0
     for step in spec["steps"]:
         shell = step.get("shell", "")
@@ -180,6 +185,8 @@ def main():
     render.add_argument("image")
     render.add_argument("--label-filter")
     render.add_argument("--expected-cluster")
+    render.add_argument("--amw-query-endpoint")
+    render.add_argument("--azure-client-id")
     render.add_argument("--expect-operator-https", choices=("true", "false"))
     render.add_argument("--expect-windows-exporter", choices=("true", "false"))
     reports = commands.add_parser("reports")
@@ -193,6 +200,8 @@ def main():
             expectations = {
                 name.upper(): value for name, value in {
                     "expected_cluster": args.expected_cluster,
+                    "amw_query_endpoint": args.amw_query_endpoint,
+                    "azure_client_id": args.azure_client_id,
                     "expect_operator_https": args.expect_operator_https,
                     "expect_windows_exporter": args.expect_windows_exporter,
                 }.items() if value is not None

@@ -26,6 +26,20 @@ Optional assertion expectations are `EXPECTED_CLUSTER`, `EXPECT_OPERATOR_HTTPS=t
 
 The ConfigTests pipeline always publishes JUnit and execution artifacts, and independently gates the complete expected scenario set against retained execution IDs, terminal passed statuses and nonempty matching reports. A Teams notification or a successful workflow with no executed specs cannot satisfy that gate.
 
+### Same-invocation settings transitions
+
+The existing configprocessing carriers select the five settings variants below. Their fixtures must come from the same verified Git revision as the suite; the renderer includes `scenarios/settings`, passes the scoped AMW query identity, and labels the workflow pod for workload identity. The harness must configure that pod's service account and AMW role assignment. Each invocation restores its original ConfigMap/Secret on exit; the harness still owns outer resource cleanup.
+
+| Label | Assertions |
+|---|---|
+| `config-processing-customer-transitions-v1` | v1 alias update/clear, annotation namespace update/removal, healthy canonical PM/SM targets and fresh ingested jobs, Windows kube-proxy per-node ingestion |
+| `config-processing-customer-transitions-v2` | The same transitions with v2 settings |
+| `config-processing-secret-transitions-v1` | Invalid dummy username to existing `admin`/`pwd` reload/auth recovery without collector/allocator/endpoint restarts; allowed to empty/omitted to restored Secret allowlist |
+| `config-processing-secret-transitions-v2` | The same recovery/enforcement with v2 settings |
+| `config-processing-windows-kube-proxy-ingestion` | Actual Windows node endpoint plus fresh `up` and `kubeproxy_sync_proxy_rules_duration_seconds_count`, exact Windows job/cluster/node |
+
+Scoped allowlist enforcement skips as unsupported below Kubernetes 1.37; auth recovery remains a separate spec. True two-valid-password credential rotation is **deferred by user**, not covered by recovery. A compile, label dry-run, or unsupported skip is not live candidate-image evidence.
+
 ### Durable candidate mode in the existing ConfigTests pipeline
 
 Opt in with `candidateMode: true`, `candidateBuildId: <successful pipeline-440 build ID>`, and `candidateSourceSha: <full lowercase commit>`. The pipeline's own reviewed checkout supplies the trusted receipt verifier/scanner; PR execution and attempt retries are rejected. The separate clean candidate checkout must match the requested SHA, and authenticated producer receipts are verified before invoking that checkout's existing scenario harness. The legacy shared-cluster job is disabled in this mode. The service connection must target the approved build subscription and retain its existing scoped resource, caller-object lookup and AMW role-assignment permissions.

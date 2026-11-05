@@ -63,30 +63,7 @@ var _ = BeforeSuite(func() {
 })
 
 func metricQuery(metric, job string) string {
-	return freshQuery(fmt.Sprintf("%s{job=%q,cluster=%q}", metric, job, ExpectedCluster), time.Time{})
-}
-
-func freshQuery(selector string, notBefore time.Time) string {
-	query := fmt.Sprintf("(%s) and (timestamp(%s) > time() - 300) and (timestamp(%s) < time() + 30)",
-		selector, selector, selector)
-	if !notBefore.IsZero() {
-		query += fmt.Sprintf(" and (timestamp(%s) >= %.3f)", selector, float64(notBefore.UnixMilli())/1000)
-	}
-	return query
-}
-
-func TestFreshMetricQuery(t *testing.T) {
-	selector := `up{job="kubelet",cluster="expected"}`
-	expected := `(up{job="kubelet",cluster="expected"})` +
-		` and (timestamp(up{job="kubelet",cluster="expected"}) > time() - 300)` +
-		` and (timestamp(up{job="kubelet",cluster="expected"}) < time() + 30)`
-	if query := freshQuery(selector, time.Time{}); query != expected {
-		t.Fatalf("incorrect source timestamp bounds: %s", query)
-	}
-	expected += ` and (timestamp(up{job="kubelet",cluster="expected"}) >= 1000.000)`
-	if query := freshQuery(selector, time.Unix(1000, 0)); query != expected {
-		t.Fatalf("incorrect post-suite timestamp bound: %s", query)
-	}
+	return utils.FreshMetricQuery(fmt.Sprintf("%s{job=%q,cluster=%q}", metric, job, ExpectedCluster), time.Time{})
 }
 
 var _ = AfterSuite(func() {

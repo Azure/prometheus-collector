@@ -50,6 +50,9 @@ class WorkflowEvidenceTest(unittest.TestCase):
                     self.assertEqual(rendered["spec"]["content"]["git"]["revision"], SHA)
                     self.assertEqual(rendered["spec"]["pod"]["nodeSelector"]["kubernetes.io/os"], "linux")
                     self.assertEqual(rendered["spec"]["pod"]["nodeSelector"]["kubernetes.io/arch"], "amd64")
+                    self.assertEqual(rendered["spec"]["pod"]["labels"]["azure.workload.identity/use"], "true")
+                    self.assertEqual(rendered["spec"]["pod"]["serviceAccountName"], "testkube-api-server-tests-job")
+                    self.assertIn("otelcollector/test/scenarios/settings", rendered["spec"]["content"]["git"]["paths"])
                     runs = [step for step in rendered["spec"]["steps"] if "shell" in step]
                     self.assertEqual(len(runs), 1)
                     self.assertEqual(runs[0]["container"]["image"], IMAGE)
@@ -77,6 +80,13 @@ class WorkflowEvidenceTest(unittest.TestCase):
         rendered = render_candidate(source, "prometheusui", SHA, IMAGE, "foo || bar")
         self.assertIn("--label-filter 'foo || bar'", rendered["spec"]["steps"][0]["shell"])
         self.assertNotIn("arc-extension", rendered["spec"]["steps"][0]["shell"])
+        rendered = render_candidate(source, "prometheusui", SHA, IMAGE, expectations={
+            "AMW_QUERY_ENDPOINT": "https://exact-amw.example",
+            "AZURE_CLIENT_ID": "scoped-reader-id",
+        })
+        env = {item["name"]: item.get("value") for item in rendered["spec"]["steps"][0]["container"]["env"]}
+        self.assertEqual(env.get("AMW_QUERY_ENDPOINT"), "https://exact-amw.example")
+        self.assertEqual(env.get("AZURE_CLIENT_ID"), "scoped-reader-id")
         with self.assertRaises(ValueError):
             render_candidate(source + "\n---\n" + source, "operator", SHA, IMAGE)
 

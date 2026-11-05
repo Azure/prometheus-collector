@@ -40,6 +40,14 @@ rules:
   - ama-e2e-denied-secret
   verbs:
   - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - settings-auth-creds
+  verbs:
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

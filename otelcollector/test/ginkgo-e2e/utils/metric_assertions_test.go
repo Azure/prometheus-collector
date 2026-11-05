@@ -7,6 +7,20 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+func TestFreshMetricQuery(t *testing.T) {
+	selector := `up{job="kubelet",cluster="expected"}`
+	expected := `(up{job="kubelet",cluster="expected"})` +
+		` and (timestamp(up{job="kubelet",cluster="expected"}) > time() - 300)` +
+		` and (timestamp(up{job="kubelet",cluster="expected"}) < time() + 30)`
+	if query := FreshMetricQuery(selector, time.Time{}); query != expected {
+		t.Fatalf("incorrect source timestamp bounds: %s", query)
+	}
+	expected += ` and (timestamp(up{job="kubelet",cluster="expected"}) >= 1000.000)`
+	if query := FreshMetricQuery(selector, time.Unix(1000, 0)); query != expected {
+		t.Fatalf("incorrect post-suite timestamp bound: %s", query)
+	}
+}
+
 func TestValidateMetricSamples(t *testing.T) {
 	now := time.Now()
 	sample := func() *model.Sample {
