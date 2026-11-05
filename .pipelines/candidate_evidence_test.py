@@ -103,6 +103,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         steps = template["steps"]
         prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
         helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
+        self.assertEqual(steps[helm]["inputs"]["helmVersionToInstall"], "3.19.0")
         self.assertLess(prereqs, helm)
         for required in ("unzip jq gettext-base libicu70", "bicep --version", "command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash",
                          'sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep',

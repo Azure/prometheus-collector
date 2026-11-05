@@ -66,7 +66,7 @@ steps:
 
 - task: HelmInstaller@1
   inputs:
-    helmVersionToInstall: '3.12.3'
+    helmVersionToInstall: '3.19.0'
   displayName: "Install pinned harness Helm"
 
 - bash: |
