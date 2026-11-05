@@ -244,7 +244,8 @@ class Commands:
     def __init__(self, evidence):
         self.evidence = evidence
         evidence.mkdir(parents=True, exist_ok=True)
-        self.stages = []
+        history = evidence / "commands.json"
+        self.stages = load(history) if history.exists() else []
         self.deadline = None
 
     def run(self, args, *, cwd=None, env=None, data=None, json_output=False, private=False):
@@ -269,6 +270,13 @@ class Commands:
                 log.write(json.dumps(record) + "\n" + completed.stdout + completed.stderr + "\n")
         if completed.returncode:
             detail = "(private command; output redacted)" if private else completed.stderr[-6000:]
+            if private and list(args[:4]) == ["az", "deployment", "group", "create"]:
+                diagnostic = completed.stderr
+                for name, value in (env or os.environ).items():
+                    if value and re.search(r"password|token|secret|key", name, re.IGNORECASE):
+                        diagnostic = diagnostic.replace(value, "[REDACTED]")
+                (self.evidence / "deployment-error.txt").write_text(diagnostic, encoding="utf-8")
+                detail = diagnostic[-6000:]
             raise RuntimeError(f"Command failed ({completed.returncode}): {args[0]} {args[1]}: {detail}")
         return json.loads(completed.stdout) if json_output else completed.stdout
 

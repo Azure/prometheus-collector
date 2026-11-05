@@ -146,6 +146,8 @@ One passing Windows spec does not imply every Windows OS/pool was checked.
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and cleanup proof.
 Secret-bearing command output is redacted; snapshots remain in memory.
+Failed deployments retain `deployment-error.txt` with secret-bearing environment
+values redacted. Command history survives a separate cleanup invocation.
 Cleanup waits for the recorded AKS node and AMW managed resource groups to disappear
 as well as the parent. Incomplete receipts discover parent-linked managed groups,
 including retries after the parent has disappeared. Failed discovery is an
