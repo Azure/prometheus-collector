@@ -268,6 +268,32 @@ class Contracts(unittest.TestCase):
                     commands.run(["python", "--version"])
             process.assert_not_called()
 
+    def test_deployment_failure_retains_redacted_error_and_history_across_cleanup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            commands = runner.Commands(evidence)
+            env = {"SCENARIO_WINDOWS_PASSWORD": "private-password", "SYSTEM_ACCESSTOKEN": "private-token",
+                   "SCENARIO_OWNER": "ama-metrics-e2e"}
+            failed = types.SimpleNamespace(returncode=1, stdout="private-success-output",
+                                           stderr="ERROR: InvalidTemplate private-password private-token")
+            with patch.object(runner.shutil, "which", return_value="az"), \
+                    patch.object(runner.subprocess, "run", return_value=failed):
+                with self.assertRaises(RuntimeError):
+                    commands.run(["az", "deployment", "group", "create"], env=env, private=True)
+            error = (evidence / "deployment-error.txt").read_text(encoding="utf-8")
+            self.assertIn("InvalidTemplate", error)
+            self.assertNotIn("private-password", error)
+            self.assertNotIn("private-token", error)
+            self.assertNotIn("private-success-output", error)
+            cleanup = runner.Commands(evidence)
+            succeeded = types.SimpleNamespace(returncode=0, stdout="false", stderr="")
+            with patch.object(runner.shutil, "which", return_value="az"), \
+                    patch.object(runner.subprocess, "run", return_value=succeeded):
+                cleanup.run(["az", "group", "exists"])
+            records = runner.load(evidence / "commands.json")
+            self.assertEqual([record["exitCode"] for record in records], [1, 0])
+            self.assertEqual(records[0]["command"], ["az", "deployment", "group", "create"])
+
     def test_pin_only_candidate_workloads_and_require_all_components(self):
         document = {"kind": "Deployment", "metadata": {"name": "ama-metrics"},
                     "spec": {"template": {"spec": {"containers": [
@@ -685,6 +711,8 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "cleanup-command-history": ("self.stages = load(history) if history.exists() else []", "self.stages = []"),
+        "deployment-error-redaction": ('diagnostic = diagnostic.replace(value, "[REDACTED]")', "pass"),
         "feature-requirements": ('set(variant["requires"]["clusterFeatures"]) <= set(scenario["clusterFeatures"])', "True"),
         "source-binding": ('document.get("source", {}).get("commit") != source_sha', "False"),
         "windows-build": ('image.get("os") == "windows" and not re.fullmatch(r"\\d+\\.\\d+\\.\\d+\\.\\d+", image.get("osVersion", ""))', "False"),
