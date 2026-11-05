@@ -296,7 +296,7 @@ class Host:
         return self.commands.run([getattr(self.args, "kubectl", "kubectl"),
                                   "--kubeconfig", str(self.kubeconfig), *args], **kwargs)
 
-    def provision(self, env):
+    def provision(self, env, principal, principal_type):
         if self.receipt_path.exists() or self.kubeconfig.exists():
             raise ValueError("An ownership receipt or kubeconfig already exists; cleanup that execution first")
         token = str(uuid.uuid4())
@@ -311,6 +311,8 @@ class Host:
                 "--tags", f"scenario-token={token}", f"scenario-run={self.args.run_id}",
                 f"scenario={self.scenario['id']}", "owner=ama-metrics-e2e",
                 f"expiresAt={env['SCENARIO_EXPIRES_AT']}")
+        if principal_type == "ServicePrincipal":
+            self.wait_for_rbac(principal)
         result = self.az("deployment", "group", "create", "--resource-group", name,
                          "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
                          env=env, json_output=True, private=True)
@@ -322,6 +324,53 @@ class Host:
         save(self.receipt_path, self.receipt)
         save(self.args.evidence / "deployment.json", outputs)
         return outputs
+
+    def wait_for_rbac(self, principal):
+        uuid.UUID(principal)
+        scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
+        role = "f58310d9-a9f6-439a-9e8d-f62e7b41a168"
+        allowed = ["4d97b98b-1d4f-4787-a291-c67834d212e7", "b0d8363b-8ddd-447d-831f-62ca05bff136"]
+        if "custom-ca" in self.scenario["clusterFeatures"]:
+            allowed.append("acdd72a7-3385-48ef-bd42-f606fba81ae7")
+        clauses = []
+        for action, source in (("write", "Request"), ("delete", "Resource")):
+            clauses.append(
+                f"((!(ActionMatches{{'Microsoft.Authorization/roleAssignments/{action}'}})) OR "
+                f"(@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
+                f"ForAnyOfAnyValues:GuidEquals {{{', '.join(allowed)}}} AND "
+                f"@{source}[Microsoft.Authorization/roleAssignments:PrincipalType] "
+                "ForAnyOfAnyValues:StringEqualsIgnoreCase {'ServicePrincipal'}))")
+        condition = " AND ".join(clauses)
+        command = (
+            f"az role assignment create --subscription {self.args.subscription} "
+            f"--assignee-object-id {principal} --assignee-principal-type ServicePrincipal "
+            f"--role {role} --scope {scope} --condition-version 2.0 --condition \"{condition}\"")
+        proof = {"scope": scope, "principalId": principal, "roleDefinitionId": role,
+                 "allowedRoleDefinitionIds": allowed, "condition": condition, "status": "waiting"}
+        self.receipt["rbacBootstrapScope"] = scope
+        save(self.receipt_path, self.receipt)
+        save(self.args.evidence / "rbac-bootstrap.json", proof)
+        (self.args.evidence / "rbac-bootstrap.ps1").write_text(command + "\n", encoding="utf-8")
+        print("Administrator action required within 20 minutes; run in an authorized Azure session:\n"
+              + command, flush=True)
+        deadline = time.monotonic() + 1200
+        while True:
+            self.assert_owned()
+            assignments = self.az("role", "assignment", "list", "--scope", scope, "--all", json_output=True)
+            for assignment in assignments:
+                if (assignment.get("scope", "").casefold() == scope.casefold()
+                        and assignment.get("principalId", "").casefold() == principal.casefold()
+                        and assignment.get("roleDefinitionId", "").split("/")[-1] == role
+                        and assignment.get("conditionVersion") == "2.0"
+                        and re.sub(r"\s+", "", assignment.get("condition") or "") == re.sub(r"\s+", "", condition)):
+                    self.receipt["rbacDelegationId"] = assignment["id"]
+                    save(self.receipt_path, self.receipt)
+                    save(self.args.evidence / "rbac-bootstrap.json",
+                         {**proof, "status": "granted", "assignmentId": assignment["id"]})
+                    return
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Scoped administrator RBAC bootstrap not confirmed within 20 minutes")
+            time.sleep(30)
 
     def assert_owned(self):
         if self.receipt is None:
@@ -372,8 +421,14 @@ class Host:
                 save(self.args.evidence / "cleanup.json", {"deleted": False, "resourceGroup": group,
                                                          "managedGroupDiscoveryError": discovery_error})
                 raise RuntimeError(f"Parent deleted but managed-group cleanup could not be verified: {discovery_error}")
+            if self.receipt.get("rbacBootstrapScope"):
+                assignments = self.az("role", "assignment", "list", "--all", json_output=True, private=True)
+                if any(row["scope"].casefold() == self.receipt["rbacBootstrapScope"].casefold()
+                       for row in assignments):
+                    raise RuntimeError("Resource group deleted but bootstrap role assignment still exists")
             save(self.args.evidence / "cleanup.json", {
                 "deleted": True, "resourceGroup": group, "managedGroupsDeleted": self.receipt.get("managedGroups", []),
+                **({"rbacDelegationRemoved": True} if self.receipt.get("rbacBootstrapScope") else {}),
             })
         finally:
             self.kubeconfig.unlink(missing_ok=True)
@@ -1001,7 +1056,7 @@ def execute(args, scenario, variants, commands):
                "sourceSha": source, "status": "RUNNING", "settings": {}}
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
-        outputs = host.provision(env)
+        outputs = host.provision(env, testkube[1], testkube[2])
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,

@@ -148,6 +148,19 @@ Ginkgo JSON, per-node/component `imageID` observations, results and cleanup proo
 Secret-bearing command output is redacted; snapshots remain in memory.
 Failed deployments retain `deployment-error.txt` with secret-bearing environment
 values redacted. Command history survives a separate cleanup invocation.
+Service-principal runs create their owned resource group, then wait up to 20 minutes
+for an administrator bootstrap before deploying. The runner prints the exact
+`az role assignment create` command and saves `rbac-bootstrap.ps1` plus
+`rbac-bootstrap.json`. An authorized administrator runs that command in their own
+Azure session; no token or credential is transferred to the runner.
+The delegation is **Role Based Access Control Administrator**, scoped only to this
+new group, with condition version 2.0 restricting both assignment creation and
+deletion to Network Contributor and Monitoring Data Reader for service principals.
+Only the custom-CA profile additionally permits Reader. It cannot delegate Owner,
+User Access Administrator or itself. A precreated group is still refused.
+The gate requires the exact principal, group, role and condition; missing or wider
+delegations do not satisfy it. Timeout fails and cleans up the group. Actual ARM
+deployment remains the permission-propagation check, not the presence of a grant.
 Cleanup waits for the recorded AKS node and AMW managed resource groups to disappear
 as well as the parent. Incomplete receipts discover parent-linked managed groups,
 including retries after the parent has disappeared. Failed discovery is an
@@ -155,6 +168,8 @@ explicit incomplete cleanup, not a pass. It never directly
 deletes an unrelated managed group. The execution-local kubeconfig is removed even
 when cloud cleanup fails. CI publication must unconditionally exclude credential
 files in case the process was killed before `finally`.
+When an administrator bootstrap was recorded, cleanup also verifies its role
+assignment disappeared after deleting the owned group.
 A four-hour execution
 budget bounds commands; cleanup is still allowed after the budget expires.
 `--max-run-seconds` changes that explicit budget. Expiry tags include cleanup grace,
