@@ -153,8 +153,15 @@ Use `<owner>/ama-metrics-sre-<campaign>` (for example
 `bot/ama-metrics-sre-compress`). The build pipeline includes
 `*/ama-metrics-sre-*` alongside its existing main/OTel/Dependabot triggers.
 Pushes trigger the existing build and report-only Linux Trivy jobs. The current
-main-only TestKube conditions do **not** make this an exact-image candidate test
-trigger yet; wiring the owned scenario runner and strict scans remains required.
+legacy TestKube conditions do not automatically validate these branch images.
+After authenticated successful producer verification, queue pipeline 979 with
+`candidateMode: true`, `candidateBuildId`, full `candidateSourceSha` and
+`candidateScenario: default`. Only after verified cleanup may a separate
+`candidateScenario: settings` run execute the nightly settings profile.
+The trusted pipeline checkout may include pipeline/scanner-only repairs while
+the product/test candidate stays immutable; publication records both revisions
+as `pipelineSourceSha` and `sourceSha`. Product or test-source changes require
+a matching new protected producer and fresh execution.
 
 The ci-sre instruction contract is:
 
