@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import shlex
+import shutil
 import subprocess
 import tempfile
 import inspect
@@ -32,6 +33,43 @@ class ReceiptTests(unittest.TestCase):
                          if step.get("parameters", {}).get("component") == "config-reader")
         self.assertEqual(shlex.split(arguments), ["--metadata", metadata])
         self.assertEqual(script.splitlines()[0], "set -e")
+
+    def test_config_reader_signing_payload_and_retry(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        script = next(step["bash"] for stage in pipeline["extends"]["parameters"]["stages"]
+                      for job in stage.get("jobs", []) for step in job.get("steps", [])
+                      if step.get("displayName") == "Build: build and push configuration reader image to dev ACR")
+        jq = next((shlex.split(line) for line in script.splitlines() if line.startswith("jq -e ")), None)
+        self.assertIsNotNone(jq, "sign the push metadata descriptor, not a mutable multi-arch tag lookup")
+        descriptor = {"mediaType": "application/vnd.oci.image.index.v1+json",
+                      "digest": "sha256:" + "b" * 64, "size": 1234}
+        for value in (descriptor, None, {**descriptor, "size": None}, {**descriptor, "digest": "latest"}):
+            result = subprocess.run(jq[:3], input=json.dumps({"containerimage.descriptor": value}),
+                                    text=True, capture_output=True)
+            if value == descriptor:
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout), {"targetArtifact": descriptor})
+            else:
+                self.assertNotEqual(result.returncode, 0)
+        builder = "\n".join(line for line in script.splitlines()
+                            if line.startswith("docker buildx ") and not line.startswith("docker buildx build "))
+        broken = builder.replace("docker buildx inspect dockerbuilder >/dev/null 2>&1 || ", "")
+        self.assertNotEqual(broken, builder)
+        for commands, existing, passed in ((builder, "0", True), (builder, "1", True), (broken, "1", False)):
+            stub = """set -e
+docker() {
+  case "$1 $2 $3" in
+    "buildx inspect dockerbuilder") [[ "$exists" == 1 ]] ;;
+    "buildx inspect --bootstrap") [[ "$exists" == 1 ]] ;;
+    "buildx create --name") [[ "$exists" == 0 ]] && exists=1 ;;
+    "buildx use dockerbuilder") [[ "$exists" == 1 ]] ;;
+    *) printf 'Unexpected Docker command: %s\\n' "$*" >&2; return 99 ;;
+  esac
+}
+"""
+            result = subprocess.run([shutil.which("bash"), "-c", stub + "\nexists=" + existing + "\n" + commands],
+                                    text=True, capture_output=True)
+            self.assertEqual(result.returncode == 0, passed, result.stderr)
 
     def test_worker_accepts_build_and_imagetools_metadata(self):
         digest = "sha256:" + "b" * 64

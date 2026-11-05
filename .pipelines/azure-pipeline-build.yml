@@ -1674,17 +1674,13 @@ extends:
             docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
             docker system prune --all -f
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-            docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+            docker buildx inspect dockerbuilder >/dev/null 2>&1 || docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+            docker buildx use dockerbuilder
             docker buildx inspect --bootstrap
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxcfgreader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
             docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-            cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
-            {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-            EOF
+            jq -e '.["containerimage.descriptor"] | select(.mediaType and (.digest | test("^sha256:[0-9a-f]{64}$")) and (.size | type == "number") and .size > 0) | {targetArtifact: .}' $(Build.ArtifactStagingDirectory)/linuxcfgreader/metadata.json > $(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
