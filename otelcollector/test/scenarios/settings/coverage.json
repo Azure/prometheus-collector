@@ -3,6 +3,7 @@
     "variants": [
       "all-targets-disabled",
       "all-targets-enabled",
+      "annotation-regex-edges-v1",
       "collector-controls-v1",
       "controlplane-istio",
       "custom-scrape",
@@ -934,6 +935,7 @@
     "variants": [
       "all-targets-disabled",
       "all-targets-enabled",
+      "annotation-regex-edges-v1",
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
@@ -1284,6 +1286,7 @@
     "variants": [
       "all-targets-disabled",
       "all-targets-enabled",
+      "annotation-regex-edges-v1",
       "controlplane-istio",
       "custom-scrape",
       "customer-settings-v1",
@@ -1490,6 +1493,7 @@
     "variants": [
       "all-targets-disabled",
       "all-targets-enabled",
+      "annotation-regex-edges-v1",
       "collector-controls-v1",
       "controlplane-istio",
       "custom-scrape",
@@ -1653,6 +1657,7 @@
   },
   "configmap.v2.cluster-metrics.default-targets-metrics-keep-list.podannotations": {
     "variants": [
+      "annotation-regex-edges-v2",
       "customer-settings-v2",
       "customer-transitions-v2",
       "defaults-v2",
@@ -2070,6 +2075,7 @@
   },
   "configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.podannotations": {
     "variants": [
+      "annotation-regex-edges-v2",
       "customer-settings-v2",
       "customer-transitions-v2",
       "defaults-v2",
@@ -2156,6 +2162,7 @@
     "variants": [
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
+      "annotation-regex-edges-v2",
       "collector-controls",
       "customer-settings-v2",
       "customer-transitions-v2",
@@ -2388,6 +2395,7 @@
     "variants": [
       "all-targets-disabled-v2",
       "all-targets-enabled-v2",
+      "annotation-regex-edges-v2",
       "collector-controls",
       "customer-settings-v2",
       "customer-transitions-v2",

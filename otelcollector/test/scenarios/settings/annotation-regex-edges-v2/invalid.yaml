@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v2
+  config-version: regex-invalid
+  cluster-metrics: |-
+    pod-annotation-based-scraping: |-
+      podannotationnamespaceregex = "["
+    default-targets-scrape-interval-settings: |-
+      podannotations = "15s"
+    default-targets-metrics-keep-list: |-
+      podannotations = "weather_.*"
