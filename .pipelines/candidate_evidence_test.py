@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
+import shlex
+import subprocess
 import tempfile
+import time
 import unittest
 
 import yaml
@@ -22,6 +25,62 @@ class CandidateEvidenceTest(unittest.TestCase):
         path = self.evidence / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(data, encoding="utf-8")
+
+    def test_bootstrap_publishes_live_and_watcher_stops_without_changing_exit_status(self):
+        template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
+        run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
+        script = run["inputs"]["inlineScript"]
+        watcher = script[script.index("publish_bootstrap() {"):script.index('"$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run')]
+        for variable, value in (("Build.BuildId", "979123"), ("System.StageAttempt", "1"), ("System.JobAttempt", "2")):
+            watcher = watcher.replace(f"$({variable})", value)
+        self.write("ownership.json", '{"token":"DO_NOT_UPLOAD"}')
+        self.write("kubeconfig", "DO_NOT_UPLOAD")
+        proof = self.evidence / "rbac-bootstrap.json"
+        for publish, status in ((True, 23), (False, 0), (False, 143)):
+            proof.unlink(missing_ok=True)
+            command = "kill -TERM $$" if status == 143 else f"sleep 4; exit {status}"
+            output_path = self.root / "watcher-output.txt"
+            output_file = output_path.open("w")
+            script_path = self.root / "watcher.sh"
+            script_path.write_text(
+                "set -euo pipefail\nCANDIDATE_EVIDENCE=" + shlex.quote(self.evidence.as_posix()) +
+                "\nCANDIDATE_SOURCE_SHA=source\nPRODUCER_BUILD_ID=131161\nCANDIDATE_SCENARIO=default\n" + watcher +
+                '\nprintf "%s" "$bootstrap_watcher" > "$CANDIDATE_EVIDENCE/watcher.pid"\n' + command,
+                encoding="utf-8",
+            )
+            process = subprocess.Popen(
+                ["bash", script_path.as_posix()],
+                stdout=output_file, stderr=subprocess.PIPE, text=True,
+            )
+            try:
+                if publish:
+                    self.write("rbac-bootstrap.json", '{"status":')
+                    time.sleep(0.3)
+                    self.assertIsNone(process.poll())
+                    self.assertEqual(output_path.read_text(), "")
+                    self.write("rbac-bootstrap.json", '{"status":"waiting","scope":"/subscriptions/test/resourceGroups/new","principalId":"principal","token":"DO_NOT_UPLOAD"}')
+                    deadline = time.monotonic() + 8
+                    while not output_path.read_text() and process.poll() is None and time.monotonic() < deadline:
+                        time.sleep(0.1)
+                    line = output_path.read_text()
+                    if process.poll() is not None:
+                        self.fail("Publication must precede harness completion: " + process.communicate(timeout=10)[1])
+                    public = self.evidence / "rbac-bootstrap-public.json"
+                    self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=rbac-bootstrap;artifactname=candidate-rbac-bootstrap-979123-1-2]" + public.as_posix())
+                    data = json.loads(public.read_text())
+                    self.assertNotIn("DO_NOT_UPLOAD", public.read_text())
+                    self.assertEqual((data["validationBuildId"], data["candidateSourceSha"], data["producerBuildId"], data["scenario"]), ("979123", "source", "131161", "default"))
+                _, errors = process.communicate(timeout=10)
+                self.assertEqual(process.returncode, status, errors)
+                if not publish:
+                    self.assertEqual(output_path.read_text(), "")
+                watcher_pid = (self.evidence / "watcher.pid").read_text()
+                self.assertNotEqual(subprocess.run(["bash", "-c", f"kill -0 {watcher_pid} 2>/dev/null"]).returncode, 0)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate()
+                output_file.close()
 
     def test_filters_credentials_but_retains_bound_execution_and_scan_evidence(self):
         self.write("kubeconfig", "NEVER PUBLISH")

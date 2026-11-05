@@ -118,6 +118,33 @@ steps:
       "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
         --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
         --output "$CANDIDATE_EVIDENCE/pipeline-verification"
+      publish_bootstrap() {
+        local proof="$CANDIDATE_EVIDENCE/rbac-bootstrap.json"
+        local public="$CANDIDATE_EVIDENCE/rbac-bootstrap-public.json"
+        while true; do
+          if [[ -f "$proof" ]] && jq -e \
+            --arg buildId "$(Build.BuildId)" --arg sourceSha "$CANDIDATE_SOURCE_SHA" \
+            --arg producerBuildId "$PRODUCER_BUILD_ID" --arg scenario "$CANDIDATE_SCENARIO" \
+            'select(.status == "waiting" and (.scope | type == "string") and (.principalId | type == "string")) |
+             {scope, principalId, roleDefinitionId, allowedRoleDefinitionIds, condition, status,
+              validationBuildId: $buildId, candidateSourceSha: $sourceSha, producerBuildId: $producerBuildId, scenario: $scenario}' \
+            "$proof" > "$public.tmp" 2>/dev/null; then
+            mv "$public.tmp" "$public"
+            echo "##vso[artifact.upload containerfolder=rbac-bootstrap;artifactname=candidate-rbac-bootstrap-$(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)]$public"
+            return
+          fi
+          sleep 2
+        done
+      }
+      publish_bootstrap &
+      bootstrap_watcher=$!
+      stop_bootstrap_watcher() {
+        kill "$bootstrap_watcher" 2>/dev/null || true
+        wait "$bootstrap_watcher" 2>/dev/null || true
+      }
+      trap stop_bootstrap_watcher EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
       "$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run \
         --scenario "$CANDIDATE_SCENARIO" --build-id "$PRODUCER_BUILD_ID" --testkube-version 2.15.0 \
         --max-run-seconds "$max_run_seconds" \
