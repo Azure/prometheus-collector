@@ -57,7 +57,9 @@ Write-Host "CoMET Docker exit code: $scanExitCode"
   dockerExitCode = $scanExitCode
 } | ConvertTo-Json | Set-Content -Path (Join-Path $ResultsDirectory 'scan-exit.json') -Encoding UTF8
 
-if ($scanExitCode -ne 0) {
+$xmlPath = Join-Path $ResultsDirectory 'result.xml'
+$jsonPath = Join-Path $ResultsDirectory 'result.json'
+if ($scanExitCode -ne 0 -or !(Test-Path $xmlPath) -or !(Test-Path $jsonPath)) {
   # Keep Qualys diagnostics without copying its large manifest database or binaries.
   $copyDiagnostics = @'
 $ErrorActionPreference = 'Stop'
@@ -91,8 +93,6 @@ foreach ($source in 'C:\internal', 'C:\qualys_binaries') {
   }
 }
 
-$xmlPath = Join-Path $ResultsDirectory 'result.xml'
-$jsonPath = Join-Path $ResultsDirectory 'result.json'
 if (!(Test-Path $xmlPath) -or !(Test-Path $jsonPath)) {
   throw "CoMET did not produce both result.xml and result.json in $ResultsDirectory."
 }
