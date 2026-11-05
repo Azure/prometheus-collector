@@ -2,12 +2,65 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Image,
   [Parameter(Mandatory = $true)]
-  [string]$ResultsDirectory
+  [string]$ResultsDirectory,
+  [switch]$ControlScan
 )
 
 $ErrorActionPreference = 'Stop'
 $scanner = 'mcr.microsoft.com/tvm-containers/shavsa/comet:v1-windows-amd64'
 New-Item -ItemType Directory -Force -Path $ResultsDirectory | Out-Null
+$fullDiagnostics = $env:COMET_WINDOWS_DIAGNOSTICS -eq 'true'
+
+if ($fullDiagnostics -and !$ControlScan) {
+  $hostProbes = @(
+    { Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber },
+    { Get-WindowsFeature Hyper-V, Containers | Select-Object Name, InstallState },
+    { Get-Service Winmgmt, vmcompute, vmms, docker | Select-Object Name, Status, StartType }
+  )
+  foreach ($probe in $hostProbes) {
+    try { & $probe | Format-List | Out-String | Add-Content (Join-Path $ResultsDirectory 'host-probes.txt') }
+    catch { "Probe $probe failed: $_" | Add-Content (Join-Path $ResultsDirectory 'host-probes.txt') }
+  }
+  foreach ($command in 'version', 'info') {
+    $ErrorActionPreference = 'Continue'
+    docker $command 2>&1 | Out-File (Join-Path $ResultsDirectory "docker-$command.txt")
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    "Docker $command exit: $code" | Add-Content (Join-Path $ResultsDirectory "docker-$command.txt")
+  }
+  if ($Image -notmatch '-(ltsc2019|ltsc2022)$') { throw 'Cannot determine matching Server Core tag for diagnostic probe.' }
+  $baseImage = "mcr.microsoft.com/windows/servercore:$($Matches[1])"
+  docker pull $baseImage
+  if ($LASTEXITCODE -ne 0) { throw "Cannot pull diagnostic base image $baseImage." }
+  $queryProbe = @'
+$ErrorActionPreference = 'Stop'
+whoami
+foreach ($probe in @(
+  { Get-Service Winmgmt | Format-List Name, Status, StartType },
+  { Get-CimInstance Win32_OperatingSystem | Format-List Caption, Version, BuildNumber },
+  { Get-CimInstance Win32_QuickFixEngineering | Format-List HotFixID, InstalledOn },
+  { Get-Item C:\Windows\System32\wbem\WMIC.exe | Select-Object FullName, VersionInfo }
+)) {
+  try { & $probe } catch { Write-Output "Probe $probe failed: $_" }
+}
+$ErrorActionPreference = 'Continue'
+& C:\Windows\System32\wbem\WMIC.exe qfe list /format:rawxml
+Write-Output "WMIC exit: $LASTEXITCODE"
+'@
+  $encodedProbe = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($queryProbe))
+  foreach ($probeImage in $Image, $baseImage) {
+    $name = if ($probeImage -eq $Image) { 'target' } else { 'servercore' }
+    docker image inspect $probeImage | Out-File (Join-Path $ResultsDirectory "$name-image.json")
+    if ($LASTEXITCODE -ne 0) { throw "Cannot inspect diagnostic image $probeImage." }
+    $ErrorActionPreference = 'Continue'
+    docker run --rm --isolation=hyperv --user 'NT AUTHORITY\SYSTEM' --entrypoint powershell `
+      $probeImage -NoProfile -EncodedCommand $encodedProbe 2>&1 |
+      Out-File (Join-Path $ResultsDirectory "$name-wmi-probe.txt")
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    "Probe container exit: $code" | Add-Content (Join-Path $ResultsDirectory "$name-wmi-probe.txt")
+  }
+}
 
 $platform = docker image inspect --format '{{.Os}}/{{.Architecture}}' $Image
 if ($LASTEXITCODE -ne 0 -or $platform.Trim() -ne 'windows/amd64') {
@@ -47,8 +100,15 @@ $dockerArgs = @(
   $scanner, 'scan', '--scan-result-path', 'C:\results',
   '--oidc-token', $jwt, $Image
 )
-& docker @dockerArgs
+$consolePath = Join-Path $ResultsDirectory 'comet-console.txt'
+$ErrorActionPreference = 'Continue'
+& docker @dockerArgs 2>&1 | ForEach-Object {
+  $line = $_.ToString().Replace($jwt, '[REDACTED]')
+  Write-Host $line
+  Add-Content -LiteralPath $consolePath -Value $line
+}
 $scanExitCode = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
 Write-Host "CoMET Docker exit code: $scanExitCode"
 @{
   image = $Image
@@ -59,21 +119,21 @@ Write-Host "CoMET Docker exit code: $scanExitCode"
 
 $xmlPath = Join-Path $ResultsDirectory 'result.xml'
 $jsonPath = Join-Path $ResultsDirectory 'result.json'
-if ($scanExitCode -ne 0 -or !(Test-Path $xmlPath) -or !(Test-Path $jsonPath)) {
-  # Keep Qualys diagnostics without copying its large manifest database or binaries.
+if ($fullDiagnostics -or $scanExitCode -ne 0 -or !(Test-Path $xmlPath) -or !(Test-Path $jsonPath)) {
   $copyDiagnostics = @'
 $ErrorActionPreference = 'Stop'
 foreach ($source in 'C:\internal', 'C:\qualys_binaries') {
   $files = @(Get-ChildItem -LiteralPath $source -Recurse -File)
   $files | Select-Object FullName, Length | ConvertTo-Json -Depth 3 | Set-Content ("C:\results\" + (Split-Path $source -Leaf) + "-files.json")
   foreach ($file in $files) {
-    if ($file.Extension -notin '.log', '.txt', '.json', '.xml', '.out', '.err') { continue }
+    if (!($fullDiagnostics -and $source -eq 'C:\internal') -and $file.Extension -notin '.log', '.txt', '.json', '.xml', '.out', '.err') { continue }
     $destination = Join-Path 'C:\results\diagnostics' $file.FullName.Substring(3)
     New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
     Copy-Item -LiteralPath $file.FullName -Destination $destination
   }
 }
 '@
+  $copyDiagnostics = '$fullDiagnostics = $' + $fullDiagnostics.ToString().ToLowerInvariant() + "`n" + $copyDiagnostics
   $encodedDiagnostics = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($copyDiagnostics))
   docker run --rm --isolation=hyperv --entrypoint powershell `
     -v 'scanutilitywin:C:\internal:ro' `
@@ -87,9 +147,21 @@ foreach ($source in 'C:\internal', 'C:\qualys_binaries') {
   $diagnosticsDirectory = Join-Path $ResultsDirectory 'diagnostics'
   if (Test-Path $diagnosticsDirectory) {
     Get-ChildItem -LiteralPath $diagnosticsDirectory -Recurse -File | ForEach-Object {
+      if ($_.Extension -notin '.log', '.txt', '.json', '.xml', '.out', '.err' -and $_.Name -notlike 'console_log-*') { return }
       $content = [System.IO.File]::ReadAllText($_.FullName)
       [System.IO.File]::WriteAllText($_.FullName, $content.Replace($jwt, '[REDACTED]'))
     }
+  }
+}
+
+if ($fullDiagnostics -and !$ControlScan) {
+  $controlDirectory = Join-Path $ResultsDirectory 'self-scan'
+  try {
+    & $PSCommandPath -Image $scanner -ResultsDirectory $controlDirectory -ControlScan
+    @{ reportValidation = 'passed' } | ConvertTo-Json | Set-Content (Join-Path $ResultsDirectory 'self-scan-status.json')
+  } catch {
+    Write-Host "##vso[task.logissue type=warning]CoMET self-scan failed report validation: $_"
+    @{ reportValidation = 'failed'; error = "$_" } | ConvertTo-Json | Set-Content (Join-Path $ResultsDirectory 'self-scan-status.json')
   }
 }
 
