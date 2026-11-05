@@ -22,10 +22,15 @@ class ComparisonTests(unittest.TestCase):
                    "images": [{"name": "collector", "ref": image("b"), "os": "linux", "arch": "amd64"}]}
         finding = {"VulnerabilityID": cve, "PkgName": "example/package", "InstalledVersion": "1",
                    "FixedVersion": "2", "Severity": "HIGH"}
-        data = {"Metadata": {"RepoDigests": [image("a")], "ImageConfig": {"os": "linux", "architecture": "amd64"}},
+        data = {"Metadata": {"RepoDigests": [image("a")], "ImageConfig": {"os": "linux", "architecture": "amd64"},
+                             "OS": {"Family": "azurelinux", "Name": "3.0"}},
                 "Results": [{"Target": "opt/main", "Class": "lang-pkgs", "Type": "gobinary",
                              "Packages": [{"Name": "example/package", "Version": "1"}],
-                             "Vulnerabilities": [finding]}]}
+                             "Vulnerabilities": [finding]},
+                            {"Target": image("a") + " (azurelinux 3.0)", "Class": "os-pkgs", "Type": "azurelinux",
+                             "Packages": [{"Name": "os-package", "Version": "1"}],
+                             "Vulnerabilities": [{**finding, "VulnerabilityID": "CVE-2026-5678",
+                                                  "PkgName": "os-package"}]}]}
         metadata = {"exitCode": 0, "requestedRef": image("a"), "platform": "linux/amd64",
                     "version": "test-version", "dbUpdatedAt": now.isoformat(),
                     "finishedUtc": now.isoformat(), "dbSha256": "c" * 64,
@@ -46,12 +51,14 @@ class ComparisonTests(unittest.TestCase):
             write(baseline, data, metadata)
             after = copy.deepcopy(data)
             after["Metadata"]["RepoDigests"] = [image("b")]
+            after["Results"][1]["Target"] = image("b") + " (azurelinux 3.0)"
             after["Results"][0]["Vulnerabilities"] = []
             after["Results"][0]["Packages"][0]["Version"] = "2"
             candidate_meta = {**metadata, "requestedRef": image("b")}
             write(candidate, after, candidate_meta)
             self.assertEqual(compare_trivy.compare(baseline, candidate, receipt, [cve], now)["verdict"], "PASS")
-            for failure in ("db", "missing-package", "open", "new", "wrong-image"):
+            for failure in ("db", "missing-package", "open", "new", "wrong-image",
+                            "os-source", "os-version", "os-type", "missing-target", "language-path"):
                 with self.subTest(failure=failure):
                     changed, meta = copy.deepcopy(after), dict(candidate_meta)
                     if failure == "db":
@@ -61,10 +68,22 @@ class ComparisonTests(unittest.TestCase):
                     elif failure in ("open", "new"):
                         changed["Results"][0]["Vulnerabilities"] = [
                             {**finding, "VulnerabilityID": cve if failure == "open" else "CVE-2026-9999"}]
-                    else:
+                    elif failure == "wrong-image":
                         meta["requestedRef"] = image("c")
+                    elif failure == "os-source":
+                        changed["Results"][1]["Target"] = image("a") + " (azurelinux 3.0)"
+                    elif failure == "os-version":
+                        changed["Metadata"]["OS"]["Name"] = "4.0"
+                        changed["Results"][1]["Target"] = image("b") + " (azurelinux 4.0)"
+                    elif failure == "os-type":
+                        changed["Results"][1]["Type"] = "other-os"
+                    elif failure == "missing-target":
+                        changed["Results"].pop()
+                    else:
+                        changed["Results"][0]["Target"] = "opt/different"
                     write(candidate, changed, meta)
-                    if failure in ("db", "wrong-image"):
+                    if failure in ("db", "wrong-image", "os-source", "os-version", "os-type",
+                                   "missing-target", "language-path"):
                         with self.assertRaises(ValueError):
                             compare_trivy.compare(baseline, candidate, receipt, [cve], now)
                     else:

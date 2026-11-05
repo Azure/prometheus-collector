@@ -34,6 +34,15 @@ def load(directory, now):
     }
     if metadata["configuration"] != expected_config or not data["Results"]:
         raise ValueError("Incomplete or noncanonical scanner configuration")
+    for result in data["Results"]:
+        if result.get("Class") == "os-pkgs":
+            os = data["Metadata"]["OS"]
+            target = f'{os["Family"]} {os["Name"]}'
+            if (result["Target"] != f'{metadata["requestedRef"]} ({target})'
+                    or result.get("Type") != os["Family"]):
+                raise ValueError("OS target is not bound to the scanned image and distribution")
+            # Trivy embeds the changing image ref in OS targets, unlike binary paths.
+            result["Target"] = "os:" + target
     lane = {"name": metadata["platform"], "scanner": "trivy", "status": "COMPLETE",
             "version": metadata["version"], "dbUpdatedAt": metadata["dbUpdatedAt"]}
     return metadata, data, {"lanes": [lane], "scanVerdict": "PASS", "verdict": "PASS",

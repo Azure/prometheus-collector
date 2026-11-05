@@ -17,7 +17,8 @@ and cluster mutations. The agent never approves or merges its own PR.
   for matched scanner/configuration/DB hashes, complete target/package inventory
   and a candidate bound to the successful build receipt. It cannot clear a
   Qualys QID or claim Windows/full-image coverage. All residual findings remain
-  in its JSON output.
+  in its JSON output. OS targets must match the scan's exact image ref and OS
+  metadata before comparing their distribution/version; binary paths remain exact.
 - `scan.ps1` and `scan-steps.yml`: ported per-child CoMET/OIDC producer, output
   ownership guards and scoped cleanup. They still require dedicated trusted
   workers, approved scanner digests and verified onboarding. Coverage is explicitly
