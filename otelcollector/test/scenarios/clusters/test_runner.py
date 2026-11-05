@@ -294,6 +294,71 @@ class Contracts(unittest.TestCase):
             self.assertEqual([record["exitCode"] for record in records], [1, 0])
             self.assertEqual(records[0]["command"], ["az", "deployment", "group", "create"])
 
+    def test_rbac_bootstrap_accepts_only_exact_scoped_condition_and_times_out_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            host = runner.Host(types.SimpleNamespace(evidence=evidence, subscription="a" * 36),
+                               scenario(), Mock())
+            host.receipt = {"resourceGroup": "owned"}
+            principal = "df26555d-400a-48dd-b013-940eb85ab5bb"
+            host.assert_owned = Mock()
+            rejected = []
+
+            def assignments(*args, **kwargs):
+                proof = runner.load(evidence / "rbac-bootstrap.json")
+                valid = {"id": proof["scope"] + "/providers/Microsoft.Authorization/roleAssignments/one",
+                         "scope": proof["scope"], "principalId": principal,
+                         "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/" +
+                                             proof["roleDefinitionId"],
+                         "conditionVersion": "2.0", "condition": proof["condition"]}
+                if not rejected:
+                    for field, value in (("scope", "/subscriptions/other"), ("principalId", "other"),
+                                         ("roleDefinitionId", "owner"), ("conditionVersion", None),
+                                         ("condition", None)):
+                        rejected.append({**valid, field: value})
+                    return rejected
+                return [valid]
+
+            host.az = Mock(side_effect=assignments)
+            with patch.object(runner.time, "sleep") as sleep, patch("sys.stdout", new=io.StringIO()):
+                host.wait_for_rbac(principal)
+            sleep.assert_called_once_with(30)
+            proof = runner.load(evidence / "rbac-bootstrap.json")
+            self.assertEqual(proof["status"], "granted")
+            self.assertEqual(len(proof["allowedRoleDefinitionIds"]), 2)
+            self.assertNotIn("acdd72a7", proof["condition"])
+            self.assertIn("'ServicePrincipal'", proof["condition"])
+            self.assertNotIn("'User'", proof["condition"])
+            self.assertIn("@Request", proof["condition"])
+            self.assertIn("@Resource", proof["condition"])
+            self.assertEqual(host.receipt["rbacDelegationId"], proof["assignmentId"])
+            self.assertIn("--scope " + proof["scope"], (evidence / "rbac-bootstrap.ps1").read_text())
+            host.az = Mock(return_value=[])
+            with patch.object(runner.time, "monotonic", side_effect=[0, 1200]), \
+                    patch("sys.stdout", new=io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "not confirmed"):
+                    host.wait_for_rbac(principal)
+
+    def test_rbac_bootstrap_is_before_deployment_and_cleanup_verifies_delegation_absence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                         location="eastus2")
+            host = runner.Host(args, scenario(), Mock())
+            host.az = Mock(side_effect=["false", {}])
+            host.wait_for_rbac = Mock(side_effect=RuntimeError("waiting"))
+            with self.assertRaisesRegex(RuntimeError, "waiting"):
+                host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", "ServicePrincipal")
+            self.assertEqual(host.az.call_count, 2)
+            host.wait_for_rbac.assert_called_once_with("principal")
+            host.receipt["managedGroups"] = []
+            host.receipt["rbacBootstrapScope"] = "/subscriptions/sub/resourceGroups/owned"
+            host.az = Mock(side_effect=["false", [{"scope": "/SUBSCRIPTIONS/SUB/RESOURCEGROUPS/OWNED"}]])
+            with self.assertRaisesRegex(RuntimeError, "bootstrap role assignment still exists"):
+                host.cleanup()
+            host.az = Mock(side_effect=["false", []])
+            host.cleanup()
+            self.assertTrue(runner.load(args.evidence / "cleanup.json")["rbacDelegationRemoved"])
+
     def test_pin_only_candidate_workloads_and_require_all_components(self):
         document = {"kind": "Deployment", "metadata": {"name": "ama-metrics"},
                     "spec": {"template": {"spec": {"containers": [
@@ -711,6 +776,11 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "rbac-before-deployment": ("self.wait_for_rbac(principal)", "pass"),
+        "rbac-exact-scope": ('assignment.get("scope", "").casefold() == scope.casefold()', "True"),
+        "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),
+        "rbac-required-condition": ('re.sub(r"\\s+", "", assignment.get("condition") or "") == re.sub(r"\\s+", "", condition)', "True"),
+        "rbac-cleanup": ('if any(row["scope"].casefold() == self.receipt["rbacBootstrapScope"].casefold()\n                       for row in assignments):', 'if False:'),
         "cleanup-command-history": ("self.stages = load(history) if history.exists() else []", "self.stages = []"),
         "deployment-error-redaction": ('diagnostic = diagnostic.replace(value, "[REDACTED]")', "pass"),
         "feature-requirements": ('set(variant["requires"]["clusterFeatures"]) <= set(scenario["clusterFeatures"])', "True"),
