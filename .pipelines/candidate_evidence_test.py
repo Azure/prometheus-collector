@@ -104,7 +104,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
         helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
         self.assertLess(prereqs, helm)
-        for required in ("unzip jq gettext-base", "command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash",
+        for required in ("unzip jq gettext-base libicu70", "bicep --version", "command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash",
+                         'sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep',
+                         "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true",
                          "29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634",
                          "for tool in unzip az kubectl jq envsubst"):
             self.assertIn(required, steps[prereqs]["bash"])

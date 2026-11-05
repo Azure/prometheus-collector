@@ -46,10 +46,15 @@ steps:
 
 - bash: |
     set -euo pipefail
-    # The managed candidate image lacks unzip for HelmInstaller and az for AzureCLI tasks.
+    # The managed candidate image lacks unzip for HelmInstaller, and az/Bicep for AzureCLI tasks and the harness.
     sudo apt-get update
-    sudo apt-get install -y --no-install-recommends unzip jq gettext-base
+    sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
     command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
+    az bicep install
+    # AzureCLI tasks use their own AZURE_CONFIG_DIR, so they can only find Bicep on PATH.
+    sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
+    bicep --version
+    echo "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true"
     if ! command -v kubectl; then
       curl --fail --silent --show-error --location --retry 3 \
         https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl -o "$AGENT_TEMPDIRECTORY/kubectl"
