@@ -122,3 +122,52 @@ for each Windows node, matching the job's `instance` node identity. Prove the
 metric really exists at the current node endpoint `:10249/metrics`; report an
 unsupported endpoint/metric explicitly rather than substitute Windows exporter
 or a Linux kube-proxy series. No Azure resource or nodepool provisioning occurs.
+
+## Annotation namespace regex edges
+
+Run `annotation-regex-edges-v1/v2` with
+`config-processing-annotation-regex-edges-v1/v2`, replacing the labels of the
+existing schema-matched customer-settings carrier. Do not delay the initial
+candidate run for these later cases.
+
+Initial resources reuse `annotation-targets.yaml` and add
+`annotation-edge-targets.yaml`: Namespace `ama-settings-included-similar`,
+annotated Pod `annotation-target` in it, and unannotated Pod
+`ama-settings-included/unannotated-target`. The latter intentionally has a
+different app label to avoid changing other monitor selectors. All identities
+are declared before execution, and the same namespace refusal/restore rules
+apply. The two existing annotated pods remain unchanged.
+
+Apply these complete ConfigMaps from the selected variant folder sequentially:
+
+| Phase input | Regex | Expected annotated fixture namespaces |
+|---|---|---|
+| `default.yaml` (initial) | absent | none; annotation job disabled |
+| `empty.yaml` | empty string | none; annotation job disabled |
+| `invalid.yaml` (cold/default state) | `[` | none; validation error, disabled |
+| `alternation.yaml` | `^(ama-settings-included\|ama-settings-excluded)$` | included + excluded, not included-similar |
+| `wildcard.yaml` | `.*` | all three annotated fixture namespaces |
+| `invalid.yaml` (after wildcard) | `[` | none after normal reload convergence, not last-valid wildcard |
+
+Never discover or ingest `unannotated-target` through `job="kubernetes-pods"`,
+even under wildcard. Scope checks to the declared fixture pods; wildcard can
+legitimately discover unrelated annotated workloads elsewhere on the host.
+Require both anchored alternatives independently, deny the similar-prefix
+namespace under alternation, and require it positively under wildcard so a
+missing/dead negative target cannot make the exclusion assertion pass.
+
+The fallback is disabled, not "all namespaces": MP
+`tomlparser-pod-annotation-based-scraping.go` rejects missing/empty/invalid
+regex before writing configuration; `configmapparser.go` returns before
+reading any previous env file on that error. Linux
+`shared/process_utilities_linux.go` only updates process environment, not
+persistent bashrc. Reader and RS main parse once; settings inotify changes
+make liveness unhealthy and the normal container restart parses afresh.
+Verify that normal restart/config convergence occurred before asserting
+invalid-after-valid removal; do not force a restart from the spec. This is
+the container reload path, not a claim that calling the parser twice in the
+same process clears a previously set environment variable.
+
+Require the invalid-regex diagnostic, healthy fallback and generated
+annotation-job absence separately from fresh target/sample checks. Historical
+AMW series can remain after a phase; their existence is not new ingestion.

@@ -249,6 +249,35 @@ class SettingsCatalogTests(unittest.TestCase):
         self.assertEqual(windows["configmap.v2.cluster-metrics.default-targets-scrape-interval-settings.windowskubeproxy"], "15s")
         self.assertEqual(windows["configmap.v2.cluster-metrics.default-targets-metrics-keep-list.windowskubeproxy"], "kubeproxy_sync_proxy_rules_duration_seconds.*")
 
+    def test_annotation_regex_edge_inputs_and_controls(self):
+        controls = list(yaml.safe_load_all((ROOT / "annotation-edge-targets.yaml").read_text()))
+        similar = next(doc for doc in controls if doc["kind"] == "Pod" and doc["metadata"]["name"] == "annotation-target")
+        unannotated = next(doc for doc in controls if doc["kind"] == "Pod" and doc["metadata"]["name"] == "unannotated-target")
+        self.assertEqual(similar["metadata"]["namespace"], "ama-settings-included-similar")
+        self.assertEqual(similar["metadata"]["annotations"]["prometheus.io/scrape"], "true")
+        with self.subTest(control="unannotated"):
+            self.assertNotIn("prometheus.io/scrape", unannotated["metadata"].get("annotations", {}))
+        self.assertEqual(unannotated["metadata"]["namespace"], "ama-settings-included")
+        expected = {"default": None, "empty": "", "alternation": "^(ama-settings-included|ama-settings-excluded)$", "wildcard": ".*", "invalid": "["}
+        for version in ("v1", "v2"):
+            directory = ROOT / f"annotation-regex-edges-{version}"
+            manifest = json.loads((directory / "manifest.json").read_text())
+            self.assertEqual(manifest["configmaps"], ["default.yaml"])
+            self.assertEqual(manifest["customResources"], ["../annotation-targets.yaml", "../annotation-edge-targets.yaml"])
+            prefix = f"configmap.{version}."
+            metrics = prefix + ("cluster-metrics." if version == "v2" else "")
+            baseline = None
+            for phase, regex in expected.items():
+                with self.subTest(version=version, phase=phase):
+                    doc = yaml.safe_load((directory / f"{phase}.yaml").read_text())
+                    self.assertEqual(doc["metadata"], {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"})
+                    values = config_settings(doc["data"])
+                    self.assertEqual(values.pop(metrics + "pod-annotation-based-scraping.podannotationnamespaceregex", None), regex)
+                    values.pop(prefix + "config-version")
+                    if baseline is None:
+                        baseline = values
+                    self.assertEqual(values, baseline)
+
     def test_empty_labels_cannot_select_every_suite(self):
         path = ROOT / "default/manifest.json"
         manifest = json.loads(path.read_text())

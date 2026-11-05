@@ -9,6 +9,22 @@
   ],
   "variants": [
     {
+      "id": "annotation-regex-edges-v1",
+      "manifest": "annotation-regex-edges-v1/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v1-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
+      "id": "annotation-regex-edges-v2",
+      "manifest": "annotation-regex-edges-v2/manifest.json",
+      "schedule": "nightly",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-customer-settings-v2-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
       "id": "customer-transitions-v1",
       "manifest": "customer-transitions-v1/manifest.json",
       "schedule": "nightly",

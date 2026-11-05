@@ -1,0 +1,11 @@
+{
+  "id": "annotation-regex-edges-v1",
+  "description": "Schema v1 annotation namespace default, empty, anchored alternation, wildcard and invalid-regex fallback with negative controls.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": []},
+  "configmaps": ["default.yaml"],
+  "customResources": ["../annotation-targets.yaml", "../annotation-edge-targets.yaml"],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-annotation-regex-edges-v1"],
+  "expectedOutcome": "healthy"
+}
