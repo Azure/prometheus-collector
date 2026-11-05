@@ -39,6 +39,13 @@ parameters:
   displayName: 'Full candidate source commit'
   type: string
   default: ''
+- name: candidateScenario
+  displayName: 'Existing candidate scenario (PR default or nightly settings)'
+  type: string
+  default: default
+  values:
+  - default
+  - settings
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -1140,7 +1147,10 @@ stages:
   - deployment: CandidateTestkube
     displayName: "Test: receipt-bound disposable candidate"
     environment: Prometheus-Collector-Tests
-    timeoutInMinutes: 600
+    ${{ if eq(parameters.candidateScenario, 'settings') }}:
+      timeoutInMinutes: 900
+    ${{ else }}:
+      timeoutInMinutes: 600
     cancelTimeoutInMinutes: 60
     variables:
       candidateAttempt: $(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)
@@ -1162,4 +1172,5 @@ stages:
             parameters:
               producerBuildId: ${{ parameters.candidateBuildId }}
               sourceSha: ${{ parameters.candidateSourceSha }}
+              scenario: ${{ parameters.candidateScenario }}
               azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})

@@ -33,7 +33,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.write("pipeline-verification/candidate-build.json", json.dumps({
             "source": {"commit": self.sha, "buildId": "4401", "repo": "Azure/prometheus-collector"},
         }))
-        execution = "customer-settings-v1/configprocessing/testkube-executions/ConfigTests/workflow/exact-id/"
+        execution = "customer-transitions-v1/configprocessing/testkube-executions/ConfigTests/workflow/exact-id/"
         self.write(execution + "execution.json", json.dumps({
             "id": "exact-id", "workflow": {"name": "workflow"}, "result": {"status": "failed"},
         }))
@@ -87,7 +87,17 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("'False'", jobs[0]["condition"])
         self.assertIn("'True'", jobs[1]["condition"])
         self.assertEqual(jobs[1]["cancelTimeoutInMinutes"], 60)
+        self.assertEqual(jobs[1]["${{ if eq(parameters.candidateScenario, 'settings') }}"]["timeoutInMinutes"], 900)
+        self.assertEqual(jobs[1]["${{ else }}"]["timeoutInMinutes"], 600)
+        scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
+        self.assertEqual(scenario["default"], "default")
+        self.assertEqual(scenario["values"], ["default", "settings"])
+        include = jobs[1]["strategy"]["runOnce"]["deploy"]["steps"][0]
+        self.assertEqual(include["parameters"]["scenario"], "${{ parameters.candidateScenario }}")
         template = yaml.safe_load((directory / "azure-template-candidate-config-tests.yml").read_text())
+        scenario = next(item for item in template["parameters"] if item["name"] == "scenario")
+        self.assertEqual(scenario["default"], "default")
+        self.assertEqual(scenario["values"], ["default", "settings"])
         steps = template["steps"]
         run = next(i for i, step in enumerate(steps) if "Run authenticated candidate" in step.get("displayName", ""))
         cleanup = next(i for i, step in enumerate(steps) if "retry ownership" in step.get("displayName", ""))
@@ -97,6 +107,14 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(steps[cleanup]["condition"], "always()")
         self.assertIn('$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
         self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', steps[run]["inputs"]["inlineScript"])
+        self.assertIn('--scenario "$CANDIDATE_SCENARIO"', steps[run]["inputs"]["inlineScript"])
+        self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        self.assertEqual(steps[run]["${{ if eq(parameters.scenario, 'settings') }}"]["timeoutInMinutes"], 540)
+        self.assertEqual(steps[run]["${{ else }}"]["timeoutInMinutes"], 300)
+        self.assertIn('settings) max_run_seconds=28800 ;; default) max_run_seconds=14400', steps[run]["inputs"]["inlineScript"])
+        self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings)', steps[1]["bash"])
+        self.assertEqual(steps[1]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertLess(
             steps[run]["inputs"]["inlineScript"].index(".pipelines/pr-e2e/fetch_candidate.py"),
             steps[run]["inputs"]["inlineScript"].index("/otelcollector/test/scenarios/run-scenario.py"),
