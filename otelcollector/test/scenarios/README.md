@@ -208,6 +208,8 @@ files alone are not a published CI result.
 No separate per-scenario runner, fixture copies, or additional scenario schema is
 needed. The existing profiles exercise this extension path; planned axes remain
 coverage gaps until their real adapter and live evidence exist.
+The [private-runner finalizer contract](clusters/private-runner/CONTRACT.md)
+provides tested cleanup code, not a commissioned runner or private-path proof.
 
 ## Auto-upgrade and combination semantics
 
