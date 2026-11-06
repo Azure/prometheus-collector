@@ -45,7 +45,10 @@ resources:
     name: 1ESPipelineTemplates/1ESPipelineTemplates
     ref: refs/tags/release
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+    template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  ${{ else }}:
+    template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     featureFlags:
       disableNetworkIsolation: true
@@ -54,6 +57,8 @@ extends:
       image: ci-1es-managed-ubuntu-2204
       os: linux
     sdl:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+        enableProductionSDL: true
       sourceAnalysisPool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
