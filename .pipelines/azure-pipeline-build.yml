@@ -30,7 +30,7 @@ variables:
   IS_SRE_BRANCH: $[or(startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/vuln/'), and(startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-')))]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
-  Codeql.Enabled: true
+  Codeql.Enabled: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
   GOLANG_VERSION: '1.26.10'
   FLUENTBIT_GOLANG_VERSION: '1.26.5'
   TESTKUBE_GOLANG_VERSION: '1.26.9'
@@ -57,11 +57,18 @@ extends:
       image: ci-1es-managed-ubuntu-2204
       os: linux
     sdl:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+        enableAllTools: false
+        antimalwareScan:
+          enabled: false
+        spmi:
+          enabled: false
       sourceAnalysisPool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022
         os: windows
       componentgovernance: 
+        enabled: true
         ignoreDirectories: 'mixins,internal,tools'
     customBuildTags:
     - ES365AIMigrationTooling
@@ -267,6 +274,7 @@ extends:
           condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - task: CredScan@3
           displayName: "SDL : Run credscan"
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - task: CopyFiles@2
           displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
           condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
@@ -781,7 +789,7 @@ extends:
           os: windows
         variables:
           skipComponentGovernanceDetection: true
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         steps:
         - checkout: self
           submodules: true
@@ -798,12 +806,13 @@ extends:
           os: linux
         variables:
           skipComponentGovernanceDetection: true
-        condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         steps:
         - checkout: self
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             set -e
             wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
@@ -872,6 +881,7 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             set -e
             wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-arm64.tar.gz
@@ -928,6 +938,7 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             set -e
             wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
@@ -991,6 +1002,7 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             set -e
             wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
@@ -1175,6 +1187,7 @@ extends:
           displayName: "Build: run trivy scan"
         - task: CodeQL3000Finalize@0
           displayName: 'SDL: run codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - task: ComponentGovernanceComponentDetection@0
           displayName: "SDL: run component governance"
           inputs:
@@ -1186,6 +1199,7 @@ extends:
             ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
         - task: SdtReport@2
           displayName: 'SDL: generate report'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             GdnExportAllTools: false
             GdnExportGdnToolBinSkim: true
@@ -1196,6 +1210,7 @@ extends:
             GdnExportGdnToolSemmleSeverity: 'Note'
         - task: PublishSecurityAnalysisLogs@3
           displayName: 'SDL: publish report'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             ArtifactName: 'CodeAnalysisLogs'
             ArtifactType: 'Container'
@@ -1204,6 +1219,7 @@ extends:
             ToolLogsNotFoundAction: 'Standard'
         - task: PostAnalysis@2
           displayName: 'SDL: Post-Build Analysis'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             GdnBreakAllTools: false
             GdnBreakGdnToolBinSkim: true
@@ -1235,6 +1251,7 @@ extends:
           submodules: true
         - task: CodeQL3000Init@0
           displayName: 'SDL: init codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - bash: |
             set -e
             wget -q https://go.dev/dl/go$(GOLANG_VERSION).linux-amd64.tar.gz
@@ -1353,6 +1370,7 @@ extends:
           displayName: "Build: run trivy scan"
         - task: CodeQL3000Finalize@0
           displayName: 'SDL: run codeql'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - task: ComponentGovernanceComponentDetection@0
           displayName: "SDL: run component governance"
           inputs:
@@ -1370,6 +1388,7 @@ extends:
             DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
         - task: SdtReport@2
           displayName: 'SDL: generate report'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             GdnExportAllTools: false
             GdnExportGdnToolBinSkim: true
@@ -1380,6 +1399,7 @@ extends:
             GdnExportGdnToolSemmleSeverity: 'Note'
         - task: PublishSecurityAnalysisLogs@3
           displayName: 'SDL: publish report'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             ArtifactName: 'CodeAnalysisLogs'
             ArtifactType: 'Container'
@@ -1388,6 +1408,7 @@ extends:
             ToolLogsNotFoundAction: 'Standard'
         - task: PostAnalysis@2
           displayName: 'SDL: Post-Build Analysis'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             GdnBreakAllTools: false
             GdnBreakGdnToolBinSkim: true
