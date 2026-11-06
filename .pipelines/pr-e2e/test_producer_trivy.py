@@ -15,7 +15,13 @@ import yaml
 class ProducerTests(unittest.TestCase):
     def test_scan_replacement_and_release_artifacts_are_scoped(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
-        self.assertEqual(pipeline["extends"]["template"], "v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates")
+        conditional = "${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}"
+        self.assertEqual(pipeline["extends"][conditional]["template"],
+                         "v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates")
+        self.assertEqual(pipeline["extends"]["${{ else }}"]["template"],
+                         "v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates")
+        self.assertTrue(pipeline["extends"]["parameters"]["sdl"][
+            "${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}"]["enableProductionSDL"])
         self.assertIn("refs/heads/main", pipeline["variables"]["IS_MAIN_BRANCH"])
         jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
         tags = next(job for job in jobs if job["job"] == "Image_Tags_and_Ev2_Artifacts")
