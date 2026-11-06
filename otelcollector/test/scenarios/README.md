@@ -166,9 +166,19 @@ User Access Administrator or itself. A precreated group is still refused.
 The gate requires the exact principal, group, role and condition; missing or wider
 delegations do not satisfy it. Timeout fails and retains any created resources for
 inspection. Actual ARM deployment remains the permission-propagation check, not
-the presence of a grant. The authorized bootstrap identity removes the exact
-temporary administrator assignment after the run; the narrower workload roles
-remain with the retained cluster.
+the presence of a grant. The authorized Owner identity removes the exact
+temporary administrator assignment after a successful run; the narrower
+workload roles remain with the retained cluster. The pipeline identity cannot
+delete its own conditional administrator assignment, so run this action from the
+authorized user Azure session:
+
+```powershell
+python otelcollector\test\scenarios\run-scenario.py revoke-bootstrap --evidence C:\temp\ama-candidate-run
+```
+
+It validates the exact recorded scope, principal, role and condition, deletes
+only the recorded assignment ID, verifies its absence, and confirms the
+narrower role assignments are unchanged. It does not delete infrastructure.
 Explicit cleanup waits for the recorded AKS node and AMW managed resource groups
 to disappear as well as the parent. Incomplete receipts discover parent-linked managed groups,
 including retries after the parent has disappeared. Failed discovery is an
