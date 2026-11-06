@@ -95,7 +95,6 @@ variables:
 stages:
 - ${{ if eq(parameters.discoveryOnly, false) }}:
   - stage: Deploy
-    condition: eq('${{ parameters.discoveryOnly }}', 'False')
     jobs:
     - deployment: Testkube
       displayName: "Test: AKS testkube tests"
@@ -105,7 +104,7 @@ stages:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-ubuntu-2204
         os: linux
-      condition: and(succeeded(), eq('${{ parameters.discoveryOnly }}', 'False'), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
+      condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
       variables:
         skipComponentGovernanceDetection: true
       strategy:
@@ -1195,7 +1194,7 @@ stages:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-ubuntu-2204
         os: linux
-      condition: and(succeeded(), eq('${{ parameters.discoveryOnly }}', 'False'), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
+      condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
       strategy:
         runOnce:
           deploy:

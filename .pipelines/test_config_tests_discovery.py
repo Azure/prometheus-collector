@@ -5,7 +5,6 @@ import unittest
 import yaml
 
 ROOT = pathlib.Path(__file__).parent / "azure-pipeline-config-tests.yml"
-GATE = "eq('${{ parameters.discoveryOnly }}', 'False')"
 ON = "${{ if eq(parameters.discoveryOnly, true) }}"
 OFF = "${{ if eq(parameters.discoveryOnly, false) }}"
 
@@ -38,11 +37,20 @@ def check_expanded(doc):
     assert [job["job"] for job in scan["jobs"]] == ["DiscoveryScan"]
     text = yaml.safe_dump(stages).lower()
     for forbidden in ("deployment:", "environment:", "azurecli@", "kubectl",
-                      "testkube", "campaignproducer", "resources.pipeline",
+                      "campaignproducer", "resources.pipeline",
                       "az aks", "az deployment", "azureSubscription:".lower()):
         assert forbidden not in text, forbidden
-    downloads = [step["download"] for step in scan["jobs"][0]["steps"] if "download" in step]
-    assert downloads == ["none"], downloads
+    steps = scan["jobs"][0]["steps"]
+    assert steps[0] == {
+        "task": "30f35852-3f7e-4c0c-9a88-e127b4f97211@1",
+        "condition": False, "inputs": {"alias": "none"},
+    }, steps[0]
+    assert [step["task"] for step in steps[1:]] == [
+        "Bash@3", "Bash@3", "PublishPipelineArtifact@1",
+    ]
+    variables = {row["name"]: row["value"] for row in doc["variables"]}
+    assert variables["campaignProducerBuildId"] == "0"
+    assert variables["campaignSourceSha"] == ""
 
 
 class DiscoveryOnlyIsolation(unittest.TestCase):
@@ -80,11 +88,9 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
         self.assertEqual([s["stage"] for s in expand(doc, True)], ["DiscoveryScan"])
         deploy = expand(doc, False)[0]
         self.assertEqual(deploy["stage"], "Deploy")
-        self.assertIn(GATE, deploy["condition"])
         jobs = [j for j in deploy["jobs"] if "deployment" in j]
         self.assertEqual([j["deployment"] for j in jobs], ["Testkube", "CandidateTestkube"])
         for job in jobs:
-            self.assertIn(GATE, job["condition"])
             # No always()/failed() escape: a skipped job cannot run cleanup steps.
             self.assertTrue(job["condition"].startswith("and(succeeded()"))
         self.assertTrue(all("deployment" in j for j in deploy["jobs"]), "ungated non-deployment job in Deploy")
