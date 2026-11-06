@@ -57,8 +57,6 @@ extends:
       image: ci-1es-managed-ubuntu-2204
       os: linux
     sdl:
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
-        enableProductionSDL: true
       sourceAnalysisPool:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-windows-2022

@@ -20,8 +20,8 @@ class ProducerTests(unittest.TestCase):
                          "v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates")
         self.assertEqual(pipeline["extends"]["${{ else }}"]["template"],
                          "v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates")
-        self.assertTrue(pipeline["extends"]["parameters"]["sdl"][
-            "${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}"]["enableProductionSDL"])
+        self.assertNotIn("enableProductionSDL", str(pipeline["extends"]["parameters"]["sdl"]))
+        self.assertNotIn("antimalwareScan", pipeline["extends"]["parameters"]["sdl"])
         self.assertIn("refs/heads/main", pipeline["variables"]["IS_MAIN_BRANCH"])
         jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
         tags = next(job for job in jobs if job["job"] == "Image_Tags_and_Ev2_Artifacts")
