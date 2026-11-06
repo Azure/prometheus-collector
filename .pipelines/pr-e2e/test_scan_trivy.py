@@ -1,6 +1,7 @@
 """Exercise the actual discovery entrypoint without making registry requests."""
 import json
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -14,6 +15,47 @@ IMAGE = "example.invalid/collector@sha256:" + "a" * 64
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_database_timestamp_with_nanoseconds_is_supported(self):
+        timestamp = "2026-11-06T18:59:52.855177206+00:00"
+        real_datetime = scan_trivy.datetime
+        parsed_values = []
+
+        class StrictDateTime:
+            @staticmethod
+            def now(tz=None):
+                return real_datetime.now(tz)
+
+            @staticmethod
+            def fromisoformat(value):
+                parsed_values.append(value)
+                if re.search(r"\.\d{7,}[+-]\d{2}:\d{2}$", value):
+                    raise ValueError(f"Invalid isoformat string: {value!r}")
+                return real_datetime.fromisoformat(value)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "run"
+
+            def invoke(command, **kwargs):
+                if "--version" in command:
+                    return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
+                        "Version": "test-version",
+                        "VulnerabilityDB": {"UpdatedAt": timestamp},
+                    }))
+                output = Path(command[command.index("--output") + 1])
+                database = root / "cache" / "db"
+                database.mkdir(parents=True)
+                (database / "trivy.db").write_bytes(b"offline database")
+                output.write_text(json.dumps({"Metadata": {
+                    "RepoDigests": [IMAGE],
+                    "ImageConfig": {"os": "linux", "architecture": "amd64"},
+                }, "Results": []}))
+                return subprocess.CompletedProcess(command, 0)
+
+            with patch.object(scan_trivy, "datetime", StrictDateTime):
+                with patch.object(scan_trivy.subprocess, "run", side_effect=invoke):
+                    scan_trivy.scan(IMAGE, "linux/amd64", root)
+            self.assertEqual(parsed_values, ["2026-11-06T18:59:52.855177+00:00"])
+
     def test_digest_platform_and_failed_tool_are_checked(self):
         for mismatch in ("digest", "platform", "tool", None):
             with self.subTest(mismatch=mismatch), tempfile.TemporaryDirectory() as directory:
