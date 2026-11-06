@@ -93,9 +93,18 @@ stages:
             displayName: "Install kubectl CLI"
 
           - bash: |
-              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-              exit 0
+              set -uo pipefail
+              # Hosted agents may be running apt (e.g. unattended-upgrades) at job start, so the
+              # install can fail on the apt/dpkg lock. Retry, and fail the step if `az` is still missing
+              # instead of letting later AzureCLI@2 steps fail with "Azure CLI 2.x is not installed".
+              for attempt in 1 2 3 4 5; do
+                if curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash && command -v az >/dev/null 2>&1; then
+                  break
+                fi
+                echo "Azure CLI install attempt $attempt failed (likely apt/dpkg lock contention); retrying in 30s..."
+                sleep 30
+              done
+              az version
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install Azure CLI"
 
