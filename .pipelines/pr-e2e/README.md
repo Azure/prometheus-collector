@@ -8,12 +8,13 @@ Human approval gates commits/pushes, live scans, image publication, pipeline run
 and cluster mutations. The agent never approves or merges its own PR.
 
 Pipeline 440 uses the Official 1ES template only for `refs/heads/main`; branch
-and PR runs use normal Unofficial SDL defaults, without opting into production
-SDL or disabling default AntiMalware. Production Ev2 artifacts remain main-only. This split
-does not bypass Defender: the 1ES signature check refreshes Linux definitions
-when they are at least 2,880 minutes old. Keeping the managed agent image's
-definitions current avoids that refresh; scanner timeout settings do not limit
-the separate signature-update step.
+and PR runs disable optional SDL via Unofficial's `enableAllTools: false`, with
+explicit AntiMalware/SPMI opt-outs covering nonproduction artifacts too.
+Component Governance remains enabled; Trivy candidate evidence and signing
+are unchanged. Repository-owned CodeQL, CredScan and standalone SDL/report
+tasks run only on main, as do production Ev2 artifacts. Official main keeps its
+enforced security checks, including Defender's refresh for Linux definitions
+at least 2,880 minutes old. Non-main runs no longer request that refresh.
 
 ## Implemented
 

@@ -21,9 +21,21 @@ class ProducerTests(unittest.TestCase):
         self.assertEqual(pipeline["extends"]["${{ else }}"]["template"],
                          "v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates")
         self.assertNotIn("enableProductionSDL", str(pipeline["extends"]["parameters"]["sdl"]))
-        self.assertNotIn("antimalwareScan", pipeline["extends"]["parameters"]["sdl"])
+        sdl = pipeline["extends"]["parameters"]["sdl"]
+        non_main = sdl["${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}"]
+        self.assertFalse(non_main["enableAllTools"])
+        self.assertFalse(non_main["antimalwareScan"]["enabled"])
+        self.assertFalse(non_main["spmi"]["enabled"])
+        self.assertTrue(sdl["componentgovernance"]["enabled"])
         self.assertIn("refs/heads/main", pipeline["variables"]["IS_MAIN_BRANCH"])
         jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
+        for job in jobs:
+            if job["job"] in ("SDL_Policheck_Scan", "SDL_Binary_Scan"):
+                self.assertEqual(job["condition"], "and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))")
+            for step in job.get("steps", []):
+                if step.get("task", "").startswith(("CodeQL3000", "CredScan@", "SdtReport@",
+                                                      "PublishSecurityAnalysisLogs@", "PostAnalysis@")):
+                    self.assertEqual(step["condition"], "and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))")
         tags = next(job for job in jobs if job["job"] == "Image_Tags_and_Ev2_Artifacts")
         self.assertIn("${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}",
                       tags["templateContext"]["outputs"][0])
