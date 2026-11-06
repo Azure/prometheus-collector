@@ -1206,6 +1206,7 @@ stages:
 
 - ${{ if eq(parameters.discoveryOnly, true) }}:
   - stage: DiscoveryScan
+    dependsOn: []
     displayName: "Scan published images (no cluster, TestKube or candidate)"
     jobs:
     - job: DiscoveryScan

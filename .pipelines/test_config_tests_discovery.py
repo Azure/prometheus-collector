@@ -37,7 +37,10 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
 
     def test_discovery_expansion_is_template_only(self):
         doc, _ = load()
-        text = yaml.safe_dump(expand(doc, True)[-1])
+        scan = expand(doc, True)[-1]
+        # Without an explicit empty dependsOn it implicitly follows the skipped Deploy stage and never runs.
+        self.assertEqual(scan.get("dependsOn"), [])
+        text = yaml.safe_dump(scan)
         for banned in ("environment", "deployment", "azureSubscription", "AzureCLI", "kubectl", "testkube", "azure-template-candidate"):
             self.assertNotIn(banned, text)
         self.assertIn("pr-e2e/published-scan-steps.yml", text)
