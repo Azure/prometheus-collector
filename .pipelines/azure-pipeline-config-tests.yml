@@ -63,6 +63,11 @@ parameters:
   - default
   - settings
 
+- name: discoveryOnly
+  displayName: 'Scan published images only (no TestKube, candidate or cluster access)'
+  type: boolean
+  default: false
+
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
@@ -86,6 +91,7 @@ variables:
 
 stages:
 - stage: Deploy
+  condition: eq('${{ parameters.discoveryOnly }}', 'False')
   jobs:
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
@@ -95,7 +101,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
+    condition: and(succeeded(), eq('${{ parameters.discoveryOnly }}', 'False'), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
     variables:
       skipComponentGovernanceDetection: true
     strategy:
@@ -1185,7 +1191,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
+    condition: and(succeeded(), eq('${{ parameters.discoveryOnly }}', 'False'), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
     strategy:
       runOnce:
         deploy:
@@ -1197,3 +1203,16 @@ stages:
               cve: ${{ parameters.candidateCve }}
               scenario: ${{ parameters.candidateScenario }}
               azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
+
+- ${{ if eq(parameters.discoveryOnly, true) }}:
+  - stage: DiscoveryScan
+    displayName: "Scan published images (no cluster, TestKube or candidate)"
+    jobs:
+    - job: DiscoveryScan
+      timeoutInMinutes: 120
+      pool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-ubuntu-2204
+        os: linux
+      steps:
+      - template: pr-e2e/published-scan-steps.yml
