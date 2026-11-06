@@ -6,6 +6,7 @@ import yaml
 ROOT = pathlib.Path(__file__).parent / "azure-pipeline-config-tests.yml"
 GATE = "eq('${{ parameters.discoveryOnly }}', 'False')"
 ON = "${{ if eq(parameters.discoveryOnly, true) }}"
+OFF = "${{ if eq(parameters.discoveryOnly, false) }}"
 
 
 def load():
@@ -15,12 +16,14 @@ def load():
 
 
 def expand(doc, discovery):
-    """Minimal expander: keeps stages gated by `if discoveryOnly == true` only when discovery is on."""
     stages = []
     for item in doc["stages"]:
         if ON in item:
             if discovery:
                 stages += item[ON]
+        elif OFF in item:
+            if not discovery:
+                stages += item[OFF]
         else:
             stages.append(item)
     return stages
@@ -55,10 +58,13 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
         job = expand(doc, True)[-1]["jobs"][0]
         self.assertEqual(job["steps"][0], {"download": "none"})
         self.assertNotIn("campaignProducer", yaml.safe_dump(job))
+        self.assertEqual(list(doc["resources"]["pipelines"][0]), [OFF])
+        self.assertEqual(len(doc["resources"]["pipelines"]), 1)
 
     def test_every_cluster_job_is_gated_for_all_triggers(self):
         doc, _ = load()
-        deploy = expand(doc, True)[0]
+        self.assertEqual([s["stage"] for s in expand(doc, True)], ["DiscoveryScan"])
+        deploy = expand(doc, False)[0]
         self.assertEqual(deploy["stage"], "Deploy")
         self.assertIn(GATE, deploy["condition"])
         jobs = [j for j in deploy["jobs"] if "deployment" in j]
