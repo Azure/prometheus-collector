@@ -8,8 +8,8 @@ Human approval gates commits/pushes, live scans, image publication, pipeline run
 and cluster mutations. The agent never approves or merges its own PR.
 
 Pipeline 440 uses the Official 1ES template only for `refs/heads/main`; branch
-and PR runs use Unofficial with `enableProductionSDL: true` to preserve the
-existing security controls. Production Ev2 artifacts remain main-only. This split
+and PR runs use normal Unofficial SDL defaults, without opting into production
+SDL or disabling default AntiMalware. Production Ev2 artifacts remain main-only. This split
 does not bypass Defender: the 1ES signature check refreshes Linux definitions
 when they are at least 2,880 minutes old. Keeping the managed agent image's
 definitions current avoids that refresh; scanner timeout settings do not limit
