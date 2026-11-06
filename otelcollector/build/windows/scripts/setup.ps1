@@ -75,7 +75,7 @@ Write-Host ('Finished downloading Telegraf')
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri = 'https://github.com/microsoft/Docker-Provider/releases/download/windows-ama-bits/genevamonitoringagent.47.14.2.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.14.2.zip'
     $genevamonitoringagentSha256 = '8f1b572c5caad58b9beed8c6072b690c0988c05d1daefd52f7afe50702f99e2a'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip -ErrorAction Stop
     if ((Get-FileHash -Path /installation/genevamonitoringagent.zip -Algorithm SHA256 -ErrorAction Stop).Hash -ne $genevamonitoringagentSha256) {
