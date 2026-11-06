@@ -420,6 +420,68 @@ class Contracts(unittest.TestCase):
             self.assertFalse(host.kubeconfig.exists())
             self.assertEqual(host.az.call_count, 1)
 
+    def test_run_retains_owned_resource_inventory_and_removes_kubeconfig(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            args = types.SimpleNamespace(evidence=evidence, subscription=runner.BUILD_SUBSCRIPTION)
+            host = runner.Host(args, scenario(), Mock())
+            group = "owned"
+            parent_id = f"/subscriptions/{runner.BUILD_SUBSCRIPTION}/resourceGroups/{group}"
+            tags = {"owner": "ama-metrics-e2e", "scenario-run": "run",
+                    "scenario": "mixed", "scenario-token": "token"}
+            host.receipt = {
+                "subscription": runner.BUILD_SUBSCRIPTION, "resourceGroup": group,
+                "runId": "run", "scenario": "mixed", "token": "token",
+                "managedGroups": ["owned-node"],
+                "rbacBootstrapScope": parent_id, "rbacDelegationId": "assignment-id",
+            }
+            host.kubeconfig.write_text("test-only credential")
+            host.az = Mock(side_effect=[
+                "true", {"id": parent_id, "tags": tags},
+                [{"name": "owned-node", "managedBy": parent_id + "/providers/aks"},
+                 {"name": "unrelated", "managedBy": "/subscriptions/other/resourceGroups/parent/providers/aks"}],
+                [{"id": parent_id + "/vm", "name": "vm", "type": "Microsoft.Compute/virtualMachines",
+                  "location": "eastus2", "sku": {"name": "Standard_D4s_v4"}, "kind": None}],
+                "true",
+                {"id": parent_id + "-node", "tags": {}},
+                [{"id": parent_id + "-node/vm", "name": "node", "type": "Microsoft.Compute/virtualMachines",
+                  "location": "eastus2", "sku": {"name": "Standard_D4s_v4"}, "kind": None}],
+            ])
+            result = host.retain()
+            self.assertTrue(result["retained"])
+            self.assertEqual(result["inventory"][0]["tags"], tags)
+            self.assertEqual(result["inventory"][0]["resources"][0]["id"], parent_id + "/vm")
+            self.assertEqual(result["managedResourceGroups"], ["owned-node"])
+            self.assertFalse(result["missingManagedResourceGroups"])
+            self.assertEqual(result["rbacBootstrap"]["assignmentId"], "assignment-id")
+            self.assertEqual(runner.load(evidence / "retained-resources.json"), result)
+            self.assertFalse(host.kubeconfig.exists())
+            self.assertFalse(any(call.args[:2] == ("group", "delete") for call in host.az.call_args_list))
+
+    def test_run_uses_retention_even_when_tests_fail(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            args = types.SimpleNamespace(
+                evidence=evidence, build_id=1, max_run_seconds=60, run_id="00000000-0000-0000-0000-000000000001",
+                subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0,
+            )
+            row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=[])
+            commands = runner.Commands(evidence)
+            with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
+                    patch.object(runner, "label_filter", return_value=""), \
+                    patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.36.5"}), \
+                    patch.object(runner, "candidate_receipt", return_value=([], {})), \
+                    patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
+                    patch.object(runner, "deployment_env", return_value={}), \
+                    patch.object(runner.Host, "provision", side_effect=RuntimeError("test failure")), \
+                    patch.object(runner.Host, "retain", return_value={"retained": True}) as retain, \
+                    patch.object(runner.Host, "cleanup") as cleanup:
+                with self.assertRaisesRegex(RuntimeError, "test failure"):
+                    runner.execute(args, row, {}, commands)
+            retain.assert_called_once()
+            cleanup.assert_not_called()
+            self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
+
     def test_cleanup_never_claims_external_groups_deleted_or_retains_credentials_on_failure(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(evidence=Path(temporary), subscription=runner.BUILD_SUBSCRIPTION)
@@ -781,6 +843,8 @@ def mutations():
         "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),
         "rbac-required-condition": ('re.sub(r"\\s+", "", assignment.get("condition") or "") == re.sub(r"\\s+", "", condition)', "True"),
         "rbac-cleanup": ('if any(row["scope"].casefold() == self.receipt["rbacBootstrapScope"].casefold()\n                       for row in assignments):', 'if False:'),
+        "run-retains-resources": ('outcome["resources"] = host.retain()', 'host.cleanup()'),
+        "retained-resource-inventory": ('"resources": resources,', '"resources": []'),
         "cleanup-command-history": ("self.stages = load(history) if history.exists() else []", "self.stages = []"),
         "deployment-error-redaction": ('diagnostic = diagnostic.replace(value, "[REDACTED]")', "pass"),
         "feature-requirements": ('set(variant["requires"]["clusterFeatures"]) <= set(scenario["clusterFeatures"])', "True"),

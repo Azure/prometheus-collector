@@ -12,7 +12,8 @@ The runner is a candidate-image adapter, not an approval/merge bot. A successful
 plan, Bicep build, mock test or Azure preflight is **not** a live test pass.
 `result.json` reports a pass only after terminal-passed TestKube executions with
 nonempty Ginkgo JSON/JUnit, candidate runtime
-image verification before and after the tests, and verified cleanup. Missing
+image verification before and after the tests, and a recorded retained-resource
+inventory. Missing
 images/settings/adapters and incompatible profiles fail rather than use a released
 addon or silently substitute another configuration.
 
@@ -56,11 +57,14 @@ python otelcollector\test\scenarios\run-scenario.py preflight --scenario default
 The build subscription is explicitly restricted to
 `9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb`. No shared CI, settings-session, stopped, or
 failed cluster is an implicit target. The runner creates a separately owned
-disposable resource group and validates its recorded ownership tags before
-deletion. Its generated names are derived from the recorded execution identity;
-it never takes over an existing group. Do not start the same execution/evidence
-directory concurrently on multiple machines; the calling protected runner must
-serialize that execution. Separate fresh executions do not share clusters.
+resource group and validates its recorded ownership tags before recording the
+parent and AKS-managed resource groups.
+Infrastructure remains provisioned after every run, including failed runs, until
+the explicit `cleanup` action is requested. Its generated names are derived from
+the recorded execution identity; it never takes over an existing group. Do not
+start the same execution/evidence directory concurrently on multiple machines;
+the calling protected runner must serialize that execution. Separate fresh
+executions do not share clusters.
 
 ## Candidate receipt and execution
 
@@ -144,10 +148,11 @@ Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
-Ginkgo JSON, per-node/component `imageID` observations, results and cleanup proof.
+Ginkgo JSON, per-node/component `imageID` observations, results and
+`retained-resources.json` with resource IDs and tags.
 Secret-bearing command output is redacted; snapshots remain in memory.
 Failed deployments retain `deployment-error.txt` with secret-bearing environment
-values redacted. Command history survives a separate cleanup invocation.
+values redacted. Command history survives a separate explicit cleanup invocation.
 Service-principal runs create their owned resource group, then wait up to 20 minutes
 for an administrator bootstrap before deploying. The runner prints the exact
 `az role assignment create` command and saves `rbac-bootstrap.ps1` plus
@@ -159,10 +164,13 @@ deletion to Network Contributor and Monitoring Data Reader for service principal
 Only the custom-CA profile additionally permits Reader. It cannot delegate Owner,
 User Access Administrator or itself. A precreated group is still refused.
 The gate requires the exact principal, group, role and condition; missing or wider
-delegations do not satisfy it. Timeout fails and cleans up the group. Actual ARM
-deployment remains the permission-propagation check, not the presence of a grant.
-Cleanup waits for the recorded AKS node and AMW managed resource groups to disappear
-as well as the parent. Incomplete receipts discover parent-linked managed groups,
+delegations do not satisfy it. Timeout fails and retains any created resources for
+inspection. Actual ARM deployment remains the permission-propagation check, not
+the presence of a grant. The authorized bootstrap identity removes the exact
+temporary administrator assignment after the run; the narrower workload roles
+remain with the retained cluster.
+Explicit cleanup waits for the recorded AKS node and AMW managed resource groups
+to disappear as well as the parent. Incomplete receipts discover parent-linked managed groups,
 including retries after the parent has disappeared. Failed discovery is an
 explicit incomplete cleanup, not a pass. It never directly
 deletes an unrelated managed group. The execution-local kubeconfig is removed even
@@ -171,10 +179,11 @@ files in case the process was killed before `finally`.
 When an administrator bootstrap was recorded, cleanup also verifies its role
 assignment disappeared after deleting the owned group.
 A four-hour execution
-budget bounds commands; cleanup is still allowed after the budget expires.
+budget bounds commands; retention recording and kubeconfig removal still run after
+the budget expires. Explicit cleanup remains available after the budget expires.
 `--max-run-seconds` changes that explicit budget. Expiry tags include cleanup grace,
-but tags alone do not automatically delete Azure resources. If interrupted, retain the
-ownership receipt and use:
+but tags alone do not automatically delete Azure resources. To explicitly remove a
+retained execution, use:
 
 ```powershell
 python otelcollector\test\scenarios\run-scenario.py cleanup --evidence C:\temp\ama-candidate-run
@@ -203,7 +212,7 @@ files alone are not a published CI result.
    compilation and the scenario's read-only `preflight`. Add a focused rejecting
    case when introducing an incompatibility, and confirm it fails when that guard
    is removed. Then run the same candidate lifecycle with authorized resources;
-   retain JUnit, imageIDs, timing and cleanup evidence before claiming coverage.
+   retain JUnit, imageIDs, timing and retained-resource evidence before claiming coverage.
 
 No separate per-scenario runner, fixture copies, or additional scenario schema is
 needed. The existing profiles exercise this extension path; planned axes remain
