@@ -1,0 +1,36 @@
+steps:
+- bash: |
+    set -euo pipefail
+    version=0.76.1
+    archive="trivy_${version}_Linux-64bit.tar.gz"
+    release="https://github.com/aquasecurity/trivy/releases/download/v${version}"
+    tools="$(Agent.TempDirectory)/published-image-trivy"
+    staging="$(Build.ArtifactStagingDirectory)/published-image-discovery"
+    mkdir -p "$tools" "$staging"
+    curl --fail --location --silent --show-error --retry 5 --retry-connrefused \
+      "$release/$archive" --output "$tools/$archive"
+    curl --fail --location --silent --show-error --retry 5 --retry-connrefused \
+      "$release/trivy_${version}_checksums.txt" --output "$tools/checksums.txt"
+    checksum="$(grep -E "[[:space:]]${archive}$" "$tools/checksums.txt" || true)"
+    [[ -n "$checksum" ]] || { echo "Pinned Trivy checksum is missing" >&2; exit 1; }
+    printf '%s\n' "$checksum" | (cd "$tools" && sha256sum --check)
+    tar -xzf "$tools/$archive" -C "$tools" trivy
+    installed="$( "$tools/trivy" --version --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["Version"])' )"
+    [[ "$installed" == "$version" ]] || { echo "Installed Trivy version mismatch" >&2; exit 1; }
+    echo "##vso[task.prependpath]$tools"
+  displayName: "Install pinned Trivy for published-image discovery"
+
+- bash: |
+    set -euo pipefail
+    python3 -B "$(Build.SourcesDirectory)/.pipelines/pr-e2e/published_discovery.py" \
+      --manifest "$(Build.SourcesDirectory)/.pipelines/pr-e2e/published-images.json" \
+      --output "$(Build.ArtifactStagingDirectory)/published-image-discovery/evidence"
+  displayName: "Scan and compare immutable published production/main images"
+
+- task: PublishPipelineArtifact@1
+  displayName: "Publish published-image discovery evidence"
+  condition: always()
+  inputs:
+    targetPath: $(Build.ArtifactStagingDirectory)/published-image-discovery
+    artifactName: published-image-discovery-$(Build.BuildId)
+    publishLocation: pipeline
