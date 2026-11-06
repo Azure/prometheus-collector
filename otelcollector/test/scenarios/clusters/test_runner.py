@@ -482,6 +482,97 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
+    def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            subscription = runner.BUILD_SUBSCRIPTION
+            group = "owned"
+            scope = f"/subscriptions/{subscription}/resourceGroups/{group}"
+            admin = "f58310d9-a9f6-439a-9e8d-f62e7b41a168"
+            allowed = ["4d97b98b-1d4f-4787-a291-c67834d212e7",
+                       "b0d8363b-8ddd-447d-831f-62ca05bff136"]
+            principal = "df26555d-400a-48dd-b013-940eb85ab5bb"
+            assignment_id = scope + "/providers/Microsoft.Authorization/roleAssignments/11111111-1111-4111-8111-111111111111"
+            condition = runner.rbac_condition(allowed)
+            run_id, scenario_id, token = "run-id", "default", "ownership-token"
+            proof = {"status": "granted", "scope": scope, "assignmentId": assignment_id,
+                     "principalId": principal, "roleDefinitionId": admin,
+                     "allowedRoleDefinitionIds": allowed, "condition": condition}
+            network_id = scope + "/providers/Microsoft.Authorization/roleAssignments/22222222-2222-4222-8222-222222222222"
+            monitor_id = scope + "/providers/Microsoft.Authorization/roleAssignments/33333333-3333-4333-8333-333333333333"
+            assignments = [
+                {"id": assignment_id, "scope": scope, "principalId": principal,
+                 "roleDefinitionId": admin, "conditionVersion": "2.0", "condition": condition},
+                {"id": network_id, "roleDefinitionId": allowed[0]},
+                {"id": monitor_id, "roleDefinitionId": allowed[1]},
+            ]
+            tags = {"owner": "ama-metrics-e2e", "scenario-run": run_id,
+                    "scenario": scenario_id, "scenario-token": token}
+            runner.save(evidence / "result.json", {
+                "status": "PASS", "runId": run_id, "scenario": scenario_id,
+            })
+            runner.save(evidence / "retained-resources.json", {
+                "retained": True, "subscription": subscription, "resourceGroup": group,
+                "runId": run_id, "scenario": scenario_id,
+                "inventory": [{"id": scope, "name": group, "tags": tags, "resources": []}],
+                "rbacBootstrap": {"scope": scope, "assignmentId": assignment_id},
+            })
+            runner.save(evidence / "rbac-bootstrap.json", proof)
+            host = runner.Host(types.SimpleNamespace(evidence=evidence, subscription=subscription), {}, Mock())
+            host.az = Mock(side_effect=[{"tags": tags}, "user", assignments, "", assignments[1:]])
+            host.revoke_bootstrap()
+            deleted = [call.args for call in host.az.call_args_list
+                       if call.args[:3] == ("role", "assignment", "delete")]
+            self.assertEqual(deleted, [("role", "assignment", "delete", "--ids", assignment_id)])
+            receipt = runner.load(evidence / "rbac-bootstrap-revocation.json")
+            self.assertTrue(receipt["verifiedAbsent"])
+            self.assertEqual(set(receipt["preservedRoleAssignmentIds"]), {network_id, monitor_id})
+
+    def test_revoke_bootstrap_rejects_a_mismatched_assignment_without_deleting_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            subscription = runner.BUILD_SUBSCRIPTION
+            group = "owned"
+            scope = f"/subscriptions/{subscription}/resourceGroups/{group}"
+            assignment_id = scope + "/providers/Microsoft.Authorization/roleAssignments/11111111-1111-4111-8111-111111111111"
+            allowed = ["4d97b98b-1d4f-4787-a291-c67834d212e7",
+                       "b0d8363b-8ddd-447d-831f-62ca05bff136"]
+            principal = "df26555d-400a-48dd-b013-940eb85ab5bb"
+            condition = runner.rbac_condition(allowed)
+            run_id, scenario_id, token = "run-id", "default", "ownership-token"
+            proof = {"status": "granted", "scope": scope, "assignmentId": assignment_id,
+                     "principalId": principal, "roleDefinitionId": "f58310d9-a9f6-439a-9e8d-f62e7b41a168",
+                     "allowedRoleDefinitionIds": allowed, "condition": condition}
+            tags = {"owner": "ama-metrics-e2e", "scenario-run": run_id,
+                    "scenario": scenario_id, "scenario-token": token}
+            runner.save(evidence / "result.json", {
+                "status": "PASS", "runId": run_id, "scenario": scenario_id,
+            })
+            runner.save(evidence / "retained-resources.json", {
+                "retained": True, "subscription": subscription, "resourceGroup": group,
+                "runId": run_id, "scenario": scenario_id,
+                "inventory": [{"id": scope, "name": group, "tags": tags, "resources": []}],
+                "rbacBootstrap": {"scope": scope, "assignmentId": assignment_id},
+            })
+            for field, value in (("roleDefinitionId", "not-the-approved-role"),
+                                 ("condition", "unrestricted"),
+                                 ("groupTags", {"owner": "other"})):
+                case_proof = dict(proof)
+                if field == "condition":
+                    case_proof["condition"] = value
+                runner.save(evidence / "rbac-bootstrap.json", case_proof)
+                assignment = {"id": assignment_id, "scope": scope, "principalId": principal,
+                              "roleDefinitionId": proof["roleDefinitionId"],
+                              "conditionVersion": "2.0", "condition": condition}
+                assignment[field] = value
+                host = runner.Host(types.SimpleNamespace(evidence=evidence, subscription=subscription), {}, Mock())
+                actual_tags = value if field == "groupTags" else tags
+                host.az = Mock(side_effect=[{"tags": actual_tags}, "user", [assignment]])
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    host.revoke_bootstrap()
+                self.assertFalse(any(call.args[:3] == ("role", "assignment", "delete")
+                                     for call in host.az.call_args_list))
+
     def test_cleanup_never_claims_external_groups_deleted_or_retains_credentials_on_failure(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(evidence=Path(temporary), subscription=runner.BUILD_SUBSCRIPTION)
@@ -843,6 +934,11 @@ def mutations():
         "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),
         "rbac-required-condition": ('re.sub(r"\\s+", "", assignment.get("condition") or "") == re.sub(r"\\s+", "", condition)', "True"),
         "rbac-cleanup": ('if any(row["scope"].casefold() == self.receipt["rbacBootstrapScope"].casefold()\n                       for row in assignments):', 'if False:'),
+        "bootstrap-revocation-exact-role": ('assignment.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() != admin_role', "False"),
+        "bootstrap-revocation-condition": ('re.sub(r"\\s+", "", condition) != re.sub(r"\\s+", "", rbac_condition(allowed))', "False"),
+        "bootstrap-revocation-owned-group": (
+            '        self.assert_owned()\n        if self.az("account", "show", "--query", "user.type")',
+            '        if False: self.assert_owned()\n        if self.az("account", "show", "--query", "user.type")'),
         "run-retains-resources": ('outcome["resources"] = host.retain()', 'host.cleanup()'),
         "retained-resource-inventory": ('"resources": resources,', '"resources": []'),
         "cleanup-command-history": ("self.stages = load(history) if history.exists() else []", "self.stages = []"),

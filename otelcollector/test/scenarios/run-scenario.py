@@ -281,6 +281,26 @@ class Commands:
         return json.loads(completed.stdout) if json_output else completed.stdout
 
 
+RBAC_ADMIN_ROLE = "f58310d9-a9f6-439a-9e8d-f62e7b41a168"
+RBAC_ALLOWED_ROLES = [
+    "4d97b98b-1d4f-4787-a291-c67834d212e7",
+    "b0d8363b-8ddd-447d-831f-62ca05bff136",
+]
+RBAC_PROXY_READER = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+
+
+def rbac_condition(allowed):
+    clauses = []
+    for action, source in (("write", "Request"), ("delete", "Resource")):
+        clauses.append(
+            f"((!(ActionMatches{{'Microsoft.Authorization/roleAssignments/{action}'}})) OR "
+            f"(@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
+            f"ForAnyOfAnyValues:GuidEquals {{{', '.join(allowed)}}} AND "
+            f"@{source}[Microsoft.Authorization/roleAssignments:PrincipalType] "
+            "ForAnyOfAnyValues:StringEqualsIgnoreCase {'ServicePrincipal'}))")
+    return " AND ".join(clauses)
+
+
 class Host:
     def __init__(self, args, scenario, commands):
         self.args, self.scenario, self.commands = args, scenario, commands
@@ -331,24 +351,15 @@ class Host:
     def wait_for_rbac(self, principal):
         uuid.UUID(principal)
         scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
-        role = "f58310d9-a9f6-439a-9e8d-f62e7b41a168"
-        allowed = ["4d97b98b-1d4f-4787-a291-c67834d212e7", "b0d8363b-8ddd-447d-831f-62ca05bff136"]
+        allowed = list(RBAC_ALLOWED_ROLES)
         if "custom-ca" in self.scenario["clusterFeatures"]:
-            allowed.append("acdd72a7-3385-48ef-bd42-f606fba81ae7")
-        clauses = []
-        for action, source in (("write", "Request"), ("delete", "Resource")):
-            clauses.append(
-                f"((!(ActionMatches{{'Microsoft.Authorization/roleAssignments/{action}'}})) OR "
-                f"(@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
-                f"ForAnyOfAnyValues:GuidEquals {{{', '.join(allowed)}}} AND "
-                f"@{source}[Microsoft.Authorization/roleAssignments:PrincipalType] "
-                "ForAnyOfAnyValues:StringEqualsIgnoreCase {'ServicePrincipal'}))")
-        condition = " AND ".join(clauses)
+            allowed.append(RBAC_PROXY_READER)
+        condition = rbac_condition(allowed)
         command = (
             f"az role assignment create --subscription {self.args.subscription} "
             f"--assignee-object-id {principal} --assignee-principal-type ServicePrincipal "
-            f"--role {role} --scope {scope} --condition-version 2.0 --condition \"{condition}\"")
-        proof = {"scope": scope, "principalId": principal, "roleDefinitionId": role,
+            f"--role {RBAC_ADMIN_ROLE} --scope {scope} --condition-version 2.0 --condition \"{condition}\"")
+        proof = {"scope": scope, "principalId": principal, "roleDefinitionId": RBAC_ADMIN_ROLE,
                  "allowedRoleDefinitionIds": allowed, "condition": condition, "status": "waiting"}
         self.receipt["rbacBootstrapScope"] = scope
         save(self.receipt_path, self.receipt)
@@ -363,7 +374,7 @@ class Host:
             for assignment in assignments:
                 if (assignment.get("scope", "").casefold() == scope.casefold()
                         and assignment.get("principalId", "").casefold() == principal.casefold()
-                        and assignment.get("roleDefinitionId", "").split("/")[-1] == role
+                        and assignment.get("roleDefinitionId", "").split("/")[-1] == RBAC_ADMIN_ROLE
                         and assignment.get("conditionVersion") == "2.0"
                         and re.sub(r"\s+", "", assignment.get("condition") or "") == re.sub(r"\s+", "", condition)):
                     self.receipt["rbacDelegationId"] = assignment["id"]
@@ -476,7 +487,8 @@ class Host:
                 missing = [name for name in managed if name not in inventoried]
                 result = {
                     "retained": not missing, "subscription": self.args.subscription,
-                    "resourceGroup": group, "managedResourceGroups": managed,
+                    "resourceGroup": group, "runId": self.receipt.get("runId"),
+                    "scenario": self.receipt.get("scenario"), "managedResourceGroups": managed,
                     "missingManagedResourceGroups": missing,
                     "inventory": resource_groups,
                     **({"rbacBootstrap": {
@@ -488,6 +500,80 @@ class Host:
             return result
         finally:
             self.remove_kubeconfig()
+
+    def revoke_bootstrap(self):
+        run = load(self.args.evidence / "result.json")
+        retained = load(self.args.evidence / "retained-resources.json")
+        proof = load(self.args.evidence / "rbac-bootstrap.json")
+        group = retained["resourceGroup"]
+        scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{group}"
+        assignment_id = proof["assignmentId"]
+        if not isinstance(assignment_id, str):
+            raise ValueError("Bootstrap assignment ID is invalid")
+        assignment_prefix = scope + "/providers/Microsoft.Authorization/roleAssignments/"
+        try:
+            uuid.UUID(assignment_id.rsplit("/", 1)[-1])
+        except ValueError as failure:
+            raise ValueError("Bootstrap assignment ID is invalid") from failure
+        if not assignment_id.casefold().startswith(assignment_prefix.casefold()):
+            raise ValueError("Bootstrap assignment ID is outside the retained resource group")
+        admin_role = RBAC_ADMIN_ROLE
+        allowed = proof["allowedRoleDefinitionIds"]
+        if allowed not in (RBAC_ALLOWED_ROLES, RBAC_ALLOWED_ROLES + [RBAC_PROXY_READER]):
+            raise ValueError("Bootstrap receipt contains an unapproved role allowlist")
+        condition = proof["condition"]
+        if (run.get("status") != "PASS" or not retained.get("retained")
+                or retained.get("subscription") != self.args.subscription
+                or retained.get("runId") != run.get("runId")
+                or retained.get("scenario") != run.get("scenario")
+                or proof.get("status") != "granted" or proof.get("scope", "").casefold() != scope.casefold()
+                or retained.get("rbacBootstrap", {}).get("scope", "").casefold() != scope.casefold()
+                or retained.get("rbacBootstrap", {}).get("assignmentId", "").casefold() != assignment_id.casefold()
+                or proof.get("roleDefinitionId", "").casefold() != admin_role
+                or re.sub(r"\s+", "", condition) != re.sub(r"\s+", "", rbac_condition(allowed))):
+            raise ValueError("Bootstrap revocation requires the exact successful retained-run receipt")
+        parent = next((row for row in retained["inventory"] if row.get("name") == group), None)
+        if not parent or not parent.get("tags", {}).get("scenario-token"):
+            raise ValueError("Retained resource-group ownership tags are missing")
+        self.receipt = {
+            "subscription": self.args.subscription, "resourceGroup": group,
+            "runId": run["runId"], "scenario": run["scenario"],
+            "token": parent["tags"]["scenario-token"],
+        }
+        self.assert_owned()
+        if self.az("account", "show", "--query", "user.type").strip().casefold() != "user":
+            raise ValueError("Bootstrap revocation requires the authorized user Azure identity")
+        assignments = self.az("role", "assignment", "list", "--scope", scope, "--all",
+                              json_output=True, private=True)
+        matches = [row for row in assignments
+                   if row.get("id", "").casefold() == assignment_id.casefold()]
+        if len(matches) > 1:
+            raise RuntimeError("Bootstrap assignment ID is not unique at the retained resource group")
+        if matches:
+            assignment = matches[0]
+            if (assignment.get("scope", "").casefold() != scope.casefold()
+                    or assignment.get("principalId", "").casefold() != proof["principalId"].casefold()
+                    or assignment.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() != admin_role
+                    or assignment.get("conditionVersion") != "2.0"
+                    or re.sub(r"\s+", "", assignment.get("condition") or "") != re.sub(r"\s+", "", condition)):
+                raise ValueError("Bootstrap assignment does not match the recorded approved grant")
+        allowed_roles = {role.casefold() for role in allowed}
+        narrower = {row["id"] for row in assignments
+                    if row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() in allowed_roles}
+        if matches:
+            self.az("role", "assignment", "delete", "--ids", assignment_id)
+        remaining = self.az("role", "assignment", "list", "--scope", scope, "--all",
+                            json_output=True, private=True)
+        remaining_ids = {row["id"].casefold() for row in remaining}
+        if assignment_id.casefold() in remaining_ids:
+            raise RuntimeError("Bootstrap role assignment removal was not confirmed")
+        if not {item.casefold() for item in narrower} <= remaining_ids:
+            raise RuntimeError("A narrower workload role assignment changed during bootstrap revocation")
+        save(self.args.evidence / "rbac-bootstrap-revocation.json", {
+            "removed": True, "assignmentId": assignment_id, "scope": scope,
+            "verifiedAbsent": True, "alreadyAbsent": not matches,
+            "preservedRoleAssignmentIds": sorted(narrower),
+        })
 
 
 @cache
@@ -1211,7 +1297,8 @@ def execute(args, scenario, variants, commands):
 def main(argv=None):
     global REPO, TEST_SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("validate", "compile", "plan", "preflight", "run", "cleanup"))
+    parser.add_argument("action", choices=("validate", "compile", "plan", "preflight", "run",
+                                           "cleanup", "revoke-bootstrap"))
     parser.add_argument("--matrix", type=Path, default=ROOT / "matrix.json")
     parser.add_argument("--settings-root", type=Path, default=ROOT / "settings")
     parser.add_argument("--source-root", type=Path, default=REPO,
@@ -1244,6 +1331,10 @@ def main(argv=None):
     if args.action == "cleanup":
         with execution_lock(args.evidence):
             Host(args, {}, commands).cleanup()
+        return 0
+    if args.action == "revoke-bootstrap":
+        with execution_lock(args.evidence):
+            Host(args, {}, commands).revoke_bootstrap()
         return 0
     variants = catalog(args.settings_root.resolve())
     matrix = validate_matrix(load(args.matrix), variants)
