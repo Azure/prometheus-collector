@@ -24,6 +24,10 @@ parameters:
   displayName: 'Capture Windows CoMET environment and self-scan diagnostics'
   type: boolean
   default: false
+- name: runWindowsCometExitDiagnostics
+  displayName: 'Capture Windows 2022 CoMET container exit diagnostics'
+  type: boolean
+  default: false
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -1739,7 +1743,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Publish Windows 2019 CoMET reports'
-            condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+            condition: and(succeededOrFailed(), eq('${{ parameters.runWindowsCometTrial }}', 'true'), ne('${{ parameters.runWindowsCometExitDiagnostics }}', 'true'))
             targetPath: '$(Build.ArtifactStagingDirectory)\comet-windows-2019'
             artifactName: 'comet-windows-2019-$(System.JobAttempt)'
         steps:
@@ -1910,7 +1914,7 @@ extends:
             targetType: filePath
             filePath: '$(Build.SourcesDirectory)\.pipelines\scripts\scan-windows-with-comet.ps1'
             arguments: '-Image "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)" -ResultsDirectory "$(Build.ArtifactStagingDirectory)\comet-windows-2019"'
-          condition: and(succeeded(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
+          condition: and(succeeded(), eq('${{ parameters.runWindowsCometTrial }}', 'true'), ne('${{ parameters.runWindowsCometExitDiagnostics }}', 'true'))
           env:
             COMET_WINDOWS_DIAGNOSTICS: ${{ parameters.runWindowsCometDiagnostics }}
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -2110,6 +2114,7 @@ extends:
           condition: and(succeeded(), eq('${{ parameters.runWindowsCometTrial }}', 'true'))
           env:
             COMET_WINDOWS_DIAGNOSTICS: ${{ parameters.runWindowsCometDiagnostics }}
+            COMET_WINDOWS_EXIT_DIAGNOSTICS: ${{ parameters.runWindowsCometExitDiagnostics }}
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
             SYSTEM_COLLECTIONURI: $(System.CollectionUri)
             SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)

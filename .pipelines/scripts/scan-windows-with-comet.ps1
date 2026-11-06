@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 $scanner = 'mcr.microsoft.com/tvm-containers/shavsa/comet:v1-windows-amd64'
 New-Item -ItemType Directory -Force -Path $ResultsDirectory | Out-Null
 $fullDiagnostics = $env:COMET_WINDOWS_DIAGNOSTICS -eq 'true'
+$captureExitDiagnostics = $env:COMET_WINDOWS_EXIT_DIAGNOSTICS -eq 'true' -and !$ControlScan
 
 if ($fullDiagnostics -and !$ControlScan) {
   $hostProbes = @(
@@ -101,6 +102,7 @@ $dockerArgs = @(
   '--oidc-token', $jwt, $Image
 )
 $consolePath = Join-Path $ResultsDirectory 'comet-console.txt'
+$scanStartedAt = [DateTime]::UtcNow
 $ErrorActionPreference = 'Continue'
 & docker @dockerArgs 2>&1 | ForEach-Object {
   $line = $_.ToString().Replace($jwt, '[REDACTED]')
@@ -116,6 +118,71 @@ Write-Host "CoMET Docker exit code: $scanExitCode"
   scannerDigests = @($scannerDigests)
   dockerExitCode = $scanExitCode
 } | ConvertTo-Json | Set-Content -Path (Join-Path $ResultsDirectory 'scan-exit.json') -Encoding UTF8
+
+if ($captureExitDiagnostics) {
+  $eventsPath = Join-Path $ResultsDirectory 'docker-container-die.jsonl'
+  $eventsSince = $scanStartedAt.ToString('o')
+  $eventsUntil = [DateTime]::UtcNow.ToString('o')
+  $ErrorActionPreference = 'Continue'
+  $eventOutput = @(& docker events --since $eventsSince --until $eventsUntil --filter type=container --filter event=die --format '{{json .}}' 2>&1)
+  $eventsExitCode = $LASTEXITCODE
+  $ErrorActionPreference = 'Stop'
+  $redactedEventOutput = @($eventOutput | ForEach-Object { $_.ToString().Replace($jwt, '[REDACTED]') })
+  [System.IO.File]::WriteAllLines($eventsPath, [string[]]$redactedEventOutput)
+  @{
+    exitCode = $eventsExitCode
+    since = $eventsSince
+    until = $eventsUntil
+  } | ConvertTo-Json | Set-Content -Path (Join-Path $ResultsDirectory 'docker-events-status.json') -Encoding UTF8
+  if ($eventsExitCode -ne 0) {
+    Write-Host "##vso[task.logissue type=warning]Could not capture Docker container exit events: docker events exit $eventsExitCode."
+  }
+
+  $engineEvents = [System.Collections.Generic.List[object]]::new()
+  $engineErrors = [System.Collections.Generic.List[string]]::new()
+  $logNames = [System.Collections.Generic.List[string]]::new()
+  $logNames.Add('Application')
+  $logNames.Add('System')
+  try {
+    Get-WinEvent -ListLog '*' -ErrorAction Stop |
+      Where-Object { $_.LogName -match 'Docker|Container|HCS|Hyper-V' } |
+      ForEach-Object { $logNames.Add($_.LogName) }
+  } catch {
+    $engineErrors.Add("Could not enumerate Docker-related Windows event logs: $_")
+  }
+  foreach ($logName in $logNames | Sort-Object -Unique) {
+    try {
+      Get-WinEvent -FilterHashtable @{ LogName = $logName; StartTime = $scanStartedAt.ToLocalTime() } -MaxEvents 500 -ErrorAction Stop |
+        Where-Object {
+          $_.ProviderName -match 'Docker|Container|HCS|Hyper-V|vmcompute' -or
+            $_.Message -match 'docker_engine|pipe is being closed|container|HCS|vmcompute'
+        } |
+        ForEach-Object {
+          $engineEvents.Add(@{
+            logName = $logName
+            timeCreated = $_.TimeCreated
+            provider = $_.ProviderName
+            id = $_.Id
+            level = $_.LevelDisplayName
+            message = $_.Message
+          })
+        }
+    } catch {
+      $engineErrors.Add("Could not read Windows event log '$logName': $_")
+    }
+  }
+  $engineLogJson = @{
+    since = $scanStartedAt.ToString('o')
+    events = @($engineEvents)
+    errors = @($engineErrors)
+  } | ConvertTo-Json -Depth 5
+  [System.IO.File]::WriteAllText(
+    (Join-Path $ResultsDirectory 'docker-engine-events.json'),
+    $engineLogJson.Replace($jwt, '[REDACTED]'))
+  if ($engineErrors.Count -gt 0) {
+    Write-Host "##vso[task.logissue type=warning]Some Docker-related Windows event logs could not be collected; see docker-engine-events.json."
+  }
+}
 
 $xmlPath = Join-Path $ResultsDirectory 'result.xml'
 $jsonPath = Join-Path $ResultsDirectory 'result.json'
