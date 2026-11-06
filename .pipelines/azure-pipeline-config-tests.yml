@@ -82,7 +82,10 @@ variables:
   GOLANG_VERSION: '1.24.9'
   TESTKUBE_GOLANG_VERSION: '1.25.9'
   FLUENT_BIT_VERSION: '3.2.2'
-  ${{ if eq(parameters.candidateMode, true) }}:
+  ${{ if eq(parameters.discoveryOnly, true) }}:
+    campaignProducerBuildId: '0'
+    campaignSourceSha: ''
+  ${{ elseif eq(parameters.candidateMode, true) }}:
     campaignProducerBuildId: ${{ parameters.candidateBuildId }}
     campaignSourceSha: ${{ parameters.candidateSourceSha }}
   ${{ else }}:
@@ -1216,4 +1219,6 @@ stages:
         image: ci-1es-managed-ubuntu-2204
         os: linux
       steps:
+      # Pipeline resource artifacts must not be fetched; the scan has no 440 dependency.
+      - download: none
       - template: pr-e2e/published-scan-steps.yml

@@ -45,6 +45,17 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
             self.assertNotIn(banned, text)
         self.assertIn("pr-e2e/published-scan-steps.yml", text)
 
+    def test_discovery_does_not_resolve_or_download_producer(self):
+        doc, _ = load()
+        v = doc["variables"]
+        self.assertIn("${{ if eq(parameters.discoveryOnly, true) }}", v)
+        self.assertNotIn("resources.pipeline", yaml.safe_dump(v["${{ if eq(parameters.discoveryOnly, true) }}"]))
+        # elseif keeps the producer macro out of discovery; a plain else would resolve it.
+        self.assertTrue(any(k.startswith("${{ elseif eq(parameters.candidateMode") for k in v))
+        job = expand(doc, True)[-1]["jobs"][0]
+        self.assertEqual(job["steps"][0], {"download": "none"})
+        self.assertNotIn("campaignProducer", yaml.safe_dump(job))
+
     def test_every_cluster_job_is_gated_for_all_triggers(self):
         doc, _ = load()
         deploy = expand(doc, True)[0]
