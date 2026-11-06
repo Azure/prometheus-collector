@@ -43,13 +43,14 @@ and cluster mutations. The agent never approves or merges its own PR.
   successful build against the requested full source SHA, downloads its five
   protected receipt artifacts and calls the receipt verifier. Retains the raw
   producer files and build response beside `candidate-build.json`.
-- `producer_trivy.py`: pipeline 440 replaces its collector vulnerability console
-  scan with full, unfiltered JSON for the exact pushed Linux amd64 child. The
-  protected `sre-trivy-collector` artifact contains `trivy/{result.json,metadata.json}`,
+- `producer_trivy.py`: on SRE candidate branches, pipeline 440 replaces its collector
+  vulnerability console scan with full, unfiltered JSON for the exact pushed Linux
+  amd64 child. The protected `sre-trivy-collector` artifact contains
+  `trivy/{result.json,metadata.json}`,
   the exact `cache/db` snapshot, empty config/ignore files, and `provenance.json`
   binding source repo/commit/build, definition 440, index/child/platform and every
-  file's SHA256. Only successful first-attempt jobs/stages publish it. MCR lag
-  retries the immutable digest, never a tag. Filtered console findings and existing
+  file's SHA256. Only successful first-attempt SRE branch jobs/stages publish it.
+  MCR lag retries the immutable digest, never a tag. Filtered console findings and existing
   secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
   A consumer must authenticate this artifact from the exact successful 440 build,
   verify its hashes/provenance against the push receipts, and scan the released
