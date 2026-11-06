@@ -16,8 +16,9 @@ IMAGE = "example.invalid/collector@sha256:" + "a" * 64
 
 class DiscoveryTests(unittest.TestCase):
     def test_database_timestamp_with_nanoseconds_is_supported(self):
-        timestamp = "2026-11-06T18:59:52.855177206+00:00"
         real_datetime = scan_trivy.datetime
+        expected = real_datetime.now(scan_trivy.timezone.utc).isoformat(timespec="microseconds")
+        timestamp = expected.replace("+00:00", "206+00:00")
         parsed_values = []
 
         class StrictDateTime:
@@ -54,7 +55,7 @@ class DiscoveryTests(unittest.TestCase):
             with patch.object(scan_trivy, "datetime", StrictDateTime):
                 with patch.object(scan_trivy.subprocess, "run", side_effect=invoke):
                     scan_trivy.scan(IMAGE, "linux/amd64", root)
-            self.assertEqual(parsed_values, ["2026-11-06T18:59:52.855177+00:00"])
+            self.assertEqual(parsed_values, [expected])
 
     def test_digest_platform_and_failed_tool_are_checked(self):
         for mismatch in ("digest", "platform", "tool", None):
