@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "ama-metrics",
+  "repository": "Azure/prometheus-collector",
+  "platform": "linux/amd64",
+  "asOfDate": "2026-11-06",
+  "provenanceSource": "Azure DevOps build metadata/timeline and MCR manifest digests",
+  "selectionNote": "Use the latest published main collector linux/amd64 child from build 131326 even though unrelated Windows 2019 work is still in progress.",
+  "images": {
+    "production": {
+      "ref": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99",
+      "tag": "7.4.0-main-10-02-2026-b0b85f19",
+      "indexDigest": "sha256:69aafa04906bde9f835ed4f622680de7e0cf7eadc70a3534de4774815cf07575",
+      "source": {
+        "repo": "Azure/prometheus-collector",
+        "branch": "refs/heads/main",
+        "commit": "b0b85f19ec2ed77364f4e313ef8b3c988652c4ae",
+        "buildId": "128016",
+        "buildStatus": "completed",
+        "buildResult": "succeeded"
+      },
+      "publication": {
+        "collectorLinuxAmd64Push": "succeeded",
+        "indexPublished": true
+      }
+    },
+    "main": {
+      "ref": "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images@sha256:6dc790da6c61907da3b1a15618fec08f1dd0cd9b2665fda2438864fb8861fbe6",
+      "tag": "7.5.0-main-11-06-2026-57f3c575-amd",
+      "indexDigest": null,
+      "source": {
+        "repo": "Azure/prometheus-collector",
+        "branch": "refs/heads/main",
+        "commit": "57f3c575825201f786e5644fea2378ec4e8bf6e2",
+        "buildId": "131326",
+        "buildStatus": "inProgress",
+        "buildResult": null
+      },
+      "publication": {
+        "collectorLinuxAmd64Push": "succeeded",
+        "collectorLinuxArm64Push": "succeeded",
+        "collectorWindows2019Push": "pending",
+        "indexPublished": false,
+        "unpublished": [
+          "No unsuffixed collector index tag",
+          "No Windows collector tag"
+        ]
+      }
+    }
+  }
+}
