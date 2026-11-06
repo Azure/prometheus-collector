@@ -2,14 +2,13 @@ trigger: none
 
 resources:
   pipelines:
-  - ${{ if eq(parameters.discoveryOnly, false) }}:
-    - pipeline: campaignProducer
-      source: Azure.prometheus-collector
-      trigger:
-        branches:
-          include:
-          - sre/vuln/*
-          - '*/ama-metrics-sre-*'
+  - pipeline: campaignProducer
+    source: Azure.prometheus-collector
+    trigger:
+      branches:
+        include:
+        - sre/vuln/*
+        - '*/ama-metrics-sre-*'
 
 parameters:
 - name: subscriptionName

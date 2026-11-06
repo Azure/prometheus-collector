@@ -1,4 +1,5 @@
 import pathlib
+import sys
 import unittest
 
 import yaml
@@ -27,6 +28,21 @@ def expand(doc, discovery):
         else:
             stages.append(item)
     return stages
+
+
+def check_expanded(doc):
+    stages = doc["stages"]
+    assert [stage["stage"] for stage in stages] == ["DiscoveryScan"]
+    scan = stages[0]
+    assert scan["dependsOn"] == []
+    assert [job["job"] for job in scan["jobs"]] == ["DiscoveryScan"]
+    text = yaml.safe_dump(stages).lower()
+    for forbidden in ("deployment:", "environment:", "azurecli@", "kubectl",
+                      "testkube", "campaignproducer", "resources.pipeline",
+                      "az aks", "az deployment", "azureSubscription:".lower()):
+        assert forbidden not in text, forbidden
+    downloads = [step["download"] for step in scan["jobs"][0]["steps"] if "download" in step]
+    assert downloads == ["none"], downloads
 
 
 class DiscoveryOnlyIsolation(unittest.TestCase):
@@ -58,8 +74,6 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
         job = expand(doc, True)[-1]["jobs"][0]
         self.assertEqual(job["steps"][0], {"download": "none"})
         self.assertNotIn("campaignProducer", yaml.safe_dump(job))
-        self.assertEqual(list(doc["resources"]["pipelines"][0]), [OFF])
-        self.assertEqual(len(doc["resources"]["pipelines"]), 1)
 
     def test_every_cluster_job_is_gated_for_all_triggers(self):
         doc, _ = load()
@@ -77,4 +91,8 @@ class DiscoveryOnlyIsolation(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--expanded-yaml":
+        check_expanded(yaml.safe_load(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")))
+        print("Expanded discovery isolation passed")
+    else:
+        unittest.main()
