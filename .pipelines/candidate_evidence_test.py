@@ -146,20 +146,56 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load((directory / "azure-pipeline-config-tests.yml").read_text())
         jobs = pipeline["stages"][0]["jobs"]
         self.assertIn("'False'", jobs[0]["condition"])
+        self.assertIn("ResourceTrigger", jobs[0]["condition"])
         self.assertIn("'True'", jobs[1]["condition"])
+        self.assertIn("ResourceTrigger", jobs[1]["condition"])
+        self.assertEqual(pipeline["trigger"], "none")
+        producer = pipeline["resources"]["pipelines"][0]
+        self.assertEqual(producer["source"], "Azure.prometheus-collector")
+        self.assertEqual(producer["trigger"]["branches"]["include"],
+                         ["sre/vuln/*", "*/ama-metrics-sre-*"])
+        manual_variables = pipeline["variables"]["${{ if eq(parameters.candidateMode, true) }}"]
+        automatic_variables = pipeline["variables"]["${{ else }}"]
+        self.assertEqual(manual_variables["campaignProducerBuildId"],
+                         "${{ parameters.candidateBuildId }}")
+        self.assertEqual(manual_variables["campaignSourceSha"],
+                         "${{ parameters.candidateSourceSha }}")
+        self.assertEqual(automatic_variables["campaignProducerBuildId"],
+                         "$(resources.pipeline.campaignProducer.runID)")
+        self.assertEqual(automatic_variables["campaignSourceSha"],
+                         "$(resources.pipeline.campaignProducer.sourceCommit)")
         self.assertEqual(jobs[1]["cancelTimeoutInMinutes"], 60)
         self.assertEqual(jobs[1]["${{ if eq(parameters.candidateScenario, 'settings') }}"]["timeoutInMinutes"], 900)
         self.assertEqual(jobs[1]["${{ else }}"]["timeoutInMinutes"], 600)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "default")
         self.assertEqual(scenario["values"], ["default", "settings"])
+        cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
+        self.assertEqual(cve["default"], "")
+        campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
+        self.assertEqual(campaign, {"schemaVersion": 1, "cve": "CVE-2026-63209"})
         include = jobs[1]["strategy"]["runOnce"]["deploy"]["steps"][0]
         self.assertEqual(include["parameters"]["scenario"], "${{ parameters.candidateScenario }}")
+        self.assertEqual(include["parameters"]["cve"], "${{ parameters.candidateCve }}")
+        self.assertEqual(include["parameters"]["producerBuildId"],
+                         "${{ variables.campaignProducerBuildId }}")
+        self.assertEqual(include["parameters"]["sourceSha"],
+                         "${{ variables.campaignSourceSha }}")
         template = yaml.safe_load((directory / "azure-template-candidate-config-tests.yml").read_text())
         scenario = next(item for item in template["parameters"] if item["name"] == "scenario")
         self.assertEqual(scenario["default"], "default")
         self.assertEqual(scenario["values"], ["default", "settings"])
         steps = template["steps"]
+        input_validation = next(step for step in steps if "Validate opt-in inputs" in step.get("displayName", ""))
+        self.assertIn("CANDIDATE_CVE", input_validation["bash"])
+        self.assertIn("CANDIDATE_CVE", input_validation["env"])
+        self.assertIn("campaign.json", input_validation["bash"])
+        self.assertLess(input_validation["bash"].index("git fetch"), input_validation["bash"].index("git show"))
+        self.assertLess(input_validation["bash"].index("git show"), input_validation["bash"].index("task.setvariable"))
+        self.assertLess(input_validation["bash"].index("task.setvariable"), input_validation["bash"].index("git worktree add"))
+        scan = next(step for step in steps if "baseline/candidate scan comparison" in step.get("displayName", ""))
+        self.assertIn('--cve "$CANDIDATE_CVE"', scan["inputs"]["inlineScript"])
+        self.assertEqual(scan["env"]["CANDIDATE_CVE"], "$(candidateCve)")
         prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
         helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
         self.assertEqual(steps[helm]["inputs"]["helmVersionToInstall"], "3.19.0")

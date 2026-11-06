@@ -149,14 +149,20 @@ adapter before deployment; do not assume these local Copilot tools exist in SRE 
 
 ### Branch trigger and agent iteration
 
-Use `<owner>/ama-metrics-sre-<campaign>` (for example
-`bot/ama-metrics-sre-compress`). The build pipeline includes
-`*/ama-metrics-sre-*` alongside its existing main/OTel/Dependabot triggers.
-Pushes trigger the existing build and report-only Linux Trivy jobs. The current
-legacy TestKube conditions do not automatically validate these branch images.
-After authenticated successful producer verification, queue pipeline 979 with
-`candidateMode: true`, `candidateBuildId`, full `candidateSourceSha` and
-`candidateScenario: default`. Only after verified cleanup may a separate
+Use `sre/vuln/<campaign-id>` for the SRE remediation branch and commit
+`.pipelines/pr-e2e/campaign.json` with
+`{"schemaVersion":1,"cve":"CVE-YYYY-N"}`.
+The build pipeline includes this namespace alongside its existing main, OTel,
+Dependabot and `*/ama-metrics-sre-*` triggers. A successful 440 completion
+automatically triggers pipeline 979 for either SRE campaign branch form; the
+979 candidate run binds the upstream build ID/source SHA and validates the
+campaign CVE before any test resources are created. The push-receipt and
+candidate-build validators accept both SRE branch forms. Pipeline 440's
+existing Trivy output is report-only; it does not itself produce the structured
+campaign scan artifact. This POC's `.pipelines/pr-e2e/campaign.json` selects
+`CVE-2026-63209`; later campaigns choose their CVE in the same manifest. A
+manually queued 979 candidate run can instead supply `candidateBuildId`,
+`candidateSourceSha` and `candidateCve`. Only after verified cleanup may a separate
 `candidateScenario: settings` run execute the nightly settings profile.
 The trusted pipeline checkout may include pipeline/scanner-only repairs while
 the product/test candidate stays immutable; publication records both revisions
@@ -233,14 +239,37 @@ store. Verify actual adapter authentication support rather than promising MSI.
 
 ### Remaining deployment prerequisites
 
-Read-only verification of the existing ci-sre found it Running in review mode,
-with a GitHub OAuth connector. Its complete repository inventory did not include
-`Azure/prometheus-collector`. Configure and test this repository separately;
-an existing Docker-Provider integration is not a shared implementation or proof
-of access to this repository. No agent configuration was changed by the POC.
+Read-only verification of the existing ci-sre found it Running in review mode.
+Code Access now contains six repositories: `Docker-Provider`,
+`InfrastructureInsights`, `Microsoft_Azure_ContainerInsightsExt`, `aks-rp`,
+`ci-build` and `Azure/prometheus-collector`. The user confirmed that the former
+`fluent-bit`, `fluentd` and `telegraf` entries were intentionally removed. The
+repository connection test passes using the existing `azure-monitor-assistant`
+GitHub App, and the host auth domain reports `GitHubApp`. The original OAuth
+attempt was unrelated to this app; do not retry its SSO flow.
 
-Verify the existing ci-sre resource and its repository integration, approve branch
-writes and pipeline publication, and verify effective 1ES expansion.
+| Code Access field | Value |
+|---|---|
+| Client ID | Existing `azure-monitor-assistant` GitHub App client ID |
+| Private key URI (Key Vault) | Existing app key's Key Vault **key** URI |
+| Key Vault identity | ci-sre's existing user-assigned managed identity |
+
+Use the Key Vault **key** URI (`/keys/`), not the legacy secret URI (`/secrets/`);
+the private key remains in Key Vault. The selected ci-sre identity needs the
+Key Vault cryptographic permission required to sign with this key. The ci-sre
+identity's Key Vault Crypto User assignment was verified before the Code Access
+test. Do not repeat the unrelated `SREAgent-OAuth` SSO flow.
+
+The Client ID and key URI were verified in the existing
+`managed-prometheus-agent-tsg` setup; ci-sre must use its own managed identity.
+Keep those identifiers in the approved configuration surface rather than
+committing them here. The separate ci-sre `github` data connector remains
+`GitHubOAuth` by user decision; Code Access validation does not verify that
+connector's PR/action identity. The successful Code Access test returned HTTP
+200 with `isSuccessful: true`.
+
+Next, approve branch writes and pipeline publication, and verify effective 1ES
+expansion.
 Configure/test the actual pipeline read/queue adapter and least-privilege identities; approve
 dedicated Linux/Windows scan/build workers and CoMET coverage; attest candidate
 build receipts; connect the scenario owner's live cluster execution; persist and

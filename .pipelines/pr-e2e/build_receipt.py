@@ -74,7 +74,9 @@ def build_source(build):
             or repository.get("type") != "GitHub"
             or repository.get("name", "Azure/prometheus-collector") != "Azure/prometheus-collector"):
         raise ValueError("Build repository mismatch")
-    if not re.fullmatch(r"refs/heads/[^/]+/ama-metrics-sre-[^/]+", build["sourceBranch"]):
+    if not re.fullmatch(
+            r"refs/heads/(?:[^/]+/ama-metrics-sre-[^/]+|sre/vuln/[A-Za-z0-9][A-Za-z0-9._-]*)",
+            build["sourceBranch"]):
         raise ValueError("Expected an SRE campaign branch build")
     if not re.fullmatch(r"[0-9a-f]{40}", build["sourceVersion"]) or int(build["id"]) <= 0:
         raise ValueError("Expected full source SHA and positive producer build ID")

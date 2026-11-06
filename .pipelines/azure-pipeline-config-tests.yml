@@ -1,3 +1,15 @@
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: campaignProducer
+    source: Azure.prometheus-collector
+    trigger:
+      branches:
+        include:
+        - sre/vuln/*
+        - '*/ama-metrics-sre-*'
+
 parameters:
 - name: subscriptionName
   displayName: 'Subscription Name'
@@ -39,6 +51,10 @@ parameters:
   displayName: 'Full candidate source commit'
   type: string
   default: ''
+- name: candidateCve
+  displayName: 'Campaign-selected CVE to verify'
+  type: string
+  default: ''
 - name: candidateScenario
   displayName: 'Existing candidate scenario (PR default or nightly settings)'
   type: string
@@ -61,6 +77,12 @@ variables:
   GOLANG_VERSION: '1.24.9'
   TESTKUBE_GOLANG_VERSION: '1.25.9'
   FLUENT_BIT_VERSION: '3.2.2'
+  ${{ if eq(parameters.candidateMode, true) }}:
+    campaignProducerBuildId: ${{ parameters.candidateBuildId }}
+    campaignSourceSha: ${{ parameters.candidateSourceSha }}
+  ${{ else }}:
+    campaignProducerBuildId: $(resources.pipeline.campaignProducer.runID)
+    campaignSourceSha: $(resources.pipeline.campaignProducer.sourceCommit)
 
 stages:
 - stage: Deploy
@@ -73,7 +95,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'))
+    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
     variables:
       skipComponentGovernanceDetection: true
     strategy:
@@ -1163,14 +1185,15 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'True'))
+    condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
     strategy:
       runOnce:
         deploy:
           steps:
           - template: azure-template-candidate-config-tests.yml
             parameters:
-              producerBuildId: ${{ parameters.candidateBuildId }}
-              sourceSha: ${{ parameters.candidateSourceSha }}
+              producerBuildId: ${{ variables.campaignProducerBuildId }}
+              sourceSha: ${{ variables.campaignSourceSha }}
+              cve: ${{ parameters.candidateCve }}
               scenario: ${{ parameters.candidateScenario }}
               azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})

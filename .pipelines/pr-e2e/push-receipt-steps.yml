@@ -9,7 +9,7 @@ parameters:
 steps:
 - task: PythonScript@0
   displayName: 'SRE: record exact candidate push digest'
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+  condition: and(succeeded(), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/vuln/'), and(startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))))
   inputs:
     scriptSource: filePath
     scriptPath: '$(Build.SourcesDirectory)/.pipelines/pr-e2e/push_receipt.py'

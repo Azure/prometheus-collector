@@ -19,6 +19,15 @@ import runner_receipt
 
 
 class ReceiptTests(unittest.TestCase):
+    def test_sre_campaign_trigger_and_receipt_conditions_match_agent_branch(self):
+        root = Path(__file__).parents[1]
+        build_pipeline = yaml.safe_load((root / "azure-pipeline-build.yml").read_text())
+        self.assertIn("sre/vuln/*", build_pipeline["trigger"]["branches"]["include"])
+        push_template = yaml.safe_load((Path(__file__).parent / "push-receipt-steps.yml").read_text())
+        condition = push_template["steps"][0]["condition"]
+        self.assertIn("refs/heads/sre/vuln/", condition)
+        self.assertIn("/ama-metrics-sre-", condition)
+
     def test_windows_push_captures_one_exact_tag_digest(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
         steps = next(job["steps"] for stage in pipeline["extends"]["parameters"]["stages"]
@@ -174,6 +183,10 @@ docker() {
                  "url": "https://dev.azure.com/github-private/project/_apis/build/builds/123",
                  "sourceBranch": "refs/heads/bot/ama-metrics-sre-test",
                  "_links": {"web": {"href": "https://example.invalid/build/123"}}}
+        self.assertEqual(build_receipt.build_source({**build, "sourceBranch": "refs/heads/sre/vuln/campaign-123"}),
+                         {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"})
+        with self.assertRaisesRegex(ValueError, "SRE campaign branch"):
+            build_receipt.build_source({**build, "sourceBranch": "refs/heads/sre/other/campaign-123"})
         pushes = [{"commit": "a" * 40, "buildId": 123, "name": name,
                    "tag": "candidate", "indexRef": f"mcr.microsoft.com/test/{name}@sha256:" + "b" * 64}
                   for name in ("collector", "targetallocator", "config-reader")]

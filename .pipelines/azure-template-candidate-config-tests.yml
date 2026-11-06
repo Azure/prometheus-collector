@@ -1,8 +1,11 @@
 parameters:
 - name: producerBuildId
-  type: number
+  type: string
 - name: sourceSha
   type: string
+- name: cve
+  type: string
+  default: ''
 - name: azureSubscription
   type: string
 - name: scenario
@@ -25,6 +28,13 @@ steps:
     case "$CANDIDATE_SCENARIO" in default|settings) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
+    git cat-file -e "$CANDIDATE_SOURCE_SHA^{commit}"
+    if [[ -z "$CANDIDATE_CVE" ]]; then
+      git cat-file -e "$CANDIDATE_SOURCE_SHA:.pipelines/pr-e2e/campaign.json" || { echo "Campaign-selected CVE or campaign.json is required in candidate source" >&2; exit 1; }
+      CANDIDATE_CVE="$(git show "$CANDIDATE_SOURCE_SHA:.pipelines/pr-e2e/campaign.json" | jq -er 'select(.schemaVersion == 1) | .cve | select(type == "string" and test("^CVE-[0-9]{4}-[0-9]+$"))')"
+    fi
+    [[ "$CANDIDATE_CVE" =~ ^CVE-[0-9]{4}-[0-9]+$ ]] || { echo "Require one campaign-selected CVE" >&2; exit 1; }
+    echo "##vso[task.setvariable variable=candidateCve]$CANDIDATE_CVE"
     git worktree add --detach "$CANDIDATE_ROOT" "$CANDIDATE_SOURCE_SHA"
     [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
     [[ -z "$(git -C "$CANDIDATE_ROOT" status --porcelain)" ]]
@@ -35,6 +45,7 @@ steps:
   env:
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
     CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
+    CANDIDATE_CVE: ${{ parameters.cve }}
     CANDIDATE_SCENARIO: ${{ parameters.scenario }}
     CANDIDATE_ROOT: $(candidateRoot)
     CANDIDATE_EVIDENCE: $(candidateEvidence)
@@ -194,11 +205,12 @@ steps:
       "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan_candidate.py" \
         --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
         --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
-        --platform linux/amd64 --cve CVE-2026-63209 --output "$CANDIDATE_EVIDENCE/scans"
+        --platform linux/amd64 --cve "$CANDIDATE_CVE" --output "$CANDIDATE_EVIDENCE/scans"
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
     CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
+    CANDIDATE_CVE: $(candidateCve)
     CANDIDATE_EVIDENCE: $(candidateEvidence)
     PYTHON: $(candidatePython)/bin/python
 
