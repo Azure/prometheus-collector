@@ -61,7 +61,9 @@ def scan(image, platform, output, database_from=None):
         "ignoreSha256": hashlib.sha256(ignore.read_bytes()).hexdigest(),
         "configSha256": hashlib.sha256(config.read_bytes()).hexdigest(),
     }
-    database_time = datetime.fromisoformat(metadata["dbUpdatedAt"].replace("Z", "+00:00"))
+    database_timestamp = metadata["dbUpdatedAt"].replace("Z", "+00:00")
+    database_timestamp = re.sub(r"(?<=\.\d{6})\d+", "", database_timestamp)
+    database_time = datetime.fromisoformat(database_timestamp)
     now = datetime.now(timezone.utc)
     if database_time.tzinfo is None or not now - timedelta(hours=24) <= database_time <= now + timedelta(minutes=5):
         raise ValueError("Trivy database freshness is not established")
