@@ -15,6 +15,42 @@ import fetch_candidate
 
 
 class FetchTests(unittest.TestCase):
+    def test_resolves_successful_producer_for_exact_pr_head(self):
+        commit = "a" * 40
+        branch = "refs/heads/sre/vuln/campaign"
+        builds = {"value": [
+            {"id": 121, "status": "completed", "result": "succeeded",
+             "definition": {"id": 440}, "sourceVersion": commit, "sourceBranch": branch,
+             "repository": {"id": "Azure/prometheus-collector", "type": "GitHub"}},
+            {"id": 122, "status": "completed", "result": "succeeded",
+             "definition": {"id": 440}, "sourceVersion": "b" * 40, "sourceBranch": branch,
+             "repository": {"id": "Azure/prometheus-collector", "type": "GitHub"}},
+            {"id": 123, "status": "completed", "result": "succeeded",
+             "definition": {"id": 440}, "sourceVersion": commit, "sourceBranch": "refs/heads/main",
+             "repository": {"id": "Azure/prometheus-collector", "type": "GitHub"}},
+            {"id": 124, "status": "completed", "result": "failed",
+             "definition": {"id": 440}, "sourceVersion": commit, "sourceBranch": branch,
+             "repository": {"id": "Azure/prometheus-collector", "type": "GitHub"}},
+        ]}
+        received = []
+
+        def download(url, token):
+            received.append((url, token))
+            return json.dumps(builds).encode()
+
+        with patch.object(fetch_candidate, "access_token", return_value="unit-test-token"), \
+                patch.object(fetch_candidate, "download", side_effect=download):
+            self.assertEqual(fetch_candidate.resolve_build_id(commit, branch), 121)
+        self.assertIn("definitions=440", received[0][0])
+        self.assertIn(urllib.parse.quote(branch, safe=""), received[0][0])
+        self.assertEqual(received[0][1], "unit-test-token")
+
+    def test_resolver_rejects_missing_exact_source_build(self):
+        with patch.object(fetch_candidate, "access_token", return_value="unit-test-token"), \
+                patch.object(fetch_candidate, "download", return_value=b'{"value": []}'):
+            self.assertIsNone(fetch_candidate.resolve_build_id(
+                "a" * 40, "refs/heads/sre/vuln/campaign"))
+
     def test_authenticated_build_and_raw_receipts_bind_candidate(self):
         source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
         build = {"status": "completed", "result": "succeeded", "id": 123,

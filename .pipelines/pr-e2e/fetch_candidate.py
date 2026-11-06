@@ -61,6 +61,30 @@ def download(url, token):
     return raw
 
 
+def resolve_build_id(commit, branch):
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise ValueError("Expected full PR source SHA")
+    query = urllib.parse.urlencode({
+        "definitions": 440, "branchName": branch, "statusFilter": "completed",
+        "resultFilter": "succeeded", "queryOrder": "finishTimeDescending",
+        "$top": 100, "api-version": "7.1",
+    })
+    url = ADO_PROJECT + "/_apis/build/builds?" + query
+    builds = json.loads(download(url, access_token())).get("value")
+    if not isinstance(builds, list):
+        raise ValueError("Azure DevOps returned no build list")
+    matches = [build for build in builds
+               if build.get("status") == "completed" and build.get("result") == "succeeded"
+               and build.get("sourceVersion") == commit and build.get("sourceBranch") == branch]
+    if not matches:
+        return None
+    selected = max(matches, key=lambda build: (build.get("finishTime") or "", int(build["id"])))
+    source = build_receipt.build_source(selected)
+    if source["commit"] != commit:
+        raise ValueError("Resolved producer source differs from the PR head")
+    return int(selected["id"])
+
+
 def receipt_file(raw, artifact, filename):
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         files = [entry for entry in archive.infolist()
@@ -110,14 +134,24 @@ def fetch(build_id, commit, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--build-id", required=True, type=int)
+    parser.add_argument("--build-id", type=int)
     parser.add_argument("--source-commit", required=True)
-    parser.add_argument("--output", required=True, type=Path, help="New evidence directory")
+    parser.add_argument("--source-branch")
+    parser.add_argument("--resolve-producer", action="store_true")
+    parser.add_argument("--output", type=Path, help="New evidence directory")
     args = parser.parse_args()
+    if args.resolve_producer:
+        if args.build_id is not None or args.output is not None or not args.source_branch:
+            parser.error("--resolve-producer requires --source-branch and no --build-id or --output")
+        print(json.dumps({"buildId": resolve_build_id(args.source_commit, args.source_branch)}))
+        return 0
+    if args.build_id is None or args.output is None:
+        parser.error("--build-id and --output are required unless --resolve-producer is used")
     receipt = fetch(args.build_id, args.source_commit, args.output)
     print(json.dumps({"source": receipt["source"], "testRunner": receipt["testRunner"],
                       "candidateReceipt": str(args.output / "candidate-build.json")}, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

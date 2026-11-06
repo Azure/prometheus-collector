@@ -30,7 +30,7 @@ class ComparisonTests(unittest.TestCase):
                             {"Target": image("a") + " (azurelinux 3.0)", "Class": "os-pkgs", "Type": "azurelinux",
                              "Packages": [{"Name": "os-package", "Version": "1"}],
                              "Vulnerabilities": [{**finding, "VulnerabilityID": "CVE-2026-5678",
-                                                  "PkgName": "os-package"}]}]}
+                                                   "PkgName": "os-package", "Severity": "LOW"}]}]}
         metadata = {"exitCode": 0, "requestedRef": image("a"), "platform": "linux/amd64",
                     "version": "test-version", "dbUpdatedAt": now.isoformat(),
                     "finishedUtc": now.isoformat(), "dbSha256": "c" * 64,
@@ -53,11 +53,17 @@ class ComparisonTests(unittest.TestCase):
             after["Metadata"]["RepoDigests"] = [image("b")]
             after["Results"][1]["Target"] = image("b") + " (azurelinux 3.0)"
             after["Results"][0]["Vulnerabilities"] = []
+            after["Results"][1]["Vulnerabilities"] = []
             after["Results"][0]["Packages"][0]["Version"] = "2"
             candidate_meta = {**metadata, "requestedRef": image("b")}
             write(candidate, after, candidate_meta)
-            self.assertEqual(compare_trivy.compare(baseline, candidate, receipt, [cve], now)["verdict"], "PASS")
-            for failure in ("db", "missing-package", "open", "new", "wrong-image",
+            result = compare_trivy.compare(baseline, candidate, receipt, [cve], now)
+            self.assertEqual(result["verdict"], "PASS")
+            self.assertEqual(result["baselineFindingCount"], 2)
+            self.assertEqual([row["status"] for row in result["baselineFindings"]], ["CLOSED", "CLOSED"])
+            self.assertEqual(result["smokeTests"], [{"id": cve, "status": "CLOSED"}])
+            self.assertTrue(result["unsupportedCoverage"])
+            for failure in ("db", "missing-package", "open", "residual", "new", "wrong-image",
                             "os-source", "os-version", "os-type", "missing-target", "language-path"):
                 with self.subTest(failure=failure):
                     changed, meta = copy.deepcopy(after), dict(candidate_meta)
@@ -65,9 +71,14 @@ class ComparisonTests(unittest.TestCase):
                         meta["dbSha256"] = "d" * 64
                     elif failure == "missing-package":
                         changed["Results"][0]["Packages"] = []
+                    elif failure == "residual":
+                        changed["Results"][1]["Vulnerabilities"] = [
+                            {**finding, "VulnerabilityID": "CVE-2026-5678", "PkgName": "os-package",
+                             "FixedVersion": "", "Severity": "LOW"}]
                     elif failure in ("open", "new"):
                         changed["Results"][0]["Vulnerabilities"] = [
-                            {**finding, "VulnerabilityID": cve if failure == "open" else "CVE-2026-9999"}]
+                            {**finding, "VulnerabilityID":
+                             cve if failure == "open" else "CVE-2026-9999"}]
                     elif failure == "wrong-image":
                         meta["requestedRef"] = image("c")
                     elif failure == "os-source":
@@ -88,6 +99,12 @@ class ComparisonTests(unittest.TestCase):
                             compare_trivy.compare(baseline, candidate, receipt, [cve], now)
                     else:
                         self.assertNotEqual(compare_trivy.compare(baseline, candidate, receipt, [cve], now)["verdict"], "PASS")
+            write(candidate, after, candidate_meta)
+            unreported_smoke = compare_trivy.compare(
+                baseline, candidate, receipt, ["CVE-2026-9998"], now)
+            self.assertEqual(unreported_smoke["verdict"], "BLOCKED")
+            self.assertEqual(unreported_smoke["smokeTests"], [
+                {"id": "CVE-2026-9998", "status": "NOT_REPORTED"}])
 
     def test_regression_guard_fails_when_broken(self):
         def broken(current, previous):

@@ -1,4 +1,4 @@
-"""Compare matched Linux Trivy scans; never claim Windows or Qualys/QID closure."""
+"""Compare all findings from matched Linux Trivy scans."""
 import argparse
 import hashlib
 import json
@@ -68,18 +68,49 @@ def compare(baseline, candidate, receipt, requested, now=None):
         raise ValueError("Analyzed target/type coverage changed")
     normalize.compare_findings(current, previous)
     inventory = {(r["Target"], p["Name"]) for r in after["Results"] for p in r.get("Packages", [])}
-    selected = []
+    def identity(finding):
+        return tuple(finding[field] for field in ("lane", "scanner", "id", "package", "path"))
+
+    candidate_by_identity = {identity(finding): finding for finding in current["findings"]}
+    baseline_findings = []
+    for finding in previous["findings"]:
+        candidate_finding = candidate_by_identity.get(identity(finding))
+        covered = (finding["path"], finding["package"]) in inventory
+        baseline_findings.append({
+            "finding": finding,
+            "candidateFinding": candidate_finding,
+            "status": "OPEN" if candidate_finding else "CLOSED" if covered else "NOT_REPORTED",
+        })
+
+    smoke_tests = []
     for cve in sorted(set(requested)):
         prior = [f for f in previous["findings"] if f["id"] == cve]
         present = any(f["id"] == cve for f in current["findings"])
-        covered = bool(prior) and all((f["path"], f["package"]) in inventory for f in prior)
-        selected.append({"id": cve, "status": "OPEN" if present else "CLOSED" if covered else "NOT_REPORTED"})
-    verdict = ("BLOCKED" if any(r["status"] == "NOT_REPORTED" for r in selected)
-               else "FAIL" if current["newFindings"] or any(r["status"] == "OPEN" for r in selected) else "PASS")
+        statuses = [row["status"] for row in baseline_findings if row["finding"]["id"] == cve]
+        status = ("OPEN" if present else "NOT_REPORTED" if not prior or "NOT_REPORTED" in statuses
+                  else "CLOSED")
+        smoke_tests.append({"id": cve, "status": status})
+    statuses = [row["status"] for row in baseline_findings] + [
+        row["status"] for row in smoke_tests]
+    verdict = ("BLOCKED" if "NOT_REPORTED" in statuses
+               else "FAIL" if current["newFindings"] or "OPEN" in statuses else "PASS")
     return {
-        "schemaVersion": 1, "scope": "selected Linux Trivy CVEs; not Windows/Qualys clearance",
+        "schemaVersion": 1,
+        "scope": "all Linux/amd64 collector Trivy findings; not full image clearance",
         "source": receipt["source"], "baseline": before_meta, "candidate": after_meta,
-        "requested": selected, "verdict": verdict, "newFindings": current["newFindings"],
+        "findingPolicy": "Evaluate every baseline finding without severity or fixability filters",
+        "baselineFindingCount": len(baseline_findings),
+        "baselineFindings": baseline_findings,
+        "smokeTests": smoke_tests,
+        "supportedCoverage": ["Trivy vulnerability scan of the ama-metrics collector linux/amd64 child"],
+        "unsupportedCoverage": [
+            "Collector linux/arm64 and Windows images",
+            "Target allocator and config-reader images",
+            "Qualys/CoMET scans and QID closure",
+        ],
+        "verdict": verdict,
+        "newFindings": current["newFindings"],
+        "unresolvedFindings": [row for row in baseline_findings if row["status"] != "CLOSED"],
         "remainingFindings": current["findings"],
     }
 

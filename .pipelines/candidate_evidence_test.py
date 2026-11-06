@@ -147,9 +147,13 @@ class CandidateEvidenceTest(unittest.TestCase):
         jobs = pipeline["stages"][0]["jobs"]
         self.assertIn("'False'", jobs[0]["condition"])
         self.assertIn("ResourceTrigger", jobs[0]["condition"])
+        self.assertIn("PullRequest", jobs[0]["condition"])
         self.assertIn("'True'", jobs[1]["condition"])
         self.assertIn("ResourceTrigger", jobs[1]["condition"])
+        self.assertIn("PullRequest", jobs[1]["condition"])
         self.assertEqual(pipeline["trigger"], "none")
+        self.assertEqual(pipeline["pr"]["branches"]["include"], ["main"])
+        self.assertIn(".pipelines/pr-e2e/campaign.json", pipeline["pr"]["paths"]["include"])
         producer = pipeline["resources"]["pipelines"][0]
         self.assertEqual(producer["source"], "Azure.prometheus-collector")
         self.assertEqual(producer["trigger"]["branches"]["include"],
@@ -176,16 +180,20 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(campaign, {"schemaVersion": 1, "cve": "CVE-2026-63209"})
         include = jobs[1]["strategy"]["runOnce"]["deploy"]["steps"][0]
         self.assertEqual(include["parameters"]["scenario"], "${{ parameters.candidateScenario }}")
-        self.assertEqual(include["parameters"]["cve"], "${{ parameters.candidateCve }}")
-        self.assertEqual(include["parameters"]["producerBuildId"],
-                         "${{ variables.campaignProducerBuildId }}")
-        self.assertEqual(include["parameters"]["sourceSha"],
-                         "${{ variables.campaignSourceSha }}")
+        self.assertEqual(include["parameters"]["cve"], "$(candidateCve)")
+        self.assertEqual(include["parameters"]["producerBuildId"], "$(campaignProducerBuildId)")
+        self.assertEqual(include["parameters"]["sourceSha"], "$(campaignSourceSha)")
         template = yaml.safe_load((directory / "azure-template-candidate-config-tests.yml").read_text())
         scenario = next(item for item in template["parameters"] if item["name"] == "scenario")
         self.assertEqual(scenario["default"], "default")
         self.assertEqual(scenario["values"], ["default", "settings"])
         steps = template["steps"]
+        pr_resolution = next(step for step in steps if "Resolve successful 440" in step.get("displayName", ""))
+        self.assertIn("System.PullRequest.SourceCommitId", str(pr_resolution["env"]))
+        self.assertIn("--resolve-producer", pr_resolution["bash"])
+        self.assertIn("task.setvariable variable=campaignSourceSha", pr_resolution["bash"])
+        self.assertLess(steps.index(pr_resolution), next(
+            i for i, step in enumerate(steps) if "Validate opt-in inputs" in step.get("displayName", "")))
         input_validation = next(step for step in steps if "Validate opt-in inputs" in step.get("displayName", ""))
         self.assertIn("CANDIDATE_CVE", input_validation["bash"])
         self.assertIn("CANDIDATE_CVE", input_validation["env"])
@@ -207,26 +215,34 @@ class CandidateEvidenceTest(unittest.TestCase):
                          "for tool in unzip az kubectl jq envsubst"):
             self.assertIn(required, steps[prereqs]["bash"])
         run =  next(i for i, step in enumerate(steps) if "Run authenticated candidate" in step.get("displayName", ""))
-        cleanup = next(i for i, step in enumerate(steps) if "retry ownership" in step.get("displayName", ""))
+        self.assertFalse(any(
+            "run-scenario.py" in str(step) and " cleanup" in str(step)
+            for step in steps
+        ))
+        cleanup = next(i for i, step in enumerate(steps) if "Always remove private candidate kubeconfig" in step.get("displayName", ""))
         scan = next(i for i, step in enumerate(steps) if "SRE-owned authenticated" in step.get("displayName", ""))
         self.assertEqual(cleanup, run + 1)
         self.assertLess(cleanup, scan)
         self.assertEqual(steps[cleanup]["condition"], "always()")
+        self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', steps[cleanup]["bash"])
         self.assertIn('$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('--scenario "$CANDIDATE_SCENARIO"', steps[run]["inputs"]["inlineScript"])
+        run_script = steps[run]["inputs"]["inlineScript"]
+        exit_handler = run_script[run_script.index("stop_bootstrap_watcher() {"):run_script.index("trap 'exit 130'")]
+        self.assertIn("trap stop_bootstrap_watcher EXIT", run_script)
+        self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', exit_handler)
+        self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', run_script)
+        self.assertIn('--scenario "$CANDIDATE_SCENARIO"', run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["${{ if eq(parameters.scenario, 'settings') }}"]["timeoutInMinutes"], 540)
         self.assertEqual(steps[run]["${{ else }}"]["timeoutInMinutes"], 300)
         self.assertIn('settings) max_run_seconds=28800 ;; default) max_run_seconds=14400', steps[run]["inputs"]["inlineScript"])
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings)', steps[1]["bash"])
-        self.assertEqual(steps[1]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings)', input_validation["bash"])
+        self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertLess(
             steps[run]["inputs"]["inlineScript"].index(".pipelines/pr-e2e/fetch_candidate.py"),
             steps[run]["inputs"]["inlineScript"].index("/otelcollector/test/scenarios/run-scenario.py"),
         )
-        self.assertIn('rm -f "$CANDIDATE_EVIDENCE/kubeconfig"', steps[cleanup]["inputs"]["inlineScript"])
         for task in ("PublishTestResults@2", "PublishPipelineArtifact@1"):
             self.assertEqual(next(step for step in steps if step.get("task") == task)["condition"], "always()")
         junit = next(step for step in steps if step.get("task") == "PublishTestResults@2")["inputs"]

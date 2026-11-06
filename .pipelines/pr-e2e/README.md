@@ -4,8 +4,10 @@ Phase 1 is a real scan/fix/build/one-cluster/evidence-PR campaign, not a replace
 for the full scenario matrix. That matrix covers representative current clusters
 with auto-upgrade enabled, not historical Kubernetes versions. All runtime code
 lives in this repository.
-Human approval gates commits/pushes, live scans, image publication, pipeline runs
-and cluster mutations. The agent never approves or merges its own PR.
+The campaign automatically runs its approved build, scan, and run-owned cluster
+validation. It never uses a shared cluster or expands the existing resource/IAM
+scope. A human reviews and merges the resulting PR; the agent never approves or
+merges it.
 
 ## Implemented
 
@@ -13,11 +15,12 @@ and cluster mutations. The agent never approves or merges its own PR.
   child digest/platform, empty ignore/config files and recorded scanner/DB/hash.
   It does not use or change the Docker daemon. Exit zero means the scanner ran,
   not that vulnerabilities are absent.
-- `compare_trivy.py`: selected Linux CVE closure and no-new-findings comparison
+- `compare_trivy.py`: every baseline Linux CVE finding and no-new-findings comparison
   for matched scanner/configuration/DB hashes, complete target/package inventory
   and a candidate bound to the successful build receipt. It cannot clear a
-  Qualys QID or claim Windows/full-image coverage. All residual findings remain
-  in its JSON output. OS targets must match the scan's exact image ref and OS
+  Qualys QID or claim full-image coverage. Every baseline finding is evaluated
+  without severity/fixability filters; unresolved, unreported, or new findings
+  block readiness. OS targets must match the scan's exact image ref and OS
   metadata before comparing their distribution/version; binary paths remain exact.
 - `scan.ps1` and `scan-steps.yml`: ported per-child CoMET/OIDC producer, output
   ownership guards and scoped cleanup. They still require dedicated trusted
@@ -154,20 +157,36 @@ Use `sre/vuln/<campaign-id>` for the SRE remediation branch and commit
 `{"schemaVersion":1,"cve":"CVE-YYYY-N"}`.
 The build pipeline includes this namespace alongside its existing main, OTel,
 Dependabot and `*/ama-metrics-sre-*` triggers. A successful 440 completion
-automatically triggers pipeline 979 for either SRE campaign branch form; the
-979 candidate run binds the upstream build ID/source SHA and validates the
-campaign CVE before any test resources are created. The push-receipt and
-candidate-build validators accept both SRE branch forms. Pipeline 440's
+triggers pipeline 979 for either SRE campaign branch form only after that
+completion filter is present on 979's default branch. The campaign PR trigger
+also runs 979 directly and binds its run to the source head's successful 440
+build. The candidate run validates the source, CVE and protected receipts before
+provisioning. The push-receipt and candidate-build validators accept both SRE
+branch forms. Pipeline 440's
 existing Trivy output is report-only; it does not itself produce the structured
 campaign scan artifact. This POC's `.pipelines/pr-e2e/campaign.json` selects
-`CVE-2026-63209`; later campaigns choose their CVE in the same manifest. A
+`CVE-2026-63209` as a smoke test; the scanner also evaluates every finding in the
+baseline without severity or fixability filtering. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
-`candidateSourceSha` and `candidateCve`. Only after verified cleanup may a separate
-`candidateScenario: settings` run execute the nightly settings profile.
+`candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
+resource group and publish its inventory; the pipeline removes its local kubeconfig
+but never invokes cloud cleanup. A separate `candidateScenario: settings` run
+requires its own verified producer and run-owned resources. After a successful
+retained run, the authorized owner revokes the recorded temporary administrator
+assignment with the runner's `revoke-bootstrap` action; resource cleanup remains
+an explicit action, not an automatic pipeline step.
 The trusted pipeline checkout may include pipeline/scanner-only repairs while
 the product/test candidate stays immutable; publication records both revisions
 as `pipelineSourceSha` and `sourceSha`. Product or test-source changes require
 a matching new protected producer and fresh execution.
+
+Pipeline 440's ordinary PR builds do not run the AKS, OTel, or Arc TestKube
+jobs. Pipeline 979 therefore has a PR validation trigger for campaign PRs. It
+resolves a successful 440 build for `System.PullRequest.SourceCommitId`, validates
+that build's protected receipts, and runs the existing TestKube scenario against
+those exact image digests. The 979 PR run is linked to the PR and auto-cancels
+when its head changes; only results for the latest head count. The separate 440
+push-triggered run remains the producer and is not itself e2e evidence.
 
 The ci-sre instruction contract is:
 
@@ -183,15 +202,21 @@ The ci-sre instruction contract is:
    missing-permission or owner conflicts require the corresponding real action,
    not speculative package changes.
 5. On every changed head/base, invalidate previous build/image/test/closure verdicts.
-   Require current-head component receipts, exact tested child digests, selected
-   closure, no new findings, full required matrix and verified restoration.
-6. Publish the evidence PR and human approval request only with honest scope.
-   Never approve/merge, silently waive failing tests, treat skipped/not-run as passed
-   or re-label an earlier successful image as the new build.
+   Require current-head component receipts, exact tested child digests, every
+   baseline finding closed, no new findings, the PR-linked 979 e2e run for that
+   exact head, the required scenario tier and verified restoration.
+6. Publish the evidence PR and request human review only with honest scope.
+   Never approve/merge, silently waive failing tests, treat skipped/not-run as
+   passed or re-label an earlier successful image as the new build.
 
-Keep iterating while there is an evidenced actionable fix. A real external blocker
-pauses with durable diagnostics and the exact missing approval/action; repeated
-identical failures without a new hypothesis are not useful iteration.
+Keep iterating while there is an evidenced actionable fix. Monitor the PR's own
+979 run and required checks for the latest head; after each pushed fix, wait for
+the new producer and PR e2e run before evaluating readiness. A real external blocker
+pauses with durable diagnostics and the exact missing action; repeated identical
+failures without a new hypothesis are not useful iteration.
+
+For now, print the intended Teams approval/results message in the automation
+output only. Do not configure or send a Teams message.
 
 ### Trigger/input/output
 

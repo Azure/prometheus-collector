@@ -22,6 +22,40 @@ steps:
 
 - bash: |
     set -euo pipefail
+    [[ "$BUILD_REASON" != PullRequest ]] || {
+      [[ "$PR_SOURCE_BRANCH" =~ ^refs/heads/(sre/vuln/[A-Za-z0-9][A-Za-z0-9._-]*|[^/]+/ama-metrics-sre-[^/]+)$ ]] || {
+        echo "PR source is not an allowed SRE campaign branch" >&2
+        exit 1
+      }
+      [[ "$PR_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || {
+        echo "PR source commit is not available" >&2
+        exit 1
+      }
+      for attempt in $(seq 1 180); do
+        resolved="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+          --resolve-producer --source-commit "$PR_SOURCE_COMMIT" --source-branch "$PR_SOURCE_BRANCH")"
+        build_id="$(printf '%s' "$resolved" | python3 -c 'import json,sys; print(json.load(sys.stdin)["buildId"] or "")')"
+        if [[ -n "$build_id" ]]; then
+          echo "##vso[task.setvariable variable=campaignProducerBuildId]$build_id"
+          echo "##vso[task.setvariable variable=campaignSourceSha]$PR_SOURCE_COMMIT"
+          echo "Resolved successful producer $build_id for PR head $PR_SOURCE_COMMIT"
+          exit 0
+        fi
+        echo "No successful pipeline 440 build for PR head $PR_SOURCE_COMMIT yet; waiting ($attempt/180)"
+        sleep 60
+      done
+      echo "Timed out waiting for the exact-head pipeline 440 producer" >&2
+      exit 1
+    }
+  displayName: "Resolve successful 440 producer for the exact PR head"
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    BUILD_REASON: $(Build.Reason)
+    PR_SOURCE_BRANCH: $(System.PullRequest.SourceBranch)
+    PR_SOURCE_COMMIT: $(System.PullRequest.SourceCommitId)
+
+- bash: |
+    set -euo pipefail
     [[ "$BUILD_REASON" != PullRequest ]] || { echo "Candidate execution requires a trusted pipeline branch" >&2; exit 1; }
     [[ "$SYSTEM_JOBATTEMPT" == 1 && "$SYSTEM_STAGEATTEMPT" == 1 ]] || { echo "Start a new run; candidate retries cannot reuse evidence" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
@@ -152,6 +186,7 @@ steps:
       stop_bootstrap_watcher() {
         kill "$bootstrap_watcher" 2>/dev/null || true
         wait "$bootstrap_watcher" 2>/dev/null || true
+        rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"
       }
       trap stop_bootstrap_watcher EXIT
       trap 'exit 130' INT
@@ -173,25 +208,13 @@ steps:
     CANDIDATE_TOOLS: $(candidateTools)
     PYTHON: $(candidatePython)/bin/python
 
-- task: AzureCLI@2
-  displayName: "Always retry ownership-guarded candidate cleanup before scanning"
+- bash: |
+    set -euo pipefail
+    rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"
+  displayName: "Always remove private candidate kubeconfig"
   condition: always()
-  timeoutInMinutes: 55
-  inputs:
-    azureSubscription: ${{ parameters.azureSubscription }}
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      set -euo pipefail
-      trap 'rm -f "$CANDIDATE_EVIDENCE/kubeconfig"' EXIT
-      if [[ -f "$CANDIDATE_EVIDENCE/ownership.json" ]]; then
-        "$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" cleanup \
-          --evidence "$CANDIDATE_EVIDENCE" --subscription 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb
-      fi
   env:
-    CANDIDATE_ROOT: $(candidateRoot)
     CANDIDATE_EVIDENCE: $(candidateEvidence)
-    PYTHON: $(candidatePython)/bin/python
 
 - task: AzureCLI@2
   displayName: "Retain SRE-owned authenticated baseline/candidate scan comparison"
@@ -244,7 +267,7 @@ steps:
     testRunTitle: Candidate ${{ parameters.scenario }} producer ${{ parameters.producerBuildId }} source ${{ parameters.sourceSha }}
 
 - task: PublishPipelineArtifact@1
-  displayName: "Always retain candidate TestKube, cleanup and SRE scan evidence"
+  displayName: "Always retain candidate TestKube, resource and SRE scan evidence"
   condition: always()
   inputs:
     targetPath: $(candidatePublication)
