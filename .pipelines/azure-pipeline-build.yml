@@ -27,6 +27,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  IS_SRE_BRANCH: $[or(startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/vuln/'), and(startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-')))]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
@@ -115,7 +116,7 @@ extends:
             VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
             SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
             LINUX_IMAGE_TAG=$SEMVER
-            if [[ "$BUILD_SOURCEBRANCH" == refs/heads/*/ama-metrics-sre-* ]]; then
+            if [ "$(IS_SRE_BRANCH)" = "True" ]; then
               LINUX_IMAGE_TAG="sre-$(Build.BuildId)-$SEMVER"
             fi
             # Truncating to 128 characters as it is required by docker
@@ -229,7 +230,8 @@ extends:
               echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
               echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
             fi
-          displayName: 'Ev2: package artifacts.tar.gz for prod release'
+          displayName: 'Build: prepare charts for PR lint and main release'
+          condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
         - task: HelmInstaller@1
           displayName: 'CI/CD: Install Helm version for linting'
           condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -385,7 +387,7 @@ extends:
 
       - job: SRE_TestKube_Runner_Receipt
         displayName: "SRE: pin existing TestKube runner and test source"
-        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+        condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
         variables:
           skipComponentGovernanceDetection: true
         templateContext:
@@ -973,12 +975,12 @@ extends:
             artifactName: linux-drop
           - output: pipelineArtifact
             displayName: 'SRE: publish Linux push receipt'
-            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
             artifactName: sre-push-linux
           - output: pipelineArtifact
             displayName: 'SRE: publish complete collector Trivy evidence'
-            condition: and(succeeded(), eq(variables['System.JobAttempt'], '1'), eq(variables['System.StageAttempt'], '1'))
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true), eq(variables['System.JobAttempt'], '1'), eq(variables['System.StageAttempt'], '1'))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-trivy-collector'
             artifactName: sre-trivy-collector
         steps:
@@ -1138,13 +1140,14 @@ extends:
               --ignorefile "$evidence/empty.ignore" --severity HIGH,CRITICAL,MEDIUM "$console_json"
           workingDirectory: $(Build.SourcesDirectory)
           displayName: "Build: scan exact collector child and retain complete Trivy evidence"
+          condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
         - bash: |
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
-              # Collector vulnerabilities are already retained above; keep its original secret coverage.
+              # Only SRE candidates reuse the vulnerability scan above; preserve secret coverage.
               scanners="vuln,secret"
-              if [ "$image" = "$(LINUX_FULL_IMAGE_NAME)" ]; then scanners="secret"; fi
+              if [ "$image" = "$(LINUX_FULL_IMAGE_NAME)" ] && [ "$(IS_SRE_BRANCH)" = "True" ]; then scanners="secret"; fi
               for i in {1..5}; do
                 trivy image --scanners "$scanners" --exit-code 0 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
                 TRIVY_EXIT_CODE=$?
@@ -1504,7 +1507,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'SRE: publish targetallocator push receipt'
-            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
             artifactName: sre-push-targetallocator
         steps:
@@ -1685,7 +1688,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'SRE: publish cfg push receipt'
-            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
             artifactName: sre-push-cfg
         steps:
@@ -1992,7 +1995,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'SRE: publish Windows2022 push receipt'
-            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
             artifactName: sre-push-windows2022
         steps:

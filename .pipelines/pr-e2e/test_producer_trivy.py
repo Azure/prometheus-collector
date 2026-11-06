@@ -9,9 +9,37 @@ import unittest
 from unittest.mock import patch
 
 import producer_trivy
+import yaml
 
 
 class ProducerTests(unittest.TestCase):
+    def test_scan_replacement_and_release_artifacts_are_scoped(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        self.assertEqual(pipeline["extends"]["template"], "v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates")
+        self.assertIn("refs/heads/main", pipeline["variables"]["IS_MAIN_BRANCH"])
+        jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
+        tags = next(job for job in jobs if job["job"] == "Image_Tags_and_Ev2_Artifacts")
+        self.assertIn("${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}",
+                      tags["templateContext"]["outputs"][0])
+        for job in jobs:
+            for output in job.get("templateContext", {}).get("outputs", []):
+                if output.get("artifactName", "").startswith("sre-push-"):
+                    self.assertEqual(output["condition"], "and(succeeded(), eq(variables.IS_SRE_BRANCH, true))")
+        runner = next(job for job in jobs if job["job"] == "SRE_TestKube_Runner_Receipt")
+        self.assertEqual(runner["condition"], "and(succeeded(), eq(variables.IS_SRE_BRANCH, true))")
+        collector = next(job for job in jobs if job["job"] == "Linux_Prometheus_Collector")
+        artifact = next(item for item in collector["templateContext"]["outputs"]
+                        if item.get("artifactName") == "sre-trivy-collector")
+        self.assertIn("eq(variables.IS_SRE_BRANCH, true)", artifact["condition"])
+        self.assertIn("eq(variables['System.JobAttempt'], '1')", artifact["condition"])
+        step = next(item for item in collector["steps"]
+                    if item.get("displayName") == "Build: scan exact collector child and retain complete Trivy evidence")
+        self.assertEqual(step["condition"], "and(succeeded(), eq(variables.IS_SRE_BRANCH, true))")
+        console = next(item["bash"] for item in collector["steps"]
+                       if item.get("displayName") == "Build: run trivy scan")
+        self.assertIn('scanners="vuln,secret"', console)
+        self.assertIn('[ "$(IS_SRE_BRANCH)" = "True" ]; then scanners="secret"', console)
+
     def test_exact_push_binding_and_fail_closed_publication(self):
         commit = "a" * 40
         digest = "sha256:" + "b" * 64
