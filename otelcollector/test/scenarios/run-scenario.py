@@ -296,6 +296,9 @@ class Host:
         return self.commands.run([getattr(self.args, "kubectl", "kubectl"),
                                   "--kubeconfig", str(self.kubeconfig), *args], **kwargs)
 
+    def remove_kubeconfig(self):
+        self.kubeconfig.unlink(missing_ok=True)
+
     def provision(self, env, principal, principal_type):
         if self.receipt_path.exists() or self.kubeconfig.exists():
             raise ValueError("An ownership receipt or kubeconfig already exists; cleanup that execution first")
@@ -431,7 +434,60 @@ class Host:
                 **({"rbacDelegationRemoved": True} if self.receipt.get("rbacBootstrapScope") else {}),
             })
         finally:
-            self.kubeconfig.unlink(missing_ok=True)
+            self.remove_kubeconfig()
+
+    def retain(self):
+        if self.receipt is None and not self.receipt_path.exists():
+            self.remove_kubeconfig()
+            return {"retained": False, "reason": "No ownership receipt"}
+        try:
+            if self.receipt is None:
+                self.receipt = load(self.receipt_path)
+            group = self.receipt["resourceGroup"]
+            if self.receipt["subscription"] != self.args.subscription:
+                raise ValueError("Retention subscription mismatch")
+            if self.az("group", "exists", "--name", group).strip() == "false":
+                result = {"retained": False, "resourceGroup": group, "managedResourceGroups": []}
+            else:
+                parent = self.assert_owned()
+                groups = self.az("group", "list", "--query",
+                                 "[?managedBy != null].{name:name,managedBy:managedBy}",
+                                 json_output=True, private=True)
+                parent_id = f"/subscriptions/{self.args.subscription}/resourceGroups/{group}/".casefold()
+                managed = {name for name in self.receipt.get("managedGroups", [])}
+                managed.update(g["name"] for g in groups
+                               if g["managedBy"].casefold().startswith(parent_id))
+                managed = sorted(managed)
+                resource_groups = []
+                for name in [group, *managed]:
+                    if name != group and self.az("group", "exists", "--name", name).strip() == "false":
+                        continue
+                    details = parent if name == group else self.az(
+                        "group", "show", "--name", name, json_output=True, private=True)
+                    resources = self.az(
+                        "resource", "list", "--resource-group", name, "--query",
+                        "[].{id:id,name:name,type:type,location:location,sku:sku,kind:kind}",
+                        json_output=True, private=True)
+                    resource_groups.append({
+                        "id": details["id"], "name": name, "tags": details.get("tags", {}),
+                        "resources": resources,
+                    })
+                inventoried = {row["name"] for row in resource_groups}
+                missing = [name for name in managed if name not in inventoried]
+                result = {
+                    "retained": not missing, "subscription": self.args.subscription,
+                    "resourceGroup": group, "managedResourceGroups": managed,
+                    "missingManagedResourceGroups": missing,
+                    "inventory": resource_groups,
+                    **({"rbacBootstrap": {
+                        "scope": self.receipt["rbacBootstrapScope"],
+                        "assignmentId": self.receipt.get("rbacDelegationId"),
+                    }} if self.receipt.get("rbacBootstrapScope") else {}),
+                }
+            save(self.args.evidence / "retained-resources.json", result)
+            return result
+        finally:
+            self.remove_kubeconfig()
 
 
 @cache
@@ -1139,11 +1195,13 @@ def execute(args, scenario, variants, commands):
     finally:
         commands.deadline = None
         try:
-            host.cleanup()
+            outcome["resources"] = host.retain()
             if outcome["status"] == "TESTS_PASSED":
+                if not outcome["resources"].get("retained"):
+                    raise RuntimeError("Successful tests but retained resource inventory is incomplete")
                 outcome["status"] = "PASS"
         except (RuntimeError, ValueError, OSError, KeyError) as failure:
-            outcome.update(status="FAIL", cleanupError=str(failure))
+            outcome.update(status="FAIL", retentionError=str(failure))
             raise
         finally:
             save(args.evidence / "result.json", outcome)
