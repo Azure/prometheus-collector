@@ -43,6 +43,18 @@ and cluster mutations. The agent never approves or merges its own PR.
   successful build against the requested full source SHA, downloads its five
   protected receipt artifacts and calls the receipt verifier. Retains the raw
   producer files and build response beside `candidate-build.json`.
+- `producer_trivy.py`: pipeline 440 replaces its collector vulnerability console
+  scan with full, unfiltered JSON for the exact pushed Linux amd64 child. The
+  protected `sre-trivy-collector` artifact contains `trivy/{result.json,metadata.json}`,
+  the exact `cache/db` snapshot, empty config/ignore files, and `provenance.json`
+  binding source repo/commit/build, definition 440, index/child/platform and every
+  file's SHA256. Only successful first-attempt jobs/stages publish it. MCR lag
+  retries the immutable digest, never a tag. Filtered console findings and existing
+  secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
+  A consumer must authenticate this artifact from the exact successful 440 build,
+  verify its hashes/provenance against the push receipts, and scan the released
+  baseline with that same Trivy version/config/DB. Published prod-vs-main discovery
+  needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
   child, rescans the released baseline, reuses its private hashed DB for the candidate,
   and retains raw scans plus `comparison.json`, including failed/blocked verdicts.
@@ -158,8 +170,8 @@ automatically triggers pipeline 979 for either SRE campaign branch form; the
 979 candidate run binds the upstream build ID/source SHA and validates the
 campaign CVE before any test resources are created. The push-receipt and
 candidate-build validators accept both SRE branch forms. Pipeline 440's
-existing Trivy output is report-only; it does not itself produce the structured
-campaign scan artifact. This POC's `.pipelines/pr-e2e/campaign.json` selects
+collector Trivy scan publishes reusable structured `sre-trivy-collector` evidence;
+its other console scans remain report-only. This POC's `.pipelines/pr-e2e/campaign.json` selects
 `CVE-2026-63209`; later campaigns choose their CVE in the same manifest. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Only after verified cleanup may a separate
