@@ -6,8 +6,9 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+import normalize
 import scan_trivy
 
 
@@ -16,9 +17,9 @@ IMAGE = "example.invalid/collector@sha256:" + "a" * 64
 
 class DiscoveryTests(unittest.TestCase):
     def test_database_timestamp_with_nanoseconds_is_supported(self):
-        real_datetime = scan_trivy.datetime
-        expected = real_datetime.now(scan_trivy.timezone.utc).isoformat(timespec="microseconds")
-        timestamp = expected.replace("+00:00", "206+00:00")
+        now = datetime.now(timezone.utc) - timedelta(minutes=5)
+        timestamp = now.isoformat(timespec="microseconds").replace("+00:00", "123+00:00")
+        real_datetime = normalize.datetime
         parsed_values = []
 
         class StrictDateTime:
@@ -52,10 +53,10 @@ class DiscoveryTests(unittest.TestCase):
                 }, "Results": []}))
                 return subprocess.CompletedProcess(command, 0)
 
-            with patch.object(scan_trivy, "datetime", StrictDateTime):
+            with patch.object(normalize, "datetime", StrictDateTime):
                 with patch.object(scan_trivy.subprocess, "run", side_effect=invoke):
                     scan_trivy.scan(IMAGE, "linux/amd64", root)
-            self.assertEqual(parsed_values, [expected])
+            self.assertEqual(parsed_values, [now.isoformat(timespec="microseconds")])
 
     def test_digest_platform_and_failed_tool_are_checked(self):
         for mismatch in ("digest", "platform", "tool", None):
