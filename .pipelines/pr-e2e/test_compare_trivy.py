@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -12,6 +13,55 @@ import normalize
 
 
 class ComparisonTests(unittest.TestCase):
+    def test_load_accepts_nanosecond_database_timestamp(self):
+        now = datetime.now(timezone.utc)
+        image = "example.invalid/collector@sha256:" + "a" * 64
+        timestamp = now.isoformat(timespec="microseconds").replace("+00:00", "123+00:00")
+        data = {
+            "Metadata": {
+                "RepoDigests": [image],
+                "ImageConfig": {"os": "linux", "architecture": "amd64"},
+            },
+            "Results": [{"Target": "opt/app", "Class": "lang-pkgs", "Type": "gobinary"}],
+        }
+        raw = json.dumps(data).encode()
+        metadata = {
+            "exitCode": 0,
+            "requestedRef": image,
+            "platform": "linux/amd64",
+            "version": "test-version",
+            "dbUpdatedAt": timestamp,
+            "finishedUtc": now.isoformat(timespec="microseconds"),
+            "dbSha256": "c" * 64,
+            "configuration": {
+                "scanners": ["vuln"],
+                "listAllPkgs": True,
+                "ignoreSha256": hashlib.sha256(b"").hexdigest(),
+                "configSha256": hashlib.sha256(b"{}\n").hexdigest(),
+            },
+            "resultSha256": hashlib.sha256(raw).hexdigest(),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            trivy = Path(directory) / "trivy"
+            trivy.mkdir()
+            (trivy / "result.json").write_bytes(raw)
+            (trivy / "metadata.json").write_text(json.dumps(metadata))
+            parsed_values = []
+            real_datetime = normalize.datetime
+
+            class StrictDateTime:
+                @staticmethod
+                def fromisoformat(value):
+                    parsed_values.append(value)
+                    if re.search(r"\.\d{7,}[+-]\d{2}:\d{2}$", value):
+                        raise ValueError(f"Invalid isoformat string: {value!r}")
+                    return real_datetime.fromisoformat(value)
+
+            with patch.object(normalize, "datetime", StrictDateTime):
+                loaded, _, _ = compare_trivy.load(Path(directory), now)
+            self.assertEqual(loaded["dbUpdatedAt"], timestamp)
+            self.assertEqual(parsed_values[0], now.isoformat(timespec="microseconds"))
+
     def test_only_matched_present_to_absent_without_new_findings_passes(self):
         now = datetime.now(timezone.utc)
         cve = "CVE-2026-1234"

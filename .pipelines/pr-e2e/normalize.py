@@ -9,7 +9,9 @@ from pathlib import Path
 
 
 def utc(value):
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    value = value.replace("Z", "+00:00")
+    value = re.sub(r"(?<=\.\d{6})\d+", "", value)
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("Timestamp must include timezone")
     return parsed.astimezone(timezone.utc)
