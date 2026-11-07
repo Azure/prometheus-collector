@@ -46,7 +46,7 @@ def check_expanded(doc):
         "condition": False, "inputs": {"alias": "none"},
     }, steps[0]
     assert [step["task"] for step in steps[1:]] == [
-        "Bash@3", "Bash@3", "PublishPipelineArtifact@1",
+        "Bash@3", "Bash@3", "PublishPipelineArtifact@1", "PublishPipelineArtifact@1",
     ]
     variables = {row["name"]: row["value"] for row in doc["variables"]}
     assert variables["campaignProducerBuildId"] == "0"

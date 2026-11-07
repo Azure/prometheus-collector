@@ -8,14 +8,14 @@
   "selectionNote": "Use the latest published main collector linux/amd64 child from build 131326 even though unrelated Windows 2019 work is still in progress.",
   "images": {
     "production": {
-      "ref": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99",
-      "tag": "7.4.0-main-10-02-2026-b0b85f19",
-      "indexDigest": "sha256:69aafa04906bde9f835ed4f622680de7e0cf7eadc70a3534de4774815cf07575",
+      "ref": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324",
+      "tag": "7.4.1-hotfix-7-4-1-10-23-2026-8e5d8995",
+      "indexDigest": "sha256:b6b659ea0b4658b33b1bb8ea0c80e675099f3a489a35ef256393ee3fac60ed97",
       "source": {
         "repo": "Azure/prometheus-collector",
-        "branch": "refs/heads/main",
-        "commit": "b0b85f19ec2ed77364f4e313ef8b3c988652c4ae",
-        "buildId": "128016",
+        "branch": "refs/heads/hotfix-7.4.1",
+        "commit": "8e5d899505227d6a48e0a38441f5c9a9a8ebb70c",
+        "buildId": "129944",
         "buildStatus": "completed",
         "buildResult": "succeeded"
       },

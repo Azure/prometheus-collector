@@ -28,6 +28,13 @@ steps:
   displayName: "Scan and compare immutable published production/main images"
 
 - task: PublishPipelineArtifact@1
+  displayName: "Publish discovery findings"
+  inputs:
+    targetPath: $(Build.ArtifactStagingDirectory)/published-image-discovery/evidence/findings
+    artifactName: discovery-findings
+    publishLocation: pipeline
+
+- task: PublishPipelineArtifact@1
   displayName: "Publish published-image discovery evidence"
   condition: always()
   inputs:

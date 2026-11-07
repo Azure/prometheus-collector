@@ -1,6 +1,7 @@
 """Compare published production and main collector images without claiming remediation."""
 import argparse
 from collections import Counter
+import csv
 import json
 from pathlib import Path
 import re
@@ -32,7 +33,9 @@ def validate_manifest(manifest):
                 or f"/{repository}/" not in image["ref"]
                 or image.get("tag", "").strip() == ""
                 or source.get("repo") != REPOSITORY
-                or source.get("branch") != "refs/heads/main"
+                or not re.fullmatch(
+                    r"refs/heads/(?:main|hotfix-[A-Za-z0-9._-]+)" if role == "production" else r"refs/heads/main",
+                    source.get("branch", ""))
                 or not re.fullmatch(r"[0-9a-f]{40}", source.get("commit", ""))
                 or not re.fullmatch(r"[0-9]+", source.get("buildId", ""))
                 or publication.get("collectorLinuxAmd64Push") != "succeeded"):
@@ -149,6 +152,19 @@ def run(manifest_path, output):
     scan_trivy.scan(main_image["ref"], manifest["platform"], main, production)
     result = compare_scans(production, main, production_image, main_image)
     (output / "discovery.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    findings = output / "findings"
+    findings.mkdir()
+    (findings / "published-images.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (findings / "discovery.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    summary = {key: result[key] for key in ("kind", "verdict", "scope", "interpretation", "images", "scanner", "summary", "unsupportedCoverage")}
+    (findings / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    with (findings / "findings.csv").open("w", encoding="utf-8", newline="") as stream:
+        fields = ["image", "id", "package", "installed", "fixed", "severity", "path", "lane", "scanner", "digest"]
+        writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
+        writer.writeheader()
+        for role, rows in (("production", [row["finding"] for row in result["productionFindings"]]),
+                           ("main", result["mainFindings"])):
+            writer.writerows({"image": role, **row} for row in rows)
     return result
 
 

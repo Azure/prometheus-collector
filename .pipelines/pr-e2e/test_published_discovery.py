@@ -1,4 +1,5 @@
 import copy
+import csv
 import json
 from pathlib import Path
 import tempfile
@@ -81,6 +82,18 @@ class PublishedDiscoveryTests(unittest.TestCase):
             self.assertEqual(json.loads((output / "discovery.json").read_text()),
                              json.loads(json.dumps(result)))
             self.assertEqual(json.loads((output / "published-images.json").read_text()), self.manifest)
+            findings = output / "findings"
+            self.assertEqual({p.name for p in findings.iterdir()},
+                             {"summary.json", "findings.csv", "discovery.json", "published-images.json"})
+            self.assertEqual(json.loads((findings / "summary.json").read_text())["summary"], result["summary"])
+            self.assertEqual(json.loads((findings / "discovery.json").read_text()), json.loads(json.dumps(result)))
+            self.assertEqual(json.loads((findings / "published-images.json").read_text()), self.manifest)
+            with (findings / "findings.csv").open(newline="", encoding="utf-8") as stream:
+                rows = list(csv.DictReader(stream))
+            self.assertEqual([(row["image"], row["id"]) for row in rows], [
+                ("production", "CVE-2026-10001"), ("production", "CVE-2026-10002"),
+                ("main", "CVE-2026-10001"), ("main", "CVE-2026-10003"),
+            ])
 
     def test_incomparable_database_or_target_coverage_blocks_report(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,13 +132,29 @@ class PublishedDiscoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "main image provenance"):
             published_discovery.validate_manifest(manifest)
 
+    def test_production_hotfix_provenance_keeps_branch_and_digest_guards(self):
+        published_discovery.validate_manifest(self.manifest)
+        for role, field, invalid in (
+            ("production", "branch", "refs/heads/feature/unsafe"),
+            ("main", "branch", "refs/heads/hotfix-7.4.1"),
+            ("production", "ref", "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:latest"),
+        ):
+            manifest = copy.deepcopy(self.manifest)
+            target = manifest["images"][role]["source"] if field == "branch" else manifest["images"][role]
+            target[field] = invalid
+            with self.subTest(role=role, field=field), self.assertRaisesRegex(ValueError, f"{role} image provenance"):
+                published_discovery.validate_manifest(manifest)
+
     def test_scan_template_isolated_from_candidate_and_cloud_actions(self):
         template_path = ROOT / "published-scan-steps.yml"
         source = template_path.read_text()
         template = yaml.safe_load(source)
         steps = template["steps"]
         self.assertEqual([step.get("task", "bash") for step in steps],
-                         ["bash", "bash", "PublishPipelineArtifact@1"])
+                         ["bash", "bash", "PublishPipelineArtifact@1", "PublishPipelineArtifact@1"])
+        self.assertEqual(steps[-2]["inputs"]["artifactName"], "discovery-findings")
+        self.assertEqual(steps[-2]["inputs"]["targetPath"],
+                         "$(Build.ArtifactStagingDirectory)/published-image-discovery/evidence/findings")
         self.assertEqual(steps[-1]["condition"], "always()")
         self.assertEqual(steps[-1]["inputs"]["artifactName"],
                          "published-image-discovery-$(Build.BuildId)")
