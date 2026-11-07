@@ -20,7 +20,7 @@ function Get-WinEvent {
     ProviderName = 'Docker Engine'
     Id = 1
     LevelDisplayName = 'Information'
-    Message = 'The pipe is being closed.'
+    Message = 'Create process {"CommandLine":"scan","Environment":{"APPLICATIONINSIGHTS_AUTH_PUBLIC":"test-appinsights-secret"}}; The pipe is being closed.'
   }
 }
 function docker {
@@ -93,8 +93,12 @@ try {
       $eventStatus = Get-Content -Raw (Join-Path $directory 'docker-events-status.json') | ConvertFrom-Json
       if ($eventStatus.exitCode -ne 0) { throw 'Docker event query failed unexpectedly.' }
       $engineEvents = Get-Content -Raw (Join-Path $directory 'docker-engine-events.json')
-      if (!$engineEvents.Contains('The pipe is being closed.') -or $engineEvents.Contains('test-oidc-secret')) {
-        throw 'Docker-related Windows event log evidence was not captured or redacted.'
+      if (!$engineEvents.Contains('The pipe is being closed.') -or
+        $engineEvents.Contains('test-oidc-secret') -or
+        $engineEvents.Contains('test-appinsights-secret') -or
+        $engineEvents.Contains('APPLICATIONINSIGHTS_AUTH_PUBLIC') -or
+        !$engineEvents.Contains('[REDACTED]')) {
+        throw 'Docker-related Windows event evidence was not captured or secrets were not redacted.'
       }
       if ($global:eventCalls -ne 1) { throw "Exit diagnostics ran $global:eventCalls times instead of once for the target scan." }
     } elseif (Test-Path (Join-Path $directory 'docker-container-die.jsonl')) {

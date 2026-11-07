@@ -158,13 +158,14 @@ if ($captureExitDiagnostics) {
             $_.Message -match 'docker_engine|pipe is being closed|container|HCS|vmcompute'
         } |
         ForEach-Object {
+          $message = [regex]::Replace($_.Message, '(?s)"Environment"\s*:\s*\{[^{}]*\}', '"Environment":{"[REDACTED]":true}')
           $engineEvents.Add(@{
             logName = $logName
             timeCreated = $_.TimeCreated
             provider = $_.ProviderName
             id = $_.Id
             level = $_.LevelDisplayName
-            message = $_.Message
+            message = $message
           })
         }
     } catch {
