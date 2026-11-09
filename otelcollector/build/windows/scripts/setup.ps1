@@ -90,7 +90,7 @@ Write-Host ('Finished downloading Telegraf')
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.14.1.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.7.1.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
