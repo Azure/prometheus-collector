@@ -49,12 +49,18 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   Missing, partial, stale, unbound or incomparable evidence cannot pass.
 - `build_receipt.py`: verifies successful pipeline 440 source/build metadata and
   per-component push receipts against published MCR manifest/config bytes.
-  Emits immutable child refs for Linux amd64/arm64, Windows2022, allocator and cfg;
+  Emits immutable child refs for Linux amd64/arm64, Windows2022/2025, allocator and cfg;
   rejects incomplete images, moved tags and mismatched source/platforms.
   It does not authenticate caller-supplied JSON or replace protected push receipts.
   SRE-branch product jobs publish four protected `sre-push-*` artifacts, captured
   from BuildKit metadata or Windows push output, with unique per-build tags.
   Fetch the completed authenticated ADO build response before resolving them.
+  SRE branches build Windows2022 and Windows2025 in the existing Windows job
+  matrix using their respective configured 1ES pool images and the same signing
+  steps. `sre-push-windows` binds the final multi-OS index, not the 2022 child.
+  Its verified configs must contain both `10.0.20348.*` and `10.0.26100.*` under
+  one pinned index so mixed Windows pools can use the same DaemonSet image.
+  Other branches keep the existing 2019/2022 image set; no OS check is waived.
   The emitter also requires `sre-testkube-runner`: a protected receipt binding
   separately fetched test source to this build, the existing toolchain's immutable
   image and its durable artifact URL. No replacement runner is built or pushed.
@@ -197,15 +203,31 @@ also runs 979 directly and binds its run to the source head's successful 440
 build. The candidate run validates the source, CVE and protected receipts before
 provisioning. The push-receipt and candidate-build validators accept both SRE
 branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
-`sre-trivy-collector` evidence; its other console scans remain report-only. This
-POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
+`sre-trivy-collector` evidence; its other console scans remain report-only. The
+producer signs only `payload.json` in the collector and allocator signing folders;
+the original Buildx `push-metadata.json` remains readable JSON for immutable
+push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
+This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
 the scanner also evaluates every baseline finding without severity or fixability
 filters. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
 resource group and publish its inventory; the pipeline removes its local kubeconfig
-but never invokes cloud cleanup. A separate `candidateScenario: settings` run
-requires its own verified producer and run-owned resources. After a successful
+but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
+`default`, `linux`, `settings`, `classic-azure-cni`, `mixed`, `autoscaler`, `uai`,
+`cilium` and `kubenet` in serial stages, even if an earlier row fails. Each row
+has its own UUID, checkout, evidence, retained resource group and bootstrap
+artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
+in the approved build subscription. A named selector runs just that row.
+Before any provisioning, a read-only admission stage compiles the selected rows
+and checks each region's total simultaneous max-count-plus-surge against live
+regional and VM-family quotas, SKU restrictions and the stable Kubernetes version.
+Every row requires that stage's successful, source/build-bound placement output,
+and still performs its existing live per-row preflight.
+Admission is a point-in-time check, not a capacity reservation. Retention and
+auto-upgrade channels remain unchanged; serial test stages do not serialize
+later retained-cluster upgrades.
+After a successful
 retained run, the authorized owner revokes the recorded temporary administrator
 assignment with the runner's `revoke-bootstrap` action; resource cleanup remains
 an explicit action, not an automatic pipeline step.
@@ -227,7 +249,34 @@ when its head changes; only results for the latest head count. The separate 440
 push-triggered run remains the producer and is not itself e2e evidence.
 The fetch CLI's `trivyVersion` comes from the verified producer scan metadata;
 the pipeline installs that version before reusing the producer's database.
-The default/settings selector is not proof that every required PR scenario ran.
+
+Published discovery also emits its full JSON through the private ADO scan log,
+framed as `AMA_METRICS_DISCOVERY_BEGIN/DATA/END`. The gzip/base64 envelope binds
+the discovery 979 build ID and source SHA separately from the image producer
+provenance, with SHA-256 over the decoded envelope. Existing log-read permission
+suffices; findings must not be copied to this public repository.
+`discovery_log.py read --input build-log.txt --manifest published-images.json
+--build-id <979-id> --source-sha <979-sha> --output discovery.json` rejects
+incomplete/duplicate frames, bad checksums, and build/source/image mismatches.
+Obtain expected build/source from authenticated ADO metadata and the image
+manifest from that exact source, not from the unverified envelope. Verify an
+actual agent log round-trip before relying on this fallback.
+
+Each row publishes `coverage.json` as a plan, never as proof of execution. It
+explicitly lists blocked matrix rows and the five uncovered settings variants:
+`helm-customer-values` (no isolated customer Helm adapter), and
+`empty-secret-namespaces-v1`, `empty-secret-namespaces-v2`,
+`omitted-secret-namespaces-v1`, `omitted-secret-namespaces-v2` (no enforcement on
+the current approved Kubernetes 1.36.5 baseline). No topology or version override
+is used to manufacture coverage. A new runnable matrix row or unaccounted variant
+fails coverage planning before provisioning. Actual source-bound TestKube results
+for every applicable row, not this selector or plan, are required for completion.
+The nine-row harness runs config-processing variants, five health suites and
+fresh ingestion; it does not run every repository Ginkgo package.
+`coverage.json` also blocks `regionTests`: its specific deployed recording-rule
+and AMW usage/limits checks need an owned rule and authorization adapter
+(`parmRuleName`, `parmAmwResourceId`). Overlapping health checks do not replace
+those tests. Nine successful rows alone must not be reported as all repo tests passing.
 
 The ci-sre instruction contract is:
 

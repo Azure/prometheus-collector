@@ -13,6 +13,60 @@ import yaml
 
 
 class ProducerTests(unittest.TestCase):
+    def test_signing_keeps_buildx_push_metadata_readable(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
+        for component in ("Linux_Prometheus_Collector", "Linux_Target_Allocator"):
+            job = next(item for item in jobs if item["job"] == component)
+            signing = next(step for step in job["steps"] if step.get("task") == "EsrpCodeSigning@6")
+            with self.subTest(component=component), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                metadata = root / "push-metadata.json"
+                raw = json.dumps({
+                    "containerimage.digest": "sha256:" + "b" * 64,
+                    "containerimage.descriptor": {
+                        "mediaType": "application/vnd.oci.image.index.v1+json",
+                        "digest": "sha256:" + "b" * 64, "size": 856,
+                    },
+                }).encode()
+                metadata.write_bytes(raw)
+                (root / "payload.json").write_text('{"targetArtifact":{}}')
+                signed = []
+                for path in root.glob(signing["inputs"]["Pattern"]):
+                    signed.append(path.name)
+                    path.write_bytes(b"\xd2\x84\x43\xa1\x01\x26" + path.read_bytes())
+                self.assertEqual(json.loads(metadata.read_text(encoding="utf-8-sig")),
+                                 json.loads(raw))
+                self.assertEqual(metadata.read_bytes(), raw)
+                self.assertEqual(signed, ["payload.json"])
+                self.assertTrue((root / "payload.json").read_bytes().startswith(b"\xd2"))
+                receipt_step = next(step for step in job["steps"]
+                                    if step.get("template", "").endswith("push-receipt-steps.yml@self"))
+                self.assertIn("/push-metadata.json", receipt_step["parameters"]["evidenceArguments"])
+                if component == "Linux_Prometheus_Collector":
+                    scan = next(step for step in job["steps"]
+                                if step.get("displayName") == "Build: scan exact collector child and retain complete Trivy evidence")
+                    self.assertIn('/linux/push-metadata.json"', scan["bash"])
+
+    def test_signing_guard_rejects_metadata_wildcard(self):
+        original = yaml.safe_load
+
+        def restore_wildcard(text):
+            pipeline = original(text)
+            jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
+            for job in jobs:
+                if job["job"] in ("Linux_Prometheus_Collector", "Linux_Target_Allocator"):
+                    for step in job["steps"]:
+                        if step.get("task") == "EsrpCodeSigning@6":
+                            step["inputs"]["Pattern"] = "*.json"
+            return pipeline
+
+        with patch.object(yaml, "safe_load", side_effect=restore_wildcard):
+            result = unittest.TestResult()
+            ProducerTests("test_signing_keeps_buildx_push_metadata_readable").run(result)
+        self.assertEqual(len(result.errors), 2)
+        self.assertTrue(all("UnicodeDecodeError" in error for _, error in result.errors))
+
     def test_scan_replacement_and_release_artifacts_are_scoped(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
         conditional = "${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}"

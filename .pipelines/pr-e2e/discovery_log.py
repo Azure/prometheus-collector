@@ -35,24 +35,27 @@ def emit(discovery, build_id, source_sha, images):
         raise ValueError("Discovery log payload exceeds limit")
     digest = hashlib.sha256(raw).hexdigest()
     encoded = base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")
-    return "\n".join([PREFIX + "BEGIN " + digest,
-                      *(PREFIX + "DATA " + encoded[offset:offset + 2048]
-                        for offset in range(0, len(encoded), 2048)),
-                      PREFIX + "END " + digest]) + "\n"
+    chunks = [encoded[offset:offset + 2048] for offset in range(0, len(encoded), 2048)]
+    boundary = f"{digest} {len(chunks)} {len(raw)}"
+    return "\n".join([PREFIX + "BEGIN " + boundary,
+                      *(PREFIX + "DATA " + chunk for chunk in chunks),
+                      PREFIX + "END " + boundary]) + "\n"
 
 
 def read(text, build_id, source_sha, images):
     records = [line.split(PREFIX, 1)[1].split() for line in text.splitlines() if PREFIX in line]
-    if (len(records) < 3 or any(len(row) != 2 for row in records)
-            or records[0][0] != "BEGIN" or records[-1] != ["END", records[0][1]]
-            or any(row[0] != "DATA" for row in records[1:-1])):
+    if (len(records) < 3 or len(records[0]) != 4
+            or records[0][0] != "BEGIN" or records[-1] != ["END", *records[0][1:]]
+            or any(len(row) != 2 or row[0] != "DATA" for row in records[1:-1])
+            or records[0][2] != str(len(records) - 2)):
         raise ValueError("Discovery log frame is missing, duplicated or incomplete")
     encoded = "".join(row[1] for row in records[1:-1])
     if len(encoded) > MAX_BYTES * 2:
         raise ValueError("Discovery log encoding exceeds limit")
     with gzip.GzipFile(fileobj=io.BytesIO(base64.b64decode(encoded, validate=True))) as stream:
         raw = stream.read(MAX_BYTES + 1)
-    if len(raw) > MAX_BYTES or hashlib.sha256(raw).hexdigest() != records[0][1]:
+    if (len(raw) > MAX_BYTES or str(len(raw)) != records[0][3]
+            or hashlib.sha256(raw).hexdigest() != records[0][1]):
         raise ValueError("Discovery log checksum or length mismatch")
     return verify(json.loads(raw), build_id, source_sha, images)
 

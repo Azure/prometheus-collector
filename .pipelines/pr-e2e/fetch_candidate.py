@@ -19,7 +19,7 @@ import build_receipt
 
 ADO_PROJECT = "https://dev.azure.com/github-private/2d36c31d-2f89-409f-9a3e-32e4e9699840"
 ADO_ARTIFACT_HOST = "artprodcus3.artifacts.visualstudio.com"
-ARTIFACTS = ("sre-push-linux", "sre-push-windows2022", "sre-push-targetallocator",
+ARTIFACTS = ("sre-push-linux", "sre-push-windows", "sre-push-targetallocator",
              "sre-push-cfg", "sre-testkube-runner")
 SCAN_ARTIFACT = "sre-trivy-collector"
 MAX_SCAN_ARTIFACT_BYTES = 512 * 1024 * 1024

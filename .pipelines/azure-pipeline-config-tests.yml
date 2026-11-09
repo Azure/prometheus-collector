@@ -62,12 +62,20 @@ parameters:
   type: string
   default: ''
 - name: candidateScenario
-  displayName: 'Existing candidate scenario (PR default or nightly settings)'
+  displayName: 'Candidate matrix row, or all applicable rows in serial stages'
   type: string
-  default: default
+  default: all
   values:
+  - all
   - default
   - settings
+  - linux
+  - classic-azure-cni
+  - mixed
+  - autoscaler
+  - uai
+  - cilium
+  - kubenet
 
 variables:
   candidateCve: ${{ parameters.candidateCve }}
@@ -1173,34 +1181,170 @@ stages:
               targetPath: $(Build.ArtifactStagingDirectory)
               artifact: configtests-evidence
 
-  - deployment: CandidateTestkube
-    displayName: "Test: receipt-bound disposable candidate"
-    environment: Prometheus-Collector-Tests
-    ${{ if eq(parameters.candidateScenario, 'settings') }}:
-      timeoutInMinutes: 900
-    ${{ else }}:
-      timeoutInMinutes: 600
-    cancelTimeoutInMinutes: 60
-    variables:
-      candidateAttempt: $(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)
-      candidateRoot: $(Agent.TempDirectory)/candidate-$(candidateAttempt)
-      candidateEvidence: $(Agent.TempDirectory)/candidate-evidence-$(candidateAttempt)
-      candidateTools: $(Agent.TempDirectory)/candidate-tools-$(candidateAttempt)
-      candidatePython: $(Agent.TempDirectory)/candidate-python-$(candidateAttempt)
-      candidatePublication: $(Build.ArtifactStagingDirectory)/candidate-$(candidateAttempt)
+- stage: CandidateCapacity
+  displayName: Read-only regional admission before candidate provisioning
+  condition: and(not(canceled()), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger'), and(eq(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/'), contains(variables['System.PullRequest.SourceBranch'], '/ama-metrics-sre-')))))
+  jobs:
+  - job: Capacity
+    timeoutInMinutes: 240
     pool:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger'), and(eq(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/'), contains(variables['System.PullRequest.SourceBranch'], '/ama-metrics-sre-')))))
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - template: azure-template-candidate-config-tests.yml
-            parameters:
-              producerBuildId: $(campaignProducerBuildId)
-              sourceSha: $(campaignSourceSha)
-              cve: $(candidateCve)
-              scenario: ${{ parameters.candidateScenario }}
-              azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
+    variables:
+      capacityRoot: $(Agent.TempDirectory)/candidate-capacity-source-$(Build.BuildId)
+      capacityEvidence: $(Build.ArtifactStagingDirectory)/candidate-capacity-$(Build.BuildId)
+      capacityPython: $(Agent.TempDirectory)/candidate-capacity-python-$(Build.BuildId)
+    steps:
+    - checkout: self
+      clean: true
+      persistCredentials: true
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - bash: |
+        set -euo pipefail
+        sha="$CANDIDATE_SOURCE_SHA"
+        producer="$PRODUCER_BUILD_ID"
+        if [[ "$BUILD_REASON" == PullRequest ]]; then
+          [[ "$PR_SOURCE_BRANCH" =~ ^refs/heads/(sre/vuln/[A-Za-z0-9][A-Za-z0-9._-]*|[^/]+/ama-metrics-sre-[^/]+)$ ]] || exit 1
+          sha="$PR_SOURCE_COMMIT"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "PR head is missing" >&2; exit 1; }
+          producer=""
+          for attempt in $(seq 1 180); do
+            resolved="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+              --resolve-producer --source-commit "$sha" --source-branch "$PR_SOURCE_BRANCH")"
+            producer="$(printf '%s' "$resolved" | python3 -c 'import json,sys; print(json.load(sys.stdin)["buildId"] or "")')"
+            [[ -z "$producer" ]] || break
+            sleep 60
+          done
+        fi
+        [[ "$sha" =~ ^[0-9a-f]{40}$ && "$producer" =~ ^[1-9][0-9]*$ && ! -e "$CAPACITY_ROOT" ]] || { echo "Capacity admission requires a producer and new exact-source checkout" >&2; exit 1; }
+        git fetch --no-tags origin "$sha"
+        git worktree add --detach "$CAPACITY_ROOT" "$sha"
+        [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$sha" && -z "$(git -C "$CAPACITY_ROOT" status --porcelain)" ]]
+        echo "##vso[task.setvariable variable=capacitySourceSha]$sha"
+        echo "##vso[task.setvariable variable=capacityProducerBuildId]$producer"
+        command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
+        az bicep install
+        sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
+        echo "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true"
+        python3 -m venv "$CAPACITY_PYTHON"
+        "$CAPACITY_PYTHON/bin/python" -m pip install -r "$CAPACITY_ROOT/otelcollector/test/scenarios/clusters/requirements.txt"
+      displayName: Prepare exact-source read-only capacity tools
+      env:
+        BUILD_REASON: $(Build.Reason)
+        PR_SOURCE_BRANCH: $(System.PullRequest.SourceBranch)
+        PR_SOURCE_COMMIT: $(System.PullRequest.SourceCommitId)
+        CANDIDATE_SOURCE_SHA: $(campaignSourceSha)
+        PRODUCER_BUILD_ID: $(campaignProducerBuildId)
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        CAPACITY_ROOT: $(capacityRoot)
+        CAPACITY_PYTHON: $(capacityPython)
+    - task: AzureCLI@2
+      name: admit
+      displayName: Check aggregate regional peaks before any provisioning
+      inputs:
+        azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Capacity admission requires the approved build subscription" >&2; exit 1; }
+          [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
+          "$PYTHON" -B "$CAPACITY_ROOT/otelcollector/test/scenarios/run-scenario.py" campaign-preflight \
+            --source-root "$CAPACITY_ROOT" --scenario "$CANDIDATE_SCENARIO" \
+            --build-id "$PRODUCER_BUILD_ID" --evidence "$CAPACITY_EVIDENCE"
+          "$PYTHON" - "$CAPACITY_EVIDENCE/campaign-preflight.json" <<'PY'
+          import json, os, sys
+          value = json.load(open(sys.argv[1], encoding="utf-8"))
+          expected = os.environ["CANDIDATE_SCENARIO"]
+          scenarios = "default,linux,settings,classic-azure-cni,mixed,autoscaler,uai,cilium,kubenet".split(",")
+          selected = scenarios if expected == "all" else [expected]
+          if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
+                  or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
+                  or value.get("capacityReserved") is not False
+                  or set(value.get("placements", {})) != set(selected)):
+              raise ValueError("Aggregate capacity admission source/build/placement contract mismatch")
+          for scenario, region in value["placements"].items():
+              if region not in ("centralus", "eastus2") or region not in value.get("regions", {}):
+                  raise ValueError("Aggregate capacity admission has no approved regional proof")
+          for scenario, region in value["placements"].items():
+              key = scenario.replace("-", "_")
+              print(f"##vso[task.setvariable variable=location_{key};isOutput=true]{region}")
+          print(f"##vso[task.setvariable variable=sourceSha;isOutput=true]{value['sourceSha']}")
+          print(f"##vso[task.setvariable variable=validationBuildId;isOutput=true]{os.environ['BUILD_BUILDID']}")
+          PY
+      env:
+        CAPACITY_ROOT: $(capacityRoot)
+        CAPACITY_EVIDENCE: $(capacityEvidence)
+        CANDIDATE_SOURCE_SHA: $(capacitySourceSha)
+        PRODUCER_BUILD_ID: $(capacityProducerBuildId)
+        CANDIDATE_SCENARIO: ${{ parameters.candidateScenario }}
+        PYTHON: $(capacityPython)/bin/python
+    - task: PublishPipelineArtifact@1
+      displayName: Retain point-in-time aggregate capacity admission, not a reservation
+      condition: always()
+      inputs:
+        targetPath: $(capacityEvidence)
+        artifact: candidate-capacity-$(Build.BuildId)
+
+- ${{ each scenario in split('default,linux,settings,classic-azure-cni,mixed,autoscaler,uai,cilium,kubenet', ',') }}:
+  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
+    - stage: Candidate_${{ replace(scenario, '-', '_') }}
+      displayName: Candidate ${{ scenario }}
+      dependsOn:
+      - CandidateCapacity
+      - ${{ if eq(parameters.candidateScenario, 'all') }}:
+        - ${{ if eq(scenario, 'linux') }}:
+          - Candidate_default
+        - ${{ if eq(scenario, 'settings') }}:
+          - Candidate_linux
+        - ${{ if eq(scenario, 'classic-azure-cni') }}:
+          - Candidate_settings
+        - ${{ if eq(scenario, 'mixed') }}:
+          - Candidate_classic_azure_cni
+        - ${{ if eq(scenario, 'autoscaler') }}:
+          - Candidate_mixed
+        - ${{ if eq(scenario, 'uai') }}:
+          - Candidate_autoscaler
+        - ${{ if eq(scenario, 'cilium') }}:
+          - Candidate_uai
+        - ${{ if eq(scenario, 'kubenet') }}:
+          - Candidate_cilium
+      condition: and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))
+      variables:
+        candidateLocation: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.location_${{ replace(scenario, '-', '_') }}'] ]
+        candidateCapacitySourceSha: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.sourceSha'] ]
+        candidateCapacityBuildId: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.validationBuildId'] ]
+      jobs:
+      - deployment: CandidateTestkube
+        displayName: Test receipt-bound candidate ${{ scenario }}
+        environment: Prometheus-Collector-Tests
+        ${{ if eq(scenario, 'settings') }}:
+          timeoutInMinutes: 900
+        ${{ else }}:
+          timeoutInMinutes: 600
+        cancelTimeoutInMinutes: 60
+        variables:
+          candidateAttempt: $(Build.BuildId)-${{ scenario }}-$(System.StageAttempt)-$(System.JobAttempt)
+          candidateRoot: $(Agent.TempDirectory)/candidate-$(candidateAttempt)
+          candidateEvidence: $(Agent.TempDirectory)/candidate-evidence-$(candidateAttempt)
+          candidateTools: $(Agent.TempDirectory)/candidate-tools-$(candidateAttempt)
+          candidatePython: $(Agent.TempDirectory)/candidate-python-$(candidateAttempt)
+          candidatePublication: $(Build.ArtifactStagingDirectory)/candidate-$(candidateAttempt)
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
+          os: linux
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - template: azure-template-candidate-config-tests.yml
+                parameters:
+                  producerBuildId: $(campaignProducerBuildId)
+                  sourceSha: $(campaignSourceSha)
+                  cve: $(candidateCve)
+                  scenario: ${{ scenario }}
+                  azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})

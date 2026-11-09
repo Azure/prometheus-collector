@@ -66,6 +66,29 @@ start the same execution/evidence directory concurrently on multiple machines;
 the calling protected runner must serialize that execution. Separate fresh
 executions do not share clusters.
 
+Before provisioning any host in a full campaign, run the read-only aggregate
+admission once against its clean, exact-source checkout:
+
+```powershell
+python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --evidence C:\temp\ama-campaign-capacity
+```
+
+`--scenario` also accepts one of the nine runnable campaign rows. The
+`campaign-preflight.json` success receipt binds `sourceSha` and the supplied
+producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
+The producer ID is a correlation field here; the existing authenticated candidate
+verifier remains mandatory before deployment. `mixed` and `autoscaler` run in
+`eastus2`; the other seven rows run in `centralus`. Every pool's autoscaler
+maximum **and** declared surge counts toward the simultaneous regional and
+VM-family peak, including clusters retained after their tests finish.
+
+The pipeline must require successful admission and use its per-row location
+outputs. Failure emits no success receipt. This is a point-in-time check, not a
+quota/capacity reservation: other workloads can consume quota afterward. Existing
+per-row live SKU/version/quota checks still run before each deployment. Do not
+repeat full-campaign admission after creating its hosts and count those hosts
+twice, lower pool/surge limits, or delete retained hosts to fit quota.
+
 ## Candidate receipt and execution
 
 Supply `--build-id` for a successful pipeline-440 build. The harness invokes the

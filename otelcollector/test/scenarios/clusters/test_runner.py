@@ -60,6 +60,89 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
+        matrix = runner.load(SOURCE.parent / "matrix.json")
+        skus = [
+            {"name": name, "family": family, "locations": ["centralus", "eastus2"],
+             "capabilities": [{"name": "CpuArchitectureType", "value": architecture},
+                              {"name": "vCPUs", "value": "4"}], "restrictions": []}
+            for name, family, architecture in (
+                ("Standard_D4s_v4", "standardDSv4Family", "x64"),
+                ("Standard_D4ps_v5", "standardDPSv5Family", "arm64"))
+        ]
+        usage = [{"name": {"value": name}, "currentValue": 0, "limit": limit}
+                 for name, limit in (("cores", 300), ("standardDSv4Family", 100),
+                                     ("standardDPSv5Family", 100))]
+
+        def compiled(args, row, commands, version):
+            parameters = pool_parameters()
+            if row["platforms"] == ["linux"]:
+                parameters["nodePools"] = parameters["nodePools"][:1]
+            if row["id"] == "autoscaler":
+                for pool in parameters["nodePools"]:
+                    pool.update(autoscaling=True, maxCount=3)
+            if row["id"] == "mixed":
+                parameters["nodePools"].extend([
+                    dict(parameters["nodePools"][0], name=str(index), fips=True)
+                    for index in range(5)])
+                parameters["nodePools"].extend([
+                    dict(parameters["nodePools"][0], name="arm" + str(index),
+                         architecture="arm64", vmSize="Standard_D4ps_v5")
+                    for index in range(3)])
+            return parameters
+
+        def command(args, **kwargs):
+            if args[:3] == ["az", "aks", "get-versions"]:
+                return {"values": [{"isDefault": True, "patchVersions": {"1.36.5": {}}}]}
+            if args[:3] == ["az", "vm", "list-skus"]:
+                return copy.deepcopy(skus)
+            if args[:3] == ["az", "vm", "list-usage"]:
+                return copy.deepcopy(usage)
+            raise AssertionError(f"Unexpected or mutating command: {args}")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
+                                         scenario="all", build_id=4401, evidence=Path(temporary))
+            commands = Mock()
+            commands.run.side_effect = command
+            with patch.object(runner, "source_commit", return_value="a" * 40), \
+                    patch.object(runner, "compiled_parameters", side_effect=compiled):
+                result = runner.campaign_preflight(args, matrix, commands)
+                self.assertEqual(result["sourceSha"], "a" * 40)
+                self.assertEqual(result["buildId"], 4401)
+                self.assertEqual(len(result["placements"]), 9)
+                self.assertFalse(result["capacityReserved"])
+                self.assertEqual(result["placements"]["mixed"], "eastus2")
+                self.assertEqual(result["placements"]["settings"], "centralus")
+                for location in ("centralus", "eastus2"):
+                    quota = {row["name"]: row["additional"]
+                             for row in result["regions"][location]["quota"]}
+                    self.assertEqual(quota["standarddsv4family"], 88)
+                with self.assertRaisesRegex(ValueError, "new evidence"):
+                    runner.campaign_preflight(args, matrix, commands)
+                (args.evidence / "campaign-preflight.json").unlink()
+                with patch.object(runner, "CAMPAIGN_LOCATIONS",
+                                  dict.fromkeys(result["placements"], "eastus2")):
+                    with self.assertRaisesRegex(ValueError, "quota"):
+                        runner.campaign_preflight(args, matrix, commands)
+                self.assertFalse((args.evidence / "campaign-preflight.json").exists())
+                args.scenario = "settings"
+                selected = runner.campaign_preflight(args, matrix, commands)
+                self.assertEqual(selected["placements"], {"settings": "centralus"})
+
+    def test_campaign_admission_rejects_invalid_scope_and_blocked_rows(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(subscription="unapproved", scenario="all",
+                                         build_id=4401, evidence=Path(temporary))
+            commands = Mock()
+            for subscription, build_id, scenario_id in (
+                    ("unapproved", 4401, "all"), (runner.BUILD_SUBSCRIPTION, 0, "all"),
+                    (runner.BUILD_SUBSCRIPTION, 4401, "private")):
+                args.subscription, args.build_id, args.scenario = subscription, build_id, scenario_id
+                with self.subTest(scenario=scenario_id), self.assertRaises(ValueError):
+                    runner.campaign_preflight(args, {"scenarios": []}, commands)
+            commands.run.assert_not_called()
+
     def test_feature_and_platform_requirements(self):
         self.assertTrue(runner.compatible(scenario(), variant(["windows"], ["windows"])))
         self.assertFalse(runner.compatible(scenario(), variant(["http-proxy"])))
@@ -961,6 +1044,9 @@ def mutations():
         "fixture-namespace": ('if kind == "Namespace" and output.strip():', "if False:"),
         "override-authorization": ("if type(override) is not bool:", "if False:"),
         "sku-quota": ("current + cores > limit", "False"),
+        "campaign-region-split": ('"classic-azure-cni": "centralus",', '"classic-azure-cni": "eastus2",'),
+        "campaign-aggregate": ('regional_capacity(regional, capacity, commands)',
+                               'regional_capacity(regional, capacity[:1], commands)'),
         "quota-numeric-strings": ('int(str(row["currentValue"]))', 'row["currentValue"]'),
         "sku-architecture": ('entry["architecture"] != architecture', "False"),
         "sku-restrictions": ('restriction["type"] == "Location"', "False"),

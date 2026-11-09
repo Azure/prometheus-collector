@@ -34,3 +34,20 @@ class DiscoveryLogTest(unittest.TestCase):
         with patch("discovery_log.MAX_BYTES", 10):
             with self.assertRaisesRegex(ValueError, "limit"):
                 emit(discovery, 131371, sha, images)
+
+    def test_explicit_chunk_and_byte_counts_reject_truncation(self):
+        images = {role: {"ref": "mcr.microsoft.com/image@sha256:" + digest * 64}
+                  for role, digest in (("production", "a"), ("main", "b"))}
+        discovery = {"verdict": "DISCOVERY_ONLY", "images": images}
+        text = emit(discovery, 123, "c" * 40, images)
+        lines = text.splitlines()
+        header = lines[0].split()
+        self.assertEqual(int(header[2]), len(lines) - 2)
+        for field in (2, 3):
+            broken = lines.copy()
+            for index in (0, len(lines) - 1):
+                row = broken[index].split()
+                row[field] = str(int(row[field]) + 1)
+                broken[index] = " ".join(row)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                read("\n".join(broken), 123, "c" * 40, images)

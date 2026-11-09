@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provision one owned host, test compatible settings sequentially, and always tear it down."""
+"""Provision owned hosts, test compatible settings sequentially, and retain resources."""
 
 import argparse
 import copy
@@ -29,6 +29,11 @@ REPO = ROOT.parents[2]
 TEST_SOURCE = REPO
 BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
+CAMPAIGN_LOCATIONS = {
+    "default": "centralus", "linux": "centralus", "settings": "centralus",
+    "classic-azure-cni": "centralus", "mixed": "eastus2", "autoscaler": "eastus2",
+    "uai": "centralus", "cilium": "centralus", "kubenet": "centralus",
+}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -985,17 +990,7 @@ def verify_capacity(capacity, skus, usage, location):
     return {"compute": observed, "quota": quota, "capacityReserved": False}
 
 
-def preflight(args, scenario, commands):
-    if args.subscription != BUILD_SUBSCRIPTION:
-        raise ValueError("This POC is restricted to the approved build subscription")
-    versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
-                             "--location", args.location, "--only-show-errors", "-o", "json"],
-                            json_output=True)
-    version = select_version(versions)
-    if "secrets-watch-enforcement" in scenario["clusterFeatures"] and tuple(map(int, version.split(".")[:2])) < (1, 37):
-        raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
-    parameters = compiled_parameters(args, scenario, commands, version)
-    capacity = capacity_plan(parameters, scenario, version)
+def regional_capacity(args, capacity, commands):
     names = sorted({entry["vmSize"] for entry in capacity})
     if any(not re.fullmatch(r"[A-Za-z0-9_]+", name) for name in names):
         raise ValueError("Unsupported VM SKU name in compiled capacity plan")
@@ -1007,10 +1002,64 @@ def preflight(args, scenario, commands):
                           "--location", args.location, "--only-show-errors", "-o", "json"],
                          json_output=True, private=True)
     save(args.evidence / "capacity-inputs.json", {"skus": skus, "usage": usage})
+    return verify_capacity(capacity, skus, usage, args.location)
+
+
+def preflight(args, scenario, commands):
+    if args.subscription != BUILD_SUBSCRIPTION:
+        raise ValueError("This POC is restricted to the approved build subscription")
+    versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
+                             "--location", args.location, "--only-show-errors", "-o", "json"],
+                            json_output=True)
+    version = select_version(versions)
+    if "secrets-watch-enforcement" in scenario["clusterFeatures"] and tuple(map(int, version.split(".")[:2])) < (1, 37):
+        raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
+    parameters = compiled_parameters(args, scenario, commands, version)
+    capacity = capacity_plan(parameters, scenario, version)
     result = {"scenario": scenario["id"], "subscription": args.subscription, "location": args.location,
               "kubernetesVersion": version, "upgradeChannel": "stable", "expectedPools": parameters["nodePools"],
-              **verify_capacity(capacity, skus, usage, args.location)}
+              **regional_capacity(args, capacity, commands)}
     save(args.evidence / "preflight.json", result)
+    return result
+
+
+def campaign_preflight(args, matrix, commands):
+    output = args.evidence / "campaign-preflight.json"
+    if output.exists():
+        raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
+    if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
+        raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
+    selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
+    if any(name not in CAMPAIGN_LOCATIONS for name in selected):
+        raise ValueError("Unsupported campaign scenario")
+    source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
+    placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
+    regions = {}
+    for location in sorted(set(placements.values())):
+        regional = copy.copy(args)
+        regional.location = location
+        regional.evidence = args.evidence / location
+        regional.evidence.mkdir(parents=True, exist_ok=True)
+        versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
+                                 "--location", location, "--only-show-errors", "-o", "json"],
+                                json_output=True)
+        version = select_version(versions)
+        capacity = []
+        for name in selected:
+            if placements[name] != location:
+                continue
+            row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
+            if not row or row.get("blockedReason"):
+                raise ValueError(f"Campaign scenario is missing or blocked: {name}")
+            parameters = compiled_parameters(regional, row, commands, version)
+            capacity.extend({**pool, "scenario": name}
+                            for pool in capacity_plan(parameters, row, version))
+        regions[location] = {"kubernetesVersion": version,
+                             **regional_capacity(regional, capacity, commands)}
+    result = {"status": "PASS", "sourceSha": source, "buildId": args.build_id,
+              "subscription": args.subscription, "placements": placements,
+              "regions": regions, "capacityReserved": False}
+    save(output, result)
     return result
 
 
@@ -1297,7 +1346,7 @@ def execute(args, scenario, variants, commands):
 def main(argv=None):
     global REPO, TEST_SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("validate", "compile", "plan", "preflight", "run",
+    parser.add_argument("action", choices=("validate", "compile", "plan", "preflight", "campaign-preflight", "run",
                                            "cleanup", "revoke-bootstrap"))
     parser.add_argument("--matrix", type=Path, default=ROOT / "matrix.json")
     parser.add_argument("--settings-root", type=Path, default=ROOT / "settings")
@@ -1343,6 +1392,9 @@ def main(argv=None):
         return 0
     if args.action == "compile":
         compile_profiles(args, commands)
+        return 0
+    if args.action == "campaign-preflight":
+        campaign_preflight(args, matrix, commands)
         return 0
     scenario = next((s for s in matrix["scenarios"] if s["id"] == args.scenario), None)
     if not scenario:

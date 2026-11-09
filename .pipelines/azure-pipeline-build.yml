@@ -30,6 +30,7 @@ variables:
   IS_SRE_BRANCH: $[or(startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/vuln/'), and(startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-')))]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
+  BUILD_SRE_WINDOWS2025: ${{ or(startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/vuln/'), and(startsWith(variables['Build.SourceBranch'], 'refs/heads/'), contains(variables['Build.SourceBranch'], '/ama-metrics-sre-'))) }}
   Codeql.Enabled: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
   GOLANG_VERSION: '1.26.10'
   FLUENTBIT_GOLANG_VERSION: '1.26.5'
@@ -1099,7 +1100,7 @@ extends:
             AuthCertName: 'ESRPContainerImageSignCert'
             AuthSignCertName: 'ESRPReqPrometheusProdCert'
             FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
-            Pattern: '*.json'
+            Pattern: 'payload.json'
             signConfigType: 'inlineSignParams'
             inlineOperation: |
               [
@@ -1658,7 +1659,7 @@ extends:
             AuthCertName: 'ESRPContainerImageSignCert'
             AuthSignCertName: 'ESRPReqPrometheusProdCert'
             FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-            Pattern: "*.json"
+            Pattern: "payload.json"
             signConfigType: inlineSignParams
             inlineOperation: |
               [
@@ -2001,27 +2002,37 @@ extends:
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
-      - job: Windows2022_Prometheus_Collector
-        displayName: "Build: windows 2022 prometheus-collector image"
+      - job: Windows_Prometheus_Collector
+        displayName: "Build: windows $(WINDOWS_SERVER_VERSION) prometheus-collector image"
         pool:
           name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          image: $(WINDOWS_AGENT_IMAGE)
           os: windows
+        strategy:
+          matrix:
+            Windows2022:
+              WINDOWS_SERVER_VERSION: '2022'
+              WINDOWS_BASE_IMAGE_VERSION: ltsc2022
+              WINDOWS_AGENT_IMAGE: ci-1es-managed-windows-2022
+            ${{ if eq(variables.BUILD_SRE_WINDOWS2025, true) }}:
+              Windows2025:
+                WINDOWS_SERVER_VERSION: '2025'
+                WINDOWS_BASE_IMAGE_VERSION: ltsc2025
+                WINDOWS_AGENT_IMAGE: ci-1es-managed-windows-2025
         timeoutInMinutes: 120
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-          WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         templateContext:
           outputs:
           - output: pipelineArtifact
-            displayName: 'SRE: publish Windows2022 push receipt'
+            displayName: 'SRE: publish Windows $(WINDOWS_SERVER_VERSION) push receipt'
             condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
-            artifactName: sre-push-windows2022
+            artifactName: sre-push-windows$(WINDOWS_SERVER_VERSION)
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -2048,9 +2059,9 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: build WS2022 image"
+          displayName: "Build: build WS$(WINDOWS_SERVER_VERSION) image"
           retryCountOnTaskFailure: 2
         - task: PowerShell@2
           displayName: Extract files to sign
@@ -2058,7 +2069,7 @@ extends:
             targetType: 'inline'
             script: |
               echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)-unsigned
               echo "Creating fist party directory"
               mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
               cd $(Build.ArtifactStagingDirectory)/fpSigning
@@ -2170,7 +2181,7 @@ extends:
           inputs:
             targetType: 'inline'
             script: |
-              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)-unsigned
               echo "Copy Signed binaries/folders back to docker image"
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
               docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
@@ -2178,23 +2189,23 @@ extends:
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
               docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)
               docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            $pushOutput = @(docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION))
-            if ($LASTEXITCODE -ne 0) { throw "Windows2022 push failed: $LASTEXITCODE" }
+            $pushOutput = @(docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION))
+            if ($LASTEXITCODE -ne 0) { throw "Windows $(WINDOWS_SERVER_VERSION) push failed: $LASTEXITCODE" }
             $pushOutput
-            $tag = "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)".Split(':')[-1]
+            $tag = "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)".Split(':')[-1]
             $digests = @($pushOutput | Select-String -Pattern ("^" + [regex]::Escape($tag) + ': digest: (sha256:[0-9a-f]{64}) size: [0-9]+$'))
-            if ($digests.Count -ne 1) { throw "Expected one exact-tag digest from the successful Windows2022 push" }
-            $digests[0].Matches[0].Groups[1].Value | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows2022-push-digest.txt"
+            if ($digests.Count -ne 1) { throw "Expected one exact-tag digest from the successful Windows $(WINDOWS_SERVER_VERSION) push" }
+            $digests[0].Matches[0].Groups[1].Value | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows$(WINDOWS_SERVER_VERSION)-push-digest.txt"
           displayName: "Build: push image to dev ACR"
         - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
           parameters:
             component: collector
-            image: $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            evidenceArguments: '--digest-file "$(Build.ArtifactStagingDirectory)/windows2022-push-digest.txt"'
+            image: $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_BASE_IMAGE_VERSION)
+            evidenceArguments: '--digest-file "$(Build.ArtifactStagingDirectory)/windows$(WINDOWS_SERVER_VERSION)-push-digest.txt"'
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:
@@ -2205,12 +2216,16 @@ extends:
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Windows2019_Prometheus_Collector
-        - Windows2022_Prometheus_Collector
+        - Windows_Prometheus_Collector
         variables:
           WINDOWS_IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
           WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+          ${{ if eq(variables.BUILD_SRE_WINDOWS2025, true) }}:
+            SRE_WINDOWS_2025_BASE_IMAGE_VERSION: ltsc2025
+          ${{ else }}:
+            SRE_WINDOWS_2025_BASE_IMAGE_VERSION: ''
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         templateContext:
@@ -2220,6 +2235,11 @@ extends:
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
+          - output: pipelineArtifact
+            displayName: 'SRE: publish Windows multi-OS push receipt'
+            condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
+            targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
+            artifactName: sre-push-windows
         steps:
         - powershell: |
             $ErrorActionPreference = "Stop"
@@ -2232,7 +2252,7 @@ extends:
         - bash: |
             set -euo pipefail
             printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
-            for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)"; do
+            for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)" $(SRE_WINDOWS_2025_BASE_IMAGE_VERSION); do
               acr_image="$(WINDOWS_FULL_IMAGE_NAME)-$base_version"
               mcr_image="$(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$base_version"
               if docker pull "$acr_image"; then
@@ -2263,13 +2283,28 @@ extends:
             ACR_USERNAME: $(ACR_USERNAME)
             ACR_PASSWORD: $(ACR_PASSWORD)
         - powershell: |
+            $ErrorActionPreference = 'Stop'
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
             @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { throw "Windows index registry login failed: $LASTEXITCODE" }
+            $images = @("$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)", "$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)")
+            if ("$(SRE_WINDOWS_2025_BASE_IMAGE_VERSION)") { $images += "$(WINDOWS_FULL_IMAGE_NAME)-$(SRE_WINDOWS_2025_BASE_IMAGE_VERSION)" }
+            docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $images
+            if ($LASTEXITCODE -ne 0) { throw "Windows index creation failed: $LASTEXITCODE" }
+            $pushOutput = @(docker manifest push $(WINDOWS_FULL_IMAGE_NAME))
+            if ($LASTEXITCODE -ne 0) { throw "Windows index push failed: $LASTEXITCODE" }
+            $pushOutput
+            $digests = @($pushOutput | Where-Object { $_ -match '^sha256:[0-9a-f]{64}$' })
+            if ($digests.Count -ne 1) { throw "Expected one immutable digest from the successful Windows index push" }
+            $digests[0] | Set-Content -Encoding utf8 "$(Build.ArtifactStagingDirectory)\windows-push-digest.txt"
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: Windows multi-arch manifest"
+        - template: /.pipelines/pr-e2e/push-receipt-steps.yml@self
+          parameters:
+            component: collector
+            image: $(WINDOWS_FULL_IMAGE_NAME)
+            evidenceArguments: '--digest-file "$(Build.ArtifactStagingDirectory)/windows-push-digest.txt"'
         - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
           condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
           displayName: "Ev2: generate image artifacts"
