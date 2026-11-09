@@ -26,6 +26,7 @@ ENV APPLICATIONINSIGHTS_AUTH_DELOS YTEwMDNhNTYtNDllZC1kNDFhLWFkYjUtMmQxMTVlMGI2Y
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
+COPY ./build/windows/scripts/Test-MicrosoftSignature.ps1 $tmpdir/scripts/
 RUN mkdir "C:\\opt\\microsoft\\configmapparser"
 RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
