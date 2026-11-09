@@ -1,5 +1,11 @@
 trigger: none
 
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - main
+
 resources:
   pipelines:
   - pipeline: campaignProducer
@@ -64,6 +70,7 @@ parameters:
   - settings
 
 variables:
+  candidateCve: ${{ parameters.candidateCve }}
   HELM_CHART_NAME: 'prometheus-collector'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
@@ -95,7 +102,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'))
+    condition: and(succeeded(), eq('${{ parameters.candidateMode }}', 'False'), ne(variables['Build.Reason'], 'ResourceTrigger'), ne(variables['Build.Reason'], 'PullRequest'))
     variables:
       skipComponentGovernanceDetection: true
     strategy:
@@ -1185,15 +1192,15 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
       image: ci-1es-managed-ubuntu-2204
       os: linux
-    condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger')))
+    condition: and(succeeded(), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger'), and(eq(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/'), contains(variables['System.PullRequest.SourceBranch'], '/ama-metrics-sre-')))))
     strategy:
       runOnce:
         deploy:
           steps:
           - template: azure-template-candidate-config-tests.yml
             parameters:
-              producerBuildId: ${{ variables.campaignProducerBuildId }}
-              sourceSha: ${{ variables.campaignSourceSha }}
-              cve: ${{ parameters.candidateCve }}
+              producerBuildId: $(campaignProducerBuildId)
+              sourceSha: $(campaignSourceSha)
+              cve: $(candidateCve)
               scenario: ${{ parameters.candidateScenario }}
               azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})

@@ -56,7 +56,13 @@ steps:
 
 - bash: |
     set -euo pipefail
-    [[ "$BUILD_REASON" != PullRequest ]] || { echo "Candidate execution requires a trusted pipeline branch" >&2; exit 1; }
+    if [[ "$BUILD_REASON" == PullRequest ]]; then
+      [[ "$PR_SOURCE_BRANCH" =~ ^refs/heads/(sre/vuln/[A-Za-z0-9][A-Za-z0-9._-]*|[^/]+/ama-metrics-sre-[^/]+)$ \
+         && "$CANDIDATE_SOURCE_SHA" == "$PR_SOURCE_COMMIT" ]] || {
+        echo "Candidate execution requires the resolved SRE PR head" >&2
+        exit 1
+      }
+    fi
     [[ "$SYSTEM_JOBATTEMPT" == 1 && "$SYSTEM_STAGEATTEMPT" == 1 ]] || { echo "Start a new run; candidate retries cannot reuse evidence" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
     case "$CANDIDATE_SCENARIO" in default|settings) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
@@ -77,6 +83,9 @@ steps:
     done
   displayName: "Validate opt-in inputs and prepare clean exact-source candidate"
   env:
+    BUILD_REASON: $(Build.Reason)
+    PR_SOURCE_BRANCH: $(System.PullRequest.SourceBranch)
+    PR_SOURCE_COMMIT: $(System.PullRequest.SourceCommitId)
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
     CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
     CANDIDATE_CVE: ${{ parameters.cve }}
@@ -255,7 +264,7 @@ steps:
         --output "$CANDIDATE_EVIDENCE/pipeline-verification"
       "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan_candidate.py" \
         --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-        --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99' \
+        --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
         --platform linux/amd64 --cve "$CANDIDATE_CVE" \
         --verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification" \
         --output "$CANDIDATE_EVIDENCE/scans"

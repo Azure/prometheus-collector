@@ -1,4 +1,6 @@
 import copy
+from contextlib import redirect_stdout
+from datetime import datetime, timezone
 import hashlib
 import inspect
 import io
@@ -12,6 +14,53 @@ from unittest.mock import patch
 import zipfile
 
 import fetch_candidate
+
+
+def protected_scan_artifact(source, image):
+    database = b"trivy database"
+    result = json.dumps({"Metadata": {"RepoDigests": [image["ref"]],
+                                      "ImageConfig": {"os": "linux", "architecture": "amd64"}},
+                         "Results": [{"Target": "Debian 12", "Class": "os-pkgs", "Type": "debian",
+                                      "Packages": [], "Vulnerabilities": []}]}).encode()
+    empty_ignore = b""
+    empty_config = b"{}\n"
+    files = {
+        "trivy/result.json": result,
+        "cache/db/trivy.db": database,
+        "empty.ignore": empty_ignore,
+        "empty.yaml": empty_config,
+    }
+    metadata = {
+        "exitCode": 0,
+        "requestedRef": image["ref"],
+        "platform": "linux/amd64",
+        "version": "0.76.1",
+        "dbUpdatedAt": datetime.now(timezone.utc).isoformat(),
+        "finishedUtc": datetime.now(timezone.utc).isoformat(),
+        "dbSha256": hashlib.sha256(database).hexdigest(),
+        "resultSha256": hashlib.sha256(result).hexdigest(),
+        "configuration": {
+            "scanners": ["vuln"],
+            "listAllPkgs": True,
+            "ignoreSha256": hashlib.sha256(empty_ignore).hexdigest(),
+            "configSha256": hashlib.sha256(empty_config).hexdigest(),
+        },
+    }
+    files["trivy/metadata.json"] = json.dumps(metadata).encode()
+    provenance = {
+        "schemaVersion": 1,
+        "producerDefinitionId": 440,
+        "source": source,
+        "image": image,
+        "coverage": fetch_candidate.SCAN_COVERAGE,
+        "files": {name: hashlib.sha256(content).hexdigest() for name, content in files.items()},
+    }
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as output:
+        for name, content in files.items():
+            output.writestr(fetch_candidate.SCAN_ARTIFACT + "/" + name, content)
+        output.writestr(fetch_candidate.SCAN_ARTIFACT + "/provenance.json", json.dumps(provenance))
+    return archive.getvalue()
 
 
 class FetchTests(unittest.TestCase):
@@ -53,6 +102,13 @@ class FetchTests(unittest.TestCase):
 
     def test_authenticated_build_and_raw_receipts_bind_candidate(self):
         source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {
+            "name": "collector",
+            "ref": "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images@sha256:" + "b" * 64,
+            "indexRef": "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images@sha256:" + "c" * 64,
+            "os": "linux",
+            "arch": "amd64",
+        }
         build = {"status": "completed", "result": "succeeded", "id": 123,
                  "definition": {"id": 440}, "sourceVersion": source["commit"],
                  "repository": {"id": source["repo"], "type": "GitHub"},
@@ -73,13 +129,15 @@ class FetchTests(unittest.TestCase):
                 received = []
                 raw_runner = b'{"imageRef":"immutable-runner"}\n'
 
-                def download(url, token):
+                def download(url, token, max_bytes=16 * 1024 * 1024):
                     self.assertEqual(token, "unit-test-token")
                     self.assertTrue(url.startswith(build["url"]))
                     received.append(url)
                     if "artifacts?" not in url:
                         return json.dumps(candidate_build).encode()
                     name = url.split("artifactName=")[1].split("&")[0]
+                    if name == fetch_candidate.SCAN_ARTIFACT:
+                        return protected_scan_artifact(source, image)
                     archive = io.BytesIO()
                     with zipfile.ZipFile(archive, "w") as file:
                         filename = "runner.json" if name == "sre-testkube-runner" else "push.json"
@@ -90,7 +148,8 @@ class FetchTests(unittest.TestCase):
                 with patch.object(fetch_candidate, "access_token", return_value="unit-test-token"), \
                         patch.object(fetch_candidate, "download", side_effect=download), \
                         patch.object(fetch_candidate.build_receipt, "emit", return_value={
-                            "source": source, "testRunner": {"imageRef": "immutable-runner"}}) as emit:
+                            "source": source, "buildResult": "succeeded", "images": [image],
+                            "testRunner": {"imageRef": "immutable-runner"}}) as emit:
                     if field:
                         with self.assertRaises(ValueError):
                             fetch_candidate.fetch(123, source["commit"], output)
@@ -100,10 +159,26 @@ class FetchTests(unittest.TestCase):
                     else:
                         receipt = fetch_candidate.fetch(123, source["commit"], output)
                         self.assertEqual(receipt["source"], source)
-                        self.assertEqual(len(received), 6)
+                        self.assertEqual(len(received), 7)
                         self.assertEqual(emit.call_args.args[3], hashlib.sha256(raw_runner).hexdigest())
                         self.assertEqual((output / "sre-testkube-runner" / "runner.json").read_bytes(), raw_runner)
                         self.assertEqual(json.loads((output / "candidate-build.json").read_text()), receipt)
+                        self.assertTrue((output / fetch_candidate.SCAN_ARTIFACT / "provenance.json").is_file())
+                        self.assertEqual(fetch_candidate.load_verified(output, 123, source["commit"]), receipt)
+                        with patch.object(fetch_candidate, "fetch", return_value=receipt), \
+                                patch("sys.argv", ["fetch_candidate.py", "--build-id", "123",
+                                     "--source-commit", source["commit"], "--output", str(output)]):
+                            stdout = io.StringIO()
+                            with redirect_stdout(stdout):
+                                self.assertEqual(fetch_candidate.main(), 0)
+                        cli = json.loads(stdout.getvalue())
+                        metadata = json.loads((output / fetch_candidate.SCAN_ARTIFACT / "trivy" / "metadata.json").read_text())
+                        self.assertEqual(cli["trivyVersion"], metadata["version"])
+                        template = Path(__file__).parents[1] / "azure-template-candidate-config-tests.yml"
+                        self.assertIn('json.load(sys.stdin)["trivyVersion"]', template.read_text())
+                        (output / fetch_candidate.SCAN_ARTIFACT / "trivy" / "result.json").write_text("tampered")
+                        with self.assertRaisesRegex(ValueError, "hash mismatch"):
+                            fetch_candidate.load_verified(output, 123, source["commit"])
                         with self.assertRaises(FileExistsError):
                             fetch_candidate.fetch(123, source["commit"], output)
 
@@ -149,6 +224,20 @@ class FetchTests(unittest.TestCase):
             fetch_candidate.fetch = original
         self.assertTrue(result.failures, result.errors)
         self.assertFalse(result.errors)
+
+    def test_template_contract_rejects_missing_trivy_version(self):
+        original = fetch_candidate.main
+        code = inspect.getsource(original)
+        field = ',\n                      "trivyVersion": scan["version"]'
+        self.assertIn(field, code)
+        exec(code.replace(field, ""), vars(fetch_candidate))
+        try:
+            result = unittest.TestResult()
+            FetchTests("test_authenticated_build_and_raw_receipts_bind_candidate").run(result)
+        finally:
+            fetch_candidate.main = original
+        self.assertTrue(result.errors)
+        self.assertIn("trivyVersion", result.errors[0][1])
 
 
 if __name__ == "__main__":

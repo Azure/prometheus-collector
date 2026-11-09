@@ -31,6 +31,15 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   without severity/fixability filters; unresolved, unreported, or new findings
   block readiness. OS targets must match the scan's exact image ref and OS
   metadata before comparing their distribution/version; binary paths remain exact.
+- `published_discovery.py` and `published-images.json`: compare the pinned
+  production and latest-main collector `linux/amd64` child digests with Trivy
+  0.76.1, the same database snapshot and identical configuration. The main image
+  came from build 131326: its collector amd64 child was published while the
+  overall build remained in progress and the Windows 2019/index outputs were
+  pending. The report is discovery-only; absence from the main scan is not proof
+  of a fix. `published-scan-steps.yml` runs this without a 440 artifact, Azure
+  service connection, cluster, deployment, or cleanup step. The scan-only 979
+  route still requires exact-source preview and its routing guard before a live run.
 - `scan.ps1` and `scan-steps.yml`: ported per-child CoMET/OIDC producer, output
   ownership guards and scoped cleanup. They still require dedicated trusted
   workers, approved scanner digests and verified onboarding. Coverage is explicitly
@@ -52,9 +61,10 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   The pinned existing image is not yet demonstrated compatible with the candidate
   workflows; the coverage owner must verify suitability through real execution.
 - `fetch_candidate.py`: authenticates to the fixed build project, checks the
-  successful build against the requested full source SHA, downloads its five
-  protected receipt artifacts and calls the receipt verifier. Retains the raw
-  producer files and build response beside `candidate-build.json`.
+  successful build against the requested full source SHA, downloads five
+  protected receipt artifacts plus the collector Trivy artifact, and validates
+  the scan provenance and every file hash against that exact build/image. It
+  retains the raw producer files and build response beside `candidate-build.json`.
 - `producer_trivy.py`: on SRE candidate branches, pipeline 440 replaces its collector
   vulnerability console scan with full, unfiltered JSON for the exact pushed Linux
   amd64 child. The protected `sre-trivy-collector` artifact contains
@@ -69,15 +79,17 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   baseline with that same Trivy version/config/DB. Published prod-vs-main discovery
   needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
-  child, rescans the released baseline, reuses its private hashed DB for the candidate,
-  and retains raw scans plus `comparison.json`, including failed/blocked verdicts.
-  Run it in the producing validation pipeline and publish its evidence there;
-  a local report does not acquire a protected pipeline producer by being copied.
+  child, scans only the released baseline using the exact scanner version and DB
+  from the producer artifact, and evaluates the producer's candidate scan without
+  rescanning the candidate. It retains raw scans plus `comparison.json`, including
+  failed/blocked verdicts. A local report does not acquire a protected pipeline
+  producer by being copied.
 
 These are executable repository components, **not a deployed Azure SRE Agent
 integration or an end-to-end passing campaign**.
 
 ```powershell
+python .pipelines\pr-e2e\published_discovery.py --manifest .pipelines\pr-e2e\published-images.json --output <new-discovery-directory>
 python .pipelines\pr-e2e\scan_trivy.py --image <repository@sha256:child> --platform linux/amd64 --output <new-run-directory>
 python .pipelines\pr-e2e\scan_trivy.py --image <candidate-repository@sha256:child> --platform linux/amd64 --database-from <fresh-baseline-run> --output <new-candidate-run>
 python .pipelines\pr-e2e\compare_trivy.py --baseline <fresh-baseline-run> --candidate <new-candidate-run> --receipt .pipelines\pr-e2e\candidate-build.json --cve CVE-2026-63209 --output <new-comparison.json>
@@ -204,11 +216,18 @@ a matching new protected producer and fresh execution.
 
 Pipeline 440's ordinary PR builds do not run the AKS, OTel, or Arc TestKube
 jobs. Pipeline 979 therefore has a PR validation trigger for campaign PRs. It
-resolves a successful 440 build for `System.PullRequest.SourceCommitId`, validates
+excludes every PR from the legacy shared-cluster job and admits only SRE branches
+to the candidate job. There is no path filter: dependency-only PR updates must
+also validate. The candidate execution gate checks the allowed branch and resolved
+source SHA before fetching or provisioning the candidate. It resolves a successful
+440 build for `System.PullRequest.SourceCommitId`, validates
 that build's protected receipts, and runs the existing TestKube scenario against
 those exact image digests. The 979 PR run is linked to the PR and auto-cancels
 when its head changes; only results for the latest head count. The separate 440
 push-triggered run remains the producer and is not itself e2e evidence.
+The fetch CLI's `trivyVersion` comes from the verified producer scan metadata;
+the pipeline installs that version before reusing the producer's database.
+The default/settings selector is not proof that every required PR scenario ran.
 
 The ci-sre instruction contract is:
 

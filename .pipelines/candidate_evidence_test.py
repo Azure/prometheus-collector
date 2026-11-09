@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -25,6 +26,26 @@ class CandidateEvidenceTest(unittest.TestCase):
         path = self.evidence / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(data, encoding="utf-8")
+
+    def test_pr_candidate_gate_binds_allowed_head(self):
+        template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
+        step = next(step for step in template["steps"] if "Validate opt-in inputs" in step.get("displayName", ""))
+        gate = step["bash"].split('[[ "$SYSTEM_JOBATTEMPT"', 1)[0]
+        for reason, branch, head, candidate, passes in (
+            ("Manual", "", "", self.sha, True),
+            ("ResourceTrigger", "", "", self.sha, True),
+            ("PullRequest", "refs/heads/sre/vuln/campaign", self.sha, self.sha, True),
+            ("PullRequest", "refs/heads/grwehner/ama-metrics-sre-vuln-poc", self.sha, self.sha, True),
+            ("PullRequest", "refs/heads/untrusted", self.sha, self.sha, False),
+            ("PullRequest", "refs/heads/sre/vuln/campaign", self.sha, "b" * 40, False),
+        ):
+            with self.subTest(reason=reason, branch=branch, candidate=candidate):
+                result = subprocess.run(
+                    ["bash", "-c", gate], capture_output=True, text=True,
+                    env={**os.environ, "BUILD_REASON": reason, "PR_SOURCE_BRANCH": branch,
+                         "PR_SOURCE_COMMIT": head, "CANDIDATE_SOURCE_SHA": candidate},
+                )
+                self.assertEqual(result.returncode == 0, passes, result.stderr)
 
     def test_bootstrap_publishes_live_and_watcher_stops_without_changing_exit_status(self):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
@@ -153,7 +174,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("PullRequest", jobs[1]["condition"])
         self.assertEqual(pipeline["trigger"], "none")
         self.assertEqual(pipeline["pr"]["branches"]["include"], ["main"])
-        self.assertIn(".pipelines/pr-e2e/campaign.json", pipeline["pr"]["paths"]["include"])
+        self.assertNotIn("paths", pipeline["pr"])
+        self.assertIn("startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/')", jobs[1]["condition"])
         producer = pipeline["resources"]["pipelines"][0]
         self.assertEqual(producer["source"], "Azure.prometheus-collector")
         self.assertEqual(producer["trigger"]["branches"]["include"],
@@ -197,6 +219,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         input_validation = next(step for step in steps if "Validate opt-in inputs" in step.get("displayName", ""))
         self.assertIn("CANDIDATE_CVE", input_validation["bash"])
         self.assertIn("CANDIDATE_CVE", input_validation["env"])
+        self.assertEqual(input_validation["env"]["BUILD_REASON"], "$(Build.Reason)")
+        self.assertIn('"$CANDIDATE_SOURCE_SHA" == "$PR_SOURCE_COMMIT"', input_validation["bash"])
+        self.assertNotIn("Candidate execution requires a trusted pipeline branch", input_validation["bash"])
         self.assertIn("campaign.json", input_validation["bash"])
         self.assertLess(input_validation["bash"].index("git fetch"), input_validation["bash"].index("git show"))
         self.assertLess(input_validation["bash"].index("git show"), input_validation["bash"].index("task.setvariable"))
@@ -248,8 +273,8 @@ class CandidateEvidenceTest(unittest.TestCase):
             scan_script.index(".pipelines/pr-e2e/fetch_candidate.py"),
             scan_script.index(".pipelines/pr-e2e/scan_candidate.py"),
         )
-        self.assertIn("sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99", scan_script)
-        self.assertNotIn("sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324", scan_script)
+        self.assertIn("sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324", scan_script)
+        self.assertNotIn("sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99", scan_script)
         self.assertIn('--output "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
         self.assertIn('--verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
         self.assertNotIn("scan_trivy.py", scan_script)
