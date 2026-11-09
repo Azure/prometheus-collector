@@ -32,7 +32,9 @@ def validate_manifest(manifest):
                 or f"/{repository}/" not in image["ref"]
                 or image.get("tag", "").strip() == ""
                 or source.get("repo") != REPOSITORY
-                or source.get("branch") != "refs/heads/main"
+                or not re.fullmatch(
+                    r"refs/heads/(?:main|hotfix-[A-Za-z0-9._-]+)" if role == "production" else r"refs/heads/main",
+                    source.get("branch", ""))
                 or not re.fullmatch(r"[0-9a-f]{40}", source.get("commit", ""))
                 or not re.fullmatch(r"[0-9]+", source.get("buildId", ""))
                 or publication.get("collectorLinuxAmd64Push") != "succeeded"):

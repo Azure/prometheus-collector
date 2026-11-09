@@ -114,6 +114,14 @@ class PublishedDiscoveryTests(unittest.TestCase):
             published_discovery.validate_manifest(manifest)
 
     def test_manifest_requires_immutable_production_and_main_refs(self):
+        self.assertIn("195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324",
+                      self.manifest["images"]["production"]["ref"])
+        self.assertEqual(self.manifest["images"]["production"]["source"]["branch"], "refs/heads/hotfix-7.4.1")
+        for role, branch in (("production", "refs/heads/untrusted"), ("main", "refs/heads/hotfix-7.4.1")):
+            manifest = copy.deepcopy(self.manifest)
+            manifest["images"][role]["source"]["branch"] = branch
+            with self.assertRaisesRegex(ValueError, role + " image provenance"):
+                published_discovery.validate_manifest(manifest)
         manifest = copy.deepcopy(self.manifest)
         manifest["images"]["main"]["ref"] = manifest["images"]["main"]["ref"].split("@")[0] + ":latest"
         with self.assertRaisesRegex(ValueError, "main image provenance"):
@@ -125,7 +133,9 @@ class PublishedDiscoveryTests(unittest.TestCase):
         template = yaml.safe_load(source)
         steps = template["steps"]
         self.assertEqual([step.get("task", "bash") for step in steps],
-                         ["bash", "bash", "PublishPipelineArtifact@1"])
+                         ["bash", "bash", "bash", "PublishPipelineArtifact@1"])
+        self.assertIn('discovery_log.py" emit', steps[2]["bash"])
+        self.assertIn('--build-id "$(Build.BuildId)" --source-sha "$(Build.SourceVersion)"', steps[2]["bash"])
         self.assertEqual(steps[-1]["condition"], "always()")
         self.assertEqual(steps[-1]["inputs"]["artifactName"],
                          "published-image-discovery-$(Build.BuildId)")
