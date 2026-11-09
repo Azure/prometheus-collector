@@ -91,6 +91,23 @@ steps:
 
 - bash: |
     set -euo pipefail
+    [[ ! -e "$PRODUCER_EVIDENCE" ]] || { echo "Producer evidence directory must be new" >&2; exit 1; }
+    fetched="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+      --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
+      --output "$PRODUCER_EVIDENCE")"
+    trivy_version="$(printf '%s' "$fetched" | python3 -c 'import json,sys; print(json.load(sys.stdin)["trivyVersion"])')"
+    [[ "$trivy_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
+    echo "##vso[task.setvariable variable=candidateTrivyVersion]$trivy_version"
+    echo "Verified producer Trivy version $trivy_version"
+  displayName: "Fetch exact producer evidence and Trivy version"
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
+    CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
+    PRODUCER_EVIDENCE: $(Agent.TempDirectory)/candidate-producer-$(Build.BuildId)-$(System.JobAttempt)-$(System.StageAttempt)
+
+- bash: |
+    set -euo pipefail
     # The managed candidate image lacks unzip for HelmInstaller, and az/Bicep for AzureCLI tasks and the harness.
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
@@ -127,12 +144,22 @@ steps:
     tar -xzf testkube.tar.gz kubectl-testkube
     rm testkube.tar.gz
     chmod +x kubectl-testkube
+    version="$CANDIDATE_TRIVY_VERSION"
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
+    archive="trivy_${version}_Linux-64bit.tar.gz"
+    checksums="trivy_${version}_checksums.txt"
     curl --fail --silent --show-error --location --retry 3 \
-      https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz -o trivy.tar.gz
-    echo "c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0  trivy.tar.gz" | sha256sum --check
-    tar -xzf trivy.tar.gz trivy
-    rm trivy.tar.gz
+      "https://github.com/aquasecurity/trivy/releases/download/v${version}/${archive}" -o "$archive"
+    curl --fail --silent --show-error --location --retry 3 \
+      "https://github.com/aquasecurity/trivy/releases/download/v${version}/${checksums}" -o "$checksums"
+    checksum="$(grep -E "[[:space:]]${archive}$" "$checksums" || true)"
+    [[ -n "$checksum" ]] || { echo "Trivy release checksum is missing" >&2; exit 1; }
+    printf '%s\n' "$checksum" | sha256sum --check
+    tar -xzf "$archive" trivy
+    rm "$archive" "$checksums"
     chmod +x trivy
+    installed_version="$(./trivy --version --format json | "$CANDIDATE_PYTHON/bin/python" -c 'import json,sys; print(json.load(sys.stdin)["Version"])')"
+    [[ "$installed_version" == "$version" ]] || { echo "Installed Trivy version does not match producer scan" >&2; exit 1; }
     echo "##vso[task.prependpath]$CANDIDATE_TOOLS"
     for tool in az kubectl helm bash jq envsubst; do command -v "$tool"; done
     ./kubectl-testkube run testworkflow --help > /dev/null
@@ -144,6 +171,7 @@ steps:
   env:
     CANDIDATE_PYTHON: $(candidatePython)
     CANDIDATE_TOOLS: $(candidateTools)
+    CANDIDATE_TRIVY_VERSION: $(candidateTrivyVersion)
 
 - task: AzureCLI@2
   displayName: "Run authenticated candidate scenario through existing TestKube harness"
@@ -160,9 +188,6 @@ steps:
       [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Service connection must target the approved build subscription" >&2; exit 1; }
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
       case "$CANDIDATE_SCENARIO" in settings) max_run_seconds=28800 ;; default) max_run_seconds=14400 ;; *) exit 1 ;; esac
-      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
-        --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-        --output "$CANDIDATE_EVIDENCE/pipeline-verification"
       publish_bootstrap() {
         local proof="$CANDIDATE_EVIDENCE/rbac-bootstrap.json"
         local public="$CANDIDATE_EVIDENCE/rbac-bootstrap-public.json"
@@ -225,10 +250,15 @@ steps:
     scriptLocation: inlineScript
     inlineScript: |
       set -euo pipefail
+      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+        --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
+        --output "$CANDIDATE_EVIDENCE/pipeline-verification"
       "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan_candidate.py" \
         --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-        --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
-        --platform linux/amd64 --cve "$CANDIDATE_CVE" --output "$CANDIDATE_EVIDENCE/scans"
+        --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99' \
+        --platform linux/amd64 --cve "$CANDIDATE_CVE" \
+        --verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification" \
+        --output "$CANDIDATE_EVIDENCE/scans"
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}

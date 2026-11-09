@@ -215,6 +215,10 @@ class CandidateEvidenceTest(unittest.TestCase):
                          "for tool in unzip az kubectl jq envsubst"):
             self.assertIn(required, steps[prereqs]["bash"])
         run =  next(i for i, step in enumerate(steps) if "Run authenticated candidate" in step.get("displayName", ""))
+        self.assertNotIn(
+            "Always retry ownership-guarded candidate cleanup before scanning",
+            [step.get("displayName", "") for step in steps],
+        )
         self.assertFalse(any(
             "run-scenario.py" in str(step) and " cleanup" in str(step)
             for step in steps
@@ -239,10 +243,18 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
         self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings)', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        scan_script = steps[scan]["inputs"]["inlineScript"]
         self.assertLess(
-            steps[run]["inputs"]["inlineScript"].index(".pipelines/pr-e2e/fetch_candidate.py"),
-            steps[run]["inputs"]["inlineScript"].index("/otelcollector/test/scenarios/run-scenario.py"),
+            scan_script.index(".pipelines/pr-e2e/fetch_candidate.py"),
+            scan_script.index(".pipelines/pr-e2e/scan_candidate.py"),
         )
+        self.assertIn("sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99", scan_script)
+        self.assertNotIn("sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324", scan_script)
+        self.assertIn('--output "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
+        self.assertIn('--verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
+        self.assertNotIn("scan_trivy.py", scan_script)
+        prepare = next(step for step in steps if "Prepare scoped pinned CLI" in step.get("displayName", ""))
+        self.assertEqual(prepare["env"]["CANDIDATE_TRIVY_VERSION"], "$(candidateTrivyVersion)")
         for task in ("PublishTestResults@2", "PublishPipelineArtifact@1"):
             self.assertEqual(next(step for step in steps if step.get("task") == task)["condition"], "always()")
         junit = next(step for step in steps if step.get("task") == "PublishTestResults@2")["inputs"]
