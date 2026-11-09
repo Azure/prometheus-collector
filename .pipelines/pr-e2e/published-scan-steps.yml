@@ -27,6 +27,14 @@ steps:
       --output "$(Build.ArtifactStagingDirectory)/published-image-discovery/evidence"
   displayName: "Scan and compare immutable published production/main images"
 
+- bash: |
+    set -euo pipefail
+    python3 -B "$(Build.SourcesDirectory)/.pipelines/pr-e2e/discovery_log.py" emit \
+      --input "$(Build.ArtifactStagingDirectory)/published-image-discovery/evidence/discovery.json" \
+      --manifest "$(Build.SourcesDirectory)/.pipelines/pr-e2e/published-images.json" \
+      --build-id "$(Build.BuildId)" --source-sha "$(Build.SourceVersion)"
+  displayName: "Emit checksum-bound discovery JSON for private build-log readers"
+
 - task: PublishPipelineArtifact@1
   displayName: "Publish discovery findings"
   inputs:

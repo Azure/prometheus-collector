@@ -151,7 +151,10 @@ class PublishedDiscoveryTests(unittest.TestCase):
         template = yaml.safe_load(source)
         steps = template["steps"]
         self.assertEqual([step.get("task", "bash") for step in steps],
-                         ["bash", "bash", "PublishPipelineArtifact@1", "PublishPipelineArtifact@1"])
+                         ["bash", "bash", "bash", "PublishPipelineArtifact@1", "PublishPipelineArtifact@1"])
+        self.assertIn('--build-id "$(Build.BuildId)" --source-sha "$(Build.SourceVersion)"',
+                      steps[2]["bash"])
+        self.assertIn("discovery_log.py", steps[2]["bash"])
         self.assertEqual(steps[-2]["inputs"]["artifactName"], "discovery-findings")
         self.assertEqual(steps[-2]["inputs"]["targetPath"],
                          "$(Build.ArtifactStagingDirectory)/published-image-discovery/evidence/findings")
