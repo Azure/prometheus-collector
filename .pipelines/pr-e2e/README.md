@@ -71,20 +71,24 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
 - `producer_trivy.py`: on SRE candidate branches, pipeline 440 replaces its collector
   vulnerability console scan with full, unfiltered JSON for the exact pushed Linux
   amd64 child. The protected `sre-trivy-collector` artifact contains
-  `trivy/{result.json,metadata.json}`,
-  the exact `cache/db` snapshot, empty config/ignore files, and `provenance.json`
+  only `trivy/{result.json,metadata.json}` and `provenance.json`
   binding source repo/commit/build, definition 440, index/child/platform and every
-  file's SHA256. Only successful first-attempt SRE branch jobs/stages publish it.
+  published file's SHA256. Database identity remains in metadata; database bytes,
+  cache and temporary scanner configuration are not published. Both download and
+  extraction retain the 512 MiB limit. Only successful first-attempt SRE branch
+  jobs/stages publish it.
   MCR lag retries the immutable digest, never a tag. Filtered console findings and existing
   secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
   A consumer must authenticate this artifact from the exact successful 440 build,
-  verify its hashes/provenance against the push receipts, and scan the released
-  baseline with that same Trivy version/config/DB. Published prod-vs-main discovery
+  verify its hashes/provenance against the push receipts, and locally scan both
+  images with the same Trivy version/configuration and one fresh private database.
+  Published prod-vs-main discovery
   needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
-  child, scans only the released baseline using the exact scanner version and DB
-  from the producer artifact, and evaluates the producer's candidate scan without
-  rescanning the candidate. It retains raw scans plus `comparison.json`, including
+  child, scans that exact candidate locally with the producer's scanner version,
+  then scans the released baseline with the same frozen local database. The
+  producer's report remains authenticated evidence, not the local comparison's
+  candidate scan. It retains raw scans plus `comparison.json`, including
   failed/blocked verdicts. A local report does not acquire a protected pipeline
   producer by being copied.
 
@@ -244,8 +248,10 @@ that build's protected receipts, and runs the existing TestKube scenario against
 those exact image digests. The 979 PR run is linked to the PR and auto-cancels
 when its head changes; only results for the latest head count. The separate 440
 push-triggered run remains the producer and is not itself e2e evidence.
-The fetch CLI's `trivyVersion` comes from the verified producer scan metadata;
-the pipeline installs that version before reusing the producer's database.
+The fetch CLI's `trivyVersion` comes from the verified producer scan metadata.
+The pipeline installs that version, acquires a fresh local database, and reuses
+that database for both comparison scans. Host prerequisites precede producer
+fetching; comparison runs only after scanner/Python preparation succeeds.
 
 Published discovery also emits its full JSON through the private ADO scan log,
 framed as `AMA_METRICS_DISCOVERY_BEGIN/DATA/END`. The gzip/base64 envelope binds
@@ -258,6 +264,17 @@ incomplete/duplicate frames, bad checksums, and build/source/image mismatches.
 Obtain expected build/source from authenticated ADO metadata and the image
 manifest from that exact source, not from the unverified envelope. Verify an
 actual agent log round-trip before relying on this fallback.
+
+### Vulnerability Management findings for Linux and Windows
+
+Use the existing attached `shavulnmgmt` connector as a second findings source,
+alongside Trivy, for both Linux and Windows ama-metrics images. Load the
+[query-vulnerability-findings skill](../../.github/skills/query-vulnerability-findings/SKILL.md)
+during setup and each campaign's baseline/candidate evaluation. It defines the
+exact query, actual-agent execution proof, complete private snapshot, native OS
+and digest binding, source-preserving reconciliation and fix-or-blocker contract.
+Do not substitute workstation results for agent consumption. Keep the existing
+Trivy all-findings gate unchanged; absent or stale Kusto rows are not closure.
 
 Each row publishes `coverage.json` as a plan, never as proof of execution. It
 explicitly lists blocked matrix rows and the five uncovered settings variants:
@@ -277,9 +294,15 @@ those tests. Nine successful rows alone must not be reported as all repo tests p
 
 The ci-sre instruction contract is:
 
-1. Freeze the baseline and scan it; select a real finding and verify the fixed
+1. Freeze the baseline, scan it with Trivy and collect a fresh complete Kusto
+   snapshot for Linux and Windows through the actual agent connector. Bind and
+   reconcile both sources as above; select a real finding and verify the fixed
    package/vendor version. Create or resume the campaign branch at a recorded base.
 2. Edit the actual code/dependency pins, respecting generated-upstream boundaries.
+   Keep coordinated upstream OpenTelemetry Collector version upgrades in their
+   separate PR; report remaining collector findings rather than bundling that
+   upgrade or claiming closure. Minimal module tidies required by changed local
+   product dependencies are integration fixes, not a Collector version upgrade.
    Run local checks, then commit/push only within the human-approved write scope.
 3. Observe the push-triggered build for that exact branch/head. Persist its run
    identity; do not queue a duplicate when a push run already exists.
@@ -291,7 +314,9 @@ The ci-sre instruction contract is:
 5. On every changed head/base, invalidate previous build/image/test/closure verdicts.
    Require current-head component receipts, exact tested child digests, every
    baseline finding closed, no new findings, the PR-linked 979 e2e run for that
-   exact head, the required scenario tier and verified restoration.
+   exact head, the required scenario tier and verified restoration. Require fresh
+   source-specific Kusto evidence for the relevant digests as well; missing or
+   pending external scans remain explicit blockers, not successful rescans.
 6. Publish the evidence PR and request human review only with honest scope.
    Never approve/merge, silently waive failing tests, treat skipped/not-run as
    passed or re-label an earlier successful image as the new build.

@@ -6,6 +6,7 @@ import inspect
 import io
 import json
 from pathlib import Path
+import stat
 import tempfile
 import unittest
 import urllib.parse
@@ -26,9 +27,6 @@ def protected_scan_artifact(source, image):
     empty_config = b"{}\n"
     files = {
         "trivy/result.json": result,
-        "cache/db/trivy.db": database,
-        "empty.ignore": empty_ignore,
-        "empty.yaml": empty_config,
     }
     metadata = {
         "exitCode": 0,
@@ -64,6 +62,82 @@ def protected_scan_artifact(source, image):
 
 
 class FetchTests(unittest.TestCase):
+    def test_report_only_artifact_preserves_database_identity_without_bytes(self):
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
+                 "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            output = Path(directory) / "scan"
+            fetch_candidate.extract_scan_artifact(protected_scan_artifact(source, image), output)
+            metadata = fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
+            self.assertEqual(metadata["dbSha256"], hashlib.sha256(b"trivy database").hexdigest())
+            self.assertEqual({path.relative_to(output).as_posix()
+                              for path in output.rglob("*") if path.is_file()},
+                             {"trivy/result.json", "trivy/metadata.json", "provenance.json"})
+
+    def test_report_only_artifact_rejects_invalid_database_identity_and_hidden_cache(self):
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
+                 "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        for invalid in (None, "", "not-a-hash", "A" * 64, 42, "cache"):
+            with self.subTest(invalid=invalid), \
+                    tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+                output = Path(directory) / "scan"
+                fetch_candidate.extract_scan_artifact(protected_scan_artifact(source, image), output)
+                provenance_path = output / "provenance.json"
+                provenance = json.loads(provenance_path.read_text())
+                if invalid == "cache":
+                    path = output / "cache" / "db" / "trivy.db"
+                    path.parent.mkdir(parents=True)
+                    path.write_bytes(b"database")
+                    provenance["files"]["cache/db/trivy.db"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                else:
+                    path = output / "trivy" / "metadata.json"
+                    metadata = json.loads(path.read_text())
+                    metadata["dbSha256"] = invalid
+                    path.write_text(json.dumps(metadata))
+                    provenance["files"]["trivy/metadata.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                provenance_path.write_text(json.dumps(provenance))
+                with self.assertRaises(ValueError):
+                    fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
+
+    def test_scan_extraction_keeps_bounded_total_and_rejects_unsafe_members(self):
+        for kind in ("total", "entry", "traversal", "symlink", "duplicate"):
+            with self.subTest(kind=kind), \
+                    tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+                raw = io.BytesIO()
+                with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                    if kind == "total":
+                        archive.writestr("first", b"a" * 6)
+                        archive.writestr("second", b"b" * 6)
+                    elif kind == "entry":
+                        archive.writestr("oversized", b"a" * 11)
+                    elif kind == "traversal":
+                        archive.writestr("../escaped", b"a")
+                    elif kind == "symlink":
+                        entry = zipfile.ZipInfo("link")
+                        entry.external_attr = (stat.S_IFLNK | 0o777) << 16
+                        archive.writestr(entry, "target")
+                    else:
+                        archive.writestr("same", b"a")
+                        archive.writestr(fetch_candidate.SCAN_ARTIFACT + "/same", b"b")
+                output = Path(directory) / "scan"
+                with patch.object(fetch_candidate, "MAX_SCAN_ARTIFACT_BYTES", 10), \
+                        self.assertRaises(ValueError):
+                    fetch_candidate.extract_scan_artifact(raw.getvalue(), output)
+                if kind in ("total", "entry"):
+                    self.assertFalse((output / ("second" if kind == "total" else "oversized")).exists())
+
+    def test_download_rejects_oversize_response_with_bounded_read(self):
+        response = io.BytesIO(b"a" * 11)
+        with patch.object(fetch_candidate.urllib.request, "build_opener") as opener, \
+                patch.object(response, "read", wraps=response.read) as read:
+            opener.return_value.open.return_value.__enter__.return_value = response
+            with self.assertRaisesRegex(ValueError, "exceeds the allowed size"):
+                fetch_candidate.download(fetch_candidate.ADO_PROJECT + "/_apis/build/test", "test-token", 10)
+            read.assert_called_once_with(11)
+        self.assertEqual(fetch_candidate.MAX_SCAN_ARTIFACT_BYTES, 512 * 1024 * 1024)
+
     def test_resolves_successful_producer_for_exact_pr_head(self):
         commit = "a" * 40
         branch = "refs/heads/sre/vuln/campaign"

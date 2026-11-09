@@ -132,9 +132,12 @@ class ProducerTests(unittest.TestCase):
                 def scan(ref, platform, destination):
                     self.assertEqual(ref, selected["ref"])
                     self.assertEqual(platform, "linux/amd64")
-                    destination.mkdir()
+                    destination.mkdir(parents=True)
                     for name, content in (("trivy/result.json", b'{"Results":[]}'),
-                                          ("trivy/metadata.json", b'{"exitCode":0}'),
+                                          ("trivy/metadata.json", json.dumps({
+                                              "exitCode": 0, "dbSha256": hashlib.sha256(b"database").hexdigest(),
+                                              "version": "0.76.1"}).encode()),
+                                          ("trivy/scan.log", b"scanner diagnostics"),
                                           ("cache/db/trivy.db", b"database"), ("empty.ignore", b""),
                                           ("empty.yaml", b"{}\n")):
                         path = destination / name
@@ -164,7 +167,13 @@ class ProducerTests(unittest.TestCase):
                         self.assertEqual(provenance["source"], {"repo": "Azure/prometheus-collector",
                             "commit": commit, "buildId": "123"})
                         self.assertEqual(provenance["image"], selected)
-                        self.assertEqual(len(provenance["files"]), 5)
+                        self.assertEqual(json.loads((output / "trivy" / "metadata.json").read_text())["dbSha256"],
+                                         hashlib.sha256(b"database").hexdigest())
+                        self.assertEqual(set(provenance["files"]),
+                                         {"trivy/result.json", "trivy/metadata.json"})
+                        self.assertEqual({path.relative_to(output).as_posix()
+                                          for path in output.rglob("*") if path.is_file()},
+                                         {"trivy/result.json", "trivy/metadata.json", "provenance.json"})
                         for name, sha in provenance["files"].items():
                             self.assertEqual(sha, hashlib.sha256((output / name).read_bytes()).hexdigest())
 

@@ -133,9 +133,7 @@ def validate_scan_artifact(directory, receipt):
             raise ValueError("Collector scan contains a linked or escaped file")
         if path.is_file() and path.name != "provenance.json":
             actual.add(path.relative_to(directory).as_posix())
-    if actual != set(files) or not {
-            "trivy/result.json", "trivy/metadata.json", "cache/db/trivy.db",
-            "empty.ignore", "empty.yaml"} <= actual:
+    if actual != set(files) or actual != {"trivy/result.json", "trivy/metadata.json"}:
         raise ValueError("Collector scan files do not match the protected provenance")
     for name, digest in files.items():
         relative = PurePosixPath(name)
@@ -155,13 +153,13 @@ def validate_scan_artifact(directory, receipt):
         raise ValueError("Collector scan metadata does not match the protected image/platform")
     if (hashlib.sha256((directory / "trivy" / "result.json").read_bytes()).hexdigest()
             != metadata.get("resultSha256")
-            or hashlib.sha256((directory / "cache" / "db" / "trivy.db").read_bytes()).hexdigest()
-            != metadata.get("dbSha256")):
-        raise ValueError("Collector scan result or database hash mismatch")
+            or not isinstance(metadata.get("dbSha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", metadata["dbSha256"])):
+        raise ValueError("Collector scan result hash or database identity mismatch")
     configuration = {
         "scanners": ["vuln"], "listAllPkgs": True,
-        "ignoreSha256": hashlib.sha256((directory / "empty.ignore").read_bytes()).hexdigest(),
-        "configSha256": hashlib.sha256((directory / "empty.yaml").read_bytes()).hexdigest(),
+        "ignoreSha256": hashlib.sha256(b"").hexdigest(),
+        "configSha256": hashlib.sha256(b"{}\n").hexdigest(),
     }
     if metadata.get("configuration") != configuration:
         raise ValueError("Collector scan uses an unexpected Trivy configuration")

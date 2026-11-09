@@ -25,12 +25,13 @@ def run(build_id, commit, baseline, platform, requested, output, verified_candid
     else:
         verified_candidate = verified_candidate.resolve()
         receipt = fetch_candidate.load_verified(verified_candidate, build_id, commit)
-    candidate_scan = verified_candidate / fetch_candidate.SCAN_ARTIFACT
     system, arch = platform.split("/")
     images = [image for image in receipt["images"]
               if image["name"] == "collector" and image["os"] == system and image["arch"] == arch]
     if len(images) != 1:
         raise ValueError("Expected exactly one protected candidate collector child for the platform")
+    candidate_scan = output / "candidate"
+    scan_trivy.scan(images[0]["ref"], platform, candidate_scan)
     scan_trivy.scan(baseline, platform, output / "baseline", candidate_scan)
     result = compare_trivy.compare(output / "baseline", candidate_scan, receipt, requested)
     with (output / "comparison.json").open("x", encoding="utf-8") as file:

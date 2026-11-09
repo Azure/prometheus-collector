@@ -344,6 +344,27 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertTrue(junit["failTaskOnFailedTests"])
         self.assertTrue(junit["failTaskOnMissingResultsFile"])
 
+    def test_comparison_requires_installed_host_and_scan_tools(self):
+        steps = yaml.safe_load(
+            (Path(__file__).parent / "azure-template-candidate-config-tests.yml").read_text()
+        )["steps"]
+        host = next(i for i, step in enumerate(steps)
+                    if step.get("displayName") == "Install candidate host prerequisites")
+        fetch = next(i for i, step in enumerate(steps)
+                     if step.get("displayName") == "Fetch exact producer evidence and Trivy version")
+        prepare = next(i for i, step in enumerate(steps)
+                       if "Prepare scoped pinned CLI" in step.get("displayName", ""))
+        comparison = next(step for step in steps
+                          if "baseline/candidate scan comparison" in step.get("displayName", ""))
+        self.assertLess(host, fetch)
+        self.assertLess(fetch, prepare)
+        ready = "##vso[task.setvariable variable=candidateScanPrerequisitesReady]true"
+        self.assertTrue(steps[prepare]["bash"].rstrip().endswith(f'echo "{ready}"'))
+        self.assertEqual(
+            comparison["condition"],
+            "and(always(), not(canceled()), eq(variables['candidateScanPrerequisitesReady'], 'true'))",
+        )
+
     def test_candidate_coverage_accounts_for_every_row_and_variant(self):
         root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
         for scenario in SCENARIOS:

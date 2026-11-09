@@ -113,23 +113,6 @@ steps:
 
 - bash: |
     set -euo pipefail
-    [[ ! -e "$PRODUCER_EVIDENCE" ]] || { echo "Producer evidence directory must be new" >&2; exit 1; }
-    fetched="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
-      --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-      --output "$PRODUCER_EVIDENCE")"
-    trivy_version="$(printf '%s' "$fetched" | python3 -c 'import json,sys; print(json.load(sys.stdin)["trivyVersion"])')"
-    [[ "$trivy_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
-    echo "##vso[task.setvariable variable=candidateTrivyVersion]$trivy_version"
-    echo "Verified producer Trivy version $trivy_version"
-  displayName: "Fetch exact producer evidence and Trivy version"
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-    PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
-    CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
-    PRODUCER_EVIDENCE: $(Agent.TempDirectory)/candidate-producer-$(candidateAttempt)
-
-- bash: |
-    set -euo pipefail
     # The managed candidate image lacks unzip for HelmInstaller, and az/Bicep for AzureCLI tasks and the harness.
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
@@ -147,6 +130,23 @@ steps:
     fi
     for tool in unzip az kubectl jq envsubst; do command -v "$tool"; done
   displayName: "Install candidate host prerequisites"
+
+- bash: |
+    set -euo pipefail
+    [[ ! -e "$PRODUCER_EVIDENCE" ]] || { echo "Producer evidence directory must be new" >&2; exit 1; }
+    fetched="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+      --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
+      --output "$PRODUCER_EVIDENCE")"
+    trivy_version="$(printf '%s' "$fetched" | python3 -c 'import json,sys; print(json.load(sys.stdin)["trivyVersion"])')"
+    [[ "$trivy_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
+    echo "##vso[task.setvariable variable=candidateTrivyVersion]$trivy_version"
+    echo "Verified producer Trivy version $trivy_version"
+  displayName: "Fetch exact producer evidence and Trivy version"
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
+    CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
+    PRODUCER_EVIDENCE: $(Agent.TempDirectory)/candidate-producer-$(candidateAttempt)
 
 - task: HelmInstaller@1
   inputs:
@@ -188,6 +188,7 @@ steps:
     az bicep version
     "$CANDIDATE_PYTHON/bin/python" -B \
       "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_evidence_test.py" -v
+    echo "##vso[task.setvariable variable=candidateScanPrerequisitesReady]true"
   workingDirectory: $(candidateRoot)
   displayName: "Prepare scoped pinned CLI and verify harness prerequisites"
   env:
@@ -272,7 +273,7 @@ steps:
 
 - task: AzureCLI@2
   displayName: "Retain SRE-owned authenticated baseline/candidate scan comparison"
-  condition: and(always(), not(canceled()))
+  condition: and(always(), not(canceled()), eq(variables['candidateScanPrerequisitesReady'], 'true'))
   inputs:
     azureSubscription: ${{ parameters.azureSubscription }}
     scriptType: bash

@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import time
 import urllib.error
@@ -42,7 +43,13 @@ def produce(image, metadata_path, output):
     if len(candidates) != 1:
         raise ValueError("Expected exactly one Linux amd64 collector child")
     selected = candidates[0]
-    scan(selected["ref"], "linux/amd64", output)
+    output.mkdir(parents=True, exist_ok=False)
+    work = output / "scan-work"
+    scan(selected["ref"], "linux/amd64", work)
+    (output / "trivy").mkdir()
+    for name in ("result.json", "metadata.json"):
+        shutil.move(work / "trivy" / name, output / "trivy" / name)
+    shutil.rmtree(work)
     provenance = {
         "schemaVersion": 1,
         "source": {"repo": "Azure/prometheus-collector", "commit": pushed["commit"], "buildId": pushed["buildId"]},

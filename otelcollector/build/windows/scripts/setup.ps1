@@ -46,7 +46,7 @@ catch {
 Write-Host ('Finished installing fluentbit')
 ############################################################################################
 Write-Host ('Installing Visual C++ Redistributable Package')
-$vcRedistLocation = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
+$vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
 $vcArgs = "/install /quiet /norestart"
 $ProgressPreference = 'SilentlyContinue'
