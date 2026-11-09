@@ -107,6 +107,12 @@ class ProducerTests(unittest.TestCase):
         step = next(item for item in collector["steps"]
                     if item.get("displayName") == "Build: scan exact collector child and retain complete Trivy evidence")
         self.assertEqual(step["condition"], "and(succeeded(), eq(variables.IS_SRE_BRANCH, true))")
+        self.assertNotIn('"$evidence/empty.yaml"', step["bash"])
+        self.assertNotIn('"$evidence/empty.ignore"', step["bash"])
+        self.assertIn('printf \'{}\\n\' > "$console_config"', step["bash"])
+        self.assertIn(': > "$console_ignore"', step["bash"])
+        self.assertIn('trivy --config "$console_config" convert', step["bash"])
+        self.assertIn('--ignorefile "$console_ignore"', step["bash"])
         console = next(item["bash"] for item in collector["steps"]
                        if item.get("displayName") == "Build: run trivy scan")
         self.assertIn('scanners="vuln,secret"', console)

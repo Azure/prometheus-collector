@@ -1148,11 +1148,15 @@ extends:
               --output "$(Build.ArtifactStagingDirectory)/sre-trivy-collector"
             evidence="$(Build.ArtifactStagingDirectory)/sre-trivy-collector"
             console_json=$(mktemp)
-            trap 'rm -f "$console_json"' EXIT
+            console_config=$(mktemp)
+            console_ignore=$(mktemp)
+            trap 'rm -f "$console_json" "$console_config" "$console_ignore"' EXIT
+            printf '{}\n' > "$console_config"
+            : > "$console_ignore"
             jq '.Results |= map(.Vulnerabilities = ((.Vulnerabilities // []) | map(select(.FixedVersion != null and .FixedVersion != ""))))' \
               "$evidence/trivy/result.json" > "$console_json"
-            trivy --config "$evidence/empty.yaml" convert --format table \
-              --ignorefile "$evidence/empty.ignore" --severity HIGH,CRITICAL,MEDIUM "$console_json"
+            trivy --config "$console_config" convert --format table \
+              --ignorefile "$console_ignore" --severity HIGH,CRITICAL,MEDIUM "$console_json"
           workingDirectory: $(Build.SourcesDirectory)
           displayName: "Build: scan exact collector child and retain complete Trivy evidence"
           condition: and(succeeded(), eq(variables.IS_SRE_BRANCH, true))
