@@ -228,7 +228,7 @@
     "No live candidate evidence exists until a source-bound digest receipt is supplied and the scenario finishes.",
     "Compiled infrastructure is not live coverage. blockedReason prevents provisioning before its missing execution/proof adapter exists.",
     "Operator empty/omitted-secret watch enforcement requires the runtime official regional default to be at least Kubernetes1.37; unsupported/skipped is not a pass and no older version is pinned.",
-    "The mixed profile requires source-bound ARM64 and both Windows2022/2025 candidate image build families before provisioning.",
+    "The mixed profile requires source-bound ARM64 and a Windows2022 candidate; Windows2025 hosts support that process-isolated image without a separate Windows2025 producer.",
     "Windows2019 is unsupported on currently supported official Kubernetes versions; do not pin older Kubernetes to recreate it.",
     "Arc onboarding and CCP standalone health validation require their separate authorized adapters; ordinary AKS is not equivalent.",
     "regionTests requires region/rule parameters and is not included in the cluster health suite.",

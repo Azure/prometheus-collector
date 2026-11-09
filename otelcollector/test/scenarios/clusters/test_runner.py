@@ -290,10 +290,22 @@ class Contracts(unittest.TestCase):
         ]}
         images, mapping = runner.candidate_receipt(receipt, source, ["linux", "windows"])
         self.assertEqual(len(mapping), 4)
-        with self.assertRaisesRegex(ValueError, "Windows build family"):
-            runner.candidate_receipt(receipt, source, ["linux", "windows"], pools=[
-                {"name": "win25", "osType": "Windows", "osSKU": "Windows2025", "architecture": "amd64"},
-            ])
+        for host in ("Windows2019", "Windows2022", "Windows2025"):
+            for build in ("17763", "20348", "26100"):
+                with self.subTest(host=host, build=build):
+                    receipt["images"][1]["osVersion"] = f"10.0.{build}.123"
+                    pools = [{"name": "windows", "osType": "Windows", "osSKU": host,
+                              "architecture": "amd64"}]
+                    supported = (host, build) in {
+                        ("Windows2019", "17763"), ("Windows2022", "20348"),
+                        ("Windows2025", "20348"),
+                    }
+                    if supported:
+                        runner.candidate_receipt(receipt, source, ["linux", "windows"], pools=pools)
+                    else:
+                        with self.assertRaisesRegex(ValueError, "Windows build family"):
+                            runner.candidate_receipt(receipt, source, ["linux", "windows"], pools=pools)
+        receipt["images"][1]["osVersion"] = "10.0.20348.0"
         with self.assertRaisesRegex(ValueError, "source SHA"):
             runner.candidate_receipt(receipt, "b" * 40, ["linux", "windows"])
         receipt["images"][0]["ref"] = "mcr.microsoft.com/test:latest"
@@ -311,6 +323,34 @@ class Contracts(unittest.TestCase):
         receipt["images"].append(dict(image))
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             runner.candidate_receipt(receipt, source, ["linux", "windows"])
+
+    def test_runtime_audit_checks_supported_windows_host_image_pairs(self):
+        nodes = [{"metadata": {"name": system}, "status": {"nodeInfo": {
+            "operatingSystem": system, "architecture": "amd64",
+            "kernelVersion": "10.0.26100.123" if system == "windows" else "6.8.0"}}}
+            for system in ("linux", "windows")]
+        images, pods = [], []
+        for component, system, container, digit in (
+                ("collector", "linux", "prometheus-collector", "1"),
+                ("collector", "windows", "prometheus-collector", "2"),
+                ("targetallocator", "linux", "targetallocator", "3"),
+                ("cfg", "linux", "config-reader", "4")):
+            ref = "example.invalid/test@sha256:" + digit * 64
+            images.append({"name": component, "os": system, "arch": "amd64", "ref": ref})
+            pods.append({"metadata": {"name": component + system},
+                         "spec": {"nodeName": system, "containers": [{"name": container, "image": ref}]},
+                         "status": {"containerStatuses": [{"name": container, "ready": True,
+                                                           "imageID": ref}]}})
+        host = Mock()
+        host.kube.side_effect = lambda *args, **kwargs: {"items": nodes if args[1] == "nodes" else pods}
+        for build, supported in (("20348", True), ("17763", False), ("26100", False)):
+            with self.subTest(build=build):
+                images[1]["osVersion"] = f"10.0.{build}.456"
+                if supported:
+                    self.assertEqual(len(runner.audit_images(host, images)), 4)
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
+                        runner.audit_images(host, images)
 
     def test_empty_variant_labels_never_select_all_tests(self):
         manifest = variant()
@@ -1055,6 +1095,14 @@ def mutations():
         "pool-node-presence": ('not minimum <= len(members) <= maximum', "False"),
         "alias-only": ('if set(variant["ginkgoLabels"]) & {', "if set() & {"),
         "windows-pool-build": ('if pool["osType"] == "Windows" and not any(', "if False and not any("),
+        "windows-2025-downlevel": ('("10.0.26100", "10.0.20348")',
+                                   '("10.0.26100", "10.0.26100")'),
+        "windows-2025-legacy-image": ('("10.0.26100", "10.0.20348")',
+                                     '("10.0.26100", "10.0.17763")'),
+        "windows-runtime-build": ('and windows_image_compatible(info["kernelVersion"], i["osVersion"])',
+                                  'and True'),
+        "windows-runtime-exact-build": ('and windows_image_compatible(info["kernelVersion"], i["osVersion"])',
+                                        'and info["kernelVersion"].split(".")[:3] == i["osVersion"].split(".")[:3]'),
         "credential-cleanup": ('self.kubeconfig.unlink(missing_ok=True)', "pass"),
         "external-cleanup": ('while self.az("group", "exists", "--name", managed).strip() != "false":', "while False:"),
         "literal-labels": ('known.update(re.findall(r\'"([^"]+)"\', arguments))', "pass"),

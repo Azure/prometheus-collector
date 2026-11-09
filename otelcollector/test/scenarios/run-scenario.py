@@ -135,6 +135,14 @@ def select_version(document):
     return ".".join(map(str, max(defaults)))
 
 
+def windows_image_compatible(host, image):
+    # The approved 2022 collector also supports process isolation on 2025 hosts.
+    return (".".join(host.split(".")[:3]), ".".join(image.split(".")[:3])) in {
+        ("10.0.17763", "10.0.17763"), ("10.0.20348", "10.0.20348"),
+        ("10.0.26100", "10.0.20348"),
+    }
+
+
 def candidate_receipt(document, source_sha, platforms, features=(), pools=()):
     if not re.fullmatch(r"[0-9a-f]{40}", source_sha) or document.get("source", {}).get("commit") != source_sha:
         raise ValueError("Candidate receipt must match the exact tested source SHA")
@@ -165,12 +173,12 @@ def candidate_receipt(document, source_sha, platforms, features=(), pools=()):
         if len(refs) != 1:
             raise ValueError(f"{component}/{system} needs a common pinned multi-platform manifestRef")
         mapping[(component, system)] = refs.pop()
-    families = {"Windows2019": "10.0.17763.", "Windows2022": "10.0.20348.", "Windows2025": "10.0.26100."}
+    families = {"Windows2019": "10.0.17763", "Windows2022": "10.0.20348", "Windows2025": "10.0.26100"}
     for pool in pools:
         if pool["osType"] == "Windows" and not any(
                 image["name"] == "collector" and image["os"] == "windows"
                 and image["arch"] == pool["architecture"]
-                and image.get("osVersion", "").startswith(families[pool["osSKU"]]) for image in images):
+                and windows_image_compatible(families[pool["osSKU"]], image.get("osVersion", "")) for image in images):
             raise ValueError(f"Missing candidate Windows build family for pool {pool['name']}/{pool['osSKU']}")
     return images, mapping
 
@@ -820,7 +828,7 @@ def audit_images(host, images):
                           and i["os"] == info["operatingSystem"] and i["arch"] == info["architecture"]]
             if info["operatingSystem"] == "windows":
                 candidates = [i for i in candidates if i.get("osVersion")
-                              and info["kernelVersion"].split(".")[:3] == i["osVersion"].split(".")[:3]]
+                              and windows_image_compatible(info["kernelVersion"], i["osVersion"])]
             status = statuses.get(container["name"], {})
             runtime = status.get("imageID", "")
             if not candidates or not status.get("ready") or not any(

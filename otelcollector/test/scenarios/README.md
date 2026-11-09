@@ -315,13 +315,21 @@ are not candidate tests, and no shared cluster was mutated.
 |---|---|
 | Linux + Windows settings | Same mixed host, sequential complete variants |
 | Ubuntu/Azure Linux, AMD64/ARM64, FIPS | Compatible distinct pools on one host; ARM64 FIPS requires Azure Linux 3+ |
-| Windows 2022/2025 | Compatible separate pools only with eligible AKS version, VM/image and candidate support |
+| Windows 2022/2025 | Separate host pools; the protected Windows 2022 collector supports both through process isolation |
 | Windows 2019 | Unsupported on 1.33+; no substitution with Windows 2022 |
 | Cilium, kubenet, AKS HTTP proxy | Separate host configurations; these profiles cannot include Windows |
 | AMPLS/private ingestion + private query | Can share mixed-pool infrastructure; require distinct endpoint/DNS and data-path assertions |
 | ACNS | Not implied by Cilium; non-Cilium Retina and Cilium/Hubble/security are different cases |
 | Customer Helm, candidate addon, Arc, CCP | Distinct installation ownership/adapters, not namespaces on the same managed addon |
 | Public/private access, proxy CA, deny/recovery | Isolated owned states with readback and restoration before reuse |
+
+[Windows container compatibility](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility#windows-server-host-os-compatibility)
+explicitly permits Windows 2022 containers on Windows 2025 hosts under process
+isolation, which is the [AKS-supported isolation mode](https://learn.microsoft.com/en-us/azure/aks/windows-best-practices#windows-os-version).
+The chart uses ordinary Windows containers, not HostProcess or a custom runtime.
+Admission still checks the protected image's architecture, four-part OS version,
+source and digest; documented OS compatibility does not replace live readiness
+and ingestion evidence.
 
 Inventory additional interactions before declaring matrix completeness:
 ARM64/Azure Linux/FIPS; taints/DaemonSet and replica placement; autoscaling/mixed

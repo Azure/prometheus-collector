@@ -49,18 +49,15 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   Missing, partial, stale, unbound or incomparable evidence cannot pass.
 - `build_receipt.py`: verifies successful pipeline 440 source/build metadata and
   per-component push receipts against published MCR manifest/config bytes.
-  Emits immutable child refs for Linux amd64/arm64, Windows2022/2025, allocator and cfg;
+  Emits immutable child refs for Linux amd64/arm64, Windows2022, allocator and cfg;
   rejects incomplete images, moved tags and mismatched source/platforms.
   It does not authenticate caller-supplied JSON or replace protected push receipts.
   SRE-branch product jobs publish four protected `sre-push-*` artifacts, captured
   from BuildKit metadata or Windows push output, with unique per-build tags.
   Fetch the completed authenticated ADO build response before resolving them.
-  SRE branches build Windows2022 and Windows2025 in the existing Windows job
-  matrix using their respective configured 1ES pool images and the same signing
-  steps. `sre-push-windows` binds the final multi-OS index, not the 2022 child.
-  Its verified configs must contain both `10.0.20348.*` and `10.0.26100.*` under
-  one pinned index so mixed Windows pools can use the same DaemonSet image.
-  Other branches keep the existing 2019/2022 image set; no OS check is waived.
+  Windows pools, including the mixed scenario, use the protected Windows2022
+  collector receipt and verified `10.0.20348.*` image config. No Windows2025
+  producer, scan or common-index receipt is required by this campaign.
   The emitter also requires `sre-testkube-runner`: a protected receipt binding
   separately fetched test source to this build, the existing toolchain's immutable
   image and its durable artifact URL. No replacement runner is built or pushed.

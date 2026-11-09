@@ -14,7 +14,6 @@ from unittest.mock import patch
 import yaml
 
 import build_receipt
-import fetch_candidate
 import push_receipt
 import runner_receipt
 
@@ -33,101 +32,36 @@ class ReceiptTests(unittest.TestCase):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
         steps = next(job["steps"] for stage in pipeline["extends"]["parameters"]["stages"]
                      for job in stage.get("jobs", [])
-                     if job.get("job") == "Windows_Prometheus_Collector")
+                     if job.get("displayName") == "Build: windows 2022 prometheus-collector image")
         script = next(step["powershell"] for step in steps
                       if step.get("displayName") == "Build: push image to dev ACR")
         image = "containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector/images:candidate-win"
         digest = "sha256:" + "b" * 64
-        for version in ("2022", "2025"):
-            line = f"candidate-win-ltsc{version}: digest: " + digest + " size: 1234"
-            for output, passed in (([line], True), ([image], False), ([line, line], False),
-                                   ([line.replace("candidate-win", "another-tag")], False)):
-                with tempfile.TemporaryDirectory() as directory:
-                    body = script
-                    for key, value in {"WINDOWS_FULL_IMAGE_NAME": image, "WINDOWS_BASE_IMAGE_VERSION": "ltsc" + version,
-                                       "WINDOWS_SERVER_VERSION": version,
-                                       "Build.ArtifactStagingDirectory": directory, "ACR_USERNAME": "dummy",
-                                       "ACR_PASSWORD": "dummy"}.items():
-                        body = body.replace("$(" + key + ")", value)
-                    stub = "$ErrorActionPreference='Stop'\n$lines=@(" + ",".join("'" + value + "'" for value in output) + ")\n"
-                    stub += """function docker {
+        line = "candidate-win-ltsc2022: digest: " + digest + " size: 1234"
+        for output, passed in (([line], True), ([image], False), ([line, line], False),
+                               ([line.replace("candidate-win", "another-tag")], False)):
+            with tempfile.TemporaryDirectory() as directory:
+                body = script
+                for key, value in {"WINDOWS_FULL_IMAGE_NAME": image, "WINDOWS_2022_BASE_IMAGE_VERSION": "ltsc2022",
+                                   "Build.ArtifactStagingDirectory": directory, "ACR_USERNAME": "dummy",
+                                   "ACR_PASSWORD": "dummy"}.items():
+                    body = body.replace("$(" + key + ")", value)
+                stub = "$ErrorActionPreference='Stop'\n$lines=@(" + ",".join("'" + value + "'" for value in output) + ")\n"
+                stub += """function docker {
     $global:LASTEXITCODE=0
     if ($args[0] -eq 'push') {
         if ($args -contains '--quiet') { 'mutable-tag' } else { $script:lines }
     }
 }
 """
-                    result = subprocess.run([shutil.which("pwsh"), "-NoProfile", "-NonInteractive",
-                                             "-Command", stub + body], text=True, capture_output=True)
-                    self.assertEqual(result.returncode == 0, passed, result.stderr)
-                    path = Path(directory) / f"windows{version}-push-digest.txt"
-                    if passed:
-                        self.assertEqual(path.read_text(encoding="utf-8-sig").strip(), digest)
-                    else:
-                        self.assertFalse(path.exists())
-
-    def test_windows_index_push_binds_all_same_build_windows_images(self):
-        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
-        jobs = {job["job"]: job for stage in pipeline["extends"]["parameters"]["stages"]
-                for job in stage.get("jobs", []) if "job" in job}
-        matrix = jobs["Windows_Prometheus_Collector"]["strategy"]["matrix"]
-        self.assertEqual(matrix["Windows2022"]["WINDOWS_AGENT_IMAGE"], "ci-1es-managed-windows-2022")
-        gated = next(value for key, value in matrix.items() if "BUILD_SRE_WINDOWS2025" in key)
-        self.assertEqual(gated["Windows2025"], {
-            "WINDOWS_SERVER_VERSION": "2025", "WINDOWS_BASE_IMAGE_VERSION": "ltsc2025",
-            "WINDOWS_AGENT_IMAGE": "ci-1es-managed-windows-2025"})
-        self.assertIn("refs/heads/sre/vuln/", pipeline["variables"]["BUILD_SRE_WINDOWS2025"])
-        self.assertEqual(jobs["Windows_Prometheus_Collector"]["pool"]["image"], "$(WINDOWS_AGENT_IMAGE)")
-        job = jobs["WindowsMultiArch_Prometheus_Collector"]
-        self.assertIn("Windows_Prometheus_Collector", job["dependsOn"])
-        self.assertIn("sre-push-windows", fetch_candidate.ARTIFACTS)
-        self.assertNotIn("sre-push-windows2022", fetch_candidate.ARTIFACTS)
-        self.assertIn("sre-push-windows", [item["artifactName"] for item in job["templateContext"]["outputs"]])
-        step = next(item for item in job["steps"] if item.get("parameters", {}).get("component") == "collector")
-        self.assertEqual(step["parameters"]["image"], "$(WINDOWS_FULL_IMAGE_NAME)")
-        self.assertIn("windows-push-digest.txt", step["parameters"]["evidenceArguments"])
-        script = next(item["powershell"] for item in job["steps"]
-                      if item.get("displayName") == "Build: Windows multi-arch manifest")
-        image = "containerinsightsprod.azurecr.io/test/images:candidate-win"
-        digest = "sha256:" + "b" * 64
-        for version in ("", "ltsc2025"):
-            for output, exit_code, passed in (([digest], 0, True), ([], 0, False),
-                                              ([digest, digest], 0, False), ([digest], 1, False)):
-                with tempfile.TemporaryDirectory() as directory:
-                    body = script
-                    for key, value in {"WINDOWS_FULL_IMAGE_NAME": image,
-                                       "WINDOWS_2019_BASE_IMAGE_VERSION": "ltsc2019",
-                                       "WINDOWS_2022_BASE_IMAGE_VERSION": "ltsc2022",
-                                       "SRE_WINDOWS_2025_BASE_IMAGE_VERSION": version,
-                                       "Build.ArtifactStagingDirectory": directory,
-                                       "ACR_USERNAME": "dummy", "ACR_PASSWORD": "dummy"}.items():
-                        body = body.replace("$(" + key + ")", value)
-                    expected = [image + "-ltsc2019", image + "-ltsc2022"]
-                    if version:
-                        expected.append(image + "-ltsc2025")
-                    stub = "$ErrorActionPreference='Stop'\n$expected=@(" + ",".join(repr(ref) for ref in expected) + ")\n"
-                    stub += "$lines=@(" + ",".join(repr(line) for line in output) + ")\n"
-                    stub += f"$pushExit={exit_code}\n"
-                    stub += """function docker {
-    $global:LASTEXITCODE=0
-    if ($args[0] -eq 'manifest' -and $args[1] -eq 'create') {
-        $actual=@($args | Select-Object -Skip 3 | ForEach-Object { $_ })
-        if (($actual -join ',') -ne ($script:expected -join ',')) { throw 'Wrong Windows child set' }
-    }
-    if ($args[0] -eq 'manifest' -and $args[1] -eq 'push') {
-        $global:LASTEXITCODE=$script:pushExit
-        $script:lines
-    }
-}
-"""
-                    result = subprocess.run([shutil.which("pwsh"), "-NoProfile", "-NonInteractive",
-                                             "-Command", stub + body], text=True, capture_output=True)
-                    self.assertEqual(result.returncode == 0, passed, result.stderr)
-                    path = Path(directory) / "windows-push-digest.txt"
-                    if passed:
-                        self.assertEqual(path.read_text(encoding="utf-8-sig").strip(), digest)
-                    else:
-                        self.assertFalse(path.exists())
+                result = subprocess.run([shutil.which("pwsh"), "-NoProfile", "-NonInteractive",
+                                         "-Command", stub + body], text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, passed, result.stderr)
+                path = Path(directory) / "windows2022-push-digest.txt"
+                if passed:
+                    self.assertEqual(path.read_text(encoding="utf-8-sig").strip(), digest)
+                else:
+                    self.assertFalse(path.exists())
 
     def test_config_reader_push_metadata_is_created_and_consumed(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
@@ -266,25 +200,20 @@ docker() {
             "1": {"os": "linux", "architecture": "amd64"},
             "2": {"os": "linux", "architecture": "arm64"},
             "3": {"os": "windows", "architecture": "amd64", "os.version": "10.0.20348.1"},
-            "4": {"os": "windows", "architecture": "amd64", "os.version": "10.0.26100.1"},
         }
-        collector_children = "1234"
-        wrong_descriptor = False
 
         def registry(repository, kind, reference):
             if kind == "blobs":
                 return configs[reference[-1]], reference
             if reference in ("sha256:" + "b" * 64, "candidate"):
-                return {"manifests": [{"digest": "sha256:" + key * 64,
-                                      "platform": {**configs[key], **({"os.version": "10.0.20348.1"}
-                                                   if wrong_descriptor and key == "4" else {})}}
-                                      for key in (collector_children if repository.endswith("/collector") else "1")]}, "sha256:" + "b" * 64
+                return {"manifests": [{"digest": "sha256:" + key * 64}
+                                      for key in ("123" if repository.endswith("/collector") else "1")]}, "sha256:" + "b" * 64
             return {"config": {"digest": reference}}, reference
 
         with patch.object(build_receipt, "registry_json", side_effect=registry):
             runner["images"] = build_receipt.resolve_images("testkube-runner", runner["imageRef"])
             receipt = build_receipt.emit(build, pushes, runner, runner_hash)
-            self.assertEqual(len(receipt["images"]), 6)
+            self.assertEqual(len(receipt["images"]), 5)
             self.assertEqual(receipt["status"], "built-not-e2e-validated")
             self.assertEqual(receipt["testRunner"]["testSource"], receipt["source"])
             legacy_runner = {**runner, "artifactUrl": runner["artifactUrl"].replace(
@@ -299,26 +228,6 @@ docker() {
                 invalid[0][field] = value
                 with self.assertRaises(ValueError):
                     build_receipt.emit(build, invalid, runner, runner_hash)
-                for collector_children in ("123", "124"):
-                    with self.assertRaisesRegex(ValueError, "Windows2022/Windows2025"):
-                        build_receipt.emit(build, pushes, runner, runner_hash)
-                collector_children = "1234"
-                configs["4"]["architecture"] = "arm64"
-                with self.assertRaisesRegex(ValueError, "Windows2022/Windows2025"):
-                    build_receipt.emit(build, pushes, runner, runner_hash)
-                configs["4"]["architecture"] = "amd64"
-                wrong_descriptor = True
-                with self.assertRaisesRegex(ValueError, "index/config OS version mismatch"):
-                    build_receipt.emit(build, pushes, runner, runner_hash)
-                wrong_descriptor = False
-                resolve = build_receipt.resolve_images
-                def split_index(name, ref):
-                    return [{**image, "indexRef": "mcr.microsoft.com/test/collector@sha256:" + "f" * 64}
-                            if image.get("osVersion", "").startswith("10.0.26100.") else image
-                            for image in resolve(name, ref)]
-                with patch.object(build_receipt, "resolve_images", side_effect=split_index):
-                    with self.assertRaisesRegex(ValueError, "common-index"):
-                        build_receipt.emit(build, pushes, runner, runner_hash)
             with self.assertRaises(ValueError):
                 build_receipt.emit(build, pushes[:-1], runner, runner_hash)
             invalid = copy.deepcopy(pushes)
@@ -328,15 +237,6 @@ docker() {
 
     def test_provenance_guards_fail_when_broken(self):
         mutations = [
-            (build_receipt, "emit", '("10.0.20348.", "10.0.26100.")', '("10.0.20348.",)',
-             "test_exact_complete_build_is_required"),
-            (build_receipt, "emit", 'or len({image["indexRef"] for image in windows}) != 1', "",
-             "test_exact_complete_build_is_required"),
-            (build_receipt, "emit", 'image["arch"] == "amd64" and image.get("osVersion", "")',
-             'image.get("osVersion", "")', "test_exact_complete_build_is_required"),
-            (build_receipt, "resolve_images",
-             'if descriptor.get("os.version") not in (None, image["osVersion"]):',
-             "if False:", "test_exact_complete_build_is_required"),
             (build_receipt, "emit",
              'if pushed["commit"] != source["commit"] or str(pushed["buildId"]) != source["buildId"]:',
              "if False:", "test_exact_complete_build_is_required"),

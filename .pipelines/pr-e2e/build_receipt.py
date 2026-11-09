@@ -131,13 +131,10 @@ def emit(build, pushes, runner, runner_sha256):
     required = {("collector", "linux", "amd64"), ("collector", "linux", "arm64"),
                 ("targetallocator", "linux", "amd64"), ("config-reader", "linux", "amd64")}
     actual = {(image["name"], image["os"], image["arch"]) for image in images}
-    windows = [image for image in images if image["name"] == "collector" and image["os"] == "windows"]
-    if (not required <= actual
-            or any(not any(image["arch"] == "amd64" and image.get("osVersion", "").startswith(family)
-                           for image in windows)
-                   for family in ("10.0.20348.", "10.0.26100."))
-            or len({image["indexRef"] for image in windows}) != 1):
-        raise ValueError("Missing common-index Windows2022/Windows2025 or other required candidate images")
+    if not required <= actual or not any(
+            image["name"] == "collector" and image["os"] == "windows"
+            and image.get("osVersion", "").startswith("10.0.20348.") for image in images):
+        raise ValueError("Missing required collector/Windows2022/allocator/config-reader candidate images")
     return receipt
 
 
