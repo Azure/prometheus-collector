@@ -463,7 +463,15 @@ class Contracts(unittest.TestCase):
             self.assertIn("@Request", proof["condition"])
             self.assertIn("@Resource", proof["condition"])
             self.assertEqual(host.receipt["rbacDelegationId"], proof["assignmentId"])
-            self.assertIn("--scope " + proof["scope"], (evidence / "rbac-bootstrap.ps1").read_text())
+            command = (evidence / "rbac-bootstrap.ps1").read_text()
+            self.assertIn("--scope " + proof["scope"], command)
+            self.assertIn("AddMinutes(10)", command)
+            self.assertIn("do {", command)
+            self.assertIn("$output = & az role assignment create", command)
+            self.assertIn("if ($exitCode -eq 0) { $output; break }", command)
+            self.assertIn("authorizationfailed", command)
+            self.assertIn("microsoft.authorization/roleassignments/write", command)
+            self.assertIn("} while ($true)", command)
             host.az = Mock(return_value=[])
             with patch.object(runner.time, "monotonic", side_effect=[0, 1200]), \
                     patch("sys.stdout", new=io.StringIO()):
@@ -582,7 +590,8 @@ class Contracts(unittest.TestCase):
             deployment_calls = [call for call in host.az.call_args_list
                                 if call.args[:3] == ("deployment", "group", "create")]
             self.assertGreater(len(deployment_calls), 1)
-            self.assertLessEqual(sum(delays), 300)
+            self.assertGreater(sum(delays), 300)
+            self.assertLessEqual(sum(delays), 600)
 
     def test_pin_only_candidate_workloads_and_require_all_components(self):
         document = {"kind": "Deployment", "metadata": {"name": "ama-metrics"},

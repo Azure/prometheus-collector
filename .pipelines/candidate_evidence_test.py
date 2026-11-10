@@ -462,6 +462,15 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn(".pipelines/candidate_coverage.py", steps[gate]["bash"])
         self.assertEqual(steps[gate]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
 
+    def test_candidate_scenarios_depend_only_on_aggregate_capacity(self):
+        pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
+        expansion = next(stage for stage in pipeline["stages"]
+                         if any(key.startswith("${{ each scenario") for key in stage))
+        loop = expansion[next(key for key in expansion if key.startswith("${{ each scenario"))]
+        conditional = loop[0]
+        stage = conditional[next(key for key in conditional if key.startswith("${{ if or("))][0]
+        self.assertEqual(stage["dependsOn"], ["CandidateCapacity"])
+
     def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         capacity = pipeline["stages"][1]

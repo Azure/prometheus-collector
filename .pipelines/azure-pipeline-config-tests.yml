@@ -1306,23 +1306,6 @@ stages:
       displayName: Candidate ${{ scenario }}
       dependsOn:
       - CandidateCapacity
-      - ${{ if eq(parameters.candidateScenario, 'all') }}:
-        - ${{ if eq(scenario, 'linux') }}:
-          - Candidate_default
-        - ${{ if eq(scenario, 'settings') }}:
-          - Candidate_linux
-        - ${{ if eq(scenario, 'classic-azure-cni') }}:
-          - Candidate_settings
-        - ${{ if eq(scenario, 'mixed') }}:
-          - Candidate_classic_azure_cni
-        - ${{ if eq(scenario, 'autoscaler') }}:
-          - Candidate_mixed
-        - ${{ if eq(scenario, 'uai') }}:
-          - Candidate_autoscaler
-        - ${{ if eq(scenario, 'cilium') }}:
-          - Candidate_uai
-        - ${{ if eq(scenario, 'kubenet') }}:
-          - Candidate_cilium
       condition: and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))
       variables:
         candidateLocation: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.location_${{ replace(scenario, '-', '_') }}'] ]

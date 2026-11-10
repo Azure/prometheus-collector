@@ -178,9 +178,11 @@ Failed deployments retain `deployment-error.txt` with secret-bearing environment
 values redacted. Command history survives a separate explicit cleanup invocation.
 Service-principal runs create their owned resource group, then wait up to 20 minutes
 for an administrator bootstrap before deploying. The runner prints the exact
-`az role assignment create` command and saves `rbac-bootstrap.ps1` plus
-`rbac-bootstrap.json`. An authorized administrator runs that command in their own
-Azure session; no token or credential is transferred to the runner.
+`az role assignment create` command in `rbac-bootstrap.ps1` plus
+`rbac-bootstrap.json`. An authorized administrator runs the script in their own
+Azure session; it retries only `AuthorizationFailed` on
+`Microsoft.Authorization/roleAssignments/write` for at most 10 minutes. No token
+or credential is transferred to the runner.
 The delegation is **Role Based Access Control Administrator**, scoped only to this
 new group, with condition version 2.0 restricting both assignment creation and
 deletion to Network Contributor and Monitoring Data Reader for service principals.
@@ -189,7 +191,9 @@ User Access Administrator or itself. A precreated group is still refused.
 The gate requires the exact principal, group, role and condition; missing or wider
 delegations do not satisfy it. Timeout fails and retains any created resources for
 inspection. Actual ARM deployment remains the permission-propagation check, not
-the presence of a grant. The authorized Owner identity removes the exact
+the presence of a grant. That deployment retries the same authorization failure
+for at most 10 minutes; this treats propagation/cache delay as plausible, not
+confirmed. The authorized Owner identity removes the exact
 temporary administrator assignment after a successful run; the narrower
 workload roles remain with the retained cluster. The pipeline identity cannot
 delete its own conditional administrator assignment, so run this action from the

@@ -349,7 +349,7 @@ class Host:
                 f"expiresAt={env['SCENARIO_EXPIRES_AT']}")
         if principal_type == "ServicePrincipal":
             self.wait_for_rbac(principal)
-        retry_deadline = time.monotonic() + 300
+        retry_deadline = time.monotonic() + 600
         retry_delay = 5
         while True:
             try:
@@ -389,9 +389,24 @@ class Host:
             allowed.append(RBAC_PROXY_READER)
         condition = rbac_condition(allowed)
         command = (
-            f"az role assignment create --subscription {self.args.subscription} "
+            "$deadline = [DateTimeOffset]::UtcNow.AddMinutes(10)\n"
+            "$delay = 5\n"
+            "do {\n"
+            f"  $output = & az role assignment create --subscription {self.args.subscription} "
             f"--assignee-object-id {principal} --assignee-principal-type ServicePrincipal "
-            f"--role {RBAC_ADMIN_ROLE} --scope {scope} --condition-version 2.0 --condition \"{condition}\"")
+            f"--role {RBAC_ADMIN_ROLE} --scope {scope} --condition-version 2.0 "
+            f"--condition \"{condition}\" 2>&1\n"
+            "  $exitCode = $LASTEXITCODE\n"
+            "  if ($exitCode -eq 0) { $output; break }\n"
+            "  $detail = $output | Out-String\n"
+            "  if ($detail -notmatch '(?i)authorizationfailed' -or "
+            "$detail -notmatch '(?i)microsoft.authorization/roleassignments/write' -or "
+            "[DateTimeOffset]::UtcNow -ge $deadline) { throw $detail }\n"
+            "  $remaining = [int][Math]::Floor(($deadline - [DateTimeOffset]::UtcNow).TotalSeconds)\n"
+            "  if ($remaining -le 0) { throw $detail }\n"
+            "  Start-Sleep -Seconds ([Math]::Min($delay, $remaining))\n"
+            "  $delay = [Math]::Min($delay * 2, 30)\n"
+            "} while ($true)")
         proof = {"scope": scope, "principalId": principal, "roleDefinitionId": RBAC_ADMIN_ROLE,
                  "allowedRoleDefinitionIds": allowed, "condition": condition, "status": "waiting"}
         self.receipt["rbacBootstrapScope"] = scope
