@@ -495,6 +495,83 @@ class Contracts(unittest.TestCase):
             host.cleanup()
             self.assertTrue(runner.load(args.evidence / "cleanup.json")["rbacDelegationRemoved"])
 
+    def test_provision_retries_only_role_assignment_authorization_propagation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                         location="eastus2")
+            host = runner.Host(args, scenario(), Mock())
+            outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+            failure = RuntimeError(
+                "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")
+            host.az = Mock(side_effect=[
+                "false", None, failure,
+                {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
+            ])
+            with patch.object(host, "wait_for_rbac"), \
+                    patch.object(runner.time, "monotonic", side_effect=[0, 0, 5]), \
+                    patch.object(runner.time, "sleep") as sleep, \
+                    patch("sys.stdout", new=io.StringIO()):
+                self.assertEqual(host.provision({"SCENARIO_EXPIRES_AT": "future"},
+                                                "principal", "ServicePrincipal"), outputs)
+            deployment_calls = [call for call in host.az.call_args_list
+                                if call.args[:3] == ("deployment", "group", "create")]
+            self.assertEqual(len(deployment_calls), 2)
+            sleep.assert_called_once_with(5)
+
+    def test_provision_fails_immediately_for_other_deployment_errors(self):
+        for principal_type, failure in (
+                ("ServicePrincipal", "AuthorizationFailed: Microsoft.Compute/virtualMachines/write"),
+                ("ServicePrincipal", "InvalidTemplate: Microsoft.Authorization/roleAssignments/write"),
+                ("User", "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")):
+            with self.subTest(principal_type=principal_type), tempfile.TemporaryDirectory() as temporary:
+                args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                             location="eastus2")
+                host = runner.Host(args, scenario(), Mock())
+                host.az = Mock(side_effect=["false", None, RuntimeError(failure)])
+                with patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
+                    with self.assertRaises(RuntimeError) as error:
+                        host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", principal_type)
+                self.assertEqual(str(error.exception), failure)
+                deployment_calls = [call for call in host.az.call_args_list
+                                    if call.args[:3] == ("deployment", "group", "create")]
+                self.assertEqual(len(deployment_calls), 1)
+                sleep.assert_not_called()
+
+    def test_provision_bounds_role_assignment_retries_to_five_minutes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                         location="eastus2")
+            host = runner.Host(args, scenario(), Mock())
+            now, delays = [0], []
+            failure = RuntimeError(
+                "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")
+
+            def az(*command, **kwargs):
+                if command[:2] == ("group", "exists"):
+                    return "false"
+                if command[:2] == ("group", "create"):
+                    return None
+                if command[:3] == ("deployment", "group", "create"):
+                    raise failure
+                raise AssertionError(f"Unexpected command: {command}")
+
+            host.az = Mock(side_effect=az)
+
+            def sleep(delay):
+                delays.append(delay)
+                now[0] += delay
+
+            with patch.object(host, "wait_for_rbac"), \
+                    patch.object(runner.time, "monotonic", side_effect=lambda: now[0]), \
+                    patch.object(runner.time, "sleep", side_effect=sleep), \
+                    patch("sys.stdout", new=io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "roleAssignments/write"):
+                    host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", "ServicePrincipal")
+            deployment_calls = [call for call in host.az.call_args_list
+                                if call.args[:3] == ("deployment", "group", "create")]
+            self.assertGreater(len(deployment_calls), 1)
+            self.assertLessEqual(sum(delays), 300)
+
     def test_pin_only_candidate_workloads_and_require_all_components(self):
         document = {"kind": "Deployment", "metadata": {"name": "ama-metrics"},
                     "spec": {"template": {"spec": {"containers": [

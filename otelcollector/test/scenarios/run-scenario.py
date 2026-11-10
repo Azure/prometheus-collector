@@ -349,9 +349,29 @@ class Host:
                 f"expiresAt={env['SCENARIO_EXPIRES_AT']}")
         if principal_type == "ServicePrincipal":
             self.wait_for_rbac(principal)
-        result = self.az("deployment", "group", "create", "--resource-group", name,
-                         "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
-                         env=env, json_output=True, private=True)
+        retry_deadline = time.monotonic() + 300
+        retry_delay = 5
+        while True:
+            try:
+                result = self.az("deployment", "group", "create", "--resource-group", name,
+                                 "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
+                                 env=env, json_output=True, private=True)
+                break
+            except RuntimeError as error:
+                detail = str(error).casefold()
+                if (principal_type != "ServicePrincipal"
+                        or "authorizationfailed" not in detail
+                        or "microsoft.authorization/roleassignments/write" not in detail):
+                    raise
+                remaining = retry_deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                delay = min(retry_delay, remaining)
+                print(f"Role-assignment authorization is propagating; retrying in {delay:g}s", flush=True)
+                time.sleep(delay)
+                if time.monotonic() >= retry_deadline:
+                    raise
+                retry_delay = min(retry_delay * 2, 30)
         outputs = {key: value["value"] for key, value in result["properties"]["outputs"].items()}
         managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
         if any(not isinstance(group, str) or not group for group in managed_groups):
