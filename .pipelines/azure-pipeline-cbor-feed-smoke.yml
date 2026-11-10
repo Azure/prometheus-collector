@@ -1,0 +1,96 @@
+trigger: none
+pr: none
+
+parameters:
+- name: targets
+  type: object
+  default:
+  - name: Linux
+    image: ci-1es-managed-ubuntu-2204
+  - name: Windows
+    image: ci-1es-managed-windows-2022
+
+variables:
+  PIP_EXTRA_INDEX_URL: ''
+  PIP_FIND_LINKS: ''
+  PIP_QUIET: '1'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_FORCE_REINSTALL: '1'
+  PIP_NO_CACHE_DIR: '1'
+
+jobs:
+- ${{ each target in parameters.targets }}:
+  - job: ${{ target.name }}
+    timeoutInMinutes: 20
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      demands:
+      - ImageOverride -equals ${{ target.image }}
+    steps:
+    - checkout: self
+      fetchDepth: 1
+      persistCredentials: false
+    - pwsh: |
+        $ErrorActionPreference = 'Stop'
+        $nullDevice = if ($IsWindows) { 'nul' } else { '/dev/null' }
+        Write-Host "##vso[task.setvariable variable=PIP_CONFIG_FILE]$nullDevice"
+        $fixture = '0oRAoRghglgYbGVhZiBjZXJ0aWZpY2F0ZSBmaXh0dXJlWBppc3N1ZXIgY2VydGlmaWNhdGUgZml4dHVyZUBA'
+        [IO.File]::WriteAllBytes((Join-Path $env:AGENT_TEMPDIRECTORY 'payload.json'), [Convert]::FromBase64String($fixture))
+      displayName: Prepare deterministic extraction fixture and isolated pip configuration
+    - template: azure-template-notary-annotations.yml
+      parameters:
+        workingDirectory: $(Agent.TempDirectory)
+    - task: PythonScript@0
+      displayName: Verify feed, job identity, annotations and unchanged payload
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      inputs:
+        scriptSource: inline
+        workingDirectory: $(Agent.TempDirectory)
+        script: |
+          import base64
+          import importlib.metadata
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import subprocess
+          import sys
+          import urllib.parse
+          import urllib.request
+
+          assert sys.version_info[:2] == (3, 13), sys.version
+          index = urllib.parse.urlsplit(os.environ["PIP_INDEX_URL"])
+          assert index.scheme == "https"
+          assert index.hostname == "pkgs.dev.azure.com", "Unexpected primary feed host"
+          assert index.path.lower() == "/github-private/azure/_packaging/vmwatch/pypi/simple", "Unexpected primary feed path"
+          assert index.username and index.password, "Missing feed credentials"
+          assert not os.environ.get("PIP_EXTRA_INDEX_URL"), "Extra pip index is forbidden"
+          assert not os.environ.get("PIP_FIND_LINKS"), "pip find-links is forbidden"
+          assert os.environ["PIP_CONFIG_FILE"] == os.devnull
+          config = subprocess.check_output([sys.executable, "-m", "pip", "config", "list"], text=True)
+          source_keys = [line.split("=", 1)[0] for line in config.splitlines() if "index-url=" in line and not line.endswith("=''")]
+          assert source_keys == [":env:.index-url"], "Unexpected pip index configuration keys"
+          print("Effective pip source: https://pkgs.dev.azure.com/github-private/azure/_packaging/VMWatch/pypi/simple; no extra index or find-links; config files disabled")
+
+          request = urllib.request.Request(
+              os.environ["SYSTEM_COLLECTIONURI"] + "_apis/connectionData?api-version=7.1-preview.1",
+              headers={"Authorization": "Bearer " + os.environ["SYSTEM_ACCESSTOKEN"]},
+          )
+          with urllib.request.urlopen(request) as response:
+              identity = json.load(response)["authenticatedUser"]
+          print("Actual job identity:", identity["providerDisplayName"], identity["id"])
+          assert identity["providerDisplayName"] == "azure Build Service (github-private)", "Unexpected job identity"
+          expected = {
+              "$manifest": {
+                  "io.cncf.notary.x509chain.thumbprint#S256": json.dumps([
+                      "a7cef11e6422ced475c9d93dc483a0ae61527a6fe8b79b8cde36c67c13283311",
+                      "50a8bc6e423bd4b416568ff78495e56f6a4cd4ba419cba559c3f0d4e9ce91fa1",
+                  ])
+              }
+          }
+          assert json.loads(Path("signature-annotations.json").read_text()) == expected
+          fixture = "0oRAoRghglgYbGVhZiBjZXJ0aWZpY2F0ZSBmaXh0dXJlWBppc3N1ZXIgY2VydGlmaWNhdGUgZml4dHVyZUBA"
+          assert Path("payload.json").read_bytes() == base64.b64decode(fixture)
+          print("Python:", platform.python_version(), "cbor2:", importlib.metadata.version("cbor2"), "OS:", platform.platform())
+          print("PASS: exact annotation shape, ordered lowercase SHA256 fingerprints, byte-identical payload")
