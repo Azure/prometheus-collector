@@ -253,6 +253,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         selection = next(iter(next(iter(pipeline["stages"][2].values()))[0]))
         self.assertIn("eq(parameters.candidateScenario, 'all')", selection)
         self.assertIn("eq(parameters.candidateScenario, scenario)", selection)
+        self.assertEqual(candidate_stage["condition"],
+                         "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
         self.assertIn("${{ scenario }}", jobs[1]["variables"]["candidateAttempt"])
         self.assertEqual(jobs[1]["environment"], "Prometheus-Collector-Tests")
         producer = pipeline["resources"]["pipelines"][0]
@@ -425,6 +427,40 @@ class CandidateEvidenceTest(unittest.TestCase):
                 plan(root, "default")
         with self.assertRaisesRegex(ValueError, "Unsupported candidate"):
             plan(root, "customer-helm")
+
+    def test_candidate_coverage_gate_fails_and_preserves_blocker_report(self):
+        root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
+        script = Path(__file__).with_name("candidate_coverage.py")
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "coverage.json"
+            result = subprocess.run(
+                [sys.executable, str(script), "--root", str(root), "--scenario", "default",
+                 "--output", str(output), "--require-unblocked"],
+                capture_output=True, text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Candidate coverage gate blocked:", result.stderr)
+            self.assertTrue(output.exists(), result.stderr)
+            report = json.loads(output.read_text())
+            self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
+            self.assertEqual(len(report["blockedScenarios"]), 13)
+            self.assertEqual(len(report["blockedVariants"]), 5)
+            self.assertEqual([item["id"] for item in report["blockedTestSuites"]], ["regionTests"])
+
+    def test_candidate_coverage_gate_runs_after_tests_and_before_evidence_publish(self):
+        steps = yaml.safe_load(
+            (Path(__file__).parent / "azure-template-candidate-config-tests.yml").read_text()
+        )["steps"]
+        results = next(i for i, step in enumerate(steps) if step.get("task") == "PublishTestResults@2")
+        gate = next(i for i, step in enumerate(steps)
+                    if step.get("displayName") == "Gate candidate approval on complete scenario coverage")
+        artifact = next(i for i, step in enumerate(steps) if step.get("task") == "PublishPipelineArtifact@1")
+        self.assertLess(results, gate)
+        self.assertLess(gate, artifact)
+        self.assertEqual(steps[gate]["condition"], "always()")
+        self.assertIn("--require-unblocked", steps[gate]["bash"])
+        self.assertIn(".pipelines/candidate_coverage.py", steps[gate]["bash"])
+        self.assertEqual(steps[gate]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
 
     def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())

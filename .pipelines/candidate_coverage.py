@@ -51,8 +51,17 @@ if __name__ == "__main__":
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--require-unblocked", action="store_true")
     args = parser.parse_args()
     result = plan(args.root, args.scenario)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result))
+    blockers = (len(result["blockedScenarios"]), len(result["blockedVariants"]),
+                len(result["blockedTestSuites"]))
+    if args.require_unblocked and any(blockers):
+        raise SystemExit(
+            "Candidate coverage gate blocked: "
+            f"{blockers[0]} scenarios, {blockers[1]} settings variants, "
+            f"{blockers[2]} test suites remain blocked"
+        )

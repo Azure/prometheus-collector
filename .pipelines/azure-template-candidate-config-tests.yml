@@ -327,6 +327,19 @@ steps:
     failTaskOnMissingResultsFile: true
     testRunTitle: Candidate ${{ parameters.scenario }} producer ${{ parameters.producerBuildId }} source ${{ parameters.sourceSha }}
 
+- bash: |
+    set -euo pipefail
+    "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_coverage.py" \
+      --root "$CANDIDATE_ROOT/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
+      --output "$CANDIDATE_EVIDENCE/coverage.json" --require-unblocked
+  displayName: "Gate candidate approval on complete scenario coverage"
+  condition: always()
+  env:
+    CANDIDATE_ROOT: $(candidateRoot)
+    CANDIDATE_EVIDENCE: $(candidateEvidence)
+    CANDIDATE_SCENARIO: ${{ parameters.scenario }}
+    PYTHON: $(candidatePython)/bin/python
+
 - task: PublishPipelineArtifact@1
   displayName: "Always retain candidate TestKube, resource and SRE scan evidence"
   condition: always()
