@@ -63,7 +63,7 @@ jobs:
           index = urllib.parse.urlsplit(os.environ["PIP_INDEX_URL"])
           assert index.scheme == "https"
           assert index.hostname == "pkgs.dev.azure.com", "Unexpected primary feed host"
-          assert index.path.lower() == "/github-private/azure/_packaging/vmwatch/pypi/simple", "Unexpected primary feed path"
+          assert index.path.lower().rstrip("/") == "/github-private/azure/_packaging/vmwatch/pypi/simple", "Unexpected primary feed path"
           assert index.username and index.password, "Missing feed credentials"
           assert not os.environ.get("PIP_EXTRA_INDEX_URL"), "Extra pip index is forbidden"
           assert not os.environ.get("PIP_FIND_LINKS"), "pip find-links is forbidden"
