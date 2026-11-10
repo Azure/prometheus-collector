@@ -439,6 +439,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
         - bash: |
             set -euxo pipefail
             curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -449,7 +452,7 @@ extends:
             oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
-              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+              --annotation-file ./signature-annotations.json
             oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
               --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
@@ -613,6 +616,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
         - powershell: |
             curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
             $currentDirectory = Get-Location
@@ -620,7 +626,8 @@ extends:
             New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
             Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
             $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-            oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+            oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose --annotation-file ./signature-annotations.json
+            if ($LASTEXITCODE -ne 0) { throw "Attaching Notary signature failed" }
             oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
           workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
           displayName: "Download, install Oras and run oras attach"
@@ -1052,6 +1059,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         - bash: |
             set -euxo pipefail
             curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -1062,7 +1072,7 @@ extends:
             oras attach $(LINUX_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
-              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+              --annotation-file ./signature-annotations.json
             oras attach $(LINUX_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
               --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
@@ -1232,6 +1242,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
         - bash: |
             set -euxo pipefail
             curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -1242,7 +1255,7 @@ extends:
             oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
-              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+              --annotation-file ./signature-annotations.json
             oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
               --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"            
@@ -1571,6 +1584,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
         - bash: |
             set -euxo pipefail
             curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -1581,7 +1597,7 @@ extends:
             oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
-              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+              --annotation-file ./signature-annotations.json
             oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
               --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
@@ -1691,6 +1707,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
         - bash: |
             set -euxo pipefail
             curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -1701,7 +1720,7 @@ extends:
             oras attach $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.cncf.notary.signature' \
               ./payload.json:application/cose \
-              -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+              --annotation-file ./signature-annotations.json
             oras attach $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) \
               --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
               --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"              
@@ -1721,30 +1740,28 @@ extends:
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
           WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
+          GOTOOLCHAIN: local
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: GoTool@0
+          displayName: "Build: install Microsoft Go $(GOLANG_VERSION)"
+          inputs:
+            version: '$(GOLANG_VERSION)'
+            goDownloadUrl: 'https://aka.ms/golang/release/latest'
           retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+        - task: GoTool@0
+          displayName: "Build: install fluent-bit Microsoft Go $(FLUENTBIT_GOLANG_VERSION)"
+          inputs:
+            version: '$(FLUENTBIT_GOLANG_VERSION)'
+            goDownloadUrl: 'https://aka.ms/golang/release/latest'
           retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Building Fluent Bit plugin failed" }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
@@ -1897,30 +1914,28 @@ extends:
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
           WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
+          GOTOOLCHAIN: local
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
+        - task: GoTool@0
+          displayName: "Build: install Microsoft Go $(GOLANG_VERSION)"
+          inputs:
+            version: '$(GOLANG_VERSION)'
+            goDownloadUrl: 'https://aka.ms/golang/release/latest'
           retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
           displayName: "Build: build otelcollector and promconfigvalidator"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+        - task: GoTool@0
+          displayName: "Build: install fluent-bit Microsoft Go $(FLUENTBIT_GOLANG_VERSION)"
+          inputs:
+            version: '$(FLUENTBIT_GOLANG_VERSION)'
+            goDownloadUrl: 'https://aka.ms/golang/release/latest'
           retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Building Fluent Bit plugin failed" }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
@@ -2191,6 +2206,9 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
             PendingAnalysisWaitTimeoutMinutes: '5'
+        - template: /.pipelines/azure-template-notary-annotations.yml@self
+          parameters:
+            workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         - powershell: |
             curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
             $currentDirectory = Get-Location
@@ -2198,7 +2216,8 @@ extends:
             New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
             Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
             $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-            oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+            oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose --annotation-file ./signature-annotations.json
+            if ($LASTEXITCODE -ne 0) { throw "Attaching Notary signature failed" }
             oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
           workingDirectory: $(Build.ArtifactStagingDirectory)/windows
           displayName: "Download, install Oras and run oras attach"

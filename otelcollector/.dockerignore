@@ -1,0 +1,24 @@
+# Shared context for Linux, Windows (legacy builder), CCP and config-reader images.
+**
+!fluent-bit/
+!prometheus-ui/
+!opentelemetry-collector-builder/
+!prometheusreceiver/
+!prom-config-validator-builder/
+!configuration-reader-builder/
+!shared/
+!main/
+!go.mod
+!go.sum
+!logrotate/
+!configmapparser/default-prom-configs/*.yml
+!scripts/*.sh
+!metricextension/*.config
+!LICENSE
+!NOTICE
+!mdsd/envmdsd
+!build/linux/rpm-repos/
+!build/windows/scripts/setup.ps1
+**/.git
+**/.env
+**/.env.*
