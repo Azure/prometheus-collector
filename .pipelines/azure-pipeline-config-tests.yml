@@ -1225,6 +1225,8 @@ stages:
         [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$sha" && -z "$(git -C "$CAPACITY_ROOT" status --porcelain)" ]]
         echo "##vso[task.setvariable variable=capacitySourceSha]$sha"
         echo "##vso[task.setvariable variable=capacityProducerBuildId]$producer"
+        # Also applies to apt invocations inside the Azure CLI installer.
+        echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99ama-metrics-lock-timeout >/dev/null
         command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
         az bicep install
         sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
@@ -1282,6 +1284,15 @@ stages:
         PRODUCER_BUILD_ID: $(capacityProducerBuildId)
         CANDIDATE_SCENARIO: ${{ parameters.candidateScenario }}
         PYTHON: $(capacityPython)/bin/python
+    - bash: |
+        set -euo pipefail
+        mkdir -p "$CAPACITY_EVIDENCE"
+        printf 'Job status: %s\nThis diagnostic is not capacity admission proof; require the source-bound campaign-preflight.json PASS.\n' \
+          "$AGENT_JOBSTATUS" > "$CAPACITY_EVIDENCE/job-status.txt"
+      displayName: Retain capacity job diagnostic even when setup fails
+      condition: always()
+      env:
+        CAPACITY_EVIDENCE: $(capacityEvidence)
     - task: PublishPipelineArtifact@1
       displayName: Retain point-in-time aggregate capacity admission, not a reservation
       condition: always()

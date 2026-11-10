@@ -114,6 +114,7 @@ steps:
 - bash: |
     set -euo pipefail
     # The managed candidate image lacks unzip for HelmInstaller, and az/Bicep for AzureCLI tasks and the harness.
+    echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99ama-metrics-lock-timeout >/dev/null
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
     command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash

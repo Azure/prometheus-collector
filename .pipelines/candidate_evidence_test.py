@@ -16,6 +16,43 @@ from candidate_coverage import SCENARIOS, plan
 
 
 class CandidateEvidenceTest(unittest.TestCase):
+    def test_candidate_installers_wait_for_dpkg_lock(self):
+        root = Path(__file__).parent
+        pipeline = yaml.safe_load((root / "azure-pipeline-config-tests.yml").read_text())
+        capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
+        prepare = next(step["bash"] for step in capacity["jobs"][0]["steps"]
+                       if step.get("displayName") == "Prepare exact-source read-only capacity tools")
+        template = yaml.safe_load((root / "azure-template-candidate-config-tests.yml").read_text())
+        install = next(step["bash"] for step in template["steps"]
+                       if step.get("displayName") == "Install candidate host prerequisites")
+        for script in (prepare, install):
+            with self.subTest(script=script):
+                config = script.index('DPkg::Lock::Timeout "300";')
+                self.assertIn("/etc/apt/apt.conf.d/99ama-metrics-lock-timeout", script)
+                self.assertLess(config, script.index("https://aka.ms/InstallAzureCLIDeb"))
+                if "sudo apt-get" in script:
+                    self.assertLess(config, script.index("sudo apt-get"))
+
+    def test_capacity_failure_retains_diagnostic_without_admission_claim(self):
+        pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
+        capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
+        steps = capacity["jobs"][0]["steps"]
+        diagnostic = next(step for step in steps
+                          if step.get("displayName") == "Retain capacity job diagnostic even when setup fails")
+        self.assertEqual(diagnostic["condition"], "always()")
+        publish = next(step for step in steps if step.get("task") == "PublishPipelineArtifact@1")
+        self.assertLess(steps.index(diagnostic), steps.index(publish))
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / "not-created-by-failed-setup"
+            result = subprocess.run(["bash", "-c", diagnostic["bash"]], capture_output=True, text=True,
+                                    env={**os.environ, "CAPACITY_EVIDENCE": evidence.as_posix(),
+                                         "AGENT_JOBSTATUS": "Failed"})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Failed", (evidence / "job-status.txt").read_text())
+            self.assertIn("not capacity admission proof", (evidence / "job-status.txt").read_text())
+            self.assertFalse((evidence / "campaign-preflight.json").exists())
+            self.assertNotIn("task.setvariable", result.stdout)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
