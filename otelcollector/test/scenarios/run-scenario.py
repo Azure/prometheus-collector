@@ -383,7 +383,8 @@ class Host:
         deadline = time.monotonic() + 1200
         while True:
             self.assert_owned()
-            assignments = self.az("role", "assignment", "list", "--scope", scope, "--all", json_output=True)
+            assignments = self.az("role", "assignment", "list", "--resource-group",
+                                  self.receipt["resourceGroup"], json_output=True)
             for assignment in assignments:
                 if (assignment.get("scope", "").casefold() == scope.casefold()
                         and assignment.get("principalId", "").casefold() == principal.casefold()
@@ -556,7 +557,7 @@ class Host:
         self.assert_owned()
         if self.az("account", "show", "--query", "user.type").strip().casefold() != "user":
             raise ValueError("Bootstrap revocation requires the authorized user Azure identity")
-        assignments = self.az("role", "assignment", "list", "--scope", scope, "--all",
+        assignments = self.az("role", "assignment", "list", "--resource-group", group,
                               json_output=True, private=True)
         matches = [row for row in assignments
                    if row.get("id", "").casefold() == assignment_id.casefold()]
@@ -575,7 +576,7 @@ class Host:
                     if row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() in allowed_roles}
         if matches:
             self.az("role", "assignment", "delete", "--ids", assignment_id)
-        remaining = self.az("role", "assignment", "list", "--scope", scope, "--all",
+        remaining = self.az("role", "assignment", "list", "--resource-group", group,
                             json_output=True, private=True)
         remaining_ids = {row["id"].casefold() for row in remaining}
         if assignment_id.casefold() in remaining_ids:

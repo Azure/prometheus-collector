@@ -446,6 +446,14 @@ class Contracts(unittest.TestCase):
             with patch.object(runner.time, "sleep") as sleep, patch("sys.stdout", new=io.StringIO()):
                 host.wait_for_rbac(principal)
             sleep.assert_called_once_with(30)
+            listing_calls = [call.args for call in host.az.call_args_list
+                             if call.args[:3] == ("role", "assignment", "list")]
+            self.assertEqual(len(listing_calls), 2)
+            for command in listing_calls:
+                self.assertIn("--resource-group", command)
+                self.assertEqual(command[command.index("--resource-group") + 1], "owned")
+                self.assertNotIn("--scope", command)
+                self.assertNotIn("--all", command)
             proof = runner.load(evidence / "rbac-bootstrap.json")
             self.assertEqual(proof["status"], "granted")
             self.assertEqual(len(proof["allowedRoleDefinitionIds"]), 2)
@@ -461,6 +469,11 @@ class Contracts(unittest.TestCase):
                     patch("sys.stdout", new=io.StringIO()):
                 with self.assertRaisesRegex(RuntimeError, "not confirmed"):
                     host.wait_for_rbac(principal)
+                timeout_command = host.az.call_args.args
+                self.assertIn("--resource-group", timeout_command)
+                self.assertEqual(timeout_command[timeout_command.index("--resource-group") + 1], "owned")
+                self.assertNotIn("--scope", timeout_command)
+                self.assertNotIn("--all", timeout_command)
 
     def test_rbac_bootstrap_is_before_deployment_and_cleanup_verifies_delegation_absence(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -644,6 +657,14 @@ class Contracts(unittest.TestCase):
             host = runner.Host(types.SimpleNamespace(evidence=evidence, subscription=subscription), {}, Mock())
             host.az = Mock(side_effect=[{"tags": tags}, "user", assignments, "", assignments[1:]])
             host.revoke_bootstrap()
+            listing_calls = [call.args for call in host.az.call_args_list
+                            if call.args[:3] == ("role", "assignment", "list")]
+            self.assertEqual(len(listing_calls), 2)
+            for command in listing_calls:
+                self.assertIn("--resource-group", command)
+                self.assertEqual(command[command.index("--resource-group") + 1], group)
+                self.assertNotIn("--scope", command)
+                self.assertNotIn("--all", command)
             deleted = [call.args for call in host.az.call_args_list
                        if call.args[:3] == ("role", "assignment", "delete")]
             self.assertEqual(deleted, [("role", "assignment", "delete", "--ids", assignment_id)])
