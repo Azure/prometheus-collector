@@ -50,11 +50,17 @@ $vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
 $vcArgs = "/install /quiet /norestart"
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation
-Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait
-Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin
+Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
+# Start-Process -Wait also waits for installer-spawned services to exit.
+$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
+$vcInstaller.WaitForExit()
+Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
+if ($vcInstaller.ExitCode -notin @(0, 3010)) {
+    throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
+}
+Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ############################################################################################
 Write-Host ('Installing Telegraf');
