@@ -1,6 +1,6 @@
 module prometheus-collector
 
-go 1.25.0
+go 1.26.0
 
 replace github.com/prometheus-collector/shared => ./shared
 
@@ -9,9 +9,11 @@ replace github.com/prometheus-collector/shared/configmap/mp => ./shared/configma
 replace github.com/prometheus-collector/shared/configmap/ccp => ./shared/configmap/ccp
 
 require (
+	github.com/go-task/slim-sprig/v3 v3.0.0
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/ccp v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -34,9 +36,9 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -46,5 +48,4 @@ require (
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
