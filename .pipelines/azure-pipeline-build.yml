@@ -1724,6 +1724,10 @@ extends:
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
         - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
+        - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
             Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
@@ -1899,6 +1903,10 @@ extends:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
+        - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
