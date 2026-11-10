@@ -5,6 +5,18 @@ $block = [regex]::Match($setup, "(?s)Write-Host \('Installing Visual C\+\+ Redis
 if (-not $block.Success) { throw 'VC++ setup block not found' }
 $install = [scriptblock]::Create($block.Value)
 
+$processBlock = [regex]::Match($block.Value, '(?s)\$vcInstaller = .*?(?=Copy-Item)')
+if (-not $processBlock.Success) { throw 'Installer process wait not found' }
+$waitForInstaller = [scriptblock]::Create($processBlock.Value)
+foreach ($code in @(0, 3010, 1603)) {
+    $vcInstallerLocation = $env:ComSpec
+    $vcArgs = "/c exit $code"
+    $failed = $false
+    try { & $waitForInstaller *> $null } catch { $failed = $true }
+    if ($failed -ne ($code -eq 1603)) { throw "Native process exit code mishandled: $code" }
+    Write-Host "PASS: native exit code $code"
+}
+
 function Invoke-WebRequest {
     param($Uri, $OutFile, $ErrorAction)
     if ($script:scenario -eq 'download-failure') { throw 'Download failed' }

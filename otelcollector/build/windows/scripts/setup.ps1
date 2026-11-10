@@ -53,6 +53,8 @@ $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
 # Start-Process -Wait also waits for installer-spawned services to exit.
 $vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
+# Retain the process handle so Windows PowerShell can read ExitCode after exit.
+$vcInstaller.Handle | Out-Null
 $vcInstaller.WaitForExit()
 Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
 if ($vcInstaller.ExitCode -notin @(0, 3010)) {
