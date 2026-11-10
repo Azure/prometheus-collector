@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot 'Test-MicrosoftSignature.ps1')
+
 Write-Host ('Creating folder structure')
 New-Item -Type Directory -Path /installation/ME/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /installation/fluent-bit/ -ErrorAction SilentlyContinue
@@ -16,9 +18,16 @@ New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyCon
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.227.1509.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/
-    Move-Item /installation/ME/MetricsExtension /opt/metricextension/
+    $nugetPath = '\installation\nuget.exe'
+    $nugetConfigPath = '\installation\NuGet.Config'
+    Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/v6.14.3/nuget.exe' -OutFile $nugetPath -ErrorAction Stop
+    Set-Content -LiteralPath $nugetConfigPath -Value '<configuration />' -Encoding UTF8 -ErrorAction Stop
+    $metricsExtensionPackage = '\installation\ME\mdmmetricsextension.2.2026.227.1509.nupkg'
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile $metricsExtensionPackage -ErrorAction Stop
+    Test-MicrosoftNuGetSignature -LiteralPath $metricsExtensionPackage -NuGetPath $nugetPath -ConfigPath $nugetConfigPath
+    Move-Item -LiteralPath $metricsExtensionPackage -Destination '\installation\ME\mdmmetricsextension.2.2026.227.1509.zip' -ErrorAction Stop
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/ -ErrorAction Stop
+    Move-Item /installation/ME/MetricsExtension /opt/metricextension/ -ErrorAction Stop
 }
 catch {
     $e = $_.Exception
@@ -50,11 +59,22 @@ $vcRedistLocation = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
 $vcArgs = "/install /quiet /norestart"
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation
-Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait
-Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin
-Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin
+try {
+    Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
+    Test-MicrosoftCodeSignature -LiteralPath $vcInstallerLocation
+    $vcProcess = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait -PassThru -ErrorAction Stop
+    if ($vcProcess.ExitCode -notin @(0, 3010)) {
+        throw "Visual C++ installation failed with exit code $($vcProcess.ExitCode)"
+    }
+    Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+    Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+    Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+}
+catch {
+    Write-Host "exception while installing Visual C++ Redistributable"
+    Write-Host $_.Exception
+    exit 1
+}
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ############################################################################################
 Write-Host ('Installing Telegraf');
@@ -82,6 +102,10 @@ try {
         throw 'GenevaMonitoringAgent archive SHA256 mismatch'
     }
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent -ErrorAction Stop
+    # This archive is not NuGet-signed; these checks cover the Microsoft executables we launch, not the entire archive.
+    foreach ($relativePath in @('MonAgentLauncher.exe', 'MonAgentCore.exe', 'Extensions\AMACoreAgent\AgentLauncher.exe', 'Extensions\AMACoreAgent\AMACoreAgent.exe')) {
+        Test-MicrosoftCodeSignature -LiteralPath (Join-Path '\installation\genevamonitoringagent\Monitoring\Agent' $relativePath)
+    }
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction Stop
 }
 catch {
