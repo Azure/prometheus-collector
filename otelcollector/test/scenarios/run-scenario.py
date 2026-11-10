@@ -360,14 +360,14 @@ class Host:
             except RuntimeError as error:
                 detail = str(error).casefold()
                 if (principal_type != "ServicePrincipal"
-                        or "authorizationfailed" not in detail
+                        or ("authorizationfailed" not in detail and "authorization failed" not in detail)
                         or "microsoft.authorization/roleassignments/write" not in detail):
                     raise
                 remaining = retry_deadline - time.monotonic()
                 if remaining <= 0:
                     raise
                 delay = min(retry_delay, remaining)
-                print(f"Role-assignment authorization is propagating; retrying in {delay:g}s", flush=True)
+                print(f"Retrying role-assignment authorization failure in {delay:g}s", flush=True)
                 time.sleep(delay)
                 if time.monotonic() >= retry_deadline:
                     raise

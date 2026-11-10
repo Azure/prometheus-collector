@@ -502,7 +502,11 @@ class Contracts(unittest.TestCase):
             host = runner.Host(args, scenario(), Mock())
             outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
             failure = RuntimeError(
-                "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")
+                "ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
+                "\"The template deployment failed with error: 'Authorization failed for template "
+                "resource 'assignment-id' of type 'Microsoft.Authorization/roleAssignments'. "
+                "The client 'app-id' with object id 'principal-id' does not have permission to "
+                "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
             host.az = Mock(side_effect=[
                 "false", None, failure,
                 {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
@@ -521,8 +525,12 @@ class Contracts(unittest.TestCase):
     def test_provision_fails_immediately_for_other_deployment_errors(self):
         for principal_type, failure in (
                 ("ServicePrincipal", "AuthorizationFailed: Microsoft.Compute/virtualMachines/write"),
-                ("ServicePrincipal", "InvalidTemplate: Microsoft.Authorization/roleAssignments/write"),
-                ("User", "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")):
+                ("ServicePrincipal", "InvalidTemplateDeployment: Microsoft.Authorization/roleAssignments/write"),
+                ("ServicePrincipal", "InvalidTemplateDeployment: Authorization failed for "
+                                     "Microsoft.Compute/virtualMachines/write"),
+                ("User", "InvalidTemplateDeployment: Authorization failed for template resource "
+                         "of type Microsoft.Authorization/roleAssignments; action "
+                         "Microsoft.Authorization/roleAssignments/write")):
             with self.subTest(principal_type=principal_type), tempfile.TemporaryDirectory() as temporary:
                 args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                              location="eastus2")
@@ -544,7 +552,11 @@ class Contracts(unittest.TestCase):
             host = runner.Host(args, scenario(), Mock())
             now, delays = [0], []
             failure = RuntimeError(
-                "AuthorizationFailed: Microsoft.Authorization/roleAssignments/write")
+                "ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
+                "\"The template deployment failed with error: 'Authorization failed for template "
+                "resource 'assignment-id' of type 'Microsoft.Authorization/roleAssignments'. "
+                "The client 'app-id' with object id 'principal-id' does not have permission to "
+                "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
 
             def az(*command, **kwargs):
                 if command[:2] == ("group", "exists"):
