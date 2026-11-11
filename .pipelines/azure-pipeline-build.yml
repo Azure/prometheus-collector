@@ -76,28 +76,6 @@ extends:
     stages:
     - stage: Build
       jobs:
-      - job: Windows_Launch_Diagnostic
-        displayName: "Diagnostic: Windows elevated launch"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
-          os: windows
-        timeoutInMinutes: 45
-        steps:
-        - powershell: ./.pipelines/tests/windows-launch-watchdog-test.ps1
-          displayName: "Diagnostic: test container watchdog"
-        - powershell: |
-            $ErrorActionPreference = 'Stop'
-            Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            $image = 'mcr.microsoft.com/windows/servercore:ltsc2019'
-            docker pull $image
-            if ($LASTEXITCODE -ne 0) { throw "Diagnostic image pull failed: $LASTEXITCODE" }
-            docker image inspect $image --format '{{.Id}} {{json .RepoDigests}}'
-            if ($LASTEXITCODE -ne 0) { throw "Diagnostic image inspect failed: $LASTEXITCODE" }
-            $script = Get-Content '.pipelines/tests/windows-launch-probe.ps1' -Raw
-            $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
-            ./.pipelines/tests/windows-launch-watchdog.ps1 -Image $image -EncodedScript $encoded
-          displayName: "Diagnostic: compare direct and elevated launches"
       - job: Image_Tags_and_Ev2_Artifacts
         displayName: "Build: Set image tags and publish Ev2 artifacts"
         pool:
