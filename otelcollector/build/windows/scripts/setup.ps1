@@ -95,7 +95,7 @@ Write-Host ('Finished downloading Telegraf')
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.7.1.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-14-2/genevamonitoringagent.47.14.2.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip -ErrorAction Stop
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent -ErrorAction Stop
     # This archive is not NuGet-signed; these checks cover the Microsoft executables we launch, not the entire archive.
