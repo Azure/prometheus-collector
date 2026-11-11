@@ -30,34 +30,42 @@ def verify(value, build_id, source_sha, images):
 def emit(discovery, build_id, source_sha, images):
     value = {"schemaVersion": 1, "buildId": build_id, "sourceSha": source_sha, "discovery": discovery}
     verify(value, build_id, source_sha, images)
+    return emit_payload(value, PREFIX, MAX_BYTES)
+
+
+def emit_payload(value, prefix, max_bytes):
     raw = json.dumps(value, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    if len(raw) > MAX_BYTES:
+    if len(raw) > max_bytes:
         raise ValueError("Discovery log payload exceeds limit")
     digest = hashlib.sha256(raw).hexdigest()
     encoded = base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")
     chunks = [encoded[offset:offset + 2048] for offset in range(0, len(encoded), 2048)]
     boundary = f"{digest} {len(chunks)} {len(raw)}"
-    return "\n".join([PREFIX + "BEGIN " + boundary,
-                      *(PREFIX + "DATA " + chunk for chunk in chunks),
-                      PREFIX + "END " + boundary]) + "\n"
+    return "\n".join([prefix + "BEGIN " + boundary,
+                      *(prefix + "DATA " + chunk for chunk in chunks),
+                      prefix + "END " + boundary]) + "\n"
 
 
 def read(text, build_id, source_sha, images):
-    records = [line.split(PREFIX, 1)[1].split() for line in text.splitlines() if PREFIX in line]
+    return verify(read_payload(text, PREFIX, MAX_BYTES), build_id, source_sha, images)
+
+
+def read_payload(text, prefix, max_bytes):
+    records = [line.split(prefix, 1)[1].split() for line in text.splitlines() if prefix in line]
     if (len(records) < 3 or len(records[0]) != 4
             or records[0][0] != "BEGIN" or records[-1] != ["END", *records[0][1:]]
             or any(len(row) != 2 or row[0] != "DATA" for row in records[1:-1])
             or records[0][2] != str(len(records) - 2)):
         raise ValueError("Discovery log frame is missing, duplicated or incomplete")
     encoded = "".join(row[1] for row in records[1:-1])
-    if len(encoded) > MAX_BYTES * 2:
+    if len(encoded) > max_bytes * 2:
         raise ValueError("Discovery log encoding exceeds limit")
     with gzip.GzipFile(fileobj=io.BytesIO(base64.b64decode(encoded, validate=True))) as stream:
-        raw = stream.read(MAX_BYTES + 1)
-    if (len(raw) > MAX_BYTES or str(len(raw)) != records[0][3]
+        raw = stream.read(max_bytes + 1)
+    if (len(raw) > max_bytes or str(len(raw)) != records[0][3]
             or hashlib.sha256(raw).hexdigest() != records[0][1]):
         raise ValueError("Discovery log checksum or length mismatch")
-    return verify(json.loads(raw), build_id, source_sha, images)
+    return json.loads(raw)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 """Check producer binding, immutable publication and complete artifact hashes."""
+from contextlib import redirect_stdout
+import base64
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -9,6 +12,8 @@ import unittest
 from unittest.mock import patch
 
 import producer_trivy
+from discovery_log import read_payload
+from candidate_log import FILES, MAX_BYTES, PREFIX
 import yaml
 
 
@@ -167,7 +172,12 @@ class ProducerTests(unittest.TestCase):
                             producer_trivy.produce(image, metadata, output)
                         self.assertFalse((output / "provenance.json").exists())
                     else:
-                        producer_trivy.produce(image, metadata, output)
+                        console = io.StringIO()
+                        with redirect_stdout(console):
+                            producer_trivy.produce(image, metadata, output)
+                        envelope = read_payload(console.getvalue(), PREFIX, MAX_BYTES)
+                        self.assertEqual({name: base64.b64decode(raw) for name, raw in envelope["files"].items()},
+                                         {name: (output / name).read_bytes() for name in FILES})
                         resolve.assert_called_once_with("collector", selected["indexRef"])
                         provenance = json.loads((output / "provenance.json").read_text())
                         self.assertEqual(provenance["source"], {"repo": "Azure/prometheus-collector",
