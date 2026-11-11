@@ -77,8 +77,8 @@ python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenari
 `campaign-preflight.json` success receipt binds `sourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
-verifier remains mandatory before deployment. `mixed` and `autoscaler` run in
-`eastus2`; the other seven rows run in `centralus`. Every pool's autoscaler
+verifier remains mandatory before deployment. `mixed` runs in `eastus2`,
+`autoscaler` in `westcentralus`, and the other seven rows in `centralus`. Every pool's autoscaler
 maximum **and** declared surge counts toward the simultaneous regional and
 VM-family peak, including clusters retained after their tests finish.
 

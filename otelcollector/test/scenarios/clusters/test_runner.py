@@ -63,7 +63,7 @@ class Contracts(unittest.TestCase):
     def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
         skus = [
-            {"name": name, "family": family, "locations": ["centralus", "eastus2"],
+            {"name": name, "family": family, "locations": ["centralus", "eastus2", "westcentralus"],
              "capabilities": [{"name": "CpuArchitectureType", "value": architecture},
                               {"name": "vCPUs", "value": "4"}], "restrictions": []}
             for name, family, architecture in (
@@ -113,11 +113,22 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(len(result["placements"]), 9)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["mixed"], "eastus2")
+                self.assertEqual(result["placements"]["autoscaler"], "westcentralus")
                 self.assertEqual(result["placements"]["settings"], "centralus")
-                for location in ("centralus", "eastus2"):
+                self.assertEqual(
+                    (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
+                    .read_text(encoding="utf-8").count(
+                        'region not in ("centralus", "eastus2", "westcentralus")'), 1)
+                expected = {"centralus": (88, 88), "eastus2": (56, 80),
+                            "westcentralus": (32, 32)}
+                for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
-                    self.assertEqual(quota["standarddsv4family"], 88)
+                    self.assertEqual((quota["standarddsv4family"], quota["cores"]), demand)
+                self.assertEqual(
+                    {row["name"]: row["additional"]
+                     for row in result["regions"]["eastus2"]["quota"]}
+                    ["standarddpsv5family"], 24)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
                 (args.evidence / "campaign-preflight.json").unlink()

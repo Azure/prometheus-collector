@@ -31,7 +31,7 @@ BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "linux": "centralus", "settings": "centralus",
-    "classic-azure-cni": "centralus", "mixed": "eastus2", "autoscaler": "eastus2",
+    "classic-azure-cni": "centralus", "mixed": "eastus2", "autoscaler": "westcentralus",
     "uai": "centralus", "cilium": "centralus", "kubenet": "centralus",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",

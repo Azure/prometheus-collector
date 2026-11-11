@@ -1269,7 +1269,7 @@ stages:
                   or set(value.get("placements", {})) != set(selected)):
               raise ValueError("Aggregate capacity admission source/build/placement contract mismatch")
           for scenario, region in value["placements"].items():
-              if region not in ("centralus", "eastus2") or region not in value.get("regions", {}):
+              if region not in ("centralus", "eastus2", "westcentralus") or region not in value.get("regions", {}):
                   raise ValueError("Aggregate capacity admission has no approved regional proof")
           for scenario, region in value["placements"].items():
               key = scenario.replace("-", "_")
