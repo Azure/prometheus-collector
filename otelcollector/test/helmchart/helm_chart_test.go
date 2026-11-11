@@ -27,6 +27,54 @@ func (versions apiVersions) Has(version string) bool {
 	return slices.Contains(versions, version)
 }
 
+func TestMCRRepositoryBase(t *testing.T) {
+	funcs := sprig.TxtFuncMap()
+	funcs["lookup"] = func(string, string, string, string) map[string]interface{} {
+		return nil
+	}
+	helper, err := template.New("helpers").Funcs(funcs).ParseFiles(filepath.Join(chartDirectory(), "templates", "_ama-metrics-helpers.tpl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		cloud string
+		want  string
+	}{
+		{cloud: "", want: "mcr.microsoft.com"},
+		{cloud: "AzurePublicCloud", want: "mcr.microsoft.com"},
+		{cloud: "AzureUSGovernmentCloud", want: "mcr.microsoft.com"},
+		{cloud: "AzureChinaCloud", want: "mcr.azk8s.cn"},
+		{cloud: "USNat", want: "mcr.microsoft.eaglex.ic.gov"},
+		{cloud: "USSec", want: "mcr.microsoft.scloud"},
+		{cloud: "AzureBleuCloud", want: "mcr.sovcloud-azure.fr"},
+		{cloud: "azurebleucloud", want: "mcr.sovcloud-azure.fr"},
+		{cloud: "AZUREBLEUCLOUD", want: "mcr.sovcloud-azure.fr"},
+		{cloud: "AzureDelosCloud", want: "mcr.sovcloud-azure.de"},
+		{cloud: "azuredeloscloud", want: "mcr.sovcloud-azure.de"},
+		{cloud: "AZUREDELOSCLOUD", want: "mcr.sovcloud-azure.de"},
+		{cloud: "unknown", want: "mcr.microsoft.com"},
+	} {
+		t.Run(tt.cloud, func(t *testing.T) {
+			values := map[string]interface{}{
+				"Values": map[string]interface{}{
+					"global": map[string]interface{}{
+						"commonGlobals": map[string]interface{}{"CloudEnvironment": tt.cloud},
+					},
+				},
+			}
+			for _, name := range []string{"mcr_repository_base", "addon_mcr_repository_base"} {
+				var rendered bytes.Buffer
+				if err := helper.ExecuteTemplate(&rendered, name, values); err != nil {
+					t.Fatal(err)
+				}
+				if got := rendered.String(); got != tt.want {
+					t.Errorf("%s = %q, want %q", name, got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 func TestHPALookupCompatibility(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
