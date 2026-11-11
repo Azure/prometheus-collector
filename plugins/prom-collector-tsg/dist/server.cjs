@@ -6,11 +6,20 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
 };
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __export = (target, all) => {
   for (var name3 in all)
@@ -63715,7 +63724,7 @@ query
 | summarize max(samplesDropped) by pod`
     },
     {
-      name: "Replicaset Samples Dropped by ME",
+      name: "Replicaset ME Drop Metrics (per-field maxima)",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -63726,10 +63735,10 @@ query
 | extend currentQueueSize = toint(customDimensions.currentQueueSize)
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
-| summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`
+| summarize samplesDropped=max(samplesDropped), aggregatedSamplesDropped=max(aggregatedSamplesDropped), currentQueueSize=max(currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`
     },
     {
-      name: "DaemonSet Samples Dropped",
+      name: "DaemonSet ME Drop Metrics (per-field maxima)",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -63741,7 +63750,7 @@ query
 | extend currentQueueSize = toint(customDimensions.currentQueueSize)
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
-| summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`
+| summarize samplesDropped=max(samplesDropped), aggregatedSamplesDropped=max(aggregatedSamplesDropped), currentQueueSize=max(currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`
     },
     {
       name: "P95 CPU (millicores)",
@@ -64169,7 +64178,7 @@ customMetrics
 | summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))`
     },
     {
-      name: "Total P95 Memory GB per Replica",
+      name: "Max P95 Memory GB by Process per Replica",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -64178,8 +64187,7 @@ customMetrics
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 | extend value = value / 1000000000
 | extend pod=tostring(customDimensions.podname)
-| summarize value=round(percentile(value, 100), 2) by pod, bin(timestamp, totimespan(Interval))
-| summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))
+| summarize value=round(percentile(value, 100), 2) by pod, name, bin(timestamp, totimespan(Interval))
 `
     },
     {
@@ -65944,7 +65952,22 @@ async function callMdmTool(toolName, args) {
   if (!text) {
     throw new Error("No content in MDM MCP response");
   }
-  return JSON.parse(text);
+  if (body3.result?.isError) {
+    throw new Error(text);
+  }
+  const result = JSON.parse(text);
+  if (!result.Success || result.Error) {
+    throw new Error(result.Error || "MDM tool reported failure");
+  }
+  const entries = typeof result.Result === "string" ? [result.Result] : result.Result;
+  if (entries !== null && !Array.isArray(entries)) {
+    throw new Error("Invalid MDM result: expected a string or array");
+  }
+  const queryError = entries?.find((value) => typeof value === "string" && /^\s*Error:/i.test(value));
+  if (queryError) {
+    throw new Error(queryError);
+  }
+  return { ...result, Result: entries };
 }
 async function callKqlm(monitoringAccount, metricNamespace, query2, startTime2, endTime) {
   const result = await callMdmTool("KqlmQuery", {
@@ -65954,15 +65977,65 @@ async function callKqlm(monitoringAccount, metricNamespace, query2, startTime2, 
     endTime,
     finalKqlmQuery: query2
   });
-  if (!result.Success || !result.Result || result.Result.length === 0) {
-    return null;
+  if (!result.Result || result.Result.length === 0) {
+    throw new Error("MDM query returned no KQL-M payload; data availability is inconclusive");
   }
-  const raw = Array.isArray(result.Result) ? result.Result[0] : result.Result;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+  if (typeof result.Result[0] !== "string") {
+    throw new Error("Invalid KQL-M result: expected JSON text");
   }
+  const parsed = JSON.parse(result.Result[0]);
+  if (parsed.Status !== "Success") {
+    throw new Error(`MDM query failed (${parsed.Status}): ${parsed.Messages?.join("; ") || "No details returned"}`);
+  }
+  if (!Array.isArray(parsed.Results) || parsed.Results.some(
+    (series) => !series?.SamplingTypes || typeof series.SamplingTypes !== "object" || Array.isArray(series.SamplingTypes) || Object.values(series.SamplingTypes).some((values) => !Array.isArray(values))
+  )) {
+    throw new Error("Invalid KQL-M result: expected series with sampling arrays");
+  }
+  return parsed;
+}
+async function queryMdmKqlm(monitoringAccount, metricNamespace, queries, startTime2, endTime, onProgress) {
+  if (!startTime2.endsWith("Z") || !endTime.endsWith("Z") || !Number.isFinite(Date.parse(startTime2)) || !Number.isFinite(Date.parse(endTime)) || Date.parse(startTime2) >= Date.parse(endTime)) {
+    throw new Error("Provide an explicit UTC startTime before endTime (ISO 8601 ending in Z)");
+  }
+  if (queries.length === 0 || queries.some((query2) => !query2.trim())) {
+    throw new Error("Provide at least one nonempty KQL-M query");
+  }
+  const results = [];
+  for (const query2 of queries) {
+    const result = await callKqlm(monitoringAccount, metricNamespace, query2, startTime2, endTime);
+    let finiteValueCount = 0;
+    let missingValueCount = 0;
+    for (const series of result.Results) {
+      for (const values of Object.values(series.SamplingTypes)) {
+        for (const value of values) {
+          if (Number.isFinite(value)) finiteValueCount++;
+          else missingValueCount++;
+        }
+      }
+    }
+    results.push({ query: query2, finiteValueCount, missingValueCount, result });
+    await onProgress?.(results.length, queries.length);
+  }
+  return JSON.stringify({ requestedWindow: { startTime: startTime2, endTime }, results }, null, 2);
+}
+async function queryMdmMetadata(monitoringAccount, operation, metricNamespace = "customdefault", metric = "") {
+  if ((operation === "dimensions" || operation === "preaggregates") && !metric.trim()) {
+    throw new Error(`${operation} discovery requires a metric`);
+  }
+  const tool = {
+    namespaces: "GetNameSpaces",
+    metrics: "GetMetrics",
+    dimensions: "GetDimensions",
+    preaggregates: "GetPreAggregateConfigurations"
+  }[operation];
+  const args = operation === "namespaces" ? { monitoringAccount } : operation === "metrics" ? { monitoringAccount, nameSpace: metricNamespace } : { monitoringAccount, metricNamespace, metric };
+  const result = await callMdmTool(tool, args);
+  return JSON.stringify({
+    operation,
+    entries: result.Result,
+    caveat: !result.Result?.length ? "Inconclusive: empty metadata does not prove absence." : "Dimension names and metadata do not prove a queryable combination or sampling type."
+  }, null, 2);
 }
 var QOS_METRICS = [
   {
@@ -66051,11 +66124,7 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
       "",
       "\u274C **Geneva MDM MCP server is not running.**",
       "",
-      "Start it with:",
-      "```",
-      'DOTNET_EnableDiagnostics=0 ASPNETCORE_URLS="http://localhost:5050" ASPNETCORE_ENVIRONMENT=Local \\',
-      '  nohup dotnet run --project /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj -- --urls "http://localhost:5050" &',
-      "```",
+      "Follow the troubleshooting-setup skill, Section 5, for Windows or WSL/Linux startup and verification.",
       "",
       "Or set `MDM_MCP_URL` env var if running on a different port."
     ].join("\n");
@@ -66086,13 +66155,13 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
           summary: "No data"
         };
       }
-      const nonNanVals = vals.filter((v) => !isNaN(v));
+      const nonNanVals = vals.filter((v) => Number.isFinite(v));
       if (nonNanVals.length === 0) {
         return {
           panel: def.panel,
           metric: def.metric,
-          status: def.isThrottleMetric ? "ok" : "no_data",
-          summary: def.isThrottleMetric ? "No throttling/drops detected \u2705" : "No data (NaN)",
+          status: "no_data",
+          summary: "No data (NaN)",
           values: { sum: 0, max: 0, nonNanPoints: 0, totalPoints: vals.length }
         };
       }
@@ -66112,7 +66181,7 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
           panel: def.panel,
           metric: def.metric,
           status: "warning",
-          summary: `\u26A0\uFE0F THROTTLING DETECTED: total=${sum.toLocaleString()}, max=${max.toLocaleString()} (${nonNanVals.length} points)`,
+          summary: `\u26A0\uFE0F ${def.metric.startsWith("Throttled") ? "THROTTLING" : "DROPS"} DETECTED: total=${sum.toLocaleString()}, max=${max.toLocaleString()} (${nonNanVals.length} points)`,
           values: { sum, max, nonNanPoints: nonNanVals.length, totalPoints: vals.length }
         };
       }
@@ -66122,7 +66191,7 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
         panel: def.panel,
         metric: def.metric,
         status: "ok",
-        summary: `latest=${latest.toLocaleString(void 0, { maximumFractionDigits: 0 })}, avg=${avg.toLocaleString(void 0, { maximumFractionDigits: 0 })}/min (${nonNanVals.length} points)`,
+        summary: `latest=${latest.toLocaleString(void 0, { maximumFractionDigits: 0 })}, avg=${avg.toLocaleString(void 0, { maximumFractionDigits: 0 })} (${nonNanVals.length} points)`,
         values: { sum, max, nonNanPoints: nonNanVals.length, totalPoints: vals.length }
       };
     } catch (err) {
@@ -66198,9 +66267,10 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
         const ns = series.Dimensions?.MetricNamespace || "unknown";
         const vals = series.SamplingTypes?.Sum;
         if (vals && vals.length > 0) {
-          const nonNan = vals.filter((v) => !isNaN(v));
-          const latest = nonNan.length > 0 ? nonNan[nonNan.length - 1] : 0;
-          nsSummaries.push({ ns, latest });
+          const nonNan = vals.filter((v) => Number.isFinite(v));
+          if (nonNan.length > 0) {
+            nsSummaries.push({ ns, latest: nonNan[nonNan.length - 1] });
+          }
         }
       }
       if (nsSummaries.length > 0) {
@@ -66240,7 +66310,7 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
         const reason = series.Dimensions?.[dm.dimName] || "unknown";
         const vals = series.SamplingTypes?.Sum;
         if (!vals) continue;
-        const nonNan = vals.filter((v) => !isNaN(v));
+        const nonNan = vals.filter((v) => Number.isFinite(v));
         if (nonNan.length === 0) continue;
         const total = nonNan.reduce((a, b) => a + b, 0);
         const latest = nonNan[nonNan.length - 1];
@@ -66284,8 +66354,10 @@ async function queryMdmThrottling(monitoringAccount, timeRangeHours = 6) {
       "- `DimensionLimitExceeded` \u2014 Too many dimensions on the metric (limit: 64 for Prometheus accounts)",
       "- `TimeSeriesLimitExceeded` \u2014 Too many unique time series in the account"
     );
+  } else if (throttleResults.every((r) => r.status === "ok")) {
+    lines.push("### \u2705 No throttling or drops detected in the queried data.");
   } else {
-    lines.push("### \u2705 No throttling or drops detected.");
+    lines.push("### \u26A0\uFE0F Inconclusive: QoS queries failed or returned no data; throttling/drops cannot be ruled out.");
   }
   return lines.join("\n");
 }
@@ -66295,6 +66367,12 @@ function parseSumCount(raw) {
   if (!sumMatch || !countMatch) return null;
   const sums = sumMatch[1].split(",").map((s) => parseFloat(s.trim()));
   const counts = countMatch[1].split(",").map((s) => parseFloat(s.trim()));
+  for (let i = 0; i < Math.max(sums.length, counts.length); i++) {
+    if (!Number.isFinite(sums[i]) || !Number.isFinite(counts[i]) || counts[i] <= 0) {
+      sums[i] = NaN;
+      counts[i] = NaN;
+    }
+  }
   return { sums, counts };
 }
 function analyzeUpMetric(parsed) {
@@ -66367,11 +66445,7 @@ async function queryScrapeTargetHealth(monitoringAccount, job, cluster, timeRang
       "",
       "\u274C **Geneva MDM MCP server is not running.**",
       "",
-      "Start it with:",
-      "```",
-      'DOTNET_EnableDiagnostics=0 ASPNETCORE_URLS="http://localhost:5050" ASPNETCORE_ENVIRONMENT=Local \\',
-      '  nohup dotnet run --project /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj -- --urls "http://localhost:5050" &',
-      "```",
+      "Follow the troubleshooting-setup skill, Section 5, for Windows or WSL/Linux startup and verification.",
       "",
       "Or set `MDM_MCP_URL` env var if running on a different port."
     ].join("\n");
@@ -66397,9 +66471,9 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
           endTime,
           dimensionMapJson: JSON.stringify({ job: [j], cluster: [cluster] })
         });
-        return { job: j, result: r };
-      } catch {
-        return { job: j, result: null };
+        return { job: j, metric: "up", result: r, error: null };
+      } catch (err) {
+        return { job: j, metric: "up", result: null, error: err instanceof Error ? err.message : String(err) };
       }
     })
   );
@@ -66424,7 +66498,7 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
         startTime: startTime2,
         endTime,
         dimensionMapJson: JSON.stringify({ job: [j], cluster: [cluster] })
-      }).then((r) => ({ job: j, metric: "scraped", result: r })).catch(() => ({ job: j, metric: "scraped", result: null })),
+      }).then((r) => ({ job: j, metric: "scraped", result: r, error: null })).catch((err) => ({ job: j, metric: "scraped", result: null, error: err instanceof Error ? err.message : String(err) })),
       callMdmTool("QueryDimensionMDM", {
         monitoringAccount,
         nameSpace: "customdefault",
@@ -66432,7 +66506,7 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
         startTime: startTime2,
         endTime,
         dimensionMapJson: JSON.stringify({ job: [j], cluster: [cluster] })
-      }).then((r) => ({ job: j, metric: "postRelabel", result: r })).catch(() => ({ job: j, metric: "postRelabel", result: null }))
+      }).then((r) => ({ job: j, metric: "postRelabel", result: r, error: null })).catch((err) => ({ job: j, metric: "postRelabel", result: null, error: err instanceof Error ? err.message : String(err) }))
     ])
   );
   const scrapedAvgs = /* @__PURE__ */ new Map();
@@ -66486,13 +66560,19 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
     `| **Jobs found** | ${active.length} |`,
     ""
   ];
+  const errors = [...results, ...sampleResults].filter((r) => r.error);
+  if (errors.length > 0) {
+    lines.push("\u26A0\uFE0F Scrape health is incomplete: some queries failed.", "");
+    for (const r of errors) lines.push(`- \`${r.job}\` (${r.metric}): ${r.error}`);
+    lines.push("");
+  }
   if (active.length === 0) {
     lines.push("\u26A0\uFE0F No scrape data found for any default job on this cluster.");
     lines.push("", "Jobs probed: " + DEFAULT_JOBS.map((j) => `\`${j}\``).join(", "));
     return lines.join("\n");
   }
   lines.push(
-    "### Per-Job Health Summary",
+    "### Per-Job Health Summary (observed scrapes only)",
     "",
     "| Job | Status | Success Rate | Scrapes | Failures | Samples Scraped (avg) | After Relabeling (avg) |",
     "|-----|--------|--------------|---------|----------|-----------------------|------------------------|"
@@ -66515,7 +66595,7 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
       lines.push(`- **\`${s.job}\`** \u2014 ${s.status} (${s.successRate}, ${s.failures} failures)`);
     }
   } else {
-    lines.push("", "### \u2705 All scrape targets are healthy.");
+    lines.push("", "### \u2705 No failures among observed scrapes; unobserved targets or buckets are unconfirmed.");
   }
   const relabelRows = [];
   for (const s of active) {
@@ -66542,7 +66622,7 @@ async function queryMultiJobHealth(monitoringAccount, cluster, timeRangeHours, s
   if (missing.length > 0 && missing.length < DEFAULT_JOBS.length) {
     lines.push(
       "",
-      `<details><summary>${missing.length} jobs with no data (not active on this cluster)</summary>`,
+      `<details><summary>${missing.length} jobs without confirmed data</summary>`,
       "",
       missing.map((s) => `\`${s.job}\``).join(", "),
       "",
@@ -66560,7 +66640,7 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
       callMdmTool("QueryDimensionMDM", { ...baseArgs, metrics: "scrape_samples_scraped" }),
       callMdmTool("QueryDimensionMDM", { ...baseArgs, metrics: "scrape_samples_post_metric_relabeling" })
     ]);
-    const noData = (r) => !r.Success || !r.Result || r.Result.length === 0;
+    const noData = (r) => !r.Result || r.Result.length === 0;
     if (noData(upResult)) {
       return [
         "## Scrape Target Health Check",
@@ -66570,7 +66650,7 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
         `**MDM Account:** \`${monitoringAccount}\``,
         `**Time Range:** ${timeRangeHours}h`,
         "",
-        "\u26A0\uFE0F No data returned for the `up` metric. Possible causes:",
+        "\u26A0\uFE0F Inconclusive: no data returned for the `up` metric. Possible causes:",
         "- The job name doesn't match any scrape target",
         "- The cluster name doesn't match the `cluster` label in MDM",
         "- The monitoring account is incorrect",
@@ -66616,13 +66696,15 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
       `| Total scrape events | ${totalScrapes} |`,
       `| Successful (up=1) | ${totalUp} |`,
       `| Failed (up=0) | ${totalScrapes - totalUp} |`,
-      `| **Scrape success rate** | **${successRate}%** |`,
+      `| **Scrape success rate** | **${totalScrapes > 0 ? successRate + "%" : successRate}** |`,
       `| Healthy buckets (all up=1) | ${healthy} / ${activeBuckets} (${healthPct}%) |`,
       `| Degraded buckets (some up=0) | ${degraded} |`,
-      `| No-data buckets (NaN) | ${nanBuckets} |`
+      `| Unobserved buckets (NaN/zero count) | ${nanBuckets} |`
     ];
-    if (degraded === 0) {
-      lines.push("", `\u2705 Target \`${job}\` is fully healthy \u2014 no scrape failures in ${timeRangeHours}h.`);
+    if (totalScrapes === 0) {
+      lines.push("", "\u26A0\uFE0F Inconclusive: no scrapes observed; target health is unknown.");
+    } else if (degraded === 0) {
+      lines.push("", `\u2705 No scrape failures among observed scrapes for target \`${job}\`.`);
     } else {
       lines.push("", `\u26A0\uFE0F Target \`${job}\` has scrape failures`);
       if (failureBuckets.length <= 20) {
@@ -66644,6 +66726,9 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
           `- Typical failure: Sum=${failureBuckets[0].sum}, Count=${failureBuckets[0].count} (${failureBuckets[0].count - failureBuckets[0].sum} scrapes returned up=0)`
         );
       }
+    }
+    if (nanBuckets > 0) {
+      lines.push("", `\u26A0\uFE0F ${nanBuckets} bucket(s) are unobserved; health during these buckets is unknown.`);
     }
     lines.push("", "### Scrape Samples Analysis");
     const scrapedParsed = noData(scrapedResult) ? null : parseSumCount(scrapedResult.Result.join("\n"));
@@ -66709,7 +66794,7 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
           lines.push(`- ${c}`);
         }
       } else if (scrapedStats || postRelabelStats) {
-        lines.push("", "\u2705 Sample counts are stable (no buckets with >10% change).");
+        lines.push("", "No >10% change detected between adjacent observed sample buckets.");
       }
     }
     return lines.join("\n");
@@ -66722,6 +66807,20 @@ async function querySingleJobHealth(monitoringAccount, job, cluster, timeRangeHo
   }
 }
 async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "customdefault", dimensions = "{}", timeRangeHours = 24) {
+  let dimMap;
+  try {
+    const parsed = JSON.parse(dimensions);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed) || !Object.values(parsed).every((values) => Array.isArray(values) && values.every((value) => typeof value === "string"))) {
+      throw new Error("Expected an object mapping dimension names to arrays of strings.");
+    }
+    dimMap = parsed;
+  } catch (err) {
+    return `## MDM Metric Query
+
+\u274C **Invalid dimensions:** ${err instanceof Error ? err.message : String(err)}`;
+  }
+  dimMap["cluster"] = [cluster];
+  const dimensionMapJson = JSON.stringify(dimMap);
   const serverUp = await checkMdmServerHealth();
   if (!serverUp) {
     return [
@@ -66729,11 +66828,7 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
       "",
       "\u274C **Geneva MDM MCP server is not running.**",
       "",
-      "Start it with:",
-      "```",
-      'DOTNET_EnableDiagnostics=0 ASPNETCORE_URLS="http://localhost:5050" ASPNETCORE_ENVIRONMENT=Local \\',
-      '  nohup dotnet run --project /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj -- --urls "http://localhost:5050" &',
-      "```",
+      "Follow the troubleshooting-setup skill, Section 5, for Windows or WSL/Linux startup and verification.",
       "",
       "Or set `MDM_MCP_URL` env var if running on a different port."
     ].join("\n");
@@ -66742,14 +66837,6 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
   const start = new Date(now.getTime() - timeRangeHours * 60 * 60 * 1e3);
   const startTime2 = start.toISOString().replace(/\.\d{3}Z$/, "Z");
   const endTime = now.toISOString().replace(/\.\d{3}Z$/, "Z");
-  let dimMap;
-  try {
-    dimMap = JSON.parse(dimensions);
-  } catch {
-    dimMap = {};
-  }
-  dimMap["cluster"] = [cluster];
-  const dimensionMapJson = JSON.stringify(dimMap);
   const lines = [
     "## MDM Metric Query",
     "",
@@ -66771,7 +66858,7 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
       endTime,
       dimensionMapJson
     });
-    if (!result.Success || !result.Result || result.Result.length === 0) {
+    if (!result.Result || result.Result.length === 0) {
       lines.push(
         "",
         "\u26A0\uFE0F **No data returned.** Possible causes:",
@@ -66781,9 +66868,6 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
         "- The namespace is wrong (try `prometheus` instead of `customdefault`)",
         "- The dimension filter is too restrictive"
       );
-      if (result.Error) {
-        lines.push("", `**Error:** ${result.Error}`);
-      }
       return lines.join("\n");
     }
     const rawText = result.Result.join("\n");
@@ -66791,7 +66875,7 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
     if (!parsed) {
       lines.push(
         "",
-        "\u2705 **Data exists** \u2014 metric returned results but could not parse Sum/Count arrays.",
+        "\u26A0\uFE0F **Unrecognized MDM response** \u2014 could not parse Sum/Count arrays; data availability is unconfirmed.",
         "",
         "**Raw response (first 2000 chars):**",
         "```",
@@ -66809,8 +66893,8 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
     if (validSums.length === 0) {
       lines.push(
         "",
-        `\u26A0\uFE0F **All ${totalBuckets} buckets are NaN** \u2014 no actual data points in this time range.`,
-        "The metric may have existed historically but has no current data."
+        `\u26A0\uFE0F **No observed data** \u2014 all ${totalBuckets} buckets are unobserved (non-finite Sum or missing/non-positive Count).`,
+        "Data availability in this time range is unconfirmed."
       );
       return lines.join("\n");
     }
@@ -66826,19 +66910,19 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
     const bucketSizeMin = totalBuckets > 0 ? (totalMinutes / totalBuckets).toFixed(1) : "?";
     lines.push(
       "",
-      `\u2705 **Data exists** \u2014 ${activeBuckets} active buckets out of ${totalBuckets} total (${nanBuckets} NaN).`,
+      `\u2705 **Data exists** \u2014 ${activeBuckets} active buckets out of ${totalBuckets} total (${nanBuckets} unobserved).`,
       "",
       "### Sum Series (primary metric values)",
       "",
       "| Stat | Value |",
       "|------|-------|",
       `| First value | ${sumFirst} |`,
-      `| Latest value | ${sumLatest} |`,
+      `| Latest observed value | ${sumLatest} |`,
       `| Min | ${sumMin} |`,
       `| Max | ${sumMax} |`,
       `| Avg | ${sumAvg.toFixed(2)} |`,
       `| Active buckets | ${activeBuckets} / ${totalBuckets} |`,
-      `| NaN buckets | ${nanBuckets} |`,
+      `| Unobserved buckets | ${nanBuckets} |`,
       `| Bucket resolution | ~${bucketSizeMin} min |`
     );
     lines.push(
@@ -66849,7 +66933,7 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
       "|------|-------|",
       `| Total data points | ${countTotal} |`,
       `| Avg per bucket | ${countAvg.toFixed(1)} |`,
-      `| Latest bucket | ${countLatest} |`
+      `| Latest observed bucket | ${countLatest} |`
     );
     const significantChanges = [];
     for (let i = 1; i < sums.length; i++) {
@@ -66877,7 +66961,7 @@ async function queryMdmMetric(monitoringAccount, metric, cluster, nameSpace = "c
         lines.push(`| ... | ... | ... | (${significantChanges.length - 10} more) |`);
       }
     } else {
-      lines.push("", "\u2705 Sum values are stable (no buckets with >20% change).");
+      lines.push("", "No >20% change detected between adjacent observed Sum buckets.");
     }
     const sparkBuckets = Math.min(30, validSums.length);
     const recentSums = validSums.slice(-sparkBuckets);
@@ -66993,11 +67077,7 @@ async function queryMeInternalMetrics(monitoringAccount, timeRangeHours = 6) {
       "",
       "\u274C **Geneva MDM MCP server is not running.**",
       "",
-      "Start it with:",
-      "```",
-      'DOTNET_EnableDiagnostics=0 ASPNETCORE_URLS="http://localhost:5050" ASPNETCORE_ENVIRONMENT=Local \\',
-      '  nohup dotnet run --project /tmp/mdm-mcp/src/MdmMcp/GenevaMDM-MCP.csproj -- --urls "http://localhost:5050" &',
-      "```"
+      "Follow the troubleshooting-setup skill, Section 5, for Windows or WSL/Linux startup and verification."
     ].join("\n");
   }
   const now = /* @__PURE__ */ new Date();
@@ -67026,9 +67106,9 @@ async function queryMeInternalMetrics(monitoringAccount, timeRangeHours = 6) {
         if (!vals || vals.length === 0) {
           return { ...def, status: "no_data", summary: "No data", total: 0, max: 0, hasData: false };
         }
-        const nonNan = vals.filter((v) => !isNaN(v));
+        const nonNan = vals.filter((v) => Number.isFinite(v));
         if (nonNan.length === 0) {
-          return { ...def, status: "ok", summary: "No drops/errors \u2705", total: 0, max: 0, hasData: false };
+          return { ...def, status: "no_data", summary: "No data (NaN)", total: 0, max: 0, hasData: false };
         }
         const total = nonNan.reduce((a, b) => a + b, 0);
         const max = Math.max(...nonNan);
@@ -67063,7 +67143,7 @@ async function queryMeInternalMetrics(monitoringAccount, timeRangeHours = 6) {
         }
         const vals = kqlmResult.Results[0].SamplingTypes?.Sum;
         if (!vals || vals.length === 0) return { panel: def.panel, metric: def.metric, value: "No data" };
-        const nonNan = vals.filter((v) => !isNaN(v));
+        const nonNan = vals.filter((v) => Number.isFinite(v));
         if (nonNan.length === 0) return { panel: def.panel, metric: def.metric, value: "No data (NaN)" };
         const latest = nonNan[nonNan.length - 1];
         const avg = nonNan.reduce((a, b) => a + b, 0) / nonNan.length;
@@ -67094,7 +67174,7 @@ async function queryMeInternalMetrics(monitoringAccount, timeRangeHours = 6) {
             const reason = series.Dimensions?.Reason || "unknown";
             const vals = series.SamplingTypes?.Sum;
             if (!vals) continue;
-            const nonNan = vals.filter((v) => !isNaN(v));
+            const nonNan = vals.filter((v) => Number.isFinite(v));
             if (nonNan.length === 0) continue;
             const total = nonNan.reduce((a, b) => a + b, 0);
             if (total === 0) continue;
@@ -67157,14 +67237,19 @@ async function queryMeInternalMetrics(monitoringAccount, timeRangeHours = 6) {
       }
       lines.push("");
     }
+  } else if (aggregateResults.every((r) => r.status === "ok")) {
+    lines.push(
+      "",
+      "### \u2705 No ME-level drops or errors detected in the queried data.",
+      "",
+      "This does not prove complete ingestion. Correlate with scrape, publication, and MDM QoS telemetry."
+    );
   } else {
     lines.push(
       "",
-      "### \u2705 No ME-level drops or errors detected.",
+      "### \u26A0\uFE0F Inconclusive: ME drop/error queries failed or returned no data.",
       "",
-      "MetricsExtension is processing and publishing all metrics without drops.",
-      "If metrics are still missing from MDM, the issue is likely at the **MDM backend/MStore level**.",
-      "Check `tsg_mdm_throttling` for MDM-level throttling (especially `MStoreDroppedSamplesCount`)."
+      "Missing telemetry is not evidence of zero drops or successful publication."
     );
   }
   return lines.join("\n");
@@ -68239,6 +68324,43 @@ server.tool(
   }
 );
 server.tool(
+  "tsg_mdm_kqlm",
+  "Run flexible Geneva KQL-M queries over an explicit UTC window. Supports one-minute target Count, per-family comparisons, grouped breakdowns and raw series. Queries run serially; failures are errors, not absent data. Preserves complete results, NaN and any actual timestamps without inferring bucket times. Count is ingested MDM count, not scrape totals. Use outputFile for large/raw-series results. Requires the local Geneva MDM helper.",
+  {
+    monitoringAccount: external_exports3.string().describe("MDM account name, not the workspace ARM ID"),
+    metricNamespace: external_exports3.string().default("customdefault"),
+    queries: external_exports3.array(external_exports3.string()).describe("KQL-M queries; use the same filters, sampling type and window for family comparisons"),
+    startTime: external_exports3.string().datetime().describe("Explicit UTC start, ending in Z"),
+    endTime: external_exports3.string().datetime().describe("Explicit UTC end, ending in Z"),
+    outputFile: outputFileParam
+  },
+  async ({ monitoringAccount, metricNamespace, queries, startTime: startTime2, endTime, outputFile }, extra) => {
+    const text = await queryMdmKqlm(
+      monitoringAccount,
+      metricNamespace,
+      queries,
+      startTime2,
+      endTime,
+      (completed, total) => sendProgress(extra, completed, total, "Geneva KQL-M queries")
+    );
+    if (outputFile) (0, import_node_fs4.writeFileSync)(outputFile, text, "utf8");
+    return { content: [{ type: "text", text: outputFile ? `Full KQL-M results written to ${outputFile}` : text }] };
+  }
+);
+server.tool(
+  "tsg_mdm_metadata",
+  "Discover Geneva namespaces, metrics, dimensions or preaggregates through the local MDM helper. Empty metadata is inconclusive, not confirmed absence. Dimension names alone do not prove a queryable combination or sampling type.",
+  {
+    monitoringAccount: external_exports3.string(),
+    operation: external_exports3.enum(["namespaces", "metrics", "dimensions", "preaggregates"]),
+    metricNamespace: external_exports3.string().default("customdefault"),
+    metric: external_exports3.string().default("").describe("Required for dimensions and preaggregates")
+  },
+  async ({ monitoringAccount, operation, metricNamespace, metric }) => ({
+    content: [{ type: "text", text: await queryMdmMetadata(monitoringAccount, operation, metricNamespace, metric) }]
+  })
+);
+server.tool(
   "tsg_me_diagnostics",
   "Check MetricsExtension internal QoS metrics from the customer's MDM account (MetricsExtension2 namespace). Queries RawEventsDroppedCount, MetricAggregatesDroppedCount, MetricEventsDroppedCount, and MeErrorsCount. When drops are detected, drills down by Reason dimension to identify root cause (TooManyDimensions, Throttled, BlackListedMetric, OversizedHistogram, etc). Critical for diagnosing 'scrape healthy but metrics missing in MDM' \u2014 ME may be silently dropping metrics. Requires the Geneva MDM MCP server running on localhost:5050.",
   {
@@ -68478,7 +68600,7 @@ server.tool(
     } catch {
       results.push("\u26A0\uFE0F **Geneva MDM MCP** (localhost:5050): Not running (optional \u2014 needed for tsg_mdm_throttling)");
       if (autoFix) {
-        results.push("   \u{1F527} To start: `cd tools/geneva-mdm-mcp && dotnet run` (requires .NET 8+ SDK)");
+        results.push("   \u{1F527} See troubleshooting-setup skill, Section 5, for Geneva MDM MCP startup and verification.");
       }
     }
     results.push("\n---");

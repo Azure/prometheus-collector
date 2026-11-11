@@ -7,7 +7,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { LogsQueryClient } from "@azure/monitor-query";
 import { QUERIES, parameterizeQuery, regionToArmCluster, type QueryCategory } from "./queries.js";
 import { DATA_SOURCES, APP_INSIGHTS } from "./datasources.js";
-import { queryMdmThrottling, queryScrapeTargetHealth, queryMdmMetric, queryMeInternalMetrics } from "./mdm.js";
+import { queryMdmThrottling, queryScrapeTargetHealth, queryMdmMetric, queryMeInternalMetrics, queryMdmKqlm, queryMdmMetadata } from "./mdm.js";
 import { scrapeICMIncident } from "./icm-browser.js";
 import { writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
@@ -1029,6 +1029,39 @@ server.tool(
   }
 );
 
+server.tool(
+  "tsg_mdm_kqlm",
+  "Run flexible Geneva KQL-M queries over an explicit UTC window. Supports one-minute target Count, per-family comparisons, grouped breakdowns and raw series. Queries run serially; failures are errors, not absent data. Preserves complete results, NaN and any actual timestamps without inferring bucket times. Count is ingested MDM count, not scrape totals. Use outputFile for large/raw-series results. Requires the local Geneva MDM helper.",
+  {
+    monitoringAccount: z.string().describe("MDM account name, not the workspace ARM ID"),
+    metricNamespace: z.string().default("customdefault"),
+    queries: z.array(z.string()).describe("KQL-M queries; use the same filters, sampling type and window for family comparisons"),
+    startTime: z.string().datetime().describe("Explicit UTC start, ending in Z"),
+    endTime: z.string().datetime().describe("Explicit UTC end, ending in Z"),
+    outputFile: outputFileParam,
+  },
+  async ({ monitoringAccount, metricNamespace, queries, startTime, endTime, outputFile }, extra) => {
+    const text = await queryMdmKqlm(monitoringAccount, metricNamespace, queries, startTime, endTime,
+      (completed, total) => sendProgress(extra, completed, total, "Geneva KQL-M queries"));
+    if (outputFile) writeFileSync(outputFile, text, "utf8");
+    return { content: [{ type: "text", text: outputFile ? `Full KQL-M results written to ${outputFile}` : text }] };
+  }
+);
+
+server.tool(
+  "tsg_mdm_metadata",
+  "Discover Geneva namespaces, metrics, dimensions or preaggregates through the local MDM helper. Empty metadata is inconclusive, not confirmed absence. Dimension names alone do not prove a queryable combination or sampling type.",
+  {
+    monitoringAccount: z.string(),
+    operation: z.enum(["namespaces", "metrics", "dimensions", "preaggregates"]),
+    metricNamespace: z.string().default("customdefault"),
+    metric: z.string().default("").describe("Required for dimensions and preaggregates"),
+  },
+  async ({ monitoringAccount, operation, metricNamespace, metric }) => ({
+    content: [{ type: "text", text: await queryMdmMetadata(monitoringAccount, operation, metricNamespace, metric) }],
+  })
+);
+
 // Tool: tsg_me_diagnostics
 server.tool(
   "tsg_me_diagnostics",
@@ -1309,7 +1342,7 @@ server.tool(
     } catch {
       results.push("⚠️ **Geneva MDM MCP** (localhost:5050): Not running (optional — needed for tsg_mdm_throttling)");
       if (autoFix) {
-        results.push("   🔧 To start: `cd tools/geneva-mdm-mcp && dotnet run` (requires .NET 8+ SDK)");
+        results.push("   🔧 See troubleshooting-setup skill, Section 5, for Geneva MDM MCP startup and verification.");
       }
     }
 

@@ -1637,7 +1637,7 @@ query
 | summarize max(samplesDropped) by pod`,
     },
     {
-      name: "Replicaset Samples Dropped by ME",
+      name: "Replicaset ME Drop Metrics (per-field maxima)",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -1648,10 +1648,10 @@ query
 | extend currentQueueSize = toint(customDimensions.currentQueueSize)
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
-| summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
+| summarize samplesDropped=max(samplesDropped), aggregatedSamplesDropped=max(aggregatedSamplesDropped), currentQueueSize=max(currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
     },
     {
-      name: "DaemonSet Samples Dropped",
+      name: "DaemonSet ME Drop Metrics (per-field maxima)",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -1663,7 +1663,7 @@ query
 | extend currentQueueSize = toint(customDimensions.currentQueueSize)
 | extend pod=tostring(customDimensions.podname)
 | project timestamp, pod, samplesDropped=value, aggregatedSamplesDropped, currentQueueSize
-| summarize argmax(samplesDropped, aggregatedSamplesDropped, currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
+| summarize samplesDropped=max(samplesDropped), aggregatedSamplesDropped=max(aggregatedSamplesDropped), currentQueueSize=max(currentQueueSize) by pod, bin(timestamp, totimespan(Interval))`,
     },
     {
       name: "P95 CPU (millicores)",
@@ -2091,7 +2091,7 @@ customMetrics
 | summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))`,
     },
     {
-      name: "Total P95 Memory GB per Replica",
+      name: "Max P95 Memory GB by Process per Replica",
       datasource: "PrometheusAppInsights",
       kql: `customMetrics
 | where timestamp > ago(_endTime - _startTime)
@@ -2100,8 +2100,7 @@ customMetrics
 | where tostring(customDimensions.controllertype) == "ReplicaSet"
 | extend value = value / 1000000000
 | extend pod=tostring(customDimensions.podname)
-| summarize value=round(percentile(value, 100), 2) by pod, bin(timestamp, totimespan(Interval))
-| summarize value=sum(value) by pod, bin(timestamp, totimespan(Interval))
+| summarize value=round(percentile(value, 100), 2) by pod, name, bin(timestamp, totimespan(Interval))
 `,
     },
     {

@@ -348,7 +348,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 
 ## 5. Set Up the Geneva MDM MCP Server
 
-The Geneva MDM MCP server provides tools to query MDM time-series metrics — used for checking account throttling, dropped events, QoS health, and per-metric scrape target health (e.g., the `up` metric filtered by `job` and `cluster` dimensions).
+The Geneva MDM MCP server provides tools to query MDM time-series metrics — used for checking account throttling, dropped events, QoS health, and scrape metrics with supported preaggregates. A working `MdmQos` query does not prove that `up` or scrape sample queries support the requested dimensions and sampling types; see [preaggregate discovery](../prom-collector-tsg/reference.md#discovering-scrape-metric-preaggregates).
 
 ### One-time setup (Windows)
 
@@ -382,17 +382,32 @@ $env:DOTNET_EnableDiagnostics = "0"
 $env:ASPNETCORE_URLS = "http://localhost:5050"
 $env:ASPNETCORE_ENVIRONMENT = "Local"
 
-# Start in a new window so it persists
-Start-Process dotnet -ArgumentList "run","--project","$env:USERPROFILE\go\src\mdm-mcp\src\MdmMcp\GenevaMDM-MCP.csproj","--no-build","--","--urls","http://localhost:5050" `
-  -WindowStyle Minimized
+# Use the existing build; no restore/build is needed if this DLL is already present.
+$dll = "C:\path\to\helper.dll"
+if (!(Test-Path $dll)) { throw "Build the MDM MCP project first (see above)." }
+dotnet $dll --urls "http://localhost:5050"
+```
 
-# Verify (wait ~10 seconds for startup)
-Start-Sleep -Seconds 10
+Keep that terminal open. Direct DLL startup with these environment variables was
+verified on Windows, followed by MCP initialization, tool discovery, and an actual
+`tsg_mdm_throttling` read of internal `MdmQos` data. A listener alone does not verify
+authentication or query access.
+
+In another PowerShell terminal:
+
+```powershell
+Get-NetTCPConnection -LocalPort 5050 -State Listen
 (Invoke-WebRequest -Uri "http://localhost:5050/mcp" -Method POST -ContentType "application/json" `
   -Body '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' `
   -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 3
 # Should return serverInfo with name "GenevaMDM-MCP"
 ```
+
+Then call `tsg_mdm_throttling` with the authorized monitoring account and a short
+window. Require parsed numeric results, not just HTTP 200 or an outer `Success`
+wrapper. If using a different endpoint, set `MDM_MCP_URL` in the
+`prom-collector-tsg` server environment and restart that server. Stop your helper
+with Ctrl+C when finished; never stop unrelated dotnet processes.
 
 ### One-time setup (WSL2 / Linux)
 
@@ -443,7 +458,7 @@ curl -s http://localhost:5050/mcp \
 
 > **Key details:**
 > - Port 5050 avoids conflicts with other services
-> - `DOTNET_EnableDiagnostics=0` is **required** — without it the server hangs on startup
+> - Keep `DOTNET_EnableDiagnostics=0` in the verified startup recipe; startup without it has not been validated here
 > - This is an HTTP MCP server (not stdio) — it must be running before Copilot can use it
 > - Auth uses `DefaultAzureCredential` — ensure you're logged in with `az login`
 > - **Windows:** clone to `%USERPROFILE%\go\src\mdm-mcp`; **WSL2:** clone to `/tmp/mdm-mcp`
@@ -983,7 +998,7 @@ cd ~/go/src/prometheus-collector/tools/prom-collector-tsg-mcp
 # export PATH="$HOME/.agency/nodejs/node-v22.21.0-linux-x64/bin:$PATH"
 
 npx tsc
-# Copilot CLI automatically picks up the new dist/index.js on next tool call
+# Restart/reconnect the prom-collector-tsg server to load the rebuilt code
 ```
 
 ### Check MDM MCP server status

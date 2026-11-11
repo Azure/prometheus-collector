@@ -52,28 +52,165 @@ tsg_query(datasource: "AKS", kql: "...", outputFile: "/tmp/data.json", outputFor
 
 #### Checking Scrape Target Health via Geneva MDM
 
-When investigating **intermittent missing metrics** for a specific target (e.g. kube-state-metrics), use the Geneva MDM MCP server to query the `up` metric:
+Use internal service telemetry for incident work: `PrometheusAppInsights`,
+`MetricInsights`, internal AKS telemetry, and Geneva MDM. A cluster ARM ID is a
+filter for internal telemetry, not permission to query the customer's cluster,
+ARM endpoint, workspace, or Grafana. Resolve `MDMAccountName` with `tsg_triage` or
+the internal AMWInfo mapping, then use the [verified Windows helper startup](../troubleshooting-setup/SKILL.md#start-the-server-windows).
 
-1. Run `tsg_triage` → extract the `MDMAccountName` (e.g. `mac_0d8947c8_...`)
-2. Use the `geneva-mdm` MCP tools to query the `up` metric:
-   - Namespace: `customdefault` (or `prometheus` depending on configuration)
-   - Metric: `up`
-   - Filter by dimension `job` = target name (e.g. `kube-state-metrics`)
-   - Look at the `Sum` field (not `Min` — gauge metrics without pre-agg always show NaN for Min)
-3. **Interpreting results:**
-   - Typical Sum = N × scrapes_per_minute (e.g. Sum=45 means 3 replicas × 15 scrapes/min at 4s interval)
-   - Sum dips below typical → some scrapes returned `up=0` (target unreachable)
-   - Calculate failure rate: `(typical_sum - actual_sum) / typical_sum × 100`
-   - Failure rate < 1% → transient scrape timeouts, usually self-healing
-   - Failure rate > 5% → persistent target health issue, check target pod logs
-   - **⚠️ `up=0` vs `up` missing — critical ownership distinction:**
-     - **`up=0` present** → our collector pod IS running and scraping, but the **target endpoint** is broken/unreachable. For `node` job, this means AKS broke their node-exporter endpoint (they own it) — escalate to AKS team, not our bug
-     - **`up` completely absent** (no data points) → our collector pod isn't running on that node — check `tsg_pods` for crashes/scheduling failures. This IS our addon's problem
-4. **Correlate with App Insights logs** — search for target-specific log tags:
-   - `prometheus.log.kubestatemetricscontainer` — KSM pod logs
-   - `prometheus.log.targetallocator.tacontainer` — target allocator logs
-   - `prometheus.log.prometheuscollectorcontainer` — otelcollector scrape logs (ReplicaSet)
-   - If a log tag has zero entries, that component isn't sending telemetry (may be crash-looping)
+Start with a short incident window. `tsg_workload` accepts explicit `startTime` and
+`endTime` for historical investigation; do not infer retention expiry from one
+empty ad-hoc query. Use `tsg_query` for bounded App Insights logs, preserving all
+returned rows with `outputFile` when necessary.
+
+##### Discovering scrape-metric preaggregates
+
+1. Verify the helper's MCP initialization and tool catalog, then run
+   `tsg_mdm_throttling` against the authorized account. Real `MdmQos` values verify
+   that path only, not KSM scrape health or `MetricsExtension2` availability.
+2. Use `tsg_mdm_metadata` with `operation: "dimensions"` or `"preaggregates"` and
+   the account, namespace and metric. It dispatches `GetDimensions` or
+   `GetPreAggregateConfigurations`; `"namespaces"` and `"metrics"` enumerate names.
+   Empty metadata is inconclusive. Use MetricInsights below when that happens.
+   Individual dimension names do not establish that their combination and
+   requested sampling types are queryable.
+3. Use `tsg_query(datasource: "MetricInsights", kql: ...)` with explicitly typed
+   arguments to discover observed scrape-metric preaggregates:
+
+```kusto
+let _mdmAccount = '<MDM_ACCOUNT>';
+let _metric = dynamic(null);
+let _namespace = dynamic(['customdefault']);
+let _preaggDimensions = dynamic(null);
+let _numOfDaysQueryLookBack = 180;
+GetPreaggUsageSummaryExploratoryV7(_mdmAccount, _namespace, _metric, _preaggDimensions, false, _numOfDaysQueryLookBack)
+| where MetricName in ('up','scrape_samples_scraped','scrape_samples_post_metric_relabeling','scrape_duration_seconds')
+| project MetricName, Dimensions, DailyTSAcrossAccounts, AvgEventRate
+| order by MetricName asc
+```
+
+The 180-day usage view is historical/account-wide evidence, not proof of current
+ingestion or a usable MDM query. Use the discovered combinations when constructing
+a query, then verify its actual response. Adding `instance` alone does not
+establish that a dimension/sampling combination works. Successful family Count
+queries do not establish that scrape-total queries work.
+
+`InvalidSeries` with "Metric doesn't have preaggregate defined ... requested
+dimensions and requested sampling types" is a query/preaggregate failure, not
+evidence that the metric is absent. Inspect the inner response even when the
+outer wrapper says `Success`. `tsg_scrape_health` uses `cluster` + `job`;
+`tsg_mdm_query` adds `cluster` to the supplied dimensions. Neither can establish
+scrape health when that query fails. Preserve the error, requested dimensions,
+sampling types, and time window for the owning team rather than repeatedly
+widening the window or reporting zero samples.
+
+Only interpret numeric `up` series after validating the query. A bucket needs
+finite Sum and positive finite Count to count as observed. Sum=0 with Count>0
+is an observed zero; Count=0 or NaN is unobserved, not a healthy scrape or proof
+that metric data exists. A no-failures result applies only to observed scrapes;
+health during missing buckets remains unknown.
+
+`tsg_mdm_query` rejects malformed dimension JSON or shapes other than an object
+mapping dimension names to arrays of strings. It never silently drops invalid
+job/instance filters to run a broader cluster query.
+
+`up=0` with observed samples indicates a failed scrape, not which team caused
+it. Missing data is inconclusive, not proof that a collector stopped.
+Correlate with App Insights target, collector, and allocator logs
+(`prometheus.log.kubestatemetricscontainer`,
+`prometheus.log.prometheuscollectorcontainer`,
+`prometheus.log.targetallocator.tacontainer`). Missing log rows alone do not prove
+a crash.
+
+##### Flexible target counts, family comparisons, and label breakdowns
+
+Use `tsg_mdm_kqlm` with `monitoringAccount: "<MDM_ACCOUNT>"`,
+`metricNamespace: "customdefault"`, explicit UTC `startTime`/`endTime`, and a
+`queries` array. Use the configured Prometheus **cluster label**, not an assumed
+AKS resource name. Replace placeholders before submitting; the account is not
+the AMW ARM ID.
+
+This one-minute Count shape succeeded for individual KSM metric families:
+
+```kusto
+metric("<METRIC>")
+.dimensions("cluster","job","instance")
+.resolution(1m)
+.samplingTypes("Count")
+| where cluster == "<CLUSTER_LABEL>" and job == "<JOB>" and instance == "<INSTANCE>"
+| summarize Observed=sum(Count) by cluster,job,instance
+```
+
+For **per-family comparison**, submit one copy per discovered metric in
+`queries`, using identical filters, sampling type, resolution and window.
+Responses retain each query and every returned value; `finiteValueCount` counts
+finite numeric values, **not events**. `missingValueCount` counts NaN/null values.
+A finite zero stays zero; no series, all-NaN arrays and an error are distinct.
+Only `Status: "Success", Results: []` confirms a no-series response; a missing
+helper payload (`Result: null` or `[]`) is an inconclusive query error.
+The batch runs serially and any failed query fails the call rather than being
+silently treated as absent data.
+
+For a **condition/status breakdown**, this shape also succeeded:
+
+```kusto
+metric("<METRIC>")
+.dimensions("cluster","job","instance","condition","status")
+.resolution(1m)
+.samplingTypes("Count")
+| where cluster == "<CLUSTER_LABEL>" and job == "<JOB>" and instance == "<INSTANCE>"
+| summarize Observed=sum(Count) by condition,status
+```
+
+Choose grouping dimensions from discovered metadata; a dimension's existence is
+not proof that every combination is queryable. Do not assume every condition
+exists on every node, or count every status series as a distinct node.
+
+For **raw-series/identity cardinality**, this unsummarized query succeeded for
+`kube_pod_status_phase`, with either `Count` or `Sum`:
+
+```kusto
+metric("<METRIC>").dimensions("cluster","job","instance").samplingTypes("Count")
+| where cluster == "<CLUSTER_LABEL>" and job == "<JOB>"
+```
+
+Use `outputFile` to preserve the entire JSON response. Unlike the summarized
+queries above, this verified raw query did not specify a resolution or filter
+`instance`; it returned instance and the full namespace/pod/UID/phase labels.
+Filter the complete `results[i].result.Results` locally to the required instance
+before counting distinct complete `Dimensions` maps, distinct
+`(namespace,pod,uid)` tuples, and namespace/phase values separately.
+These are returned label-set/identity cardinalities across the requested window,
+not concurrent pod counts or scrape payload size. Keep series with no finite
+values distinguishable from measured values when reporting cardinality.
+
+**Interpretation limits:** Count here measures ingested MDM events for the queried
+family, not total scrape samples, unique samples, payload bytes, or an endpoint
+inventory. Per-family maxima may occur in different buckets; do not sum them as
+a simultaneous total. The verified helper returned arrays without timestamps.
+`resolution(1m)` requests a resolution but does not establish bucket timestamps
+or prove a gap from a NaN array position. The tool preserves any actual timestamp
+fields but never derives them from the request or array index. `requestedWindow`
+is only the requested window. Successful family reads establish neither
+scrape-total availability nor collector ownership.
+
+##### Target counts, ownership, and job load
+
+`target_allocator_opentelemetry_allocator_targets` is a discovered-target gauge
+by job, not a local collector's assignment (see
+`otelcollector/otel-allocator/internal/target/discovery.go`).
+A job-labeled global allocator metric emitted by multiple replicas does not
+identify that job's owner. `targets_per_collector` records assigned target counts using
+`collector_name` and `strategy`, not per-job sample volume (see
+`otelcollector/otel-allocator/internal/allocation/allocator.go`).
+
+Establish ownership only with time-aligned assignment evidence containing both
+job/target and collector identity. Establish load with actual per-job sample
+telemetry and verified units. Do not assign a replica's excess volume to KSM or
+sum counter snapshots as events: verify rate/delta semantics, resets, aggregation,
+and bucket width first. If internal telemetry lacks those labels, report that
+ownership or job volume remains unproven; do not query customer endpoints to fill
+the gap.
 
 #### MDM Account Resolution and Throttling Check
 
@@ -86,6 +223,14 @@ After running `tsg_triage`, extract the `MDMAccountName` from the "MDM Account I
 3. If the customer has multiple AMWs, repeat for each `MDMAccountName`
 
 The throttling check queries the **MdmQos** namespace for: `ThrottledClientMetricCount`, `DroppedClientMetricCount`, `ThrottledTimeSeriesCount`, `MStoreDroppedSamplesCount`, `ClientAggregatedMetricCount` vs Limit, `MStoreActiveTimeSeriesCount` vs Limit, and `ThrottledQueriesCount`.
+
+Treat drops and throttling separately: `Duplicated`, `TooManyDimensions`, and
+`NotSupportedDoubleValue` are not evidence of quota throttling. Inspect the
+reason breakdown and explicit throttling series before attributing quota
+pressure. Do not assume active-series counts or limit values are per-minute
+rates. Empty, NaN, failed, or partially missing ME/QoS panels are inconclusive;
+only numeric zero drop/error panels support "no drops detected in queried data."
+Even zero panels do not establish successful end-to-end ingestion.
 
 Run `tsg_triage` first, then based on findings, run the relevant deep-dive tools.
 

@@ -217,19 +217,23 @@ Follow `tsgs/vulnerabilities.md` instead.
 | `tsg_metric_insights` | Analyze metric volume and cardinality — top metrics by time series count, sample rate, high-dimension cardinality, and **View All Metric Names** (full list of metric names ever ingested into the account). Requires `mdmAccountId` from `tsg_triage`. **Note:** "View All Metric Names" uses a 180-day lookback — it shows metrics that were ingested at some point, NOT that they are currently flowing. Use it to confirm a metric name exists in the account, then check `tsg_workload` or Grafana to verify current ingestion. |
 | `tsg_mdm_throttling` | Check Geneva MDM QoS throttling, drops, and utilization for a monitoring account. **Requires Geneva MDM MCP server running on localhost:5050.** |
 | `tsg_mdm_query` | Query any Prometheus metric from Geneva MDM for a specific cluster. Returns time series data with summary statistics (min/max/avg/latest, trend sparkline, significant changes). Use to verify a specific metric has recent data, check values over time, or investigate metric-specific issues. **Requires Geneva MDM MCP server running on localhost:5050.** Use `MDMAccountName` from `tsg_triage`. |
+| `tsg_mdm_kqlm` | Flexible KQL-M queries with explicit UTC windows: target-filtered Count, family comparisons, grouped breakdowns and complete raw-series JSON export. Preserves missing values and does not infer timestamps. See [query recipes and interpretation limits](reference.md#flexible-target-counts-family-comparisons-and-label-breakdowns). |
+| `tsg_mdm_metadata` | Discover namespaces, metric names, dimensions and preaggregates through the local Geneva helper. Empty metadata is inconclusive; dimension names do not prove a queryable combination. |
 | `tsg_me_diagnostics` | Check MetricsExtension internal QoS metrics (`MetricsExtension2` namespace) in the customer's MDM account. Queries `RawEventsDroppedCount`, `MetricAggregatesDroppedCount`, `MetricEventsDroppedCount`, and `MeErrorsCount`. When drops are detected, drills down by `Reason` dimension (e.g. `TooManyDimensions`, `Throttled`, `BlackListedMetric`, `OversizedHistogram`). Critical for diagnosing "scrape healthy but metrics missing in MDM" — ME may be silently dropping metrics. **Requires Geneva MDM MCP server running on localhost:5050.** |
 | `tsg_scrape_health` | Check scrape target health by querying `up`, `scrape_samples_scraped`, and `scrape_samples_post_metric_relabeling` from Geneva MDM. **Requires Geneva MDM MCP server running on localhost:5050.** |
 | `tsg_auth_check` | Validate credentials and connectivity to all data sources before running queries. Tests Azure credential, App Insights, Kusto clusters, and MDM MCP server. **Run this first if queries fail with 403 or connection errors.** |
 | `tsg_icm_page` | Scrape ICM incident page via Edge CDP. Works on both **Windows** (localhost:9222) and **WSL2** (port proxy on 9223). Intercepts `GetIncidentDetails` and `getdescriptionentries` API responses on reload to extract the **authored summary** (`Summary` field), **discussion entries**, and **ARM resource IDs**. Requires Edge with `--remote-debugging-port=9222`. On WSL2, also needs Windows port proxy on 9223. |
 | `tsg_dimension_analysis` | Analyze metric dimension counts, trends, and growth over time using `StorageInsightsUsageV2`. Shows max dimensions across all metrics in account, weekly dimension count trend for a specific metric, dimension name diffs (added/removed labels over time), and metrics with high dimension counts. Use when investigating missing metrics that may be silently dropped due to high dimension count — helps gather evidence for MDM team escalation. Takes `mdmAccountId` (required) and `metricName` (optional — omit for account-wide overview). |
 
-All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
+Cluster telemetry tools take `cluster` (ARM resource ID) and `timeRange` (e.g.
+"24h"); MDM tools instead use the monitoring account and configured label filters.
 
 **Timeframe best practices:**
 - **Always use the incident timeframe**, not defaults. If the ICM started 2 days ago and was mitigated yesterday, use `"48h"` or `"24h"` — not `"7d"`
 - **Start narrow, widen if needed.** Use `"1h"` or `"6h"` first. Queries on busy clusters with `"7d"` frequently timeout
 - **If a query times out**, retry with a shorter `timeRange` (e.g. `"1h"` instead of `"7d"`)
-- **Past incidents** (>30 days old): App Insights data is gone. Only AKS/CCP Kusto queries may have data. Focus diagnosis on ICM metadata (`howFixed`, `mitigateData`, `customFields`)
+- **Past incidents:** use explicit `startTime`/`endTime` and check source retention;
+  one empty query does not prove that the historical window has expired.
 
 **⚠️ ARM Resource ID pitfalls:**
 - **Use the cluster resource group, NOT the node resource group.** ICMs often mention both. The cluster RG (e.g. `rg-myteam-prod-eus`) is what the addon telemetry uses. The node/MC RG (e.g. `MC_rg-myteam-prod-eus_mycluster_eastus`) will return **all queries empty** with no error
@@ -238,35 +242,18 @@ All tools take `cluster` (ARM resource ID) and `timeRange` (e.g. "24h").
 
 #### Checking Scrape Target Health via Geneva MDM
 
-When investigating **intermittent missing metrics** for a specific target (e.g. kube-state-metrics), use `tsg_scrape_health` and `tsg_mdm_query`:
-
-1. Run `tsg_triage` → extract the `MDMAccountName` (e.g. `mac_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) and the cluster short name (the `cluster` label in MDM)
-2. Run `tsg_scrape_health` with `monitoringAccount`, `cluster`, and optionally `job` (e.g. `kube-state-metrics`):
-   - Without `job`: probes all common scrape targets in parallel, returns per-job summary table
-   - With `job`: detailed analysis of `up`, `scrape_samples_scraped`, `scrape_samples_post_metric_relabeling` for that job
-3. **Interpreting `tsg_scrape_health` results:**
-   - 100% success rate → scrape is healthy, issue is downstream (ME, MDSD, or MDM)
-   - Scrape failures (up=0) → target is unreachable or timing out, check target pod logs
-   - High relabeling drop rate (>50%) → many samples dropped by `metric_relabel_configs` or keep list
-   - Failure rate < 1% → transient scrape timeouts, usually self-healing
-   - Failure rate > 5% → persistent target health issue, check target pod logs
-4. **Verify the specific metric has recent data** — run `tsg_mdm_query` with the metric name:
-   - If `tsg_mdm_query` returns "Data exists" → metric is being ingested, issue may be query-side
-   - If `tsg_mdm_query` returns "No data" but `tsg_scrape_health` shows healthy scrapes → metric is being **scraped but silently dropped** downstream (ME dimension limit, keep list filtering, or MDM rejection). This is the key diagnostic signal
-   - **Test related metrics too** — if `kube_node_labels` has no data but `kube_node_info` does, the issue is specific to that metric (likely high dimension count)
-   - To filter by specific dimensions, pass `dimensions` as JSON: `{"job": ["kube-state-metrics"], "node": ["node1"]}`
-5. **Correlate with App Insights logs** — search for target-specific log tags:
-   - `prometheus.log.kubestatemetricscontainer` — KSM pod logs
-   - `prometheus.log.targetallocator.tacontainer` — target allocator logs
-   - `prometheus.log.prometheuscollectorcontainer` — otelcollector scrape logs (ReplicaSet)
-   - If a log tag has zero entries, that component isn't sending telemetry (may be crash-looping)
+Use the [internal telemetry workflow](reference.md#checking-scrape-target-health-via-geneva-mdm)
+for helper startup, preaggregate discovery, validated scrape observations and
+target-filtered family queries. Resolve the configured cluster label rather than
+assuming the AKS short name. Missing metric data or logs do not prove downstream
+drops or a crash; correlate with explicit errors and observed scrape samples.
 
 **⚠️ When ALL queries return empty or "No data":**
 This is almost always one of these causes (check in order):
 1. **Wrong ARM resource ID** — verify you're using the cluster RG, not the node RG (see above)
 2. **Wrong timeframe** — incident was days/weeks ago but you're querying last 24h. Use `startTime`/`endTime` to target the incident window
 3. **Addon not installed** — the cluster may not have the monitoring addon enabled (no telemetry sent at all). Check with `tsg_config` → "Addon Enabled in AKS Profile"
-4. **App Insights data expired** — data older than ~30 days is purged. Only Kusto-backed data sources (AKS, AKS CCP) retain longer history
+4. **Source retention** — check the actual source/window; an empty query alone does not establish expiry
 5. **VPN/auth issue** — if ALL queries across ALL data sources fail, you're likely not connected to corpnet or credentials expired
 
 > **Detailed reference** for tsg_query, MDM account resolution, CCP cluster ID, node pool capacity, historical time ranges, versions, MetricsExtension deep-dives, and escalation contacts: see **`reference.md`** in this directory.

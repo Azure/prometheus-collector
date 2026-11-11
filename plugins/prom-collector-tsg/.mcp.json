@@ -3,7 +3,7 @@
     "prom-collector-tsg": {
       "command": "node",
       "args": ["dist/server.cjs"],
-      "description": "Azure Managed Prometheus TSG diagnostic queries (KQL against ADX, App Insights, AKS Kusto)"
+      "description": "Azure Managed Prometheus diagnostics: internal ADX/App Insights/AKS telemetry; Geneva MDM QoS, metadata discovery and flexible KQL-M target/family counts with a local helper."
     }
   }
 }
