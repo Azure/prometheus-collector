@@ -2,13 +2,10 @@
   "id": "minimal-ingestion-disabled",
   "description": "Existing ConfigTests mip-false scenario; reuses its exact workflow labels and fixtures.",
   "platforms": [
-    "linux",
-    "windows"
+    "linux"
   ],
   "requires": {
-    "clusterFeatures": [
-      "windows"
-    ]
+    "clusterFeatures": []
   },
   "configmaps": [
     "../../../test-cluster-yamls/configmaps/controlplane/ama-metrics-settings-configmap-mipfalse-emptykeep.yaml"
@@ -16,7 +13,6 @@
   "customResources": [],
   "addonParams": {},
   "ginkgoLabels": [
-    "config-processing-common",
     "config-processing-mip-false"
   ],
   "expectedOutcome": "healthy"

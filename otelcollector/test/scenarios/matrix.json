@@ -5,40 +5,11 @@
     {
       "id": "default",
       "cluster": "clusters/default.bicepparam",
-      "clusterFeatures": ["aks", "windows", "workload-identity", "operator"],
-      "settingsVariants": ["default", "custom-scrape", "invalid-config", "windows", "all-targets-enabled"],
+      "clusterFeatures": ["aks", "windows", "windows2025", "azure-linux", "arm64", "fips", "workload-identity", "operator"],
+      "settingsVariants": ["*"],
       "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "fips", "arm64", "network-profile", "mip-enabled"],
       "tier": "pr"
-    },
-    {
-      "id": "linux",
-      "cluster": "clusters/linux.bicepparam",
-      "clusterFeatures": ["aks", "workload-identity", "operator"],
-      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "deny-filesystem-access", "dcgm-custom"],
-      "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
-      "tier": "nightly"
-    },
-    {
-      "id": "settings",
-      "cluster": "clusters/default.bicepparam",
-      "clusterFeatures": ["aks", "windows", "workload-identity", "operator"],
-      "settingsVariants": [
-        "default", "all-targets-enabled", "custom-scrape", "invalid-config", "windows",
-        "customer-settings-v1", "customer-settings-v2", "defaults-v1", "defaults-v2",
-        "collector-controls", "collector-controls-v1", "all-targets-disabled",
-        "rs-targets-enabled", "ds-targets-enabled", "global-labels", "custom-config-error",
-        "global-labels-error", "controlplane-istio", "minimal-ingestion-disabled",
-        "partial-v1", "partial-v2", "deny-filesystem-access", "default-targets-v2", "dcgm-custom",
-        "all-targets-disabled-v2", "all-targets-enabled-v2", "no-configmaps",
-        "customer-transitions-v1", "customer-transitions-v2",
-        "secret-transitions-v1", "secret-transitions-v2", "windows-kube-proxy",
-        "annotation-regex-edges-v1", "annotation-regex-edges-v2"
-      ],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "nightly"
     },
     {
       "id": "operator-secret-watch",
@@ -46,61 +17,43 @@
       "clusterFeatures": ["aks", "workload-identity", "operator", "secrets-watch-enforcement"],
       "settingsVariants": ["empty-secret-namespaces-v1", "empty-secret-namespaces-v2", "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2"],
       "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "mip-enabled"],
       "tier": "weekly"
     },
     {
       "id": "classic-azure-cni",
       "cluster": "clusters/classic-azure-cni.bicepparam",
       "clusterFeatures": ["aks", "windows", "workload-identity", "operator", "classic-azure-cni"],
-      "settingsVariants": ["default", "windows"],
+      "settingsVariants": ["*"],
       "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
       "tier": "nightly"
-    },
-    {
-      "id": "mixed",
-      "cluster": "clusters/mixed.bicepparam",
-      "clusterFeatures": ["aks", "windows", "windows2025", "azure-linux", "arm64", "fips", "workload-identity", "operator"],
-      "settingsVariants": ["default", "windows", "customer-settings-v1", "customer-settings-v2"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly"
     },
     {
       "id": "autoscaler",
       "cluster": "clusters/autoscaler.bicepparam",
       "clusterFeatures": ["aks", "windows", "autoscaler", "workload-identity", "operator"],
-      "settingsVariants": ["default", "windows"],
+      "settingsVariants": ["*"],
       "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly"
-    },
-    {
-      "id": "uai",
-      "cluster": "clusters/uai.bicepparam",
-      "clusterFeatures": ["aks", "windows", "user-assigned-identity", "workload-identity", "operator"],
-      "settingsVariants": ["default", "windows"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "autoscaler", "network-profile", "mip-enabled"],
       "tier": "weekly"
     },
     {
       "id": "cilium",
       "cluster": "clusters/cilium.bicepparam",
       "clusterFeatures": ["aks", "cilium", "workload-identity", "operator"],
-      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "dcgm-custom"],
+      "settingsVariants": ["*"],
       "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
       "tier": "weekly"
     },
     {
       "id": "kubenet",
       "cluster": "clusters/kubenet.bicepparam",
       "clusterFeatures": ["aks", "kubenet", "user-assigned-identity", "workload-identity", "operator"],
-      "settingsVariants": ["customer-settings-v1", "customer-settings-v2", "dcgm-custom"],
+      "settingsVariants": ["*"],
       "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
       "tier": "weekly"
     },
     {
@@ -177,11 +130,10 @@
       "id": "acns",
       "cluster": "clusters/acns.bicepparam",
       "clusterFeatures": ["aks", "windows", "managed-acns", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
+      "settingsVariants": ["*"],
       "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Managed non-Cilium ACNS enablement/traffic/target proof is not implemented; CI Helm Retina is a different installation."
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns", "network-profile", "mip-enabled"],
+      "tier": "weekly"
     },
     {
       "id": "acns-cilium",
@@ -228,10 +180,15 @@
     "No live candidate evidence exists until a source-bound digest receipt is supplied and the scenario finishes.",
     "Compiled infrastructure is not live coverage. blockedReason prevents provisioning before its missing execution/proof adapter exists.",
     "Operator empty/omitted-secret watch enforcement requires the runtime official regional default to be at least Kubernetes1.37; unsupported/skipped is not a pass and no older version is pinned.",
-    "The mixed profile requires source-bound ARM64 and a Windows2022 candidate; Windows2025 hosts support that process-isolated image without a separate Windows2025 producer.",
+    "The default profile includes mixed Linux/Windows, ARM64, Azure Linux 3, FIPS, and Windows2025 pools; actual runtime image compatibility remains required.",
     "Windows2019 is unsupported on currently supported official Kubernetes versions; do not pin older Kubernetes to recreate it.",
     "Arc onboarding and CCP standalone health validation require their separate authorized adapters; ordinary AKS is not equivalent.",
-    "regionTests requires region/rule parameters and is not included in the cluster health suite.",
+    "regionTests is only partial coverage of the #1029 document: cloud selection, AMCS/DCR/DCE, expected always/never alerts, alert evaluation, and actionable request-ID failure reporting remain unimplemented; sovereign-cloud access is not established.",
+    "DCGM configuration assertions exist, but no GPU profile or fresh DCGM metric-ingestion check is available.",
+    "The controlplane-istio fake-FQDN workflow checks configuration generation, not real Applink target discovery or scraping.",
+    "OTLP metric assertions exist, but candidate enablement, producer setup, and fresh ingestion proof are not implemented.",
+    "Operator HTTPS specs exist, but the #1687 enabled/disabled deployment checks have no live candidate evidence.",
+    "The #1169 self-hosted Karpenter metric-name validation has no executable candidate scenario or verified run.",
     "Customer Helm installation requires an isolated helmChartInstall target; never apply customer Helm values to the managed-addon backdoor chart.",
     "Per-profile measured time/cost and Azure what-if/live proof are pending; tier recommendations do not imply successful executions."
   ]

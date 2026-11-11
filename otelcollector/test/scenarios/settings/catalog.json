@@ -86,6 +86,14 @@
       "workflow": "testkube-config-test-only-custom-configmap-crs.yaml"
     },
     {
+      "id": "custom-scrape-no-default-targets",
+      "manifest": "custom-scrape-no-default-targets/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-only-custom-configmap-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
       "id": "invalid-config",
       "manifest": "invalid-config/manifest.json",
       "schedule": "pr",
@@ -189,6 +197,14 @@
       "workflow": "testkube-config-test-custom-configmap-error-crs.yaml"
     },
     {
+      "id": "custom-config-error-no-default-targets",
+      "manifest": "custom-config-error-no-default-targets/manifest.json",
+      "schedule": "pr",
+      "surface": "configmap",
+      "workflow": "testkube-config-test-custom-configmap-error-crs.yaml",
+      "overrideWorkflowLabels": true
+    },
+    {
       "id": "global-labels-error",
       "manifest": "global-labels-error/manifest.json",
       "schedule": "nightly",
@@ -207,7 +223,8 @@
       "manifest": "minimal-ingestion-disabled/manifest.json",
       "schedule": "nightly",
       "surface": "configmap",
-      "workflow": "testkube-config-test-mip-false-crs.yaml"
+      "workflow": "testkube-config-test-mip-false-crs.yaml",
+      "overrideWorkflowLabels": true
     },
     {
       "id": "partial-v1",

@@ -13,14 +13,11 @@ parameters:
   default: default
   values:
   - default
-  - settings
-  - linux
   - classic-azure-cni
-  - mixed
   - autoscaler
-  - uai
   - cilium
   - kubenet
+  - acns
 
 steps:
 - checkout: self
@@ -70,10 +67,10 @@ steps:
         exit 1
       }
     fi
-    [[ "$SYSTEM_JOBATTEMPT" == 1 && "$SYSTEM_STAGEATTEMPT" == 1 ]] || { echo "Start a new run; candidate retries cannot reuse evidence" >&2; exit 1; }
+    [[ "$SYSTEM_JOBATTEMPT" =~ ^[1-9][0-9]*$ && "$SYSTEM_STAGEATTEMPT" =~ ^[1-9][0-9]*$ ]] || { echo "Candidate attempt counters are invalid" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
     [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched regional capacity admission" >&2; exit 1; }
-    case "$CANDIDATE_SCENARIO" in default|settings|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
+    case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|autoscaler|cilium|kubenet|acns) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
     git cat-file -e "$CANDIDATE_SOURCE_SHA^{commit}"
@@ -199,10 +196,7 @@ steps:
 
 - task: AzureCLI@2
   displayName: "Run authenticated candidate scenario through existing TestKube harness"
-  ${{ if eq(parameters.scenario, 'settings') }}:
-    timeoutInMinutes: 540
-  ${{ else }}:
-    timeoutInMinutes: 300
+  timeoutInMinutes: 540
   inputs:
     azureSubscription: ${{ parameters.azureSubscription }}
     scriptType: bash
@@ -213,11 +207,14 @@ steps:
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
       [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
-        settings) max_run_seconds=28800 ;;
-        default|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet) max_run_seconds=14400 ;;
+        default|classic-azure-cni|autoscaler|cilium|kubenet|acns) max_run_seconds=28800 ;;
         *) echo "Unsupported candidate scenario" >&2; exit 1 ;;
       esac
-      CANDIDATE_RUN_ID="$("$PYTHON" -c 'import uuid; print(uuid.uuid4())')"
+      CANDIDATE_RUN_ID="$("$PYTHON" -c 'import sys,uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, "ama-metrics-candidate:" + sys.argv[1] + ":" + sys.argv[2]))' "$BUILD_BUILDID" "$CANDIDATE_SCENARIO")"
+      retry_args=()
+      if [[ "$SYSTEM_STAGEATTEMPT" -gt 1 || "$SYSTEM_JOBATTEMPT" -gt 1 ]]; then
+        retry_args+=(--reuse-existing)
+      fi
       publish_bootstrap() {
         local proof="$CANDIDATE_EVIDENCE/rbac-bootstrap.json"
         local public="$CANDIDATE_EVIDENCE/rbac-bootstrap-public.json"
@@ -247,7 +244,9 @@ steps:
       trap 'exit 130' INT
       trap 'exit 143' TERM
       "$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run \
-        --scenario "$CANDIDATE_SCENARIO" --run-id "$CANDIDATE_RUN_ID" --build-id "$PRODUCER_BUILD_ID" --testkube-version 2.15.0 \
+        --scenario "$CANDIDATE_SCENARIO" --run-id "$CANDIDATE_RUN_ID" --build-id "$PRODUCER_BUILD_ID" \
+        --testkube-version 2.15.0 \
+        "${retry_args[@]}" \
         --max-run-seconds "$max_run_seconds" \
         --source-root "$CANDIDATE_ROOT" --test-source-root "$CANDIDATE_ROOT" \
         --settings-root "$CANDIDATE_ROOT/otelcollector/test/scenarios/settings" \
@@ -263,6 +262,9 @@ steps:
     CANDIDATE_EVIDENCE: $(candidateEvidence)
     CANDIDATE_TOOLS: $(candidateTools)
     PYTHON: $(candidatePython)/bin/python
+    BUILD_BUILDID: $(Build.BuildId)
+    SYSTEM_STAGEATTEMPT: $(System.StageAttempt)
+    SYSTEM_JOBATTEMPT: $(System.JobAttempt)
 
 - bash: |
     set -euo pipefail

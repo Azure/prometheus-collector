@@ -51,6 +51,11 @@ The empty/omitted-secret variants require the operator and the
 `config-processing-empty-secret-namespaces` spec in the combined candidate.
 They run on the current cluster; a version-gated skip is not enforcement proof.
 
+The candidate `collector-controls` slot also runs the `ksm-allowlist`
+querymetrics spec. It verifies fresh ingestion of allowlisted pod labels and
+namespace annotations and absence of non-allowlisted dimensions; rendered KSM
+arguments alone are not runtime coverage.
+
 `expectedOutcome: config-error` means the collector should report the expected
 configuration error and use its fallback. It does not mean skip assertions or
 expect unhealthy pods.

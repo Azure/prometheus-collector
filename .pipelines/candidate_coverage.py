@@ -5,9 +5,22 @@ import json
 from pathlib import Path
 
 
-SCENARIOS = ("default", "linux", "settings", "classic-azure-cni", "mixed",
-             "autoscaler", "uai", "cilium", "kubenet")
+SCENARIOS = ("default", "classic-azure-cni", "autoscaler", "cilium", "kubenet", "acns")
 SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
+
+
+def selected_variants(root, row, catalog):
+    if row["settingsVariants"] != ["*"]:
+        return row["settingsVariants"]
+    selected = []
+    for entry in catalog["variants"]:
+        manifest = json.loads((root / "settings" / entry["manifest"]).read_text())
+        features = set(row["clusterFeatures"])
+        if (set(manifest["requires"]["clusterFeatures"]) <= features
+                and set(manifest["platforms"]) <= set(row["platforms"])
+                and not manifest.get("helmValues") and not manifest.get("addonParams")):
+            selected.append(entry["id"])
+    return selected
 
 
 def plan(root, scenario):
@@ -22,7 +35,8 @@ def plan(root, scenario):
         raise ValueError(f"Unsupported candidate scenario: {scenario}")
     blocked = {name: row["blockedReason"] for name, row in rows.items() if row.get("blockedReason")}
     blocked["operator-secret-watch"] = SECRET_WATCH_BLOCKER
-    covered = {variant for name in SCENARIOS for variant in rows[name]["settingsVariants"]}
+    covered = {variant for name in SCENARIOS
+               for variant in selected_variants(root, rows[name], catalog)}
     variants = []
     for variant in catalog["variants"]:
         name = variant["id"]
@@ -38,11 +52,21 @@ def plan(root, scenario):
         "blockedScenarios": [{"id": name, "status": "BLOCKED", "reason": reason}
                              for name, reason in blocked.items()],
         "blockedVariants": variants,
-        "blockedTestSuites": [{
-            "id": "regionTests", "status": "BLOCKED",
-            "reason": "Missing owned recording-rule and AMW usage/limits authorization adapter; "
-                      "requires parmRuleName and parmAmwResourceId. Health suites are not a substitute.",
-        }],
+        "blockedTestSuites": [
+            {
+                "id": "arc-conformance", "status": "BLOCKED",
+                "reason": "Arc conformance uses a separate Arc/Sonobuoy environment and is not run by the AKS candidate adapter.",
+            },
+            {
+                "id": "ccp-health", "status": "BLOCKED",
+                "reason": "CCP health requires its standalone-underlay adapter; ordinary AKS is not CCP coverage.",
+            },
+            {
+                "id": "regionTests", "status": "BLOCKED",
+                "reason": "Missing owned recording-rule and AMW usage/limits authorization adapter; "
+                          "requires parmRuleName and parmAmwResourceId. Health suites are not a substitute.",
+            },
+        ],
     }
 
 

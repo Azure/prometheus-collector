@@ -2,7 +2,7 @@
   "id": "omitted-secret-namespaces-v2",
   "description": "Schema v2 operator watch-nothing behavior when secret namespaces are omitted, not allowlisted.",
   "platforms": ["linux"],
-  "requires": {"clusterFeatures": ["operator"]},
+  "requires": {"clusterFeatures": ["operator", "secrets-watch-enforcement"]},
   "configmaps": ["settings.yaml"],
   "customResources": [],
   "addonParams": {},

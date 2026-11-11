@@ -3,18 +3,63 @@ package querymetrics
 import (
 	"context"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/model"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"prometheus-collector/otelcollector/test/utils"
 )
 
 var _ = Describe("Query Metrics Test Suite", func() {
+	DescribeTable("should apply the minimal ingestion profile to node exporter metrics",
+		func(expectNonMinimalMetric bool) {
+			upQuery := utils.FreshMetricQuery(
+				fmt.Sprintf("up{job=%q,cluster=%q}", "node", ExpectedCluster), suiteStarted)
+			Eventually(func(g Gomega) {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, upQuery)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, "up", "node", ExpectedCluster, time.Now(), true)).To(Succeed())
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+
+			metric := "node_filefd_allocated"
+			query := utils.FreshMetricQuery(
+				fmt.Sprintf("%s{job=%q,cluster=%q}", metric, "node", ExpectedCluster), suiteStarted)
+			check := func(g Gomega) {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				if expectNonMinimalMetric {
+					g.Expect(samples).NotTo(BeEmpty(), "non-minimal metric %s was not ingested", metric)
+					g.Expect(utils.ValidateMetricSamples(samples, metric, "node", ExpectedCluster, time.Now(), false)).To(Succeed())
+				} else {
+					g.Expect(samples).To(BeEmpty(), "non-minimal metric %s was ingested with MIP enabled", metric)
+				}
+			}
+			if expectNonMinimalMetric {
+				Eventually(check, 8*time.Minute, 15*time.Second).Should(Succeed())
+			} else {
+				Consistently(check, 90*time.Second, 15*time.Second).Should(Succeed())
+			}
+		},
+		Entry("filters a non-minimal metric when enabled", false, Label("mip-enabled")),
+		Entry("ingests the same metric when disabled", true, Label("mip-disabled")),
+	)
+
 	It("ingests the configured alias and only the admitted annotation namespace after this suite starts", Label("cluster-identity"), func() {
 		Expect(os.Getenv("EXPECTED_CLUSTER")).To(Equal("Customer_Config_POC"), "use the customer-settings alias fixture and an independent expected identity")
 		Eventually(func(g Gomega) {
@@ -283,43 +328,270 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		}
 	})
 
-	It("scrapes and ingests the Cilium and Hubble jobs on a provisioned managed ACNS lane", Label("managed-acns"), func() {
-		service, err := K8sClient.CoreV1().Services("kube-system").Get(context.Background(), "network-observability", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred(), "managed ACNS network-observability service is a required independent fixture")
-		ports := map[string]bool{}
-		for _, port := range service.Spec.Ports {
-			ports[port.Name] = port.Port > 0
-		}
-		Expect(ports["cilium"]).To(BeTrue())
-		Expect(ports["hubble"]).To(BeTrue())
-		pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-node")
+	It("ingests managed Retina node and Hubble pod metrics on non-Cilium ACNS", Label("managed-acns"), func() {
+		nodePods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-node")
 		Expect(err).NotTo(HaveOccurred())
-		for _, target := range []struct{ job, metric string }{
-			{"networkobservability-cilium", "cilium_forward_bytes_total"},
+		Expect(nodePods).NotTo(BeEmpty(), "ACNS basic metrics require Linux collector nodes")
+
+		started := time.Now()
+		for range 3 {
+			_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
+			Expect(err).NotTo(HaveOccurred())
+		}
+		for _, target := range []struct {
+			job, metric string
+		}{
+			{"networkobservability-retina", "networkobservability_forward_bytes"},
 			{"networkobservability-hubble", "hubble_dns_queries_total"},
 		} {
 			Eventually(func(g Gomega) {
-				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery("up", target.job))
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
+					utils.FreshMetricQuery(metricQuery("up", target.job), started))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(warnings).To(BeEmpty())
 				samples, ok := result.(model.Vector)
 				g.Expect(ok).To(BeTrue())
 				g.Expect(utils.ValidateMetricSamples(samples, "up", target.job, ExpectedCluster, time.Now(), true)).To(Succeed())
-				for _, pod := range pods {
-					found := false
-					for _, sample := range samples {
-						found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
-					}
-					g.Expect(found).To(BeTrue(), "node %s has no fresh healthy %s scrape", pod.Spec.NodeName, target.job)
-				}
-				warnings, result, err = utils.InstantQuery(PrometheusQueryClient, metricQuery(target.metric, target.job))
+				g.Expect(samples).NotTo(BeEmpty(), "managed %s scrape target is required", target.job)
+				warnings, result, err = utils.InstantQuery(PrometheusQueryClient,
+					utils.FreshMetricQuery(metricQuery(target.metric, target.job), started))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(warnings).To(BeEmpty())
 				samples, ok = result.(model.Vector)
 				g.Expect(ok).To(BeTrue())
 				g.Expect(utils.ValidateMetricSamples(samples, target.metric, target.job, ExpectedCluster, time.Now(), false)).To(Succeed())
+				g.Expect(samples).NotTo(BeEmpty(), "fresh managed %s metric is required", target.metric)
+				if target.job == "networkobservability-retina" {
+					for _, pod := range nodePods {
+						g.Expect(pod.Spec.NodeName).NotTo(BeEmpty())
+						found := false
+						for _, sample := range samples {
+							found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
+						}
+						g.Expect(found).To(BeTrue(), "node %s has no fresh managed Retina sample", pod.Spec.NodeName)
+					}
+				}
+				trafficQuery := fmt.Sprintf("increase(%s{job=%q,cluster=%q}[5m])",
+					target.metric, target.job, ExpectedCluster)
+				warnings, result, err = utils.InstantQuery(PrometheusQueryClient,
+					utils.FreshMetricQuery(trafficQuery, started))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				traffic, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(traffic).NotTo(BeEmpty(), "managed %s traffic increase is required", target.metric)
+				observedTraffic := false
+				podTraffic := false
+				for _, sample := range traffic {
+					g.Expect(string(sample.Metric["job"])).To(Equal(target.job))
+					g.Expect(string(sample.Metric["cluster"])).To(Equal(ExpectedCluster))
+					observedTraffic = observedTraffic || sample.Value > 0
+					podTraffic = podTraffic || (sample.Value > 0 &&
+						(sample.Metric["source"] != "" || sample.Metric["destination"] != ""))
+				}
+				g.Expect(observedTraffic).To(BeTrue(), "managed %s traffic must increase after test traffic", target.metric)
+				if target.job == "networkobservability-hubble" && len(samples) > 0 {
+					g.Expect(podTraffic).To(BeTrue(), "pod-level Hubble metrics must identify a source or destination pod")
+				}
 			}, 8*time.Minute, 15*time.Second).Should(Succeed())
 		}
+	})
+
+	It("ingests node network counters after traffic through the selected AKS network profile", Label("network-profile"), func() {
+		started := time.Now()
+		baselines := map[string]map[string]model.SampleValue{}
+		for _, metric := range []string{"node_network_receive_bytes_total", "node_network_transmit_bytes_total"} {
+			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, metricQuery(metric, "node"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(warnings).To(BeEmpty())
+			samples, ok := result.(model.Vector)
+			Expect(ok).To(BeTrue())
+			Expect(samples).NotTo(BeEmpty())
+			baselines[metric] = map[string]model.SampleValue{}
+			for _, sample := range samples {
+				key := string(sample.Metric["instance"]) + "/" + string(sample.Metric["device"])
+				baselines[metric][key] = sample.Value
+			}
+		}
+
+		client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
+		for range 3 {
+			_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
+			Expect(err).NotTo(HaveOccurred())
+			response, err := client.Get("http://prometheus-reference-service.default.svc.cluster.local:2112/metrics")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			_, copyErr := io.Copy(io.Discard, response.Body)
+			closeErr := response.Body.Close()
+			Expect(copyErr).NotTo(HaveOccurred())
+			Expect(closeErr).NotTo(HaveOccurred())
+		}
+
+		for _, metric := range []string{"node_network_receive_bytes_total", "node_network_transmit_bytes_total"} {
+			Eventually(func(g Gomega) {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
+					utils.FreshMetricQuery(metricQuery(metric, "node"), started))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(utils.ValidateMetricSamples(samples, metric, "node", ExpectedCluster, time.Now(), false)).To(Succeed())
+				increased := false
+				for _, sample := range samples {
+					key := string(sample.Metric["instance"]) + "/" + string(sample.Metric["device"])
+					baseline, existed := baselines[metric][key]
+					increased = increased || (existed && sample.Value > baseline)
+				}
+				g.Expect(increased).To(BeTrue(), "%s did not increase after DNS and service traffic", metric)
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		}
+	})
+
+	It("scales the Linux system pool for pending workload and returns to its minimum", Label("autoscaler"), func() {
+		ctx := context.Background()
+		const namespaceName = "candidate-autoscaler-probe"
+		namespaceClient := K8sClient.CoreV1().Namespaces()
+		namespace, err := namespaceClient.Get(ctx, namespaceName, metav1.GetOptions{})
+		if err == nil {
+			Expect(namespace.Labels["app"]).To(Equal(namespaceName))
+			Expect(namespace.Annotations["candidate.cluster"]).To(Equal(ExpectedCluster))
+			Expect(namespaceClient.Delete(ctx, namespaceName, metav1.DeleteOptions{})).To(Succeed())
+			Eventually(func() bool {
+				_, err := namespaceClient.Get(ctx, namespaceName, metav1.GetOptions{})
+				return apierrors.IsNotFound(err)
+			}, 5*time.Minute, 10*time.Second).Should(BeTrue())
+		} else {
+			Expect(apierrors.IsNotFound(err)).To(BeTrue(), "unexpected error checking owned autoscaler namespace: %v", err)
+		}
+
+		poolNodeCount := func() (int, error) {
+			pods, err := K8sClient.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
+				LabelSelector: "dsName=ama-metrics-node",
+			})
+			if err != nil {
+				return 0, err
+			}
+			count := 0
+			for _, pod := range pods.Items {
+				if pod.Status.Phase == corev1.PodRunning && pod.Spec.NodeName != "" {
+					count++
+				}
+			}
+			return count, nil
+		}
+		eventuallyPoolCount := func(g Gomega) int {
+			count, err := poolNodeCount()
+			g.Expect(err).NotTo(HaveOccurred())
+			return count
+		}
+		Eventually(eventuallyPoolCount, 20*time.Minute, 15*time.Second).Should(Equal(1))
+
+		namespace, err = namespaceClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:        namespaceName,
+			Labels:      map[string]string{"app": namespaceName},
+			Annotations: map[string]string{"candidate.cluster": ExpectedCluster},
+		}}, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			err := namespaceClient.Delete(ctx, namespace.Name, metav1.DeleteOptions{})
+			Expect(err == nil || apierrors.IsNotFound(err)).To(BeTrue(), "failed to remove owned autoscaler namespace: %v", err)
+			Eventually(func(g Gomega) bool {
+				_, err := namespaceClient.Get(ctx, namespace.Name, metav1.GetOptions{})
+				g.Expect(err == nil || apierrors.IsNotFound(err)).To(BeTrue())
+				return apierrors.IsNotFound(err)
+			}, 5*time.Minute, 10*time.Second).Should(BeTrue())
+			Eventually(eventuallyPoolCount, 20*time.Minute, 15*time.Second).Should(Equal(1))
+		})
+
+		for index := range 3 {
+			_, err = K8sClient.CoreV1().Pods(namespaceName).Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("scale-probe-%d", index)},
+				Spec: corev1.PodSpec{
+					NodeSelector: map[string]string{
+						"kubernetes.io/os": "linux", "kubernetes.azure.com/agentpool": "system",
+					},
+					RestartPolicy: corev1.RestartPolicyNever,
+					Containers: []corev1.Container{{
+						Name: "pause", Image: "mcr.microsoft.com/oss/kubernetes/pause:3.9",
+						Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("2"),
+						}},
+					}},
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+		Eventually(func(g Gomega) {
+			for index := range 3 {
+				pod, err := K8sClient.CoreV1().Pods(namespaceName).Get(
+					ctx, fmt.Sprintf("scale-probe-%d", index), metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
+			}
+		}, 20*time.Minute, 15*time.Second).Should(Succeed())
+		count, err := poolNodeCount()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(count).To(BeNumerically(">", 1))
+	})
+
+	It("ingests only the configured KSM pod-label and namespace-annotation allowlists", Label("ksm-allowlist"), func() {
+		ctx := context.Background()
+		namespaceName := fmt.Sprintf("candidate-ksm-%d", time.Now().UnixNano())
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name: namespaceName,
+			Annotations: map[string]string{
+				"settings-test": "included",
+				"not-allowed":   "excluded",
+			},
+		}}
+		_, err := K8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(K8sClient.CoreV1().Namespaces().Delete(ctx, namespaceName, metav1.DeleteOptions{})).To(Succeed())
+		})
+		podName := "allowlist-probe"
+		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+			Name: podName, Namespace: namespaceName,
+			Labels: map[string]string{"app": "included", "not-allowed": "excluded"},
+		}, Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{"kubernetes.io/os": "linux"},
+			Containers: []corev1.Container{{
+				Name: "pause", Image: "mcr.microsoft.com/oss/kubernetes/pause:3.9",
+			}},
+		}}
+		_, err = K8sClient.CoreV1().Pods(namespaceName).Create(ctx, pod, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(K8sClient.CoreV1().Pods(namespaceName).Delete(ctx, podName, metav1.DeleteOptions{})).To(Succeed())
+		})
+
+		started := time.Now()
+		Eventually(func(g Gomega) {
+			for _, check := range []struct {
+				metric, query string
+				found         bool
+			}{
+				{"kube_pod_labels", fmt.Sprintf(`kube_pod_labels{job="kube-state-metrics",namespace=%q,pod=%q,label_app="included"}`, namespaceName, podName), true},
+				{"kube_pod_labels", fmt.Sprintf(`kube_pod_labels{job="kube-state-metrics",namespace=%q,pod=%q,label_not_allowed="excluded"}`, namespaceName, podName), false},
+				{"kube_namespace_annotations", fmt.Sprintf(`kube_namespace_annotations{job="kube-state-metrics",namespace=%q,annotation_settings_test="included"}`, namespaceName), true},
+				{"kube_namespace_annotations", fmt.Sprintf(`kube_namespace_annotations{job="kube-state-metrics",namespace=%q,annotation_not_allowed="excluded"}`, namespaceName), false},
+			} {
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
+					utils.FreshMetricQuery(check.query, started))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(warnings).To(BeEmpty())
+				samples, ok := result.(model.Vector)
+				g.Expect(ok).To(BeTrue())
+				if check.found {
+					g.Expect(samples).NotTo(BeEmpty(), "allowlisted KSM metric is missing: %s", check.query)
+					g.Expect(utils.ValidateMetricSamples(
+						samples, check.metric, "kube-state-metrics", ExpectedCluster, time.Now(), false,
+					)).To(Succeed())
+				} else {
+					g.Expect(samples).To(BeEmpty(), "non-allowlisted KSM metric was ingested: %s", check.query)
+				}
+			}
+		}, 8*time.Minute, 15*time.Second).Should(Succeed())
 	})
 
 	DescribeTable("should return the expected labels for specified metrics in each job",
@@ -352,7 +624,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"node_ip_single_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
 			"node_name_double_dollar_sign": ".+",                                        // Legacy backwards compatibility for $$NODE_NAME when single $ was not supported
 			"node_ip_double_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", // Legacy backwards compatibility for $$NODE_IP when single $ was not supported
-		}, Label(utils.LinuxDaemonsetCustomConfig)),
+		}, Label(utils.LinuxDaemonsetCustomConfig), Label(utils.ConfigProcessingSettingsNodeConfigMap)),
 		Entry("Relabeling with dollar signs & external labels for PodMonitor", "default/referenceapp", "up", map[string]string{
 			"double_dollar_sign": "\\$1",                     // PodMonitor does not have the legacy backwards compatibility for $$1
 			"single_dollar_sign": "prometheus-reference-app", // $1 does work for PodMonitor
@@ -372,11 +644,11 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		Entry("External labels are applied from DaemonSet Configmap", "node-configmap", "up", map[string]string{
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
-		}, Label(utils.LinuxDaemonsetCustomConfig)),
+		}, Label(utils.LinuxDaemonsetCustomConfig), Label(utils.ConfigProcessingSettingsNodeConfigMap)),
 		Entry("External labels are applied from Windows DaemonSet Configmap", "windows-node-configmap", "up", map[string]string{
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
-		}, Label(utils.WindowsLabel)),
+		}, Label(utils.WindowsLabel), Label(utils.ConfigProcessingSettingsNodeConfigMap)),
 	)
 
 	Context("When querying metrics", func() {

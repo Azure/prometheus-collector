@@ -56,7 +56,7 @@ Append these two steps before `"List Results Files"`. Replace `<scenario>` with 
 
 ## Things to remember
 
-- **Scenarios run sequentially and share one cluster.** Don't assume the cluster is in a clean state — pre-clean any leftover resources at the start of step 6a, set up the state your scenario needs, and restore the baseline at the end in step 6b. The summary step must use `condition: always()` so cleanup runs even when tests fail.
+- **Legacy ConfigTests scenarios run sequentially and share one cluster.** Don't assume the cluster is in a clean state — pre-clean any leftover resources at the start of step 6a, set up the state your scenario needs, and restore the baseline at the end in step 6b. The summary step must use `condition: always()` so cleanup runs even when tests fail. The candidate matrix uses separately owned clusters per infrastructure row; only settings variants within a row share a cluster, sequentially.
 - **`<scenario>` must be unique** across all scenarios — it ends up as the `.environment` tag and the result-file name in the Teams summary.
 - **Pass `"ConfigTests"` as the 7th arg** to `run-testkube-workflow.sh`. That is what makes the script look up your template under `config-processing-test-crs/` and resolve workflows from the `case` block instead of auto-discovering them.
 - **The 5th arg `"false"`** tells the script not to apply the baseline settings configmap — config tests manage their own configmaps.

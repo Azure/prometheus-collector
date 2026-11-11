@@ -1,5 +1,5 @@
 using 'aks.bicep'
-import { defaultPools } from 'pools.bicep'
+import { mixedPools } from 'pools.bicep'
 
 param runName = readEnvironmentVariable('SCENARIO_RUN_NAME')
 param scenarioId = 'default'
@@ -8,4 +8,4 @@ param kubernetesVersion = readEnvironmentVariable('SCENARIO_KUBERNETES_VERSION')
 param owner = readEnvironmentVariable('SCENARIO_OWNER')
 param expiresAt = readEnvironmentVariable('SCENARIO_EXPIRES_AT')
 param windowsAdminPassword = readEnvironmentVariable('SCENARIO_WINDOWS_PASSWORD')
-param nodePools = defaultPools
+param nodePools = mixedPools

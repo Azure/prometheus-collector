@@ -60,6 +60,58 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_retry_reuses_only_exact_live_candidate_deployment(self):
+        pools = pool_parameters()["nodePools"]
+        expiry = "2099-01-01T00:00:00Z"
+        token = "12345678-1234-1234-1234-123456789abc"
+        cluster_id = "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ContainerService/managedClusters/sc"
+        outputs = {
+            "clusterId": cluster_id, "clusterName": "sc", "location": "eastus2",
+            "nodeResourceGroupName": "node-rg", "amwManagedResourceGroupName": "amw-rg",
+            "expectedPools": pools, "addonEnabled": False, "installationMode": "candidate-addon",
+            "identityType": "SystemAssigned",
+            "resourceTags": {"owner": "ama-metrics-e2e", "scenario": "mixed",
+                             "run": "run", "expiresAt": expiry},
+        }
+        for case in ("valid", "run", "deployment-state", "deployment-output", "cluster"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                tags = {
+                    "scenario-token": token, "scenario-run": "run", "scenario": "mixed",
+                    "owner": "ama-metrics-e2e", "expiresAt": expiry,
+                }
+                if case == "run":
+                    tags["scenario-run"] = "other"
+                deployment_outputs = copy.deepcopy(outputs)
+                if case == "deployment-output":
+                    deployment_outputs["expectedPools"] = []
+                deployment = {"properties": {
+                    "provisioningState": "Failed" if case == "deployment-state" else "Succeeded",
+                    "outputs": {key: {"value": value} for key, value in deployment_outputs.items()},
+                }}
+                cluster = {
+                    "id": cluster_id, "location": "westcentralus" if case == "cluster" else "eastus2",
+                    "provisioningState": "Succeeded", "powerState": {"code": "Running"},
+                    "kubernetesVersion": "1.36.5", "nodeResourceGroup": "node-rg",
+                    "identity": {"type": "SystemAssigned"},
+                }
+                host = runner.Host(types.SimpleNamespace(
+                    evidence=Path(directory), subscription="sub", run_id="run", location="eastus2",
+                    reuse_existing=True,
+                ), scenario(), Mock())
+                host.az = Mock(side_effect=[
+                    [{"name": "rg", "location": "eastus2", "tags": tags}],
+                    {"location": "eastus2", "tags": tags}, deployment, cluster,
+                ])
+                env = {"SCENARIO_EXPIRES_AT": expiry, "SCENARIO_KUBERNETES_VERSION": "1.36.5"}
+                if case == "valid":
+                    result = host.provision(env, "principal", "User", pools)
+                    self.assertEqual(result["clusterName"], "sc")
+                    self.assertTrue((Path(directory) / "retry-reuse.json").is_file())
+                else:
+                    with self.assertRaises(ValueError):
+                        host.provision(env, "principal", "User", pools)
+                self.assertFalse(any("group create" in str(call) for call in host.az.call_args_list))
+
     def test_candidate_harness_region_guard_matches_campaign_locations(self):
         template = (runner.REPO / ".pipelines/azure-template-candidate-config-tests.yml").read_text(
             encoding="utf-8")
@@ -67,7 +119,8 @@ class Contracts(unittest.TestCase):
                      if "Regional capacity admission has no approved placement" in line)
         allowed = {clause.rsplit("==", 1)[1].strip()
                    for clause in guard.split("]]", 1)[0].split("||") if "==" in clause}
-        self.assertEqual(allowed, set(runner.CAMPAIGN_LOCATIONS.values()))
+        self.assertEqual(allowed, {"centralus", "eastus2", "westcentralus"})
+        self.assertLessEqual(set(runner.CAMPAIGN_LOCATIONS.values()), allowed)
 
     def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
@@ -90,7 +143,7 @@ class Contracts(unittest.TestCase):
             if row["id"] == "autoscaler":
                 for pool in parameters["nodePools"]:
                     pool.update(autoscaling=True, maxCount=3)
-            if row["id"] == "mixed":
+            if row["id"] in {"default", "settings"}:
                 parameters["nodePools"].extend([
                     dict(parameters["nodePools"][0], name=str(index), fips=True)
                     for index in range(5)])
@@ -119,24 +172,23 @@ class Contracts(unittest.TestCase):
                 result = runner.campaign_preflight(args, matrix, commands)
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 9)
+                self.assertEqual(len(result["placements"]), 6)
                 self.assertFalse(result["capacityReserved"])
-                self.assertEqual(result["placements"]["mixed"], "eastus2")
-                self.assertEqual(result["placements"]["autoscaler"], "westcentralus")
-                self.assertEqual(result["placements"]["settings"], "centralus")
+                self.assertEqual(result["placements"]["default"], "centralus")
+                self.assertEqual(result["placements"]["autoscaler"], "eastus2")
+                self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (88, 88), "eastus2": (56, 80),
-                            "westcentralus": (32, 32)}
+                expected = {"centralus": (88, 112), "eastus2": (48, 48)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
                     self.assertEqual((quota["standarddsv4family"], quota["cores"]), demand)
                 self.assertEqual(
                     {row["name"]: row["additional"]
-                     for row in result["regions"]["eastus2"]["quota"]}
+                     for row in result["regions"]["centralus"]["quota"]}
                     ["standarddpsv5family"], 24)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
@@ -146,9 +198,9 @@ class Contracts(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "quota"):
                         runner.campaign_preflight(args, matrix, commands)
                 self.assertFalse((args.evidence / "campaign-preflight.json").exists())
-                args.scenario = "settings"
+                args.scenario = "default"
                 selected = runner.campaign_preflight(args, matrix, commands)
-                self.assertEqual(selected["placements"], {"settings": "centralus"})
+                self.assertEqual(selected["placements"], {"default": "centralus"})
 
     def test_campaign_admission_rejects_invalid_scope_and_blocked_rows(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -184,6 +236,26 @@ class Contracts(unittest.TestCase):
         }, check_paths=False)
         self.assertEqual(len(checked["scenarios"]), 1)
         self.assertEqual(checked["scenarios"][0]["settingsVariants"], ["linux", "windows"])
+
+    def test_all_compatible_settings_expand_for_every_runnable_profile(self):
+        variants = runner.catalog(runner.ROOT / "settings")
+        document = runner.validate_matrix(runner.load(runner.ROOT / "matrix.json"), variants)
+        rows = {row["id"]: row for row in document["scenarios"]}
+        for scenario_id in ("default", "classic-azure-cni", "autoscaler", "cilium", "kubenet", "acns"):
+            row = rows[scenario_id]
+            self.assertEqual(row["settingsVariants"], ["*"])
+            self.assertNotIn("mip-enabled", runner.label_filter(row))
+            selected = runner.scenario_settings(row, variants)
+            expected = [name for name, item in variants.items()
+                        if runner.compatible(row, item) and not item.get("helmValues")
+                        and not item.get("addonParams")]
+            self.assertEqual(selected, expected)
+        self.assertIn("collector-controls", runner.scenario_settings(rows["default"], variants))
+        self.assertNotIn("empty-secret-namespaces-v1",
+                         runner.scenario_settings(rows["default"], variants))
+        self.assertNotIn("windows", runner.scenario_settings(rows["cilium"], variants))
+        with self.assertRaisesRegex(ValueError, "wildcard must be the only"):
+            runner.scenario_settings({**rows["default"], "settingsVariants": ["*", "default"]}, variants)
 
     def test_forbidden_windows_network_combinations(self):
         for feature in ("http-proxy", "cilium", "kubenet"):
@@ -406,7 +478,8 @@ class Contracts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             commands = runner.Commands(Path(temporary))
             commands.deadline = 0
-            with patch.object(runner.subprocess, "run") as process:
+            with patch.object(runner.shutil, "which", return_value="python"), \
+                    patch.object(runner.subprocess, "run") as process:
                 with self.assertRaisesRegex(RuntimeError, "budget exhausted"):
                     commands.run(["python", "--version"])
             process.assert_not_called()
@@ -508,11 +581,11 @@ class Contracts(unittest.TestCase):
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                          location="eastus2")
             host = runner.Host(args, scenario(), Mock())
-            host.az = Mock(side_effect=["false", {}])
+            host.az = Mock(side_effect=[[], "false", {}])
             host.wait_for_rbac = Mock(side_effect=RuntimeError("waiting"))
             with self.assertRaisesRegex(RuntimeError, "waiting"):
                 host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", "ServicePrincipal")
-            self.assertEqual(host.az.call_count, 2)
+            self.assertEqual(host.az.call_count, 3)
             host.wait_for_rbac.assert_called_once_with("principal")
             host.receipt["managedGroups"] = []
             host.receipt["rbacBootstrapScope"] = "/subscriptions/sub/resourceGroups/owned"
@@ -536,7 +609,7 @@ class Contracts(unittest.TestCase):
                 "The client 'app-id' with object id 'principal-id' does not have permission to "
                 "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
             host.az = Mock(side_effect=[
-                "false", None, failure,
+                [], "false", None, failure,
                 {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
             ])
             with patch.object(host, "wait_for_rbac"), \
@@ -563,7 +636,7 @@ class Contracts(unittest.TestCase):
                 args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                              location="eastus2")
                 host = runner.Host(args, scenario(), Mock())
-                host.az = Mock(side_effect=["false", None, RuntimeError(failure)])
+                host.az = Mock(side_effect=[[], "false", None, RuntimeError(failure)])
                 with patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
                     with self.assertRaises(RuntimeError) as error:
                         host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", principal_type)
@@ -573,7 +646,7 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(len(deployment_calls), 1)
                 sleep.assert_not_called()
 
-    def test_provision_bounds_role_assignment_retries_to_five_minutes(self):
+    def test_provision_bounds_role_assignment_retries_to_ten_minutes(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                          location="eastus2")
@@ -587,6 +660,8 @@ class Contracts(unittest.TestCase):
                 "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
 
             def az(*command, **kwargs):
+                if command[:2] == ("group", "list"):
+                    return []
                 if command[:2] == ("group", "exists"):
                     return "false"
                 if command[:2] == ("group", "create"):
@@ -919,6 +994,70 @@ class Contracts(unittest.TestCase):
             self.assertEqual(events[events.index("querymetrics") + 1], "delete")
             self.assertEqual(result["aliasIngestion"]["executed"], 1)
 
+    def test_collector_controls_runs_live_ksm_allowlist_query_before_restoring_slot(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            host = Mock()
+            host.scenario = scenario()
+            host.args.evidence = Path(temporary)
+            host.args.settle_seconds = 0
+            events = []
+            host.kube.side_effect = lambda *args, **kwargs: events.append(args[0]) or ""
+            manifest = variant()
+            manifest["id"] = "collector-controls"
+
+            def submit(host, suite, *args, **kwargs):
+                events.append((suite, args[1]))
+                return {"executed": 1}
+
+            with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                    runner, "label_filter", return_value="case-label"), patch.object(
+                    runner, "run_suite", side_effect=submit) as workflow:
+                result = runner.settings_slot(host, manifest)
+            self.assertEqual(workflow.call_count, 2)
+            self.assertEqual(workflow.call_args_list[1].args[1], "querymetrics")
+            self.assertEqual(workflow.call_args_list[1].args[3], "ksm-allowlist")
+            query_index = events.index(("querymetrics", "ksm-allowlist"))
+            self.assertLess(query_index, events.index("delete", query_index))
+            self.assertEqual(result["ksmAllowlist"]["executed"], 1)
+
+    def test_settings_slots_run_live_ingestion_before_restoring_configmaps(self):
+        cases = (
+            ("windows", ["linux", "windows"], ["config-processing-settings-node-config-map"],
+             "config-processing-settings-node-config-map", "nodeConfigMapIngestion"),
+            ("minimal-ingestion-disabled", ["linux"], ["config-processing-mip-false"],
+             "mip-disabled", "mipIngestion"),
+        )
+        for variant_id, platforms, labels, query_label, result_key in cases:
+            with self.subTest(variant=variant_id), tempfile.TemporaryDirectory() as temporary:
+                host = Mock()
+                host.scenario = scenario()
+                host.scenario["platforms"] = platforms
+                host.args.evidence = Path(temporary)
+                host.args.settle_seconds = 0
+                events = []
+                host.kube.side_effect = lambda *args, **kwargs: events.append(args[0]) or ""
+                manifest = variant()
+                manifest["id"] = variant_id
+                manifest["ginkgoLabels"] = labels
+
+                def submit(host, suite, *args, **kwargs):
+                    events.append((suite, args[1]))
+                    return {"executed": 1}
+
+                with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                        runner, "label_filter", return_value="case-label"), patch.object(
+                        runner, "run_suite", side_effect=submit) as workflow:
+                    result = runner.settings_slot(host, manifest)
+
+                self.assertEqual(workflow.call_count, 2)
+                self.assertEqual(workflow.call_args_list[1].args[1], "querymetrics")
+                self.assertEqual(workflow.call_args_list[1].args[3], query_label)
+                expected_config_filter = "case-label" if "windows" in platforms else "(case-label) && !windows"
+                self.assertEqual(workflow.call_args_list[0].args[3], expected_config_filter)
+                query_index = events.index(("querymetrics", query_label))
+                self.assertLess(query_index, events.index("delete", query_index))
+                self.assertEqual(result[result_key]["executed"], 1)
+
     def test_no_protected_build_cannot_create_resources(self):
         args = types.SimpleNamespace(build_id=None)
         commands = Mock()
@@ -1029,6 +1168,7 @@ class Contracts(unittest.TestCase):
             host.args.evidence = Path(temporary)
             host.kubeconfig = Path(temporary) / "kubeconfig"
             host.receipt = {"resourceGroup": "owned"}
+            host.scenario = {"clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
             cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
                        "kubernetesVersion": "1.36.5", "autoUpgradeProfile": {"upgradeChannel": "stable"},
@@ -1060,6 +1200,17 @@ class Contracts(unittest.TestCase):
             self.assertEqual(federation[federation.index("--issuer") + 1], "https://issuer.example/")
             proof = runner.load(Path(temporary) / "testkube-bootstrap.json")
             self.assertIn("not submitted", proof["workloadIdentityExecution"])
+            host.scenario = {"clusterFeatures": ["managed-acns"]}
+            cluster["networkProfile"] = {"advancedNetworking": {
+                "enabled": True, "observability": {"enabled": True},
+            }}
+            runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            acns = runner.load(Path(temporary) / "managed-acns.json")
+            self.assertEqual(acns, {"advancedNetworkingEnabled": True, "observabilityEnabled": True})
+            cluster["networkProfile"]["advancedNetworking"]["observability"]["enabled"] = False
+            with self.assertRaisesRegex(RuntimeError, "managed advanced networking"):
+                runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            cluster["networkProfile"]["advancedNetworking"]["observability"]["enabled"] = True
             cluster["autoUpgradeProfile"]["upgradeChannel"] = "none"
             with self.assertRaisesRegex(RuntimeError, "auto-upgrade"):
                 runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
@@ -1249,6 +1400,11 @@ def mutations():
         "fresh-sample": ("if not math.isfinite(observed) or not started <= observed <= time.time() + 60:", "if False:"),
         "empty-junit": ("if not executed or failed:", "if failed:"),
         "cleanup-ownership": ('if any(group.get("tags", {}).get(k) != v for k, v in expected.items()):', "if False:"),
+        "retry-deployment-state": ('if properties.get("provisioningState") != "Succeeded":', "if False:"),
+        "role-assignment-retry-loop": ('"do {\\n"', '"if ($false) {\\n"'),
+        "managed-acns-enabled": (
+            'if (advanced.get("enabled") is not True\n                or (advanced.get("observability") or {}).get("enabled") is not True):',
+            "if False:"),
     }
     for name, (before, after) in changes.items():
         if source.count(before) != 1:

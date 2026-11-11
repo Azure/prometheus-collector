@@ -157,6 +157,26 @@ class SettingsCatalogTests(unittest.TestCase):
                     self.assertEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
         self.assertEqual(paths, set(ROOT.glob("*/manifest.json")))
 
+    def test_legacy_configprocessing_matrix_has_all_supported_combinations(self):
+        manifests = {p.parent.name: json.loads(p.read_text()) for p in ROOT.glob("*/manifest.json")}
+        expected = {
+            "default": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml"},
+            "custom-scrape": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+                              "ama-metrics-prometheus-config-configmap-all-actions.yaml"},
+            "all-targets-disabled": {"ama-metrics-settings-configmap-all-targets-disabled.yaml"},
+            "custom-scrape-no-default-targets": {"ama-metrics-settings-configmap-all-targets-disabled.yaml",
+                                                  "ama-metrics-prometheus-config-configmap-all-actions.yaml"},
+            "custom-config-error": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+                                    "ama-metrics-prometheus-config-configmap-with-error.yaml"},
+            "custom-config-error-no-default-targets": {"ama-metrics-settings-configmap-all-targets-disabled.yaml",
+                                                        "ama-metrics-prometheus-config-configmap-with-error.yaml"},
+        }
+        for variant, required_files in expected.items():
+            with self.subTest(variant=variant):
+                manifest = manifests[variant]
+                names = {Path(path).name for path in manifest["configmaps"]}
+                self.assertTrue(required_files <= names)
+
     def test_every_documented_setting_has_a_real_variant(self):
         variants = {p.parent.name: configured_settings(p, json.loads(p.read_text())) for p in ROOT.glob("*/manifest.json")}
         validate_coverage(json.loads((ROOT / "coverage.json").read_text()), documented_settings(), variants)

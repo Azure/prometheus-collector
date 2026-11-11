@@ -159,7 +159,7 @@ var _ = DescribeTable("MINIMAL_INGESTION_PROFILE should be false in logs",
 	},
 	Entry("rs pod (mip false)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingMipFalse)),
 	Entry("linux ds pod (mip false)", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingMipFalse)),
-	Entry("windows ds pod (mip false)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingMipFalse)),
+	Entry("windows ds pod (mip false)", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingMipFalse), Label(utils.WindowsLabel)),
 )
 
 /*
@@ -242,6 +242,37 @@ var _ = DescribeTable("The Prometheus UI API should return 1 job in config",
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingAllTargetsDisabled)),
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingAllTargetsDisabled)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingAllTargetsDisabled)),
+)
+
+var _ = DescribeTable("The Prometheus UI API should honor custom config with default targets disabled",
+	func(controllerLabelName string, controllerLabelValue string, isLinux, customConfigValid bool) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, "kube-system", controllerLabelName, controllerLabelValue, "prometheus-collector", "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var result v1.ConfigResult
+		Expect(json.Unmarshal([]byte(apiResponse.Data), &result)).To(Succeed())
+		Expect(result.YAML).NotTo(BeEmpty())
+		prometheusConfig, err := config.Load(result.YAML, nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		var jobNames []string
+		for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+			jobNames = append(jobNames, scrapeJob.JobName)
+		}
+		if controllerLabelValue == "ama-metrics" && customConfigValid {
+			customJobs := []string{"job-replace", "job-lowercase", "job-uppercase", "job-keep", "job-drop", "job-keepequal", "job-dropequal", "job-hashmod", "job-labelmap", "job-labeldrop", "job-labelkeep"}
+			Expect(jobNames).To(ConsistOf(customJobs))
+		} else {
+			Expect(jobNames).To(Equal([]string{"empty_job"}))
+		}
+	},
+	Entry("replica with valid custom config", "rsName", "ama-metrics", true, true, Label(utils.ConfigProcessingNoDefaultTargetsCustomConfig)),
+	Entry("Linux node with valid custom config", "dsName", "ama-metrics-node", true, true, Label(utils.ConfigProcessingNoDefaultTargetsCustomConfig)),
+	Entry("replica with invalid custom config", "rsName", "ama-metrics", true, false, Label(utils.ConfigProcessingNoDefaultTargetsInvalidCustomConfig)),
+	Entry("Linux node with invalid custom config", "dsName", "ama-metrics-node", true, false, Label(utils.ConfigProcessingNoDefaultTargetsInvalidCustomConfig)),
 )
 
 // Default settings turned on in settings configmap

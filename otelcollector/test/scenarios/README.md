@@ -20,7 +20,8 @@ addon or silently substitute another configuration.
 Live candidate tests must execute through the existing TestKube workflows, using
 the coverage owner's pinned workflow adapter. The harness invokes only the selected
 workflow and rejects missing provenance, artifacts or executed cases. **No live
-candidate pass is recorded:** a real protected candidate build is still required.
+candidate pass is recorded by the offline evidence in this repository; a matching
+protected producer and full candidate validation are required for a live pass.
 It never falls back to direct local Ginkgo or treats installation as a pass. It captures
 the exact submitted execution IDs, immutable test-source SHA and runner-image
 digest, terminal passed status and nonempty JUnit/artifacts. Legacy `main`/`latest`
@@ -61,8 +62,10 @@ resource group and validates its recorded ownership tags before recording the
 parent and AKS-managed resource groups.
 Infrastructure remains provisioned after every run, including failed runs, until
 the explicit `cleanup` action is requested. Its generated names are derived from
-the recorded execution identity; it never takes over an existing group. Do not
-start the same execution/evidence directory concurrently on multiple machines;
+the recorded execution identity; a first attempt refuses an existing group.
+An explicit same-build ADO retry reuses only the same build/scenario run ID after
+checking its ownership, expiry, retained deployment and live AKS state. New builds
+never reuse old resources. Do not start the same execution/evidence directory concurrently on multiple machines;
 the calling protected runner must serialize that execution. Separate fresh
 executions do not share clusters.
 
@@ -73,12 +76,13 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario` also accepts one of the nine runnable campaign rows. The
+`--scenario` also accepts one of the six runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
-verifier remains mandatory before deployment. `mixed` runs in `eastus2`,
-`autoscaler` in `westcentralus`, and the other seven rows in `centralus`. Every pool's autoscaler
+verifier remains mandatory before deployment. `autoscaler` and `acns` run in
+`eastus2`; `default`, `classic-azure-cni`, `cilium` and `kubenet` run in `centralus`.
+Every pool's autoscaler
 maximum **and** declared surge counts toward the simultaneous regional and
 VM-family peak, including clusters retained after their tests finish.
 
@@ -124,7 +128,7 @@ The calling protected runner must pin/control the verifier checkout.
 never be selected by untrusted PR inputs.
 
 ```powershell
-python otelcollector\test\scenarios\run-scenario.py run --scenario default --settings-root C:\path\to\settings --build-id 123456 --receipt-tools-root C:\path\to\trusted-sre-tools --source-root C:\path\to\candidate-checkout --testkube-version 2.15.0 --location eastus2 --evidence C:\temp\ama-candidate-run
+python otelcollector\test\scenarios\run-scenario.py run --scenario default --settings-root C:\path\to\settings --build-id 123456 --receipt-tools-root C:\path\to\trusted-sre-tools --source-root C:\path\to\candidate-checkout --testkube-version 2.15.0 --location centralus --evidence C:\temp\ama-candidate-run
 ```
 
 The adapter initializes the managed addon's token secret, disables the addon,
@@ -156,6 +160,13 @@ propagation, runs its OR-combined existing configprocessing labels, and restores
 and reads back the baseline even after failure. Restoration failure aborts the
 batch. Negative config cases run their existing expected-error assertions; a
 generic unhealthy cluster does not count as success.
+The six default/custom-config combinations in
+`internal/docs/CONFIGPROCESSINGTESTS.md` now have settings-catalog variants,
+including custom valid/invalid configs with default targets disabled. The full
+candidate matrix selects every compatible variant for PR validation. The shipped
+addon chart hard-codes `MODE` and `WINMODE` to `advanced` and documents it as the
+only supported mode; the historical simple-mode request is not a supported
+candidate deployment.
 Fixture-declared namespaces must not already exist. Transition specs may change
 initially declared resource identities within the selected workflow; no separate
 phase executor or manifest fields are supported.
@@ -273,19 +284,59 @@ Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
-The matrix contains 22 cases sharing 20 infrastructure profiles. `default` is the
-small PR lane; `settings` runs all 34 version-independent Ginkgo settings on one
-mixed host. Four empty/omitted-secret inputs share a Linux-only
+The runnable matrix has six rows. Each row uses `settingsVariants: ["*"]` to
+select every catalog variant compatible with its declared cluster features and
+platforms. The mixed `default` profile runs all 36 supported variants and the
+FIPS/ARM64 scheduling assertions; the duplicate settings-only cluster is removed.
+Classic CNI, autoscaler and non-Cilium ACNS also run all 36 compatible variants.
+Linux-only Cilium and kubenet run all 11 Linux-compatible variants, without
+claiming Windows coverage. Four empty/omitted-secret inputs share a Linux-only
 `operator-secret-watch` lane: the current regional default must be at least 1.37,
 otherwise preflight reports unsupported without provisioning. No historical
-version is selected. Customer Helm is separately blocked, giving 39 catalog inputs
-without claiming 39 live passes. Deferred true password rotation is metadata,
-not an executable settings assignment.
+version is selected. Customer Helm is separately blocked, giving 41 catalog inputs
+(40 runnable) without claiming live passes. Deferred true password rotation is
+metadata, not an executable settings assignment.
 
-The default 360-second settle alone costs 204 minutes for 34 settings slots;
-provisioning and TestKube execution are additional. Review the explicit
-`--max-run-seconds` budget before a full-settings campaign. No measured Azure cost
-or duration is claimed yet.
+The `collector-controls` slot also runs the `ksm-allowlist` querymetrics spec on
+profiles with the required Windows/operator features. It creates a namespace/pod and requires fresh ingested allowlisted
+pod-label/namespace-annotation metrics while rejecting non-allowlisted dimensions;
+rendered KSM arguments alone are not coverage.
+
+### Executable behavior by candidate row
+
+| Row | Executable assertions | Boundary |
+|---|---|---|
+| `default` | All 36 compatible settings variants; FIPS/ARM64 scheduling; common health, fresh Linux/Windows kubelet ingestion and node network-counter increases after DNS/service traffic. | Mixed-pool inventory alone is not proof; labeled scheduling and traffic assertions provide behavior evidence. |
+| `classic-azure-cni` | All 36 compatible settings variants; common health, per-node ingestion and node network-counter increases after DNS/service traffic. | Traffic traverses the actual profile; no claim is made about CNI-specific policy or flow records. |
+| `autoscaler` | All 36 compatible settings variants; creates owned CPU-requesting pods, requires Linux system-pool scale-up and waits for scale-down after cleanup; also checks network traffic counters. | The scale test uses only the run-owned autoscaler profile and cleans its annotated namespace on retries. |
+| `cilium`, `kubenet` | All 11 Linux-compatible settings variants; Linux health, per-node ingestion and node network-counter increases after DNS/service traffic. | The checks exercise data flow on each selected network profile; managed Cilium ACNS remains blocked separately. |
+| `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
+
+### PR and scenario-source audit
+
+These are executable assertions, not claims inferred from fixture names. A passing
+local test or a prior release-image run is not a candidate-image pass.
+
+| Source | Current assertion or execution boundary |
+|---|---|
+| #930 and the user-supplied #1097 OneNote list | The catalog selects ConfigTests workflows for absent/default/partial settings, disabled and enabled targets, RS-only, DS-only, all targets, custom/all-actions, global, invalid settings/custom/global and custom-node cases. The `windows` manifest recreates the explicit combined row: default targets, the RS all-actions ConfigMap, and Linux/Windows node ConfigMaps. Its configprocessing assertions inspect the live Prometheus config and node external labels; its candidate slot now also checks fresh Linux/Windows node-configmap ingestion. The pasted table's remaining blank-cell pairings cannot be recovered, so no additional combinations are inferred. |
+| #1305 MIP follow-up promise | Configprocessing checks the MIP log value. Querymetrics now also requires `node_filefd_allocated` to be absent while the `node` target remains up with MIP enabled, and present with MIP disabled. This is an executable candidate check; it still needs a compliant live run. |
+| #1536 and #1493 secret-access follow-up | The v1/v2 secret-transition specs prove invalid-to-valid reload, fresh scrape recovery and watch denial for empty/omitted allowlists where Kubernetes supports enforcement. Fixtures alone are not coverage; no live candidate result is recorded. |
+| #875, #1788 and #1590 | ARM64/FIPS placement is asserted by node labels and collector-pod scheduling. Windows/Linux metrics are queried per node. The managed `acns` row creates traffic and checks fresh node-level Retina plus pod-level Hubble metrics; it does not install standalone Retina. |
+| #1391/#1417, #1232/#1239 and #1393 | DCGM has config/job/interval/regex assertions but no GPU pool or GPU-metric ingestion proof. OTLP has labeled metric checks but no candidate enablement/producer path. `controlplane-istio` validates config generation with a fake member FQDN, not real target discovery or scraping. |
+| #1687 | Operator HTTPS code checks cover loopback plaintext refusal, liveness and mTLS behavior. The PR's enabled/disabled deployment checks remain unverified in a live candidate run. |
+| #1029/#1032 region document | `regionTests` is separate and partial: it checks diagnostics, a nonempty `up` result, a recording-rule result and usage/limit response shape, but not the full cloud-parameter, AMCS/DCR/DCE, always/never-alert, alert-evaluation or actionable failure/request-ID contract. Fairfax, Mooncake, USSec and USNat access is not established. |
+| #1027/#1446/#1457 CCP; #896/#1338 Arc | CCP config and health scenarios require the standalone underlay documented under `test/ccp`; Arc uses Sonobuoy/conformance. Neither is exercised by ordinary AKS/TestKube, and neither has an adapter in this candidate runner. |
+| #1795/#1799 and #1809 | Open/dry-run-only proposals and author-reported runs with image skew are not exact-source candidate evidence. They are not adopted as new scenario requirements. |
+
+`ccp-health` remains blocked because CCP requires its standalone underlay
+workflow, which ordinary AKS/TestKube cannot reach. Arc conformance is a
+separate Arc/Sonobuoy workflow and is not executed by this AKS candidate matrix.
+Neither is inferred from a passing AKS row.
+
+The default 360-second settle alone costs 216 minutes for a 36-slot profile;
+provisioning and TestKube execution are additional. Each candidate row allows
+eight hours, but no measured Azure duration or live pass is claimed yet.
 
 ### Observed CI/CD examples
 
@@ -323,7 +374,7 @@ are not candidate tests, and no shared cluster was mutated.
 | Windows 2019 | Unsupported on 1.33+; no substitution with Windows 2022 |
 | Cilium, kubenet, AKS HTTP proxy | Separate host configurations; these profiles cannot include Windows |
 | AMPLS/private ingestion + private query | Can share mixed-pool infrastructure; require distinct endpoint/DNS and data-path assertions |
-| ACNS | Not implied by Cilium; non-Cilium Retina and Cilium/Hubble/security are different cases |
+| Managed ACNS | The runnable `acns` row uses managed non-Cilium Retina; it requires fresh per-node `networkobservability_forward_bytes` and Linux pod-level `hubble_dns_queries_total` after generated DNS traffic. This is distinct from the standalone Retina Helm release and from Cilium ACNS. |
 | Customer Helm, candidate addon, Arc, CCP | Distinct installation ownership/adapters, not namespaces on the same managed addon |
 | Public/private access, proxy CA, deny/recovery | Isolated owned states with readback and restoration before reuse |
 
@@ -336,11 +387,12 @@ source and digest; documented OS compatibility does not replace live readiness
 and ingestion evidence.
 
 Inventory additional interactions before declaring matrix completeness:
-ARM64/Azure Linux/FIPS; taints/DaemonSet and replica placement; autoscaling/mixed
-pools; private API/AMPLS/query DNS; proxy/noProxy/private endpoints;
-ACNS/Windows; Cilium/ACNS/network policies; UAI/BYO subnet/private DNS;
-restricted egress/private image pulls; OTLP/network/identity; service mesh;
-customer Helm advanced mode/Windows fixtures.
+taints/DaemonSet and replica placement; autoscaling/mixed pools; private
+API/AMPLS/query DNS; proxy/noProxy/private endpoints; Cilium/ACNS/network
+policies; BYO subnet/private DNS; restricted egress/private image pulls;
+OTLP/network/identity; service mesh; customer Helm advanced mode/Windows
+fixtures. CCP remains blocked from ordinary AKS/TestKube: its required standalone
+underlay workflow is not part of this matrix.
 
 AMPLS must include configuration/ingestion DCE scope and association, and the AMW
 needs a **separate** `prometheusMetrics` query private endpoint. Private AKS API

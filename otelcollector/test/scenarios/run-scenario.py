@@ -4,6 +4,7 @@
 import argparse
 import copy
 from contextlib import contextmanager
+from datetime import datetime
 from functools import cache
 import hashlib
 import json
@@ -30,9 +31,9 @@ TEST_SOURCE = REPO
 BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
-    "default": "centralus", "linux": "centralus", "settings": "centralus",
-    "classic-azure-cni": "centralus", "mixed": "eastus2", "autoscaler": "westcentralus",
-    "uai": "centralus", "cilium": "centralus", "kubenet": "centralus",
+    "default": "centralus", "classic-azure-cni": "centralus",
+    "autoscaler": "eastus2", "cilium": "centralus", "kubenet": "centralus",
+    "acns": "eastus2",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
@@ -61,6 +62,17 @@ def compatible(scenario, variant):
     return (set(variant["requires"]["clusterFeatures"]) <= set(scenario["clusterFeatures"])
             and set(variant["platforms"]) <= set(scenario["platforms"])
             and (not variant.get("helmValues") or "helmChartInstall" in scenario["clusterFeatures"]))
+
+
+def scenario_settings(scenario, variants):
+    selected = scenario["settingsVariants"]
+    if selected == ["*"]:
+        return [name for name, variant in variants.items()
+                if compatible(scenario, variant) and not variant.get("helmValues")
+                and not variant.get("addonParams")]
+    if "*" in selected:
+        raise ValueError(f"{scenario['id']}: wildcard must be the only settings selector")
+    return selected
 
 
 def catalog(settings):
@@ -107,7 +119,7 @@ def validate_matrix(document, variants, check_paths=True):
         if check_paths and not row.get("blockedReason"):
             resource_path(ROOT, row["cluster"], ROOT)
         label_filter(row)
-        for name in row["settingsVariants"]:
+        for name in scenario_settings(row, variants):
             if name not in variants or not compatible(row, variants[name]):
                 raise ValueError(f"{row['id']}: incompatible or absent settings variant {name}")
             if not variants[name].get("helmValues"):
@@ -332,9 +344,14 @@ class Host:
     def remove_kubeconfig(self):
         self.kubeconfig.unlink(missing_ok=True)
 
-    def provision(self, env, principal, principal_type):
+    def provision(self, env, principal, principal_type, expected_pools=None):
         if self.receipt_path.exists() or self.kubeconfig.exists():
             raise ValueError("An ownership receipt or kubeconfig already exists; cleanup that execution first")
+        if getattr(self.args, "reuse_existing", False):
+            return self.reuse_existing(env, expected_pools)
+        if self.az("group", "list", "--tag", f"scenario-run={self.args.run_id}",
+                   json_output=True):
+            raise ValueError("A resource group already exists for this run; refusing duplicate provisioning")
         token = str(uuid.uuid4())
         name = "ama-e2e-" + hashlib.sha256(
             (self.args.run_id + self.scenario["id"] + token).encode()).hexdigest()[:14]
@@ -372,6 +389,8 @@ class Host:
                 if time.monotonic() >= retry_deadline:
                     raise
                 retry_delay = min(retry_delay * 2, 30)
+        if expected_pools is not None:
+            self.verify_deployment(result, expected_pools, {"expiresAt": env["SCENARIO_EXPIRES_AT"]})
         outputs = {key: value["value"] for key, value in result["properties"]["outputs"].items()}
         managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
         if any(not isinstance(group, str) or not group for group in managed_groups):
@@ -380,6 +399,72 @@ class Host:
         save(self.receipt_path, self.receipt)
         save(self.args.evidence / "deployment.json", outputs)
         return outputs
+
+    def reuse_existing(self, env, expected_pools):
+        if not expected_pools:
+            raise ValueError("Retry reuse requires the preflighted pool inventory")
+        groups = self.az("group", "list", "--tag", f"scenario-run={self.args.run_id}",
+                         json_output=True)
+        if not isinstance(groups, list) or len(groups) != 1:
+            raise ValueError("Retry reuse requires exactly one existing resource group for this run")
+        group = groups[0]
+        name, tags = group.get("name"), group.get("tags") or {}
+        token = tags.get("scenario-token")
+        try:
+            expires = datetime.fromisoformat(tags["expiresAt"].replace("Z", "+00:00"))
+        except (KeyError, ValueError):
+            raise ValueError("Retry resource group has no valid expiry") from None
+        if (not name or not token or expires.tzinfo is None or expires.timestamp() <= time.time()
+                or group.get("location", "").casefold() != self.args.location.casefold()):
+            raise ValueError("Retry resource group is expired or has an invalid identity")
+        self.receipt = {"subscription": self.args.subscription, "resourceGroup": name,
+                        "runId": self.args.run_id, "scenario": self.scenario["id"],
+                        "token": token}
+        owned = self.assert_owned()
+        if owned.get("location", "").casefold() != self.args.location.casefold():
+            raise ValueError("Retry resource group location changed")
+        deployment = self.az("deployment", "group", "show", "--resource-group", name,
+                             "--name", "scenario", json_output=True)
+        self.verify_deployment(deployment, expected_pools, tags)
+        outputs = {key: value["value"] for key, value in deployment["properties"]["outputs"].items()}
+        cluster = self.az("aks", "show", "--resource-group", name, "--name", outputs["clusterName"],
+                          json_output=True)
+        if (cluster.get("id", "").casefold() != outputs["clusterId"].casefold()
+                or cluster.get("location", "").casefold() != self.args.location.casefold()
+                or cluster.get("provisioningState") != "Succeeded"
+                or (cluster.get("powerState") or {}).get("code") != "Running"
+                or cluster.get("kubernetesVersion") != env["SCENARIO_KUBERNETES_VERSION"]
+                or cluster.get("nodeResourceGroup") != outputs["nodeResourceGroupName"]
+                or (cluster.get("identity") or {}).get("type") != outputs["identityType"]):
+            raise ValueError("Retry AKS cluster does not match the retained deployment contract")
+        managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
+        if any(not isinstance(value, str) or not value for value in managed_groups):
+            raise ValueError("Retained deployment does not identify both managed resource groups")
+        self.receipt["managedGroups"] = sorted(set(managed_groups))
+        save(self.receipt_path, self.receipt)
+        save(self.args.evidence / "deployment.json", outputs)
+        save(self.args.evidence / "retry-reuse.json", {
+            "status": "verified", "resourceGroup": name, "runId": self.args.run_id,
+            "scenario": self.scenario["id"], "location": self.args.location,
+        })
+        return outputs
+
+    def verify_deployment(self, deployment, expected_pools, tags=None):
+        properties = deployment.get("properties", {})
+        if properties.get("provisioningState") != "Succeeded":
+            raise ValueError("Retained candidate deployment is not successful")
+        outputs = {key: value["value"] for key, value in properties.get("outputs", {}).items()}
+        resource_tags = outputs.get("resourceTags") or {}
+        expiry = (tags or {}).get("expiresAt")
+        if (not expiry or resource_tags.get("expiresAt") != expiry
+                or resource_tags.get("owner") != "ama-metrics-e2e"
+                or resource_tags.get("scenario") != self.scenario["id"]
+                or resource_tags.get("run") != self.args.run_id
+                or outputs.get("location") != self.args.location
+                or (expected_pools is not None and outputs.get("expectedPools") != expected_pools)
+                or outputs.get("addonEnabled") is not False
+                or outputs.get("installationMode") != "candidate-addon"):
+            raise ValueError("Retained deployment outputs do not match the candidate contract")
 
     def wait_for_rbac(self, principal):
         uuid.UUID(principal)
@@ -747,6 +832,9 @@ def settings_slot(host, variant):
         raise ValueError("Nonempty addonParams require an explicit addon-to-candidate chart mapping")
     template, workflow = settings_workflow(variant)
     expression = label_filter(host.scenario, variant)
+    if ("windows" not in host.scenario["platforms"]
+            and "config-processing-mip-false" in variant["ginkgoLabels"]):
+        expression = f"({expression}) && !windows"
     save(host.args.evidence / variant["id"] / "selection.json", {
         "template": template, "workflow": workflow, "ginkgoLabelFilter": expression,
         "overrideWorkflowLabels": variant.get("_overrideWorkflowLabels", False),
@@ -786,6 +874,21 @@ def settings_slot(host, variant):
             result["aliasIngestion"] = run_suite(
                 host, "querymetrics", host.args.evidence / variant["id"] / "alias-ingestion",
                 "cluster-identity", expected_cluster="Customer_Config_POC",
+            )
+        if variant["id"] == "collector-controls":
+            result["ksmAllowlist"] = run_suite(
+                host, "querymetrics", host.args.evidence / variant["id"] / "ksm-allowlist",
+                "ksm-allowlist",
+            )
+        if variant["id"] == "minimal-ingestion-disabled":
+            result["mipIngestion"] = run_suite(
+                host, "querymetrics", host.args.evidence / variant["id"] / "mip-ingestion",
+                "mip-disabled",
+            )
+        if variant["id"] == "windows":
+            result["nodeConfigMapIngestion"] = run_suite(
+                host, "querymetrics", host.args.evidence / variant["id"] / "node-configmap-ingestion",
+                "config-processing-settings-node-config-map",
             )
         return result
     except (RuntimeError, ValueError) as failure:
@@ -1184,6 +1287,15 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                       json_output=True)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
         raise RuntimeError("The effective AKS auto-upgrade channel must be stable")
+    if "managed-acns" in host.scenario["clusterFeatures"]:
+        advanced = ((cluster.get("networkProfile") or {}).get("advancedNetworking") or {})
+        if (advanced.get("enabled") is not True
+                or (advanced.get("observability") or {}).get("enabled") is not True):
+            raise RuntimeError("AKS must report managed advanced networking and observability enabled")
+        save(host.args.evidence / "managed-acns.json", {
+            "advancedNetworkingEnabled": advanced["enabled"],
+            "observabilityEnabled": advanced["observability"]["enabled"],
+        })
     save(host.args.evidence / "effective-upgrade.json", {
         "kubernetesVersion": cluster["kubernetesVersion"],
         "autoUpgradeProfile": cluster["autoUpgradeProfile"],
@@ -1263,7 +1375,8 @@ def verified_candidate(args, commands):
 
 def execute(args, scenario, variants, commands):
     candidate, runner_receipt = verified_candidate(args, commands)
-    for name in scenario["settingsVariants"]:
+    selected_settings = scenario_settings(scenario, variants)
+    for name in selected_settings:
         variant = variants[name]
         if variant.get("helmValues") or variant["addonParams"]:
             raise ValueError(f"{name}: customer Helm/addon parameter adapter is required before provisioning")
@@ -1282,7 +1395,7 @@ def execute(args, scenario, variants, commands):
                 for field in ("configmaps", "customResources", "helmValues")
                 for path in variants[name].get(field, [])
             ],
-        } for name in scenario["settingsVariants"]
+        } for name in selected_settings
     })
     env = deployment_env(args, resolved["kubernetesVersion"], proxy="http-proxy" in scenario["clusterFeatures"])
     host = Host(args, scenario, commands)
@@ -1291,7 +1404,7 @@ def execute(args, scenario, variants, commands):
                "sourceSha": source, "status": "RUNNING", "settings": {}}
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
-        outputs = host.provision(env, testkube[1], testkube[2])
+        outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
@@ -1331,7 +1444,7 @@ def execute(args, scenario, variants, commands):
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
         save(args.evidence / "images-before.json", audit_images(host, images))
-        for name in scenario["settingsVariants"]:
+        for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
         # Health suites depend on the repository's existing reference-app scrape fixtures.
         for name in ("ama-metrics-prometheus-config-configmap.yaml",
@@ -1403,6 +1516,8 @@ def main(argv=None):
     parser.add_argument("--location", default="eastus2")
     parser.add_argument("--run-id", default=str(uuid.uuid4()))
     parser.add_argument("--build-id", type=int, help="Successful pipeline-440 candidate build with protected receipts")
+    parser.add_argument("--reuse-existing", action="store_true",
+                        help="Reuse only the exact, unexpired resource group owned by this validation run")
     parser.add_argument("--receipt-tools-root", type=Path, default=ROOT.parents[2],
                         help="Trusted tools checkout providing .pipelines/pr-e2e/fetch_candidate.py")
     parser.add_argument("--testkube-version", help="Explicit TestKube Helm chart version; required for run")
@@ -1447,7 +1562,7 @@ def main(argv=None):
         raise ValueError(f"BLOCKED: {scenario['blockedReason']}")
     if args.action == "plan":
         save(args.evidence / "plan.json", {"hostCount": 1, "scenario": scenario,
-                                         "settingsSlots": scenario["settingsVariants"],
+                                         "settingsSlots": scenario_settings(scenario, variants),
                                          "candidateRequired": True, "coverageGaps": matrix["coverageGaps"]})
     elif args.action == "preflight":
         preflight(args, scenario, commands)

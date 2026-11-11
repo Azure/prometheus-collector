@@ -1,0 +1,14 @@
+{
+  "id": "custom-config-error-no-default-targets",
+  "description": "Invalid custom scrape config does not enable default targets when they are disabled.",
+  "platforms": ["linux"],
+  "requires": {"clusterFeatures": []},
+  "configmaps": [
+    "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml",
+    "../../../test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml"
+  ],
+  "customResources": [],
+  "addonParams": {},
+  "ginkgoLabels": ["config-processing-no-default-targets-invalid-custom-config"],
+  "expectedOutcome": "config-error"
+}

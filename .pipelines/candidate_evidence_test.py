@@ -272,8 +272,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(automatic_variables["campaignSourceSha"],
                          "$(resources.pipeline.campaignProducer.sourceCommit)")
         self.assertEqual(jobs[1]["cancelTimeoutInMinutes"], 60)
-        self.assertEqual(jobs[1]["${{ if eq(scenario, 'settings') }}"]["timeoutInMinutes"], 900)
-        self.assertEqual(jobs[1]["${{ else }}"]["timeoutInMinutes"], 600)
+        self.assertEqual(jobs[1]["timeoutInMinutes"], 900)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
         self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS})
@@ -345,18 +344,19 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', run_script)
         self.assertIn('--scenario "$CANDIDATE_SCENARIO"', run_script)
         self.assertIn('--run-id "$CANDIDATE_RUN_ID"', run_script)
-        self.assertIn("import uuid; print(uuid.uuid4())", run_script)
+        self.assertIn('uuid.uuid5(uuid.NAMESPACE_URL, "ama-metrics-candidate:" + sys.argv[1] + ":" + sys.argv[2])',
+                      run_script)
+        self.assertIn('if [[ "$SYSTEM_STAGEATTEMPT" -gt 1 || "$SYSTEM_JOBATTEMPT" -gt 1 ]]; then', run_script)
+        self.assertIn("retry_args+=(--reuse-existing)", run_script)
         self.assertIn('--location "$CANDIDATE_LOCATION"', run_script)
         self.assertIn('"$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2', run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_LOCATION"], "$(candidateLocation)")
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
-        self.assertEqual(steps[run]["${{ if eq(parameters.scenario, 'settings') }}"]["timeoutInMinutes"], 540)
-        self.assertEqual(steps[run]["${{ else }}"]["timeoutInMinutes"], 300)
-        self.assertIn('settings) max_run_seconds=28800', run_script)
-        self.assertIn('default|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet) max_run_seconds=14400', run_script)
+        self.assertEqual(steps[run]["timeoutInMinutes"], 540)
+        self.assertIn('default|classic-azure-cni|autoscaler|cilium|kubenet|acns) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|autoscaler|cilium|kubenet|acns)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -406,16 +406,30 @@ class CandidateEvidenceTest(unittest.TestCase):
 
     def test_candidate_coverage_accounts_for_every_row_and_variant(self):
         root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
+        matrix = json.loads((root / "matrix.json").read_text())
+        rows = {row["id"]: row for row in matrix["scenarios"]}
+        self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
+        self.assertNotIn("settings", rows)
+        self.assertTrue({"fips", "arm64", "network-profile"} <= set(rows["default"]["ginkgoLabels"]))
+        self.assertEqual(rows["default"]["settingsVariants"], ["*"])
+        self.assertEqual(rows["classic-azure-cni"]["settingsVariants"], ["*"])
+        self.assertIn("autoscaler", rows["autoscaler"]["ginkgoLabels"])
+        self.assertIn("network-profile", rows["cilium"]["ginkgoLabels"])
+        self.assertIn("network-profile", rows["kubenet"]["ginkgoLabels"])
+        self.assertNotIn("blockedReason", rows["acns"])
+        self.assertIn("managed-acns", rows["acns"]["ginkgoLabels"])
+        self.assertEqual(rows["acns"]["settingsVariants"], ["*"])
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])
             self.assertEqual(result["status"], "PLANNED_WITH_BLOCKERS")
             self.assertEqual(result["selectedScenario"], scenario)
             self.assertEqual(set(result["applicableScenarios"]), set(SCENARIOS))
-            self.assertEqual([item["id"] for item in result["blockedTestSuites"]], ["regionTests"])
+            self.assertEqual([item["id"] for item in result["blockedTestSuites"]],
+                             ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked) + len(SCENARIOS), 22)
+            self.assertEqual(len(blocked) + len(SCENARIOS), 18)
             self.assertIn("customer-helm", blocked)
             self.assertIn("operator-secret-watch", blocked)
             self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
@@ -427,6 +441,20 @@ class CandidateEvidenceTest(unittest.TestCase):
                 plan(root, "default")
         with self.assertRaisesRegex(ValueError, "Unsupported candidate"):
             plan(root, "customer-helm")
+
+    def test_profile_behavior_specs_are_selected_with_a_long_enough_querymetrics_timeout(self):
+        root = Path(__file__).parents[1]
+        source = (root / "otelcollector" / "test" / "ginkgo-e2e" / "querymetrics" /
+                 "query_metrics_test.go").read_text()
+        self.assertIn('Label("autoscaler")', source)
+        self.assertIn('Label("network-profile")', source)
+        self.assertIn('Label("managed-acns")', source)
+        workflows = yaml.safe_load_all((root / "otelcollector" / "test" / "testkube" /
+                                        "testkube-test-crs.yaml").read_text())
+        querymetrics = next(doc for doc in workflows
+                            if doc["metadata"]["name"] == "querymetrics")
+        script = querymetrics["spec"]["steps"][0]["shell"]
+        self.assertIn("--timeout=90m", script)
 
     def test_candidate_coverage_gate_fails_and_preserves_blocker_report(self):
         root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
@@ -443,9 +471,10 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 13)
+            self.assertEqual(len(report["blockedScenarios"]), 12)
             self.assertEqual(len(report["blockedVariants"]), 5)
-            self.assertEqual([item["id"] for item in report["blockedTestSuites"]], ["regionTests"])
+            self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
+                             ["arc-conformance", "ccp-health", "regionTests"])
 
     def test_candidate_coverage_gate_runs_after_tests_and_before_evidence_publish(self):
         steps = yaml.safe_load(
@@ -483,8 +512,10 @@ class CandidateEvidenceTest(unittest.TestCase):
         parser = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         proof = {
             "status": "PASS", "sourceSha": self.sha, "buildId": 4401, "capacityReserved": False,
-            "placements": {name: "eastus2" if name in {"mixed", "autoscaler"} else "centralus"
-                           for name in SCENARIOS},
+            "placements": {
+                name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
+                for name in SCENARIOS
+            },
             "regions": {"centralus": {}, "eastus2": {}},
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),

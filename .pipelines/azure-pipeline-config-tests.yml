@@ -68,14 +68,11 @@ parameters:
   values:
   - all
   - default
-  - settings
-  - linux
   - classic-azure-cni
-  - mixed
   - autoscaler
-  - uai
   - cilium
   - kubenet
+  - acns
 
 variables:
   candidateCve: ${{ parameters.candidateCve }}
@@ -1261,7 +1258,7 @@ stages:
           import json, os, sys
           value = json.load(open(sys.argv[1], encoding="utf-8"))
           expected = os.environ["CANDIDATE_SCENARIO"]
-          scenarios = "default,linux,settings,classic-azure-cni,mixed,autoscaler,uai,cilium,kubenet".split(",")
+          scenarios = "default,classic-azure-cni,autoscaler,cilium,kubenet,acns".split(",")
           selected = scenarios if expected == "all" else [expected]
           if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
                   or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
@@ -1300,7 +1297,7 @@ stages:
         targetPath: $(capacityEvidence)
         artifact: candidate-capacity-$(Build.BuildId)
 
-- ${{ each scenario in split('default,linux,settings,classic-azure-cni,mixed,autoscaler,uai,cilium,kubenet', ',') }}:
+- ${{ each scenario in split('default,classic-azure-cni,autoscaler,cilium,kubenet,acns', ',') }}:
   - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
@@ -1315,10 +1312,7 @@ stages:
       - deployment: CandidateTestkube
         displayName: Test receipt-bound candidate ${{ scenario }}
         environment: Prometheus-Collector-Tests
-        ${{ if eq(scenario, 'settings') }}:
-          timeoutInMinutes: 900
-        ${{ else }}:
-          timeoutInMinutes: 600
+        timeoutInMinutes: 900
         cancelTimeoutInMinutes: 60
         variables:
           candidateAttempt: $(Build.BuildId)-${{ scenario }}-$(System.StageAttempt)-$(System.JobAttempt)
