@@ -31,8 +31,8 @@ variables:
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
   Codeql.Enabled: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
-  GOLANG_VERSION: '1.26.10'
-  FLUENTBIT_GOLANG_VERSION: '1.26.10'
+  GOLANG_VERSION: '1.26.11'
+  FLUENTBIT_GOLANG_VERSION: '1.26.11'
   TESTKUBE_GOLANG_VERSION: '1.26.9'
   SRE_TESTKUBE_RUNNER_IMAGE: 'docker.io/cerebro31/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57'
   FLUENT_BIT_VERSION: '4.2.2'
