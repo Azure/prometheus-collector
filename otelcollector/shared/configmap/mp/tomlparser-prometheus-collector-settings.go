@@ -82,6 +82,14 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		}
 	}
 
+	// Populate deny filesystem access through ServiceMonitors/PodMonitors (opt-in)
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+		if value, ok := settings["deny_fs_access_through_sms"]; ok {
+			cp.DenyFSAccessThroughSMs = strings.ToLower(strings.TrimSpace(value)) == "true"
+			log.Printf("Configmap setting deny_fs_access_through_sms: %t\n", cp.DenyFSAccessThroughSMs)
+		}
+	}
+
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
@@ -119,6 +127,9 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttpsEnabled))
 	if len(configParser.SecretsAccessNamespaces) > 0 {
 		file.WriteString(fmt.Sprintf("AZMON_SECRETS_ACCESS_NAMESPACES=%s\n", strings.Join(configParser.SecretsAccessNamespaces, ",")))
+	}
+	if configParser.DenyFSAccessThroughSMs {
+		file.WriteString("AZMON_DENY_FS_ACCESS_THROUGH_SMS=true\n")
 	}
 	return nil
 }

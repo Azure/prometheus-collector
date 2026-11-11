@@ -65,6 +65,12 @@ stages:
             persistCredentials: true
 
           - bash: |
+              set -euo pipefail
+              bash ./otelcollector/test/testkube/run-testkube-workflow-test.sh
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Test ConfigTests workflow setup"
+
+          - bash: |
               # Try apt install first, fall back to official install script
               wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add - && \
               echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list && \
@@ -104,6 +110,26 @@ stages:
               go version
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Build: install golang $(GOLANG_VERSION)"
+
+          - bash: |
+              set -euo pipefail
+              # HelmInstaller@1 downloads a .zip and needs `unzip`, which this agent image
+              # does not have. Install the official tarball directly instead.
+              HELM_VERSION=v3.12.3
+              tmp=$(mktemp -d)
+              curl -fsSL --retry 5 --retry-delay 5 "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" -o "$tmp/helm.tgz"
+              tar -xzf "$tmp/helm.tgz" -C "$tmp"
+              sudo install -m 0755 "$tmp/linux-amd64/helm" /usr/local/bin/helm
+              rm -rf "$tmp"
+              helm version
+            displayName: "Install Helm for chart regression tests"
+
+          - bash: |
+              set -euo pipefail
+              # Reuse existing dependencies without running the cluster-backed Ginkgo suite.
+              go test -v ../../helmchart/helm_chart_test.go
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/ginkgo-e2e/configprocessing
+            displayName: "Test HPA compatibility and KSM chart arguments"
 
           - task: AzureCLI@2
             displayName: Get kubeconfig
@@ -817,6 +843,37 @@ stages:
               TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="mip-false"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
               echo $TESTKUBE_RESULTS_OTEL
               echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-mip-false.json"
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+            displayName: "Create TestKube Results Summary"
+            condition: always()
+
+          # --- deny_fs_access_through_sms setting ---
+          - bash: |
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-deny-fs-access.yaml
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-deny-fs-access-crs.yaml" \
+                "testkube-config-test-deny-fs-access-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for deny_fs_access_through_sms"
+            continueOnError: true
+
+          - bash: |
+              TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="deny-fs-access"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+              echo $TESTKUBE_RESULTS_OTEL
+              echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-deny-fs-access.json"
               rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
             displayName: "Create TestKube Results Summary"
             condition: always()

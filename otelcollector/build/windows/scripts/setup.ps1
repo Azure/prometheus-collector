@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot 'Test-MicrosoftSignature.ps1')
+
 Write-Host ('Creating folder structure')
 New-Item -Type Directory -Path /installation/ME/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /installation/fluent-bit/ -ErrorAction SilentlyContinue
@@ -16,9 +18,16 @@ New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyCon
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.227.1509.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/
-    Move-Item /installation/ME/MetricsExtension /opt/metricextension/
+    $nugetPath = '\installation\nuget.exe'
+    $nugetConfigPath = '\installation\NuGet.Config'
+    Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/v6.14.3/nuget.exe' -OutFile $nugetPath -ErrorAction Stop
+    Set-Content -LiteralPath $nugetConfigPath -Value '<configuration />' -Encoding UTF8 -ErrorAction Stop
+    $metricsExtensionPackage = '\installation\ME\mdmmetricsextension.2.2026.227.1509.nupkg'
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile $metricsExtensionPackage -ErrorAction Stop
+    Test-MicrosoftNuGetSignature -LiteralPath $metricsExtensionPackage -NuGetPath $nugetPath -ConfigPath $nugetConfigPath
+    Move-Item -LiteralPath $metricsExtensionPackage -Destination '\installation\ME\mdmmetricsextension.2.2026.227.1509.zip' -ErrorAction Stop
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/ -ErrorAction Stop
+    Move-Item /installation/ME/MetricsExtension /opt/metricextension/ -ErrorAction Stop
 }
 catch {
     $e = $_.Exception
@@ -50,26 +59,30 @@ $vcRedistLocation = 'https://aka.ms/vc14/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
 $vcArgs = "/install /quiet /norestart"
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
-$signature = Get-AuthenticodeSignature -FilePath $vcInstallerLocation
-if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') {
-    throw "Visual C++ installer must have a valid Microsoft signature"
+try {
+    Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
+    Test-MicrosoftCodeSignature -LiteralPath $vcInstallerLocation
+    $installerVersion = (Get-Item -LiteralPath $vcInstallerLocation -ErrorAction Stop).VersionInfo
+    if ([version]::new($installerVersion.FileMajorPart, $installerVersion.FileMinorPart, $installerVersion.FileBuildPart, $installerVersion.FilePrivatePart) -lt [version]'14.40.33816.0') {
+        throw "Visual C++ installer version $($installerVersion.FileVersion) is below 14.40.33816.0"
+    }
+    $vcProcess = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait -PassThru -ErrorAction Stop
+    if ($vcProcess.ExitCode -notin @(0, 3010)) {
+        throw "Visual C++ installation failed with exit code $($vcProcess.ExitCode)"
+    }
+    $runtimeVersion = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64' -ErrorAction Stop).Version
+    if ([version]$runtimeVersion.TrimStart('v') -lt [version]'14.40.33816.0') {
+        throw "Installed Visual C++ runtime version $runtimeVersion is below 14.40.33816.0"
+    }
+    foreach ($dll in @('msvcp140.dll', 'vccorlib140.dll', 'vcruntime140.dll')) {
+        Copy-Item -Path "/Windows/System32/$dll" -Destination /opt/fluent-bit/bin -ErrorAction Stop
+        Write-Host "$dll version: $((Get-Item -LiteralPath "/opt/fluent-bit/bin/$dll" -ErrorAction Stop).VersionInfo.FileVersion)"
+    }
 }
-$installerVersion = (Get-Item -LiteralPath $vcInstallerLocation -ErrorAction Stop).VersionInfo
-if ([version]::new($installerVersion.FileMajorPart, $installerVersion.FileMinorPart, $installerVersion.FileBuildPart, $installerVersion.FilePrivatePart) -lt [version]'14.40.33816.0') {
-    throw "Visual C++ installer version $($installerVersion.FileVersion) is below 14.40.33816.0"
-}
-$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -Wait -PassThru -ErrorAction Stop
-if ($vcInstaller.ExitCode -notin @(0, 3010)) {
-    throw "Visual C++ installation failed with exit code $($vcInstaller.ExitCode)"
-}
-$runtimeVersion = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64' -ErrorAction Stop).Version
-if ([version]$runtimeVersion.TrimStart('v') -lt [version]'14.40.33816.0') {
-    throw "Installed Visual C++ runtime version $runtimeVersion is below 14.40.33816.0"
-}
-foreach ($dll in @('msvcp140.dll', 'vccorlib140.dll', 'vcruntime140.dll')) {
-    Copy-Item -Path "/Windows/System32/$dll" -Destination /opt/fluent-bit/bin -ErrorAction Stop
-    Write-Host "$dll version: $((Get-Item -LiteralPath "/opt/fluent-bit/bin/$dll" -ErrorAction Stop).VersionInfo.FileVersion)"
+catch {
+    Write-Host "exception while installing Visual C++ Redistributable"
+    Write-Host $_.Exception
+    exit 1
 }
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ############################################################################################
@@ -90,10 +103,14 @@ Write-Host ('Finished downloading Telegraf')
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.7.1.zip'
-    Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
-    Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
-    Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-14-2/genevamonitoringagent.47.14.2.zip'
+    Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip -ErrorAction Stop
+    Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent -ErrorAction Stop
+    # This archive is not NuGet-signed; these checks cover the Microsoft executables we launch, not the entire archive.
+    foreach ($relativePath in @('MonAgentLauncher.exe', 'MonAgentCore.exe', 'Extensions\AMACoreAgent\AgentLauncher.exe', 'Extensions\AMACoreAgent\AMACoreAgent.exe')) {
+        Test-MicrosoftCodeSignature -LiteralPath (Join-Path '\installation\genevamonitoringagent\Monitoring\Agent' $relativePath)
+    }
+    Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction Stop
 }
 catch {
     $ex = $_.Exception

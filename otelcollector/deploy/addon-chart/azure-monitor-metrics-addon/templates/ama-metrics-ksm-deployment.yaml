@@ -49,28 +49,28 @@ spec:
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
-        - --resources={{ .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors | join "," }}
+        - {{ printf "--resources=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors) | quote }}
             {{-  end  }}
           {{-  end  }}
         {{-  end  }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList | join "," }}
+        - {{ printf "--metric-labels-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
-        - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList | join "," }}
+        - {{ printf "--metric-annotations-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList }}
-        - --metric-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList | join "," }}
+        - {{ printf "--metric-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}

@@ -79,6 +79,25 @@ extends:
         steps:
         - checkout: self
           submodules: true
+        - bash: bash .pipelines/tests/windows-image-restore-test.sh
+          displayName: "Build: test Windows image recovery"
+        - bash: |
+            set -euo pipefail
+            release_file=$(mktemp)
+            trap 'rm -f "$release_file"' EXIT
+            curl --fail --show-error --silent --location \
+              --retry 4 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
+              --connect-timeout 15 --max-time 120 \
+              --output "$release_file" https://api.github.com/repos/aquasecurity/trivy/releases/latest
+            version=$(jq -er '
+              select(.draft == false and .prerelease == false)
+              | .tag_name | sub("^v"; "")
+              | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
+            ' "$release_file")
+            echo "Selected Trivy version: $version"
+            echo "##vso[task.setvariable variable=TRIVY_VERSION;isOutput=true]$version"
+          name: trivyVersion
+          displayName: "Build: resolve latest stable Trivy version"
         - bash: |
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
@@ -278,8 +297,32 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            # Get all releases and filter for proper semver versions (no pre-release tags)
-            RETINA_VERSION=$(curl -sL https://api.github.com/repos/microsoft/retina/releases | jq -r '[.[] | select(.name | ("^[0-9]+\\.[0-9]+\\.[0-9]+$") and (contains("-") | not))][0].name')
+            # Use the newest stable retina release whose images and chart are all published to ghcr.io.
+            # A GitHub release can exist without its images (e.g. v1.3.1, whose image release job failed),
+            # which leaves the dev clusters' retina pods in ImagePullBackOff.
+            ghcr_manifest() {
+              local token
+              token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/$1:pull" | jq -r '.token') || return 1
+              curl -sfL -H "Authorization: Bearer $token" \
+                -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json" \
+                "https://ghcr.io/v2/microsoft/retina/$1/manifests/$2"
+            }
+            RETINA_VERSION=""
+            for candidate in $(curl -sfL https://api.github.com/repos/microsoft/retina/releases | jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' | head -n 5); do
+              # The Windows daemonset uses the same retina-agent tag, so its index must have both Linux and Windows images
+              if ghcr_manifest retina-agent "$candidate" | jq -e 'any(.manifests[]?; .platform.os == "linux") and any(.manifests[]?; .platform.os == "windows")' > /dev/null \
+                && ghcr_manifest retina-init "$candidate" > /dev/null \
+                && ghcr_manifest retina-operator "$candidate" > /dev/null \
+                && ghcr_manifest charts/retina "$candidate" > /dev/null; then
+                RETINA_VERSION=$candidate
+                break
+              fi
+              echo "##vso[task.logissue type=warning]Skipping retina $candidate: its images or chart are not published to ghcr.io"
+            done
+            if [ -z "$RETINA_VERSION" ]; then
+              echo "##vso[task.logissue type=error]None of the latest retina releases have their images and chart published to ghcr.io"
+              exit 1
+            fi
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
             echo $RETINA_VERSION 
             helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
@@ -880,6 +923,7 @@ extends:
         - Linux_Prometheus_Collector_AMD64
         - Linux_Prometheus_Collector_ARM64
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
           LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
           LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
@@ -1025,8 +1069,10 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
@@ -1099,6 +1145,7 @@ extends:
           os: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         templateContext:
@@ -1202,8 +1249,10 @@ extends:
           workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
           displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1376,6 +1425,7 @@ extends:
         - Linux_Target_Allocator_ARM64
         - Linux_Target_Allocator_AMD64
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
           TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
           TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
@@ -1461,8 +1511,10 @@ extends:
             echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1544,6 +1596,7 @@ extends:
           os: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
+          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
@@ -1578,8 +1631,10 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
           condition: succeeded()
+        - template: /.pipelines/azure-template-install-trivy.yml@self
+          parameters:
+            version: $(TRIVY_VERSION)
         - bash: |
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
             export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
             export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
             for i in {1..5}; do
@@ -1669,12 +1724,17 @@ extends:
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
         - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
+        - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1686,6 +1746,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -1843,12 +1904,17 @@ extends:
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
         - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
+        - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
@@ -1860,6 +1926,7 @@ extends:
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
@@ -2030,61 +2097,44 @@ extends:
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\"
+            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
         - bash: |
-            export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
-            export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
-            export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2019_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
+            set -euo pipefail
+            printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
+            for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)"; do
+              acr_image="$(WINDOWS_FULL_IMAGE_NAME)-$base_version"
+              mcr_image="$(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$base_version"
+              if docker pull "$acr_image"; then
+                continue
+              fi
+
+              echo "Failed to pull $acr_image. Waiting for $mcr_image."
+              restored=0
+              for attempt in {1..20}; do
+                if docker pull "$mcr_image"; then
+                  docker tag "$mcr_image" "$acr_image"
+                  docker push "$acr_image"
+                  restored=1
+                  break
+                fi
+                if [ "$attempt" -lt 20 ]; then
                   sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
+                fi
+              done
+              if [ "$restored" -eq 0 ]; then
+                echo "Image $mcr_image was not published within the timeout"
                 exit 1
               fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
-            fi
-            export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
-            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            if [ $? -ne 0 ]; then
-              echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
-              IMAGES_ARE_PUBLISHED=0
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                do
-                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                  if (echo $output | grep $WINDOWS_2022_TAG)
-                  then
-                    echo "Images are published to mcr"
-                    IMAGES_ARE_PUBLISHED=1
-                    break
-                  fi
-                  sleep 30
-                done
-              if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-                echo "Images are not published to mcr within the timeout"
-                exit 1
-              fi
-              az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
-            fi
+            done
           displayName: "Build: ensure images are present in ACR"
           retryCountOnTaskFailure: 3
+          env:
+            ACR_USERNAME: $(ACR_USERNAME)
+            ACR_PASSWORD: $(ACR_PASSWORD)
         - powershell: |
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
             @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
@@ -2241,6 +2291,11 @@ extends:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
         steps:
+        # Explicit checkout with persisted credentials so `git push` below can authenticate.
+        # Without it the push fails with "could not read Username for 'https://github.com'"
+        # (main build 130965, after 1ES PT template / NetIso task updates on Nov 4 2026).
+        - checkout: self
+          persistCredentials: true
         - bash: |
             git config --global user.name "AzureDevOps Agent"
             git tag "v$(HELM_SEMVER)"
