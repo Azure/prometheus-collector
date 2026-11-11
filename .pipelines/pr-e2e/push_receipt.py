@@ -47,6 +47,7 @@ def main():
     with args.output.open("x", encoding="utf-8") as output:
         json.dump(result, output, indent=2)
         output.write("\n")
+    print("AMA_METRICS_PUSH_RECEIPT " + json.dumps(result, separators=(",", ":")), flush=True)
 
 
 if __name__ == "__main__":

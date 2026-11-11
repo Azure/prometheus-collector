@@ -172,6 +172,37 @@ the receipt until it is actually readable. Never substitute a released image.
 
 ## Moving execution to the existing ci-sre agent
 
+The SRE Agent consumes private build logs, not artifact downloads. Candidate
+collector scans now emit `AMA_METRICS_CANDIDATE_SCAN_BEGIN/DATA/END` using the
+same counted, checksummed gzip/base64 framing as discovery. The bounded 32 MiB
+envelope preserves the original provenance, scanner metadata and full result
+bytes; it does not truncate findings. `producer_trivy.py` emits it directly.
+`push_receipt.py` also emits `AMA_METRICS_PUSH_RECEIPT` JSON with the original
+push digest for independent image binding.
+
+Before consuming a candidate scan, authenticate 440 build metadata and require
+the expected repository/source SHA, successful terminal build, successful scan
+and push tasks, and first job/stage attempts. Read the full scan and push logs
+through the agent's authorized connector. Cross-check the push receipt's source/
+build against metadata, resolve its immutable index with `resolve_images`, and
+select the Linux amd64 child. Never take expected bindings from the scan envelope.
+Read trusted decoder code from that build's exact source, then run:
+
+```text
+python candidate_log.py --input scan-log.txt --build-id <440-id> --source-sha <sha> --image-ref <resolved-child@sha256:...> --index-ref <push-index@sha256:...> --output candidate-scan.json
+```
+
+The decoder validates the complete file set, exact source/build/image/platform,
+coverage, file hashes, scanner configuration and database identity using the
+existing scan-provenance validator. Wrong-source/build/image, truncated or duplicate
+frames, corrupt hashes and oversized envelopes fail without writing output.
+The output remains collector Linux amd64 Trivy evidence only, not Windows,
+arm64, other-image, Qualys or e2e clearance. Record actual agent connector call
+IDs and negative-check results. Missing frames block consumption; a console
+table or an older baseline is not a substitute. The ADO test worker's protected
+artifact checks above are unchanged; TF400813 artifact downloads are not an
+SRE Agent readiness gate.
+
 Local execution bootstraps the same repository commands that trusted ADO workers
 will execute. The finished flow must not depend on a workstation, Copilot session
 directory, developer login, local Docker engine or absolute local path.

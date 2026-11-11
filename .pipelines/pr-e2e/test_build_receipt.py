@@ -1,4 +1,5 @@
 import copy
+from contextlib import redirect_stdout
 import hashlib
 import io
 import json
@@ -132,8 +133,13 @@ docker() {
                         with self.assertRaises(ValueError):
                             push_receipt.main()
                     else:
-                        push_receipt.main()
-                        self.assertTrue(json.loads((path / "push.json").read_text())["indexRef"].endswith("@" + digest))
+                        console = io.StringIO()
+                        with redirect_stdout(console):
+                            push_receipt.main()
+                        receipt = json.loads((path / "push.json").read_text())
+                        self.assertTrue(receipt["indexRef"].endswith("@" + digest))
+                        self.assertEqual(console.getvalue(),
+                                         "AMA_METRICS_PUSH_RECEIPT " + json.dumps(receipt, separators=(",", ":")) + "\n")
 
     def test_existing_runner_receipt_binds_the_test_checkout(self):
         image = "docker.io/cerebro31/ginkgo-test@sha256:" + "b" * 64

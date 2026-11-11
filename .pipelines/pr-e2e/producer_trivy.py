@@ -10,6 +10,7 @@ import time
 import urllib.error
 
 from build_receipt import resolve_images
+from candidate_log import emit
 from push_receipt import receipt
 from scan_trivy import scan
 
@@ -60,6 +61,7 @@ def produce(image, metadata_path, output):
                   for path in sorted(output.rglob("*")) if path.is_file()},
     }
     (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+    print(emit(output), end="", flush=True)
 
 
 if __name__ == "__main__":
