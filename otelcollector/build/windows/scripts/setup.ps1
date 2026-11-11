@@ -48,15 +48,16 @@ Write-Host ('Finished installing fluentbit')
 Write-Host ('Installing Visual C++ Redistributable Package')
 $vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
-$vcArgs = "/install /quiet /norestart"
+$vcArgs = "/install /quiet /norestart /log \installation\vcredist.log"
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
-# Start-Process -Wait also waits for installer-spawned services to exit.
+Write-Host 'Finished downloading Visual C++ Redistributable Package'
 $vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
 # Retain the process handle so Windows PowerShell can read ExitCode after exit.
 $vcInstaller.Handle | Out-Null
 $vcInstaller.WaitForExit()
 Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
+Get-Content -Path '\installation\vcredist*.log' -ErrorAction Stop
 if ($vcInstaller.ExitCode -notin @(0, 3010)) {
     throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
 }

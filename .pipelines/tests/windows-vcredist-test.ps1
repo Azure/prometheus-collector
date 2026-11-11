@@ -8,6 +8,10 @@ $install = [scriptblock]::Create($block.Value)
 $processBlock = [regex]::Match($block.Value, '(?s)\$vcInstaller = .*?(?=Copy-Item)')
 if (-not $processBlock.Success) { throw 'Installer process wait not found' }
 $waitForInstaller = [scriptblock]::Create($processBlock.Value)
+function Get-Content {
+    param($Path, $ErrorAction)
+    if ($Path -ne '\installation\vcredist*.log') { throw 'Unexpected installer log path' }
+}
 foreach ($code in @(0, 3010, 1603)) {
     $vcInstallerLocation = $env:ComSpec
     $vcArgs = "/c exit $code"
@@ -25,6 +29,7 @@ function Invoke-WebRequest {
 function Start-Process {
     param($FilePath, $ArgumentList, [switch]$NoNewWindow, [switch]$PassThru, [switch]$Wait, $ErrorAction)
     if ($Wait -or -not $PassThru) { throw 'Wait for the installer, not its descendant process tree' }
+    if ($ArgumentList -ne '/install /quiet /norestart /log \installation\vcredist.log') { throw 'Installer logging or installation flags changed' }
     if ($script:scenario -eq 'start-failure') { throw 'Installer could not start' }
     $process = [pscustomobject]@{ ExitCode = $null }
     $process | Add-Member ScriptMethod WaitForExit {
