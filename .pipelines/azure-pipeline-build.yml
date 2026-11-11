@@ -84,6 +84,8 @@ extends:
           os: windows
         timeoutInMinutes: 45
         steps:
+        - powershell: ./.pipelines/tests/windows-launch-watchdog-test.ps1
+          displayName: "Diagnostic: test container watchdog"
         - powershell: |
             $ErrorActionPreference = 'Stop'
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
@@ -94,8 +96,7 @@ extends:
             if ($LASTEXITCODE -ne 0) { throw "Diagnostic image inspect failed: $LASTEXITCODE" }
             $script = Get-Content '.pipelines/tests/windows-launch-probe.ps1' -Raw
             $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
-            docker run --rm --isolation=hyperv $image powershell.exe -NoProfile -EncodedCommand $encoded
-            if ($LASTEXITCODE -ne 0) { throw "Diagnostic container failed: $LASTEXITCODE" }
+            ./.pipelines/tests/windows-launch-watchdog.ps1 -Image $image -EncodedScript $encoded
           displayName: "Diagnostic: compare direct and elevated launches"
       - job: Image_Tags_and_Ev2_Artifacts
         displayName: "Build: Set image tags and publish Ev2 artifacts"

@@ -1,36 +1,34 @@
 param(
     [ValidateSet('both', 'direct', 'runas')]
-    [string]$Mode = 'both',
-    [int]$RunAsTimeoutSeconds = 1860
+    [string]$Mode = 'both'
 )
 
 $ErrorActionPreference = 'Stop'
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class LaunchProbe {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetExitCodeProcess(IntPtr process, out uint exitCode);
+}
+'@
+
 foreach ($launch in @('direct', 'runas')) {
     if ($Mode -ne 'both' -and $Mode -ne $launch) { continue }
-    $job = Start-Job -ArgumentList $launch -ScriptBlock {
-        param($launch)
-        $ErrorActionPreference = 'Stop'
-        Write-Output ("{0} {1} launch-start" -f [DateTime]::UtcNow.ToString('o'), $launch)
-        $arguments = @{ FilePath = $env:ComSpec; ArgumentList = '/d /c exit 0'; PassThru = $true }
-        if ($launch -eq 'runas') { $arguments.Verb = 'RunAs' } else { $arguments.NoNewWindow = $true }
-        $process = Start-Process @arguments
-        $process.Handle | Out-Null
-        if (-not $process.WaitForExit(5000)) { throw "$launch child did not exit" }
-        Write-Output ("{0} {1} launch-end exit={2}" -f [DateTime]::UtcNow.ToString('o'), $launch, $process.ExitCode)
-        if ($process.ExitCode -ne 0) { throw "$launch child failed: $($process.ExitCode)" }
+    $start = [System.Diagnostics.ProcessStartInfo]::new()
+    $start.FileName = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+    $start.Arguments = '-NoProfile -NonInteractive -Command "Start-Sleep -Seconds 2; exit 0"'
+    $start.UseShellExecute = ($launch -eq 'runas')
+    if ($launch -eq 'runas') { $start.Verb = 'runas' } else { $start.CreateNoWindow = $true }
+    Write-Output ("{0} {1} launch-start" -f [DateTime]::UtcNow.ToString('o'), $launch)
+    $process = [System.Diagnostics.Process]::Start($start)
+    if ($null -eq $process) { throw "$launch process did not start" }
+    $handle = $process.Handle
+    $process.WaitForExit()
+    $exitCode = [uint32]0
+    if (-not [LaunchProbe]::GetExitCodeProcess($handle, [ref]$exitCode)) {
+        throw [System.ComponentModel.Win32Exception]::new([Runtime.InteropServices.Marshal]::GetLastWin32Error())
     }
-    $timeout = if ($launch -eq 'direct') { 60 } else { $RunAsTimeoutSeconds }
-    if ($null -eq (Wait-Job -Job $job -Timeout $timeout)) {
-        Receive-Job -Job $job -ErrorAction Continue
-        Write-Output ("{0} {1} timeout after {2}s; exit unavailable" -f [DateTime]::UtcNow.ToString('o'), $launch, $timeout)
-        Stop-Job -Job $job
-        Remove-Job -Job $job -Force
-        continue
-    }
-    try {
-        Receive-Job -Job $job -ErrorAction Stop
-        if ($job.State -ne 'Completed') { throw "$launch probe failed: $($job.State)" }
-    } finally {
-        Remove-Job -Job $job -Force
-    }
+    Write-Output ("{0} {1} launch-end exit={2}" -f [DateTime]::UtcNow.ToString('o'), $launch, $exitCode)
+    if ($exitCode -ne 0) { throw "$launch child failed: $exitCode" }
 }
