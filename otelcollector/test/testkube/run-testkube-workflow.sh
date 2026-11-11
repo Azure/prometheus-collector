@@ -103,17 +103,18 @@ fi
 kubectl apply -f ./testkube/api-server-permissions.yaml \
     || fail_setup "Failed to apply TestKube API permissions"
 
-if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
-    existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
-        || fail_setup "Failed to list existing ConfigTests workflows"
-    # Exported last-applied metadata can make apply try to delete resourceVersion.
-    # Reset only the workflows in this scenario, without deleting their history.
-    while IFS= read -r workflow; do
-        [[ -z "$workflow" ]] && continue
-        kubectl annotate --namespace testkube "$workflow" kubectl.kubernetes.io/last-applied-configuration- \
-            || fail_setup "Failed to reset last-applied metadata for $workflow"
-    done <<< "$existing_workflows"
-fi
+# Exported last-applied metadata can make apply try to delete resourceVersion
+# ("metadata.resourceVersion: Invalid value: 0: must be specified for an update").
+# This affects every environment's long-lived cluster, not only ConfigTests
+# (e.g. AKS ci-dev-aks-mac-eus in main builds 130790-130802). Reset only the
+# workflows referenced by this manifest, without deleting their history.
+existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
+    || fail_setup "Failed to list existing $TARGET_ENV workflows"
+while IFS= read -r workflow; do
+    [[ -z "$workflow" ]] && continue
+    kubectl annotate --namespace testkube "$workflow" kubectl.kubernetes.io/last-applied-configuration- \
+        || fail_setup "Failed to reset last-applied metadata for $workflow"
+done <<< "$existing_workflows"
 
 kubectl apply -f "./testkube/$TARGET_OUTPUT" \
     || fail_setup "Failed to apply TestKube workflows; refusing to run stale definitions"
