@@ -60,6 +60,15 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_candidate_harness_region_guard_matches_campaign_locations(self):
+        template = (runner.REPO / ".pipelines/azure-template-candidate-config-tests.yml").read_text(
+            encoding="utf-8")
+        guard = next(line for line in template.splitlines()
+                     if "Regional capacity admission has no approved placement" in line)
+        allowed = {clause.rsplit("==", 1)[1].strip()
+                   for clause in guard.split("]]", 1)[0].split("||") if "==" in clause}
+        self.assertEqual(allowed, set(runner.CAMPAIGN_LOCATIONS.values()))
+
     def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
         skus = [

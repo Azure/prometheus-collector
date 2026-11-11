@@ -211,7 +211,7 @@ steps:
       set -euo pipefail
       [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Service connection must target the approved build subscription" >&2; exit 1; }
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
-      [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
+      [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
         settings) max_run_seconds=28800 ;;
         default|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet) max_run_seconds=14400 ;;
