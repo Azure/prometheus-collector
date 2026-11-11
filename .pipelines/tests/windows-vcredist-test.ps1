@@ -1,13 +1,21 @@
 $ErrorActionPreference = 'Stop'
 $setupPath = Join-Path $PSScriptRoot '..\..\otelcollector\build\windows\scripts\setup.ps1'
 $setup = Get-Content $setupPath -Raw
-$block = [regex]::Match($setup, "(?s)Write-Host \('Installing Visual C\+\+ Redistributable Package'\).*?Write-Host \('Finished Installing Visual C\+\+ Redistributable Package'\)")
-if (-not $block.Success) { throw 'VC++ setup block not found' }
-$install = [scriptblock]::Create($block.Value)
+$start = [regex]::Match($setup, "(?s)Write-Host \('Installing Visual C\+\+ Redistributable Package'\).*?\`$vcInstaller.Handle \| Out-Null")
+$finish = [regex]::Match($setup, "(?s)\`$vcInstaller.WaitForExit\(\).*?Write-Host \('Finished Installing Visual C\+\+ Redistributable Package'\)")
+if (-not $start.Success -or -not $finish.Success) { throw 'VC++ setup blocks not found' }
+foreach ($marker in @('Finished installing Metrics Extension', 'Finished installing fluentbit', 'Finished downloading Telegraf', 'Finished downloading GenevaMonitoringAgent')) {
+    $position = $setup.IndexOf($marker)
+    if ($position -lt $start.Index + $start.Length -or $position -gt $finish.Index) {
+        throw "Component setup does not overlap installer: $marker"
+    }
+}
+$install = [scriptblock]::Create($start.Value + "`n" + $finish.Value)
 
-$processBlock = [regex]::Match($block.Value, '(?s)\$vcInstaller = .*?(?=Copy-Item)')
-if (-not $processBlock.Success) { throw 'Installer process wait not found' }
-$waitForInstaller = [scriptblock]::Create($processBlock.Value)
+$processStart = [regex]::Match($start.Value, '(?s)\$vcInstaller = .*')
+$processFinish = [regex]::Match($finish.Value, '(?s).*?(?=Copy-Item)')
+if (-not $processStart.Success -or -not $processFinish.Success) { throw 'Installer process wait not found' }
+$waitForInstaller = [scriptblock]::Create($processStart.Value + "`n" + $processFinish.Value)
 function Get-Content {
     param($Path, $ErrorAction)
     if ($Path -ne '\installation\vcredist*.log') { throw 'Unexpected installer log path' }
