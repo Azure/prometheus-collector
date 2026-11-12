@@ -1569,6 +1569,8 @@ class Contracts(unittest.TestCase):
             host.scenario = {"clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
             existing_roles = []
+            dns_policies = []
+            valid_dns_policy = True
             cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
                        "kubernetesVersion": "1.36.5", "autoUpgradeProfile": {"upgradeChannel": "stable"},
                        "securityProfile": {"workloadIdentity": {"enabled": True}}}
@@ -1587,6 +1589,10 @@ class Contracts(unittest.TestCase):
                 return {}
 
             def kube(*args, **kwargs):
+                if args[:2] == ("apply", "-f") and kwargs.get("data"):
+                    dns_policies.append(runner.json.loads(kwargs["data"]))
+                if args[:2] == ("get", "ciliumnetworkpolicy"):
+                    return dns_policies[-1] if valid_dns_policy else {}
                 if args[:2] == ("get", "deployments"):
                     return {"items": [{"metadata": {"name": "testkube-api-server"}}]}
                 return "testworkflows <none> testworkflows.testkube.io/v1 true TestWorkflow"
@@ -1646,6 +1652,18 @@ class Contracts(unittest.TestCase):
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
             self.assertTrue(any(c.args[:3] == ("rollout", "status", "daemonset/cilium")
                                 for c in host.kube.call_args_list))
+            policy = dns_policies[-1]
+            self.assertEqual(policy["metadata"]["namespace"], "testkube")
+            self.assertEqual(policy["spec"]["endpointSelector"]["matchLabels"],
+                             {"azure.workload.identity/use": "true"})
+            ports = policy["spec"]["egress"]
+            self.assertEqual(ports[0]["toPorts"][0]["rules"]["dns"], [{"matchPattern": "*"}])
+            self.assertEqual([(p["port"], p["endPort"]) for p in ports[1]["toPorts"][0]["ports"]],
+                             [("1", 52), ("54", 65535)])
+            valid_dns_policy = False
+            with self.assertRaisesRegex(RuntimeError, "DNS inspection policy"):
+                runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            valid_dns_policy = True
             original_az = host.az.side_effect
             host.az.side_effect = lambda *a, **kw: {"level": "ReadOnly"} if a[:2] == ("lock", "show") else original_az(*a, **kw)
             with self.assertRaisesRegex(RuntimeError, "CanNotDelete lock"):
@@ -1797,6 +1815,7 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "cilium-dns-policy": ('if observed.get("spec") != policy["spec"]:', "if False:"),
         "cilium-maintenance-scope": (
             'maintenance = scenario["id"] == "acns-cilium" and handoff', 'maintenance = handoff'),
         "cilium-lock-restoration": (

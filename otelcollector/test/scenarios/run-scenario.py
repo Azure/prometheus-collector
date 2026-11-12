@@ -1480,6 +1480,29 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     workflows = host.kube("api-resources", "--api-group=testworkflows.testkube.io", "--no-headers")
     if not re.search(r"^testworkflows\s", workflows, re.MULTILINE):
         raise RuntimeError("TestKube workflow API was not installed")
+    if "cilium" in host.scenario["clusterFeatures"]:
+        # Cilium emits DNS metrics only for inspected DNS traffic; preserve all other egress.
+        policy = {
+            "apiVersion": "cilium.io/v2", "kind": "CiliumNetworkPolicy",
+            "metadata": {"name": "candidate-acns-dns", "namespace": "testkube"},
+            "spec": {
+                "endpointSelector": {"matchLabels": {"azure.workload.identity/use": "true"}},
+                "egress": [
+                    {"toPorts": [{"ports": [{"port": "53", "protocol": "ANY"}],
+                                  "rules": {"dns": [{"matchPattern": "*"}]}}]},
+                    {"toPorts": [{"ports": [
+                        {"port": "1", "endPort": 52, "protocol": "ANY"},
+                        {"port": "54", "endPort": 65535, "protocol": "ANY"},
+                    ]}]},
+                ],
+            },
+        }
+        host.kube("apply", "-f", "-", data=json.dumps(policy))
+        observed = host.kube("get", "ciliumnetworkpolicy", "candidate-acns-dns", "-n", "testkube",
+                             "-o", "json", json_output=True)
+        if observed.get("spec") != policy["spec"]:
+            raise RuntimeError("Cilium DNS inspection policy does not match the scoped traffic proof")
+        print("Managed ACNS DNS inspection proof: " + json.dumps(observed["spec"]), flush=True)
     save(host.args.evidence / "testkube-bootstrap.json", {
         "status": "installed", "clientId": identity["clientId"], "issuer": issuer,
         "serviceAccount": "testkube-api-server-tests-job",

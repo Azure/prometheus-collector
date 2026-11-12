@@ -89,6 +89,11 @@ During the one-time managed-addon handoff only, the runner temporarily removes
 that lane's lock so AKS can delete its DCR association, and restores and verifies
 the lock in `finally` before any candidate tests. A partial handoff is resumed on
 the same retained cluster, never by recreating it.
+The Cilium proof also installs and reads back a DNS inspection policy limited to
+the TestKube namespace's workload-identity pods. DNS requests are inspected with
+a wildcard allow rule; all non-DNS ports remain allowed. Cilium requires this
+policy to emit DNS metrics, as documented in the
+[ACNS metrics prerequisites](https://learn.microsoft.com/azure/aks/container-network-observability-how-to#prerequisites).
 New pools' autoscaler maximum **and** declared surge count toward the simultaneous
 regional and VM-family peak. Verified existing pools are already in current usage;
 only their declared surge is added. An admitted existing host that disappears fails
