@@ -294,6 +294,28 @@ class Contracts(unittest.TestCase):
             self.assertEqual([record["exitCode"] for record in records], [1, 0])
             self.assertEqual(records[0]["command"], ["az", "deployment", "group", "create"])
 
+    def test_private_role_assignment_list_exposes_only_allowlisted_error_codes(self):
+        env = {"SCENARIO_WINDOWS_PASSWORD": "private-password", "SYSTEM_ACCESSTOKEN": "private-token"}
+        for command, code, diagnostic in (
+                (["az", "role", "assignment", "list"], "Authorization_RequestDenied", True),
+                (["az", "role", "assignment", "list"], "UnknownFailure", False),
+                (["az", "account", "get-access-token"], "Authorization_RequestDenied", False)):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as temporary:
+                failed = types.SimpleNamespace(
+                    returncode=1, stdout="private-success-output",
+                    stderr=f"ERROR: ({code}) private-password private-token not-in-environment-secret")
+                evidence = Path(temporary)
+                commands = runner.Commands(evidence)
+                with patch.object(runner.shutil, "which", return_value="az"), \
+                        patch.object(runner.subprocess, "run", return_value=failed):
+                    with self.assertRaises(RuntimeError) as failure:
+                        commands.run(command, env=env, private=True)
+                message = str(failure.exception)
+                self.assertEqual(code in message, diagnostic)
+                for secret in (*env.values(), failed.stdout, "not-in-environment-secret"):
+                    self.assertNotIn(secret, message)
+                self.assertFalse((evidence / "commands.log").exists())
+
     def test_group_deployment_retries_wrapped_role_assignment_authorization_denial(self):
         wrapped = RuntimeError(
             "Command failed (1): az deployment: ERROR: {\"code\":\"InvalidTemplateDeployment\","

@@ -160,6 +160,8 @@ Ginkgo JSON, per-node/component `imageID` observations, results and
 Secret-bearing command output is redacted; snapshots remain in memory.
 Failed deployments retain `deployment-error.txt` with secret-bearing environment
 values redacted. Command history survives a separate explicit cleanup invocation.
+Private role-assignment listing failures expose only allowlisted Azure error codes
+in the raised error and `result.json`; unknown errors and all other output stay private.
 Service-principal runs create their owned resource group, then wait up to 20 minutes
 for an administrator bootstrap before deploying. The runner prints the exact
 `az role assignment create` command and saves `rbac-bootstrap.ps1` plus
