@@ -124,7 +124,7 @@
       "clusterFeatures": ["aks", "windows", "ampls", "private-query", "managed-acns", "workload-identity", "operator"],
       "settingsVariants": ["default"],
       "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns"],
       "tier": "weekly",
       "blockedReason": "Requires independent AMPLS and non-Cilium managed ACNS proofs."
     },

@@ -22,6 +22,7 @@ import xml.etree.ElementTree as ET
 
 import jsonschema
 import yaml
+import ampls_proofs
 
 
 ROOT = Path(__file__).resolve().parent
@@ -33,6 +34,7 @@ CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus",
 }
+AMPLS_VALIDATION_LOCATIONS = {"ampls": "centralus", "ampls-acns": "eastus2"}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -514,8 +516,8 @@ class Host:
                 or outputs.get("azureCniMode") != expected_mode
                 or network.get("networkPlugin") != "azure"
                 or (network.get("networkPluginMode") or "classic") != expected_mode
-                or bool(advanced.get("enabled")) != (self.scenario["id"] == "acns")
-                or (self.scenario["id"] == "acns"
+                or bool(advanced.get("enabled")) != ("managed-acns" in self.scenario["clusterFeatures"])
+                or ("managed-acns" in self.scenario["clusterFeatures"]
                     and (advanced.get("observability") or {}).get("enabled") is not True)):
             raise ValueError("Persistent AKS cluster does not match the retained deployment contract")
         verify_pool_configuration(expected_pools, cluster.get("agentPoolProfiles") or [])
@@ -900,7 +902,11 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
         host.commands.run(["bash", "./testkube/run-testkube-workflow.sh", host.query_endpoint,
                           host.query_client_id, template, target, "false", "0", "ConfigTests", source_sha],
                          cwd=TEST_SOURCE / "otelcollector/test", env=env)
-        return workflow_result(destination, workflow, source_sha, image)
+        result = workflow_result(destination, workflow, source_sha, image)
+        print("CANDIDATE_JUNIT " + json.dumps({
+            "scenario": host.scenario["id"], "selection": expression, **result,
+        }), flush=True)
+        return result
     finally:
         if generated.exists():
             generated.unlink()
@@ -1274,14 +1280,15 @@ def campaign_preflight(args, matrix, commands):
         raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
+    locations = CAMPAIGN_LOCATIONS | (AMPLS_VALIDATION_LOCATIONS if getattr(args, "validate_ampls", False) else {})
     selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
-    if any(name not in CAMPAIGN_LOCATIONS for name in selected):
+    if any(name not in locations for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
     test_source = source_commit(commands, TEST_SOURCE, ["otelcollector/test/scenarios"])
     if test_source != args.test_source_sha:
         raise ValueError("Campaign test source does not match the expected test source SHA")
-    placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
+    placements = {name: locations[name] for name in selected}
     regions = {}
     existing = {}
     for location in sorted(set(placements.values())):
@@ -1298,7 +1305,8 @@ def campaign_preflight(args, matrix, commands):
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
-            if not row or row.get("blockedReason"):
+            if not row or (row.get("blockedReason") and not (
+                    getattr(args, "validate_ampls", False) and name in AMPLS_VALIDATION_LOCATIONS)):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
@@ -1574,6 +1582,8 @@ def execute(args, scenario, variants, commands):
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
         save(args.evidence / "images-before.json", audit_images(host, images))
+        if "ampls" in scenario["clusterFeatures"]:
+            outcome["ampls"] = ampls_proofs.verify(host, outputs)
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
         # Health suites depend on the repository's existing reference-app scrape fixtures.
@@ -1623,6 +1633,8 @@ def execute(args, scenario, variants, commands):
             outcome["suites"]["otlp-processes"] = run_suite(
                 host, "containerstatus", args.evidence / "health" / "otlp-processes", "otlp && !windows")
         outcome["ingestion"] = verify_ingestion(host, outputs, probe_started)
+        if "ampls" in scenario["clusterFeatures"]:
+            print("AMPLS_PRIVATE_INGESTION " + json.dumps(outcome["ingestion"]), flush=True)
         save(args.evidence / "images-after.json", audit_images(host, images))
         outcome["status"] = "TESTS_PASSED"
     except (RuntimeError, ValueError, KeyError, OSError, ET.ParseError, yaml.YAMLError) as failure:
@@ -1671,7 +1683,11 @@ def main(argv=None):
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--settle-seconds", type=int, default=360)
     parser.add_argument("--max-run-seconds", type=int, default=14400)
+    parser.add_argument("--validate-ampls", action="store_true",
+                        help="Explicit experimental ampls/ampls-acns run; coverage stays blocked until live proof passes")
     args = parser.parse_args(argv)
+    if args.validate_ampls and args.scenario not in AMPLS_VALIDATION_LOCATIONS:
+        raise ValueError("--validate-ampls is limited to an explicit public-API AMPLS scenario")
     admitted_existing = args.admitted_existing
     args.admitted_existing = admitted_existing == "true"
     REPO = args.source_root.resolve()
@@ -1691,7 +1707,8 @@ def main(argv=None):
     if args.action == "run":
         if admitted_existing is None:
             raise ValueError("Run requires the aggregate admission's existing-host decision")
-        if args.scenario not in CAMPAIGN_LOCATIONS:
+        if args.scenario not in CAMPAIGN_LOCATIONS and not (
+                args.validate_ampls and args.scenario in AMPLS_VALIDATION_LOCATIONS):
             raise ValueError("Persistent execution requires a campaign scenario")
         pipeline = yaml.safe_load((TEST_SOURCE / ".pipelines/azure-pipeline-config-tests.yml").read_text())
         loop = next(row for row in pipeline["stages"] if any(
@@ -1726,7 +1743,7 @@ def main(argv=None):
     scenario = next((s for s in matrix["scenarios"] if s["id"] == args.scenario), None)
     if not scenario:
         raise ValueError(f"Unknown scenario: {args.scenario}")
-    if scenario.get("blockedReason"):
+    if scenario.get("blockedReason") and not (args.validate_ampls and args.scenario in AMPLS_VALIDATION_LOCATIONS):
         raise ValueError(f"BLOCKED: {scenario['blockedReason']}")
     if args.action == "plan":
         save(args.evidence / "plan.json", {"hostCount": 1, "scenario": scenario,

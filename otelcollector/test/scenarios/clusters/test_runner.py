@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "run-scenario.py"
+sys.path.insert(0, str(SOURCE.parent))
 SPEC = importlib.util.spec_from_file_location("cluster_scenarios", SOURCE)
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
@@ -62,6 +63,22 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_ampls_opt_in_is_explicit_and_does_not_unblock_coverage(self):
+        for scenario_id in ("ampls", "ampls-acns", "private-ampls", "ampls-proxy", "default", "all"):
+            for opt_in in (False, True):
+                with self.subTest(scenario=scenario_id, opt_in=opt_in), tempfile.TemporaryDirectory() as directory:
+                    args = ["plan", "--scenario", scenario_id, "--evidence", directory]
+                    if opt_in:
+                        args.append("--validate-ampls")
+                    if opt_in and scenario_id in runner.AMPLS_VALIDATION_LOCATIONS:
+                        self.assertEqual(runner.main(args), 0)
+                        self.assertIn("blockedReason", runner.load(Path(directory) / "plan.json")["scenario"])
+                    elif scenario_id == "default" and not opt_in:
+                        self.assertEqual(runner.main(args), 0)
+                    else:
+                        with self.assertRaises(ValueError):
+                            runner.main(args)
+
     def test_runner_must_come_from_expected_test_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             repo, test_source = runner.REPO, runner.TEST_SOURCE
@@ -1671,6 +1688,11 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "ampls-opt-in-scope": (
+            'if args.validate_ampls and args.scenario not in AMPLS_VALIDATION_LOCATIONS:', 'if False:'),
+        "ampls-keeps-coverage-blocked": (
+            'if scenario.get("blockedReason") and not (args.validate_ampls and args.scenario in AMPLS_VALIDATION_LOCATIONS):',
+            'if False:'),
         "persistent-bootstrap-grants": (
             'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),
         "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),

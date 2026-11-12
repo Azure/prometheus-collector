@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp")
+VALIDATION_SCENARIOS = ("ampls", "ampls-acns")
 SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
 
 
@@ -31,7 +32,7 @@ def plan(root, scenario):
                 if not row.get("blockedReason") and name != "operator-secret-watch"}
     if runnable != set(SCENARIOS):
         raise ValueError("Candidate selector does not account for every runnable matrix row")
-    if scenario not in SCENARIOS:
+    if scenario not in (*SCENARIOS, *VALIDATION_SCENARIOS):
         raise ValueError(f"Unsupported candidate scenario: {scenario}")
     blocked = {name: row["blockedReason"] for name, row in rows.items() if row.get("blockedReason")}
     blocked["operator-secret-watch"] = SECRET_WATCH_BLOCKER

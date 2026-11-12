@@ -71,6 +71,8 @@ parameters:
   - classic-azure-cni
   - acns
   - otlp
+  - ampls
+  - ampls-acns
 
 variables:
   candidateCve: ${{ parameters.candidateCve }}
@@ -1250,7 +1252,10 @@ stages:
           [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Capacity admission requires the approved build subscription" >&2; exit 1; }
           [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
           [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Capacity test source does not match this pipeline revision" >&2; exit 1; }
+          validation_args=()
+          case "$CANDIDATE_SCENARIO" in ampls|ampls-acns) validation_args=(--validate-ampls) ;; esac
           "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" campaign-preflight \
+            "${validation_args[@]}" \
             --source-root "$CAPACITY_ROOT" --scenario "$CANDIDATE_SCENARIO" \
             --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA" \
             --build-id "$PRODUCER_BUILD_ID" --evidence "$CAPACITY_EVIDENCE"
@@ -1303,8 +1308,8 @@ stages:
         targetPath: $(capacityEvidence)
         artifact: candidate-capacity-$(Build.BuildId)
 
-- ${{ each scenario in split('default,classic-azure-cni,acns,otlp', ',') }}:
-  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
+- ${{ each scenario in split('default,classic-azure-cni,acns,otlp,ampls,ampls-acns', ',') }}:
+  - ${{ if or(and(eq(parameters.candidateScenario, 'all'), not(in(scenario, 'ampls', 'ampls-acns'))), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
       lockBehavior: sequential

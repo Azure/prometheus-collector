@@ -28,6 +28,20 @@ digest, terminal passed status and nonempty JUnit/artifacts. Legacy `main`/`late
 defaults are not candidate provenance.
 `regionTests` is a separate region/rule validation, not a cluster-health substitute.
 
+The explicit pipeline choices `ampls` and `ampls-acns` are experimental proof
+runs, excluded from `all`. They pass `--validate-ampls` to admission and execution;
+the matrix's `blockedReason` and approval gate remain until live evidence passes.
+Before settings tests, these runs independently read DCR/DCE associations, AMPLS
+PrivateOnly modes and scoped DCEs, approved private endpoints and their NICs.
+Both Linux and Windows collectors must resolve configuration, ingestion and query
+hosts exclusively to their corresponding private endpoint addresses. Authenticated
+public query and remote-write probes must receive an explicit network-denial 403;
+authentication failures, timeouts and generic 403s are not proof.
+The existing run-marked fresh-ingestion check then queries from the collector pod.
+`ampls-acns` reuses the non-Cilium managed-ACNS traffic/ingestion spec.
+`AMPLS_PROOF`, `AMPLS_PRIVATE_INGESTION` and `CANDIDATE_JUNIT` records are emitted
+directly to build logs. Private-API AMPLS/proxy lanes still need the VNet orchestrator.
+
 ## Prerequisites
 
 Use Python 3.10+ and the packages pinned in `clusters/requirements.txt`, Azure CLI
