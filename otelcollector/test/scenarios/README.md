@@ -146,7 +146,8 @@ The runner never silently chooses another executable.
 
 The owned host also installs an explicitly versioned TestKube chart, records its
 package hash, sets MinIO's volume group to 1001, and places MongoDB on the system
-pool rather than a scenario-specific FIPS pool. It creates a query-only managed identity/federation for the tests-job
+pool with a Recreate rollout for its single-writer volume. It creates a query-only
+managed identity/federation for the tests-job
 service account, scoped to the **new AMW only**. The calling identity receives the
 same read-only role because the fresh-query probe forwards its token over stdin
 into the collector pod. This requires role-assignment permission and directory

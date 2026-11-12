@@ -1423,6 +1423,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                       "--set", "mongodb.nodeAffinityPreset.type=hard",
                       "--set-string", "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
                       "--set-string", "mongodb.nodeAffinityPreset.values[0]=system",
+                      "--set", "mongodb.updateStrategy.type=Recreate",
                       "--wait", "--timeout", "20m"], private=True)
     host.kube("annotate", "serviceaccount", "testkube-api-server-tests-job", "-n", "testkube",
               f"azure.workload.identity/client-id={identity['clientId']}", "--overwrite")
