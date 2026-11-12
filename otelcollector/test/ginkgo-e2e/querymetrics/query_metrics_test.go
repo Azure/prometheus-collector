@@ -328,23 +328,33 @@ var _ = Describe("Query Metrics Test Suite", func() {
 		}
 	})
 
-	It("ingests managed Retina node and Hubble pod metrics on non-Cilium ACNS", Label("managed-acns"), func() {
+	DescribeTable("ingests managed ACNS node and pod metrics after controlled DNS and forward traffic", func(cilium bool) {
 		nodePods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-node")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nodePods).NotTo(BeEmpty(), "ACNS basic metrics require Linux collector nodes")
 
 		started := time.Now()
-		for range 3 {
-			_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
-			Expect(err).NotTo(HaveOccurred())
+		client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
+		nodeJob, nodeMetric := "networkobservability-retina", "networkobservability_forward_bytes"
+		if cilium {
+			nodeJob, nodeMetric = "networkobservability-cilium", "cilium_forward_bytes_total"
 		}
 		for _, target := range []struct {
 			job, metric string
 		}{
-			{"networkobservability-retina", "networkobservability_forward_bytes"},
+			{nodeJob, nodeMetric},
 			{"networkobservability-hubble", "hubble_dns_queries_total"},
 		} {
 			Eventually(func(g Gomega) {
+				_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
+				g.Expect(err).NotTo(HaveOccurred())
+				response, err := client.Get("http://prometheus-reference-service.default.svc.cluster.local:2112/metrics")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(response.StatusCode).To(Equal(http.StatusOK))
+				_, copyErr := io.Copy(io.Discard, response.Body)
+				closeErr := response.Body.Close()
+				g.Expect(copyErr).NotTo(HaveOccurred())
+				g.Expect(closeErr).NotTo(HaveOccurred())
 				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
 					utils.FreshMetricQuery(metricQuery("up", target.job), started))
 				g.Expect(err).NotTo(HaveOccurred())
@@ -361,14 +371,14 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				g.Expect(ok).To(BeTrue())
 				g.Expect(utils.ValidateMetricSamples(samples, target.metric, target.job, ExpectedCluster, time.Now(), false)).To(Succeed())
 				g.Expect(samples).NotTo(BeEmpty(), "fresh managed %s metric is required", target.metric)
-				if target.job == "networkobservability-retina" {
+				if target.job == nodeJob {
 					for _, pod := range nodePods {
 						g.Expect(pod.Spec.NodeName).NotTo(BeEmpty())
 						found := false
 						for _, sample := range samples {
 							found = found || string(sample.Metric["instance"]) == pod.Spec.NodeName
 						}
-						g.Expect(found).To(BeTrue(), "node %s has no fresh managed Retina sample", pod.Spec.NodeName)
+						g.Expect(found).To(BeTrue(), "node %s has no fresh managed %s sample", pod.Spec.NodeName, nodeJob)
 					}
 				}
 				trafficQuery := fmt.Sprintf("increase(%s{job=%q,cluster=%q}[5m])",
@@ -393,9 +403,14 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				if target.job == "networkobservability-hubble" && len(samples) > 0 {
 					g.Expect(podTraffic).To(BeTrue(), "pod-level Hubble metrics must identify a source or destination pod")
 				}
+				fmt.Fprintf(GinkgoWriter, "Managed ACNS evidence: job=%s metric=%s freshSamples=%d trafficSeries=%d positiveIncrease=%t podTraffic=%t\n",
+					target.job, target.metric, len(samples), len(traffic), observedTraffic, podTraffic)
 			}, 8*time.Minute, 15*time.Second).Should(Succeed())
 		}
-	})
+	},
+		Entry("managed non-Cilium Retina", Label("managed-acns"), false),
+		Entry("managed Cilium", Label("managed-acns-cilium"), true),
+	)
 
 	It("ingests node network counters after traffic through the selected AKS network profile", Label("network-profile"), func() {
 		started := time.Now()

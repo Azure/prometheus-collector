@@ -81,6 +81,10 @@ producer `buildId` to a `placements` map and regional `compute`/`quota` evidence
 The producer ID is a correlation field here; the existing authenticated candidate
 verifier remains mandatory before deployment. `acns` runs in `eastus2`;
 `default`, `classic-azure-cni` and `otlp` run in `centralus`.
+`acns-cilium` is an explicit proof-only pipeline selection in `eastus2`, excluded
+from `all` until its live proof passes. The pipeline supplies `--prove-acns-cilium`;
+ordinary runner invocations still honor its `blockedReason`. Its resource group
+has a `CanNotDelete` lock and retains the same narrow bootstrap grants for reuse.
 New pools' autoscaler maximum **and** declared surge count toward the simultaneous
 regional and VM-family peak. Verified existing pools are already in current usage;
 only their declared surge is added. An admitted existing host that disappears fails
@@ -385,7 +389,7 @@ are not candidate tests, and no shared cluster was mutated.
 | Ubuntu/Azure Linux, AMD64/ARM64, FIPS | Compatible distinct pools on one host; ARM64 FIPS requires Azure Linux 3+ |
 | Windows 2022/2025 | Separate host pools; the protected Windows 2022 collector supports both through process isolation |
 | Windows 2019 | Unsupported on 1.33+; no substitution with Windows 2022 |
-| Standalone autoscaler, Cilium, kubenet | Removed from the candidate campaign; shared collector metrics/assertions remain. The `acns-cilium` row remains separately blocked pending its managed ACNS traffic proof. |
+| Standalone autoscaler, Cilium, kubenet | Removed from the candidate campaign; shared collector metrics/assertions remain. The managed `acns-cilium` proof-only selection independently verifies the AKS Cilium/ACNS profile and ready Cilium DaemonSet, then requires fresh per-node Cilium forwarding and Hubble DNS traffic increases in both customer-settings v1/v2 slots before restoration. Its blocker remains until live evidence passes. |
 | AMPLS/private ingestion + private query | Can share mixed-pool infrastructure; require distinct endpoint/DNS and data-path assertions |
 | Managed ACNS | The runnable `acns` row uses managed non-Cilium Retina; it requires fresh per-node `networkobservability_forward_bytes` and Linux pod-level `hubble_dns_queries_total` after generated DNS traffic. This is distinct from the standalone Retina Helm release and from Cilium ACNS. |
 | Customer Helm, candidate addon, Arc, CCP | Distinct installation ownership/adapters, not namespaces on the same managed addon |

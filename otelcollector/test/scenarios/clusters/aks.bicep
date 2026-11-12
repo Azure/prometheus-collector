@@ -499,6 +499,15 @@ resource queryDns 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-
   }
 }
 
+resource retainCilium 'Microsoft.Authorization/locks@2020-05-01' = if (scenarioId == 'acns-cilium') {
+  name: 'retain-acns-cilium'
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'Persistent managed ACNS Cilium scenario; retain for future candidate runs.'
+  }
+  dependsOn: [cluster, workspace]
+}
+
 output clusterId string = cluster.id
 output clusterName string = cluster.name
 output location string = location

@@ -95,7 +95,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         run = next(step["inputs"]["inlineScript"] for step in template["steps"]
                    if step.get("displayName", "").startswith("Run authenticated"))
         duration = run[run.index('case "$CANDIDATE_SCENARIO"'):run.index("CANDIDATE_RUN_ID=")]
-        for scenario in (*SCENARIOS, "customer-helm", "operator-secret-watch", "all", "unknown"):
+        for scenario in (*SCENARIOS, "acns-cilium", "customer-helm", "operator-secret-watch", "all", "unknown"):
             for script in (gate, "set -euo pipefail\n" + duration):
                 with self.subTest(scenario=scenario, script=script):
                     result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
@@ -107,7 +107,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                                                  "BUILD_SOURCESDIRECTORY": "unused",
                                                  "BUILD_BUILDID": "9791",
                                                  "CANDIDATE_SCENARIO": scenario})
-                    self.assertEqual(result.returncode == 0, scenario in SCENARIOS, result.stderr)
+                    self.assertEqual(result.returncode == 0, scenario in (*SCENARIOS, "acns-cilium"), result.stderr)
 
     def test_bootstrap_storage_is_isolated_by_scenario_and_attempt(self):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
@@ -272,11 +272,12 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertNotIn("paths", pipeline["pr"])
         self.assertIn("startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/')", capacity["condition"])
         loop = next(iter(pipeline["stages"][2]))
-        self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", loop)
+        self.assertIn("split('" + ",".join((*SCENARIOS, "acns-cilium")) + "', ',')", loop)
         self.assertIn("replace(scenario, '-', '_')", candidate_stage["stage"])
         selection = next(iter(next(iter(pipeline["stages"][2].values()))[0]))
         self.assertIn("eq(parameters.candidateScenario, 'all')", selection)
         self.assertIn("eq(parameters.candidateScenario, scenario)", selection)
+        self.assertIn("ne(scenario, 'acns-cilium')", selection)
         self.assertEqual(candidate_stage["condition"],
                          "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
         self.assertIn("${{ scenario }}", jobs[1]["variables"]["candidateAttempt"])
@@ -299,7 +300,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(jobs[1]["timeoutInMinutes"], 900)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
-        self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS})
+        self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS, "acns-cilium"})
         cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
         self.assertEqual(cve["default"], "")
         campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
@@ -312,7 +313,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         template = yaml.safe_load((directory / "azure-template-candidate-config-tests.yml").read_text())
         scenario = next(item for item in template["parameters"] if item["name"] == "scenario")
         self.assertEqual(scenario["default"], "default")
-        self.assertEqual(set(scenario["values"]), set(SCENARIOS))
+        self.assertEqual(set(scenario["values"]), {*SCENARIOS, "acns-cilium"})
         steps = template["steps"]
         pr_resolution = next(step for step in steps if "Resolve successful 440" in step.get("displayName", ""))
         self.assertIn("System.PullRequest.SourceCommitId", str(pr_resolution["env"]))
@@ -378,9 +379,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
-        self.assertIn('default|classic-azure-cni|acns|otlp) max_run_seconds=28800', run_script)
+        self.assertIn('default|classic-azure-cni|acns|acns-cilium|otlp) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|acns-cilium|otlp)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -439,12 +440,12 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load(pipeline_path.read_text())
         pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
                                   if p.get("name") == "candidateScenario")
-        self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS])
-        self.assertIn("split('default,classic-azure-cni,acns,otlp', ',')", pipeline_path.read_text())
+        self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS, "acns-cilium"])
+        self.assertIn("split('default,classic-azure-cni,acns,otlp,acns-cilium', ',')", pipeline_path.read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
         self.assertEqual(next(p["values"] for p in template["parameters"]
-                              if p.get("name") == "scenario"), list(SCENARIOS))
+                              if p.get("name") == "scenario"), [*SCENARIOS, "acns-cilium"])
         self.assertNotIn("settings", rows)
         self.assertTrue({"fips", "arm64", "network-profile"} <= set(rows["default"]["ginkgoLabels"]))
         self.assertEqual(rows["default"]["settingsVariants"], ["*"])
@@ -457,6 +458,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(rows["otlp"]["platforms"], ["linux"])
         self.assertIn("acns-cilium", rows)
         self.assertIn("blockedReason", rows["acns-cilium"])
+        proof = plan(root, "acns-cilium")
+        self.assertEqual(proof["selectedScenario"], "acns-cilium")
+        self.assertIn("acns-cilium", {item["id"] for item in proof["blockedScenarios"]})
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])

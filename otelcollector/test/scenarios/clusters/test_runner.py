@@ -62,6 +62,57 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_cilium_profile_requires_managed_dataplane_observability_and_security(self):
+        cluster = {"networkProfile": {
+            "networkPlugin": "azure", "networkDataplane": "cilium",
+            "advancedNetworking": {"enabled": True, "observability": {"enabled": True},
+                                   "security": {"enabled": True}},
+        }}
+        runner.verify_cilium_profile(cluster)
+        paths = (("networkProfile", "networkPlugin"), ("networkProfile", "networkDataplane"),
+                 ("networkProfile", "advancedNetworking", "enabled"),
+                 ("networkProfile", "advancedNetworking", "observability", "enabled"),
+                 ("networkProfile", "advancedNetworking", "security", "enabled"))
+        for path in paths:
+            broken = copy.deepcopy(cluster)
+            parent = broken
+            for key in path[:-1]:
+                parent = parent[key]
+            del parent[path[-1]]
+            with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, "managed Cilium ACNS"):
+                runner.verify_cilium_profile(broken)
+
+    def test_cilium_proof_opt_in_preserves_blocker_and_all_campaign(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "BLOCKED"):
+                runner.main(["plan", "--scenario", "acns-cilium", "--evidence", directory])
+            runner.main(["plan", "--scenario", "acns-cilium", "--prove-acns-cilium",
+                         "--evidence", directory])
+            self.assertEqual(runner.load(Path(directory) / "plan.json")["settingsSlots"],
+                             ["customer-settings-v1", "customer-settings-v2"])
+            self.assertNotIn("acns-cilium", runner.CAMPAIGN_LOCATIONS)
+            row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                       if row["id"] == "acns-cilium")
+            self.assertIn("blockedReason", row)
+
+    def test_cilium_customer_settings_query_runs_before_restoration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            host = Mock()
+            host.scenario = dict(scenario(), id="acns-cilium")
+            host.args.evidence = Path(directory)
+            host.args.settle_seconds = 0
+            host.kube.return_value = ""
+            for schema in ("v1", "v2"):
+                manifest = variant()
+                manifest["ginkgoLabels"] = ["config-processing-customer-settings-" + schema]
+                with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), \
+                        patch.object(runner, "label_filter", return_value="case-label"), \
+                        patch.object(runner, "run_suite", return_value={"executed": 1}) as workflow:
+                    result = runner.settings_slot(host, manifest)
+                self.assertEqual(workflow.call_args.args[3], "cluster-identity || managed-acns-cilium")
+                self.assertEqual(workflow.call_args.kwargs["expected_cluster"], "Customer_Config_POC")
+                self.assertEqual(result["aliasIngestion"]["executed"], 1)
+
     def test_runner_must_come_from_expected_test_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             repo, test_source = runner.REPO, runner.TEST_SOURCE
@@ -1465,6 +1516,8 @@ class Contracts(unittest.TestCase):
                     return identity
                 if args[:2] == ("aks", "show"):
                     return cluster
+                if args[:2] == ("lock", "show"):
+                    return {"level": "CanNotDelete", "id": "/owned/lock"}
                 if args[:3] == ("role", "assignment", "list"):
                     self.assertIn(args[args.index("--assignee-object-id") + 1], ("identity-object", "caller-object"))
                     self.assertEqual(args[args.index("--fill-principal-name") + 1], "false")
@@ -1525,6 +1578,17 @@ class Contracts(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "managed advanced networking"):
                 runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
             cluster["networkProfile"]["advancedNetworking"]["observability"]["enabled"] = True
+            host.scenario["clusterFeatures"].append("cilium")
+            cluster["networkProfile"].update(networkPlugin="azure", networkDataplane="cilium")
+            cluster["networkProfile"]["advancedNetworking"]["security"] = {"enabled": True}
+            runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertTrue(any(c.args[:3] == ("rollout", "status", "daemonset/cilium")
+                                for c in host.kube.call_args_list))
+            original_az = host.az.side_effect
+            host.az.side_effect = lambda *a, **kw: {"level": "ReadOnly"} if a[:2] == ("lock", "show") else original_az(*a, **kw)
+            with self.assertRaisesRegex(RuntimeError, "CanNotDelete lock"):
+                runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            host.az.side_effect = original_az
             cluster["autoUpgradeProfile"]["upgradeChannel"] = "none"
             with self.assertRaisesRegex(RuntimeError, "auto-upgrade"):
                 runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
@@ -1671,6 +1735,15 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "cilium-dataplane": ('network.get("networkDataplane") != "cilium"', "False"),
+        "cilium-plugin": ('if (network.get("networkPlugin") != "azure"', "if (False"),
+        "cilium-managed-enabled": ('or advanced.get("enabled") is not True', "or False"),
+        "cilium-observability": (
+            'or (advanced.get("observability") or {}).get("enabled") is not True\n            or (advanced.get("security")',
+            'or False\n            or (advanced.get("security")'),
+        "cilium-security": ('or (advanced.get("security") or {}).get("enabled") is not True', "or False"),
+        "cilium-deletion-lock": ('if lock.get("level") != "CanNotDelete":', "if False:"),
+        "cilium-settings-query": ('query_labels += " || managed-acns-cilium"', "pass"),
         "persistent-bootstrap-grants": (
             'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),
         "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),

@@ -33,6 +33,7 @@ CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus",
 }
+ACNS_CILIUM_LOCATION = "eastus2"
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -514,10 +515,12 @@ class Host:
                 or outputs.get("azureCniMode") != expected_mode
                 or network.get("networkPlugin") != "azure"
                 or (network.get("networkPluginMode") or "classic") != expected_mode
-                or bool(advanced.get("enabled")) != (self.scenario["id"] == "acns")
-                or (self.scenario["id"] == "acns"
+                or bool(advanced.get("enabled")) != ("managed-acns" in self.scenario["clusterFeatures"])
+                or ("managed-acns" in self.scenario["clusterFeatures"]
                     and (advanced.get("observability") or {}).get("enabled") is not True)):
             raise ValueError("Persistent AKS cluster does not match the retained deployment contract")
+        if "cilium" in self.scenario["clusterFeatures"]:
+            verify_cilium_profile(cluster)
         verify_pool_configuration(expected_pools, cluster.get("agentPoolProfiles") or [])
         managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
         if any(not isinstance(value, str) or not value for value in managed_groups):
@@ -900,7 +903,14 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
         host.commands.run(["bash", "./testkube/run-testkube-workflow.sh", host.query_endpoint,
                           host.query_client_id, template, target, "false", "0", "ConfigTests", source_sha],
                          cwd=TEST_SOURCE / "otelcollector/test", env=env)
-        return workflow_result(destination, workflow, source_sha, image)
+        result = workflow_result(destination, workflow, source_sha, image)
+        print("TestKube JUnit evidence: " + json.dumps(result), flush=True)
+        for report in load(next(Path(result["artifacts"]).rglob("ginkgo.json"))):
+            for spec in report.get("SpecReports", []):
+                for line in spec.get("CapturedGinkgoWriterOutput", "").splitlines():
+                    if line.startswith("Managed ACNS evidence:"):
+                        print(line, flush=True)
+        return result
     finally:
         if generated.exists():
             generated.unlink()
@@ -952,9 +962,12 @@ def settings_slot(host, variant):
                            expression, template=template, workflow=workflow)
         if set(variant["ginkgoLabels"]) & {"config-processing-customer-settings-v1",
                                          "config-processing-customer-settings-v2"}:
+            query_labels = "cluster-identity"
+            if host.scenario["id"] == "acns-cilium":
+                query_labels += " || managed-acns-cilium"
             result["aliasIngestion"] = run_suite(
                 host, "querymetrics", host.args.evidence / variant["id"] / "alias-ingestion",
-                "cluster-identity", expected_cluster="Customer_Config_POC",
+                query_labels, expected_cluster="Customer_Config_POC",
             )
         if variant["id"] == "collector-controls":
             result["ksmAllowlist"] = run_suite(
@@ -1275,13 +1288,16 @@ def campaign_preflight(args, matrix, commands):
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
     selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
-    if any(name not in CAMPAIGN_LOCATIONS for name in selected):
+    locations = dict(CAMPAIGN_LOCATIONS)
+    if getattr(args, "prove_acns_cilium", False) and args.scenario == "acns-cilium":
+        locations["acns-cilium"] = ACNS_CILIUM_LOCATION
+    if any(name not in locations for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
     test_source = source_commit(commands, TEST_SOURCE, ["otelcollector/test/scenarios"])
     if test_source != args.test_source_sha:
         raise ValueError("Campaign test source does not match the expected test source SHA")
-    placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
+    placements = {name: locations[name] for name in selected}
     regions = {}
     existing = {}
     for location in sorted(set(placements.values())):
@@ -1298,7 +1314,8 @@ def campaign_preflight(args, matrix, commands):
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
-            if not row or row.get("blockedReason"):
+            if not row or (row.get("blockedReason") and not (
+                    name == "acns-cilium" and getattr(args, "prove_acns_cilium", False))):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
@@ -1375,6 +1392,17 @@ def prepare_testkube(args, commands):
     return package, principal, "User" if user["type"] == "user" else "ServicePrincipal"
 
 
+def verify_cilium_profile(cluster):
+    network = cluster.get("networkProfile") or {}
+    advanced = network.get("advancedNetworking") or {}
+    if (network.get("networkPlugin") != "azure"
+            or network.get("networkDataplane") != "cilium"
+            or advanced.get("enabled") is not True
+            or (advanced.get("observability") or {}).get("enabled") is not True
+            or (advanced.get("security") or {}).get("enabled") is not True):
+        raise RuntimeError("AKS must report the managed Cilium ACNS dataplane, observability and security enabled")
+
+
 def bootstrap_testkube(host, outputs, package, principal, principal_type):
     group = host.receipt["resourceGroup"]
     identity = host.az("identity", "create", "--resource-group", group,
@@ -1406,6 +1434,15 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             "advancedNetworkingEnabled": advanced["enabled"],
             "observabilityEnabled": advanced["observability"]["enabled"],
         })
+        if "cilium" in host.scenario["clusterFeatures"]:
+            verify_cilium_profile(cluster)
+            host.kube("rollout", "status", "daemonset/cilium", "-n", "kube-system", "--timeout=10m")
+            print("Managed ACNS proof: " + json.dumps(cluster["networkProfile"]), flush=True)
+            lock = host.az("lock", "show", "--resource-group", group,
+                           "--name", "retain-acns-cilium", json_output=True)
+            if lock.get("level") != "CanNotDelete":
+                raise RuntimeError("The persistent ACNS Cilium resource group requires a CanNotDelete lock")
+            print("Deletion protection verified: " + lock["id"], flush=True)
     save(host.args.evidence / "effective-upgrade.json", {
         "kubernetesVersion": cluster["kubernetesVersion"],
         "autoUpgradeProfile": cluster["autoUpgradeProfile"],
@@ -1574,6 +1611,9 @@ def execute(args, scenario, variants, commands):
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
         save(args.evidence / "images-before.json", audit_images(host, images))
+        if scenario["id"] == "acns-cilium":
+            host.kube("apply", "-f", str(TEST_SOURCE / "internal/referenceapp/prometheus-reference-app.yaml"))
+            host.kube("rollout", "status", "deployment/prometheus-reference-app", "--timeout=10m")
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
         # Health suites depend on the repository's existing reference-app scrape fixtures.
@@ -1657,6 +1697,8 @@ def main(argv=None):
                         help="Existing clean test-source checkout matching --test-source-sha")
     parser.add_argument("--test-source-sha", help="Expected immutable test-source commit")
     parser.add_argument("--scenario", default="default")
+    parser.add_argument("--prove-acns-cilium", action="store_true",
+                        help="Explicit acns-cilium-only proof run; does not enable it in the all campaign")
     parser.add_argument("--subscription", default=BUILD_SUBSCRIPTION)
     parser.add_argument("--location", default="eastus2")
     parser.add_argument("--run-id", default=str(uuid.uuid4()))
@@ -1691,7 +1733,8 @@ def main(argv=None):
     if args.action == "run":
         if admitted_existing is None:
             raise ValueError("Run requires the aggregate admission's existing-host decision")
-        if args.scenario not in CAMPAIGN_LOCATIONS:
+        if args.scenario not in CAMPAIGN_LOCATIONS and not (
+                args.scenario == "acns-cilium" and args.prove_acns_cilium):
             raise ValueError("Persistent execution requires a campaign scenario")
         pipeline = yaml.safe_load((TEST_SOURCE / ".pipelines/azure-pipeline-config-tests.yml").read_text())
         loop = next(row for row in pipeline["stages"] if any(
@@ -1726,7 +1769,7 @@ def main(argv=None):
     scenario = next((s for s in matrix["scenarios"] if s["id"] == args.scenario), None)
     if not scenario:
         raise ValueError(f"Unknown scenario: {args.scenario}")
-    if scenario.get("blockedReason"):
+    if scenario.get("blockedReason") and not (args.scenario == "acns-cilium" and args.prove_acns_cilium):
         raise ValueError(f"BLOCKED: {scenario['blockedReason']}")
     if args.action == "plan":
         save(args.evidence / "plan.json", {"hostCount": 1, "scenario": scenario,
