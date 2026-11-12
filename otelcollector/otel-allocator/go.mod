@@ -15,19 +15,19 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-logr/logr v1.4.4
 	github.com/go-viper/mapstructure/v2 v2.5.0
-	github.com/goccy/go-json v0.11.2
+	github.com/goccy/go-json v0.12.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/oklog/run v1.2.0
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
-	github.com/prometheus-operator/prometheus-operator v0.94.1
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
-	github.com/prometheus-operator/prometheus-operator/pkg/client v0.94.1
+	github.com/prometheus-operator/prometheus-operator v0.94.2
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.2
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.94.2
 	github.com/prometheus/client_golang v1.25.0
-	github.com/prometheus/common v0.72.1
-	github.com/prometheus/prometheus v0.315.0
+	github.com/prometheus/common v0.73.1
+	github.com/prometheus/prometheus v0.315.1
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
@@ -46,9 +46,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.37.1 // indirect
 	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.1
-	k8s.io/component-base v0.37.1 // indirect
+	k8s.io/component-base v0.37.1
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
+	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab // indirect
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -249,6 +249,7 @@ require (
 	github.com/onsi/gomega v1.39.1 // indirect
 	github.com/oracle/oci-go-sdk/v65 v65.124.1 // indirect
 	github.com/outscale/osc-sdk-go/v2 v2.35.0 // indirect
+	github.com/pandatix/go-abnf v0.5.3 // indirect
 	github.com/prometheus/client_golang/exp v0.0.0-20260907100614-57bb367da472 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/sigv4 v0.5.0 // indirect
@@ -276,7 +277,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 )

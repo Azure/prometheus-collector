@@ -14,8 +14,8 @@ require (
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/prometheus/client_golang v1.25.0
-	github.com/prometheus/common v0.72.1
-	github.com/prometheus/prometheus v0.315.0
+	github.com/prometheus/common v0.73.1
+	github.com/prometheus/prometheus v0.315.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/collector/component/componenttest v0.163.0
 	go.opentelemetry.io/collector/confmap v1.69.0
@@ -135,7 +135,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/go-zookeeper/zk v1.0.4 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-json v0.11.2 // indirect
+	github.com/goccy/go-json v0.12.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -208,6 +208,7 @@ require (
 	github.com/oracle/oci-go-sdk/v65 v65.124.1 // indirect
 	github.com/outscale/osc-sdk-go/v2 v2.35.0 // indirect
 	github.com/ovh/go-ovh v1.9.0 // indirect
+	github.com/pandatix/go-abnf v0.5.3 // indirect
 	github.com/pb33f/jsonpath v0.8.2 // indirect
 	github.com/pb33f/libopenapi v0.38.7 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
@@ -217,9 +218,9 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus-community/prom-label-proxy v0.15.0 // indirect
-	github.com/prometheus-operator/prometheus-operator v0.94.1 // indirect
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1 // indirect
-	github.com/prometheus-operator/prometheus-operator/pkg/client v0.94.1 // indirect
+	github.com/prometheus-operator/prometheus-operator v0.94.2 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.2 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.94.2 // indirect
 	github.com/prometheus/alertmanager v0.34.0 // indirect
 	github.com/prometheus/client_golang/exp v0.0.0-20260907100614-57bb367da472 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
@@ -261,7 +262,7 @@ require (
 	go.opentelemetry.io/collector/consumer/xconsumer v0.163.0 // indirect
 	go.opentelemetry.io/collector/extension/extensionauth v1.69.0 // indirect
 	go.opentelemetry.io/collector/extension/extensionmiddleware v0.163.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.69.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.70.0 // indirect
 	go.opentelemetry.io/collector/internal/componentalias v0.163.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.163.0 // indirect
 	go.opentelemetry.io/collector/pdata/xpdata v0.163.0 // indirect
@@ -285,7 +286,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/arch v0.27.0 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
@@ -314,7 +315,7 @@ require (
 	k8s.io/component-base v0.37.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098 // indirect
-	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
+	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab // indirect
 	sigs.k8s.io/controller-runtime v0.25.2 // indirect
 	sigs.k8s.io/json v0.0.0-20260909141634-11ed52e25bc5 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
