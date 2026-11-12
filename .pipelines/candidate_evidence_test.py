@@ -91,7 +91,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         validation = next(step["bash"] for step in template["steps"]
                           if "Validate opt-in inputs" in step.get("displayName", ""))
-        gate = validation.split('[[ ! -e "$CANDIDATE_ROOT"', 1)[0]
+        gate = 'git() { printf "%s\\n" "$TEST_SOURCE_SHA"; }\n' + validation.split('[[ ! -e "$CANDIDATE_ROOT"', 1)[0]
         run = next(step["inputs"]["inlineScript"] for step in template["steps"]
                    if step.get("displayName", "").startswith("Run authenticated"))
         duration = run[run.index('case "$CANDIDATE_SCENARIO"'):run.index("CANDIDATE_RUN_ID=")]
@@ -103,6 +103,8 @@ class CandidateEvidenceTest(unittest.TestCase):
                                                  "SYSTEM_JOBATTEMPT": "1", "SYSTEM_STAGEATTEMPT": "1",
                                                  "PRODUCER_BUILD_ID": "4401", "CANDIDATE_SOURCE_SHA": self.sha,
                                                  "CAPACITY_SOURCE_SHA": self.sha, "CAPACITY_BUILD_ID": "9791",
+                                                 "TEST_SOURCE_SHA": self.sha, "CAPACITY_TEST_SOURCE_SHA": self.sha,
+                                                 "BUILD_SOURCESDIRECTORY": "unused",
                                                  "BUILD_BUILDID": "9791",
                                                  "CANDIDATE_SCENARIO": scenario})
                     self.assertEqual(result.returncode == 0, scenario in SCENARIOS, result.stderr)
@@ -111,7 +113,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
         script = run["inputs"]["inlineScript"]
-        watcher = script[script.index("publish_bootstrap() {"):script.index('"$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run')]
+        watcher = script[script.index("publish_bootstrap() {"):script.index('"$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" run')]
         for variable, value in (("Build.BuildId", "979123"), ("System.StageAttempt", "1"), ("System.JobAttempt", "2")):
             watcher = watcher.replace(f"$({variable})", value)
         self.write("ownership.json", '{"token":"DO_NOT_UPLOAD"}')
@@ -336,8 +338,10 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertLess(cleanup, scan)
         self.assertEqual(steps[cleanup]["condition"], "always()")
         self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', steps[cleanup]["bash"])
-        self.assertIn('$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
+        self.assertIn('$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
         run_script = steps[run]["inputs"]["inlineScript"]
+        self.assertIn('--source-root "$CANDIDATE_ROOT" --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA"', run_script)
+        self.assertIn('"$TEST_SOURCE_SHA" == "$CAPACITY_TEST_SOURCE_SHA"', run_script)
         exit_handler = run_script[run_script.index("stop_bootstrap_watcher() {"):run_script.index("trap 'exit 130'")]
         self.assertIn("trap stop_bootstrap_watcher EXIT", run_script)
         self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', exit_handler)
@@ -525,7 +529,8 @@ class CandidateEvidenceTest(unittest.TestCase):
                         script.index("isOutput=true"))
         parser = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         proof = {
-            "status": "PASS", "sourceSha": self.sha, "buildId": 4401, "capacityReserved": False,
+            "status": "PASS", "sourceSha": self.sha, "testSourceSha": "c" * 40,
+            "buildId": 4401, "capacityReserved": False,
             "placements": {
                 name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
                 for name in SCENARIOS
@@ -534,6 +539,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),
                  ("source", {"sourceSha": "b" * 40}, False), ("build", {"buildId": 4402}, False),
+                 ("test-source", {"testSourceSha": "d" * 40}, False),
                  ("missing", {"placements": {}}, False), ("reservation", {"capacityReserved": True}, False),
                  ("unapproved", {"placements": {name: "eastus" for name in SCENARIOS}}, False),
                  ("missing-region", {"regions": {}}, False)]
@@ -545,6 +551,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                                         capture_output=True, text=True,
                                         env={**os.environ, "CANDIDATE_SCENARIO": "all",
                                              "CANDIDATE_SOURCE_SHA": self.sha,
+                                             "TEST_SOURCE_SHA": "c" * 40,
                                              "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
                 self.assertEqual(result.returncode == 0, passes, result.stderr)
                 if passes:
@@ -569,6 +576,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         result = subprocess.run(["bash", "-c", command], capture_output=True, text=True,
                                 env={**os.environ, "CAPACITY_ROOT": "unused", "CAPACITY_EVIDENCE": "unused",
                                      "CANDIDATE_SOURCE_SHA": self.sha, "CANDIDATE_SCENARIO": "all",
+                                     "TEST_SOURCE_SHA": self.sha, "BUILD_SOURCESDIRECTORY": "unused",
                                      "PRODUCER_BUILD_ID": "4401", "UNSAFE_MARKER": marker.as_posix()})
         self.assertEqual(result.returncode, 23, result.stderr)
         self.assertFalse(marker.exists())

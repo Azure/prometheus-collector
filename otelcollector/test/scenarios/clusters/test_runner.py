@@ -33,7 +33,7 @@ def scenario():
             "tier": "pr"}
 
 
-def workflow_fixture(destination):
+def workflow_fixture(destination, test_sha="a" * 40):
     artifact_dir = destination / "testkube-executions/ConfigTests/configprocessingcommon/exact-id/artifacts"
     reports = artifact_dir / "nested"
     reports.mkdir(parents=True)
@@ -42,7 +42,7 @@ def workflow_fixture(destination):
         "SuiteSucceeded": True, "SpecReports": [{"State": "passed", "LeafNodeType": "It"},
                                              {"State": "skipped", "LeafNodeType": "It"}],
     }])
-    value = {"status": "passed", "test_source_sha": "a" * 40,
+    value = {"status": "passed", "test_source_sha": test_sha,
              "runner_image": "example.invalid/runner@sha256:" + "1" * 64, "executions": [{
                  "workflow": "configprocessingcommon", "execution_id": "exact-id", "status": "passed",
                  "specs": 2, "passed": 1, "skipped": 1, "failed": 0, "artifact_dir": str(artifact_dir),
@@ -62,6 +62,20 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_runner_must_come_from_expected_test_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo, test_source = runner.REPO, runner.TEST_SOURCE
+            with patch.object(runner, "REPO", repo), patch.object(runner, "TEST_SOURCE", test_source), \
+                    self.assertRaisesRegex(ValueError, "runner.*test source"):
+                runner.main(["campaign-preflight", "--source-root", directory, "--test-source-root", directory,
+                             "--test-source-sha", "a" * 40, "--build-id", "123", "--evidence", directory])
+            for flag in ("--matrix", "--settings-root"):
+                with self.subTest(flag=flag), patch.object(runner, "REPO", repo), patch.object(runner, "TEST_SOURCE", test_source), \
+                        self.assertRaisesRegex(ValueError, "matrix and settings"):
+                    runner.main(["campaign-preflight", "--source-root", str(repo),
+                                 "--test-source-root", str(test_source), "--test-source-sha", "a" * 40,
+                                 "--build-id", "123", "--evidence", directory, flag, directory])
+
     def test_retry_reuses_only_exact_live_candidate_deployment(self):
         pools = pool_parameters()["nodePools"]
         expiry = "2099-01-01T00:00:00Z"
@@ -163,13 +177,23 @@ class Contracts(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
-                                         scenario="all", build_id=4401, evidence=Path(temporary))
+                                         scenario="all", build_id=4401, evidence=Path(temporary),
+                                         test_source_sha="b" * 40)
             commands = Mock()
             commands.run.side_effect = command
-            with patch.object(runner, "source_commit", return_value="a" * 40), \
+            test_source = Path(temporary) / "test-source"
+            with patch.object(runner, "TEST_SOURCE", test_source), \
+                    patch.object(runner, "source_commit",
+                                 side_effect=lambda commands, root, paths: "b" * 40 if root == test_source else "a" * 40), \
                     patch.object(runner, "compiled_parameters", side_effect=compiled):
+                args.test_source_sha = "c" * 40
+                with self.assertRaisesRegex(ValueError, "test source"):
+                    runner.campaign_preflight(args, matrix, commands)
+                self.assertFalse((args.evidence / "campaign-preflight.json").exists())
+                args.test_source_sha = "b" * 40
                 result = runner.campaign_preflight(args, matrix, commands)
                 self.assertEqual(result["sourceSha"], "a" * 40)
+                self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
                 self.assertEqual(len(result["placements"]), 4)
                 self.assertFalse(result["capacityReserved"])
@@ -815,7 +839,7 @@ class Contracts(unittest.TestCase):
             evidence = Path(temporary)
             args = types.SimpleNamespace(
                 evidence=evidence, build_id=1, max_run_seconds=60, run_id="00000000-0000-0000-0000-000000000001",
-                subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0,
+                subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0, test_source_sha="b" * 40,
             )
             row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=[])
             commands = runner.Commands(evidence)
@@ -1100,14 +1124,16 @@ class Contracts(unittest.TestCase):
     def test_authenticated_fetch_binds_checkouts_and_retains_raw_runner_receipt(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            args = types.SimpleNamespace(build_id=123, receipt_tools_root=directory, evidence=directory / "evidence")
+            args = types.SimpleNamespace(build_id=123, receipt_tools_root=directory, evidence=directory / "evidence",
+                                         test_source_sha="b" * 40)
             verifier = directory / ".pipelines/pr-e2e/fetch_candidate.py"
             verifier.parent.mkdir(parents=True)
             verifier.write_text("# Mocked protected producer entrypoint\n")
             raw = {"source": {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"},
                    "imageRef": "example.invalid/runner@sha256:" + "1" * 64}
             receipt = {"source": raw["source"], "testRunner": {"testSource": raw["source"],
-                       "imageRef": raw["imageRef"], "receiptSha256": ""}}
+                       "imageRef": raw["imageRef"], "receiptSha256": "",
+                       "mode": "reused-toolchain-source-fetched-separately"}}
             receipt["images"] = [
                 {"name": name, "os": "linux", "arch": arch,
                  "ref": f"example.invalid/{name}@sha256:" + child * 64,
@@ -1119,7 +1145,9 @@ class Contracts(unittest.TestCase):
 
             def invoke(command, **kwargs):
                 if command[0] == "git":
-                    return "a" * 40 if "rev-parse" in command else ""
+                    if "rev-parse" not in command:
+                        return ""
+                    return "b" * 40 if command[2] == str(directory / "test-source") else "a" * 40
                 self.assertEqual(command[1:6], [str(verifier), "--build-id", "123", "--source-commit", "a" * 40])
                 self.assertTrue(kwargs["private"])
                 output = directory / "evidence/verified-candidate"
@@ -1136,19 +1164,24 @@ class Contracts(unittest.TestCase):
 
             commands = Mock()
             commands.run.side_effect = invoke
-            verified, runtime = runner.verified_candidate(args, commands)
-            self.assertEqual(runtime, raw)
-            self.assertEqual(verified["source"]["commit"], "a" * 40)
-            images, mapping = runner.candidate_receipt(verified, "a" * 40, ["linux"], ["arm64"])
-            self.assertEqual(len(images), 6)
-            self.assertEqual(mapping[("cfg", "linux")], receipt["images"][-1]["indexRef"])
-            self.assertEqual(mapping[("collector", "linux")], receipt["images"][0]["indexRef"])
-            persisted = runner.load(args.evidence / "verified-candidate/candidate-build.json")
-            self.assertEqual(persisted["images"], receipt["images"])
-            for tamper in ("source", "runner-bytes"):
-                with self.subTest(tamper=tamper), self.assertRaisesRegex(ValueError, "protected runner bytes"):
+            with patch.object(runner, "TEST_SOURCE", directory / "test-source"):
+                verified, runtime = runner.verified_candidate(args, commands)
+                self.assertEqual(runtime, raw)
+                self.assertEqual(verified["source"]["commit"], "a" * 40)
+                images, mapping = runner.candidate_receipt(verified, "a" * 40, ["linux"], ["arm64"])
+                self.assertEqual(len(images), 6)
+                self.assertEqual(mapping[("cfg", "linux")], receipt["images"][-1]["indexRef"])
+                self.assertEqual(mapping[("collector", "linux")], receipt["images"][0]["indexRef"])
+                persisted = runner.load(args.evidence / "verified-candidate/candidate-build.json")
+                self.assertEqual(persisted["images"], receipt["images"])
+                args.test_source_sha = "c" * 40
+                with self.assertRaisesRegex(ValueError, "test source"):
                     runner.verified_candidate(args, commands)
-            self.assertTrue((args.evidence / "verified-candidate/sre-testkube-runner/runner.json").is_file())
+                args.test_source_sha = "b" * 40
+                for tamper in ("source", "runner-bytes"):
+                    with self.subTest(tamper=tamper), self.assertRaisesRegex(ValueError, "protected runner bytes"):
+                        runner.verified_candidate(args, commands)
+                self.assertTrue((args.evidence / "verified-candidate/sre-testkube-runner/runner.json").is_file())
 
     def test_dirty_source_cannot_establish_provenance(self):
         commands = Mock()
@@ -1299,6 +1332,7 @@ class Contracts(unittest.TestCase):
             host = Mock()
             host.args.kubectl = str(Path(temporary) / "bin/kubectl.exe")
             host.args.tools_bin = None
+            host.args.test_source_sha = "b" * 40
             host.kubeconfig = Path(temporary) / "isolated-kubeconfig"
             host.query_endpoint = "https://amw.example"
             host.query_client_id = "query-client"
@@ -1311,7 +1345,7 @@ class Contracts(unittest.TestCase):
             def submit(command, **kwargs):
                 generated.append(runner.TEST_SOURCE / "otelcollector/test/testkube" / command[5])
                 generated[-1].write_text("generated")
-                return workflow_fixture(destination)
+                return workflow_fixture(destination, host.args.test_source_sha)
 
             host.commands.run.side_effect = submit
             result = runner.run_suite(host, "configprocessing", destination, "case-label",
@@ -1325,7 +1359,8 @@ class Contracts(unittest.TestCase):
             self.assertIsNotNone(re.fullmatch(pattern, command[5]))
             self.assertIsNone(re.fullmatch(pattern, "." + command[5]))
             self.assertFalse(generated[0].exists())
-            self.assertEqual(command[-4:], ["false", "0", "ConfigTests", "a" * 40])
+            self.assertEqual(command[-4:], ["false", "0", "ConfigTests", "b" * 40])
+            self.assertEqual(env["CANDIDATE_TEST_SOURCE_SHA"], "b" * 40)
             self.assertEqual(env["SELECTED_WORKFLOW"], "configprocessingcommon")
             self.assertEqual(env["GINKGO_LABEL_FILTER"], "case-label")
             self.assertEqual(env["CANDIDATE_RUNNER_IMAGE"], host.runner_receipt["imageRef"])

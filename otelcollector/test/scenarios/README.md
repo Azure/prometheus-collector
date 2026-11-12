@@ -73,11 +73,11 @@ Before provisioning any host in a full campaign, run the read-only aggregate
 admission once against its clean, exact-source checkout:
 
 ```powershell
-python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --evidence C:\temp\ama-campaign-capacity
+python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
 `--scenario` also accepts one of the four runnable campaign rows. The
-`campaign-preflight.json` success receipt binds `sourceSha` and the supplied
+`campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
 verifier remains mandatory before deployment. `acns` runs in `eastus2`;
@@ -108,7 +108,10 @@ remain unchanged; the common index is deployed and child digests verify runtime 
 `--source-root C:\path\to\candidate-checkout` uses an existing clean
 candidate checkout without changing this worktree's branch; by default the source
 is this checkout. `--test-source-root` defaults to that checkout and must match
-the verified `testRunner.testSource.commit`. Test packages, workflow scripts,
+the expected immutable `--test-source-sha`; the pipeline uses its own checked-out
+`Build.SourceVersion`. The producer receipt still binds the reusable toolchain to
+the product build; execution evidence separately records the actual test commit.
+Test packages, workflow scripts,
 chart and reference fixtures must be clean and committed. Selected settings metadata/resource hashes are
 recorded separately; a content hash is not a trusted build-source attestation.
 Each image is immutable and records `name` (`collector`, `targetallocator`, `cfg`),
@@ -128,7 +131,7 @@ The calling protected runner must pin/control the verifier checkout.
 never be selected by untrusted PR inputs.
 
 ```powershell
-python otelcollector\test\scenarios\run-scenario.py run --scenario default --settings-root C:\path\to\settings --build-id 123456 --receipt-tools-root C:\path\to\trusted-sre-tools --source-root C:\path\to\candidate-checkout --testkube-version 2.15.0 --location centralus --evidence C:\temp\ama-candidate-run
+python otelcollector\test\scenarios\run-scenario.py run --scenario default --build-id 123456 --receipt-tools-root C:\path\to\trusted-sre-tools --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --testkube-version 2.15.0 --location centralus --evidence C:\temp\ama-candidate-run
 ```
 
 The adapter initializes the managed addon's token secret, disables the addon,

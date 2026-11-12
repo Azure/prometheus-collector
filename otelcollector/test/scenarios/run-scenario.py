@@ -797,7 +797,7 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
               expected_cluster=None):
     workflow = workflow or suite
     destination.mkdir(parents=True, exist_ok=False)
-    source_sha = host.runner_receipt["source"]["commit"]
+    source_sha = host.args.test_source_sha
     image = host.runner_receipt["imageRef"]
     env = dict(os.environ, CANDIDATE_TEST_SOURCE_SHA=source_sha, CANDIDATE_RUNNER_IMAGE=image,
                SELECTED_WORKFLOW=workflow, GINKGO_LABEL_FILTER=expression,
@@ -1181,6 +1181,9 @@ def campaign_preflight(args, matrix, commands):
     if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
+    test_source = source_commit(commands, TEST_SOURCE, ["otelcollector/test/scenarios"])
+    if test_source != args.test_source_sha:
+        raise ValueError("Campaign test source does not match the expected test source SHA")
     placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
     regions = {}
     for location in sorted(set(placements.values())):
@@ -1204,7 +1207,7 @@ def campaign_preflight(args, matrix, commands):
                             for pool in capacity_plan(parameters, row, version))
         regions[location] = {"kubernetesVersion": version,
                              **regional_capacity(regional, capacity, commands)}
-    result = {"status": "PASS", "sourceSha": source, "buildId": args.build_id,
+    result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
               "subscription": args.subscription, "placements": placements,
               "regions": regions, "capacityReserved": False}
     save(output, result)
@@ -1353,9 +1356,11 @@ def verified_candidate(args, commands):
         raise ValueError("Authenticated protected runner-receipt verifier is missing from --receipt-tools-root")
     source = source_commit(commands, REPO, ["otelcollector/deploy/addon-chart"])
     test_source = source_commit(commands, TEST_SOURCE, [
-        "otelcollector/test/ginkgo-e2e", "otelcollector/test/test-cluster-yamls",
+        "otelcollector/test/scenarios", "otelcollector/test/ginkgo-e2e", "otelcollector/test/test-cluster-yamls",
         "otelcollector/test/testkube", "internal/referenceapp",
     ])
+    if test_source != args.test_source_sha:
+        raise ValueError("Candidate test source does not match the expected test source SHA")
     destination = args.evidence / "verified-candidate"
     commands.run([sys.executable, str(verifier), "--build-id", str(args.build_id),
                   "--source-commit", source, "--output", str(destination)], private=True)
@@ -1364,7 +1369,8 @@ def verified_candidate(args, commands):
     runner = load(runner_path)
     expected = candidate["testRunner"]
     if (candidate["source"]["commit"] != source or runner["source"] != expected["testSource"]
-            or runner["source"]["commit"] != test_source or runner["imageRef"] != expected["imageRef"]
+            or runner["source"]["commit"] != source or runner["imageRef"] != expected["imageRef"]
+            or expected.get("mode") != "reused-toolchain-source-fetched-separately"
             or hashlib.sha256(runner_path.read_bytes()).hexdigest() != expected["receiptSha256"]):
         raise ValueError("Verified candidate output does not match product/test checkouts and protected runner bytes")
     for image in candidate["images"]:
@@ -1402,7 +1408,7 @@ def execute(args, scenario, variants, commands):
     host = Host(args, scenario, commands)
     host.runner_receipt = runner_receipt
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
-               "sourceSha": source, "status": "RUNNING", "settings": {}}
+               "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
@@ -1531,7 +1537,8 @@ def main(argv=None):
     parser.add_argument("--source-root", type=Path, default=REPO,
                         help="Existing clean candidate source checkout; no checkout or branch changes are performed")
     parser.add_argument("--test-source-root", type=Path,
-                        help="Existing clean test-source checkout matching the verified runner receipt")
+                        help="Existing clean test-source checkout matching --test-source-sha")
+    parser.add_argument("--test-source-sha", help="Expected immutable test-source commit")
     parser.add_argument("--scenario", default="default")
     parser.add_argument("--subscription", default=BUILD_SUBSCRIPTION)
     parser.add_argument("--location", default="eastus2")
@@ -1550,6 +1557,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     REPO = args.source_root.resolve()
     TEST_SOURCE = (args.test_source_root or REPO).resolve()
+    if args.action in ("run", "campaign-preflight"):
+        if ROOT.resolve() != (TEST_SOURCE / "otelcollector/test/scenarios").resolve():
+            raise ValueError("Scenario runner must come from the expected test source checkout")
+        if args.matrix.resolve() != ROOT / "matrix.json" or args.settings_root.resolve() != ROOT / "settings":
+            raise ValueError("Scenario matrix and settings must come from the expected test source checkout")
     args.evidence = args.evidence.resolve()
     uuid.UUID(args.run_id)
     if args.settle_seconds < 0 or args.max_run_seconds <= 0:
@@ -1557,6 +1569,8 @@ def main(argv=None):
     commands = Commands(args.evidence)
     if args.action == "run" and not args.build_id:
         raise ValueError("--build-id must identify a protected candidate build before provisioning")
+    if args.action in ("run", "campaign-preflight") and not re.fullmatch(r"[0-9a-f]{40}", args.test_source_sha or ""):
+        raise ValueError("--test-source-sha must identify the immutable test source")
     if args.action == "cleanup":
         with execution_lock(args.evidence):
             Host(args, {}, commands).cleanup()

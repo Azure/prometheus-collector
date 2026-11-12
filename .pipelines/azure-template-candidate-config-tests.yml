@@ -68,6 +68,7 @@ steps:
     [[ "$SYSTEM_JOBATTEMPT" =~ ^[1-9][0-9]*$ && "$SYSTEM_STAGEATTEMPT" =~ ^[1-9][0-9]*$ ]] || { echo "Candidate attempt counters are invalid" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
     [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched regional capacity admission" >&2; exit 1; }
+    [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$CAPACITY_TEST_SOURCE_SHA" == "$TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Missing or mismatched test-source admission" >&2; exit 1; }
     case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
@@ -85,7 +86,7 @@ steps:
       [[ -f "$BUILD_SOURCESDIRECTORY/$file" ]] || { echo "Trusted pipeline checkout lacks $file" >&2; exit 1; }
     done
     python3 -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_coverage.py" \
-      --root "$CANDIDATE_ROOT/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
+      --root "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
       --output "$CANDIDATE_EVIDENCE/coverage.json"
   displayName: "Validate opt-in inputs and prepare clean exact-source candidate"
   env:
@@ -97,6 +98,8 @@ steps:
     CANDIDATE_CVE: ${{ parameters.cve }}
     CANDIDATE_SCENARIO: ${{ parameters.scenario }}
     CAPACITY_SOURCE_SHA: $(candidateCapacitySourceSha)
+    CAPACITY_TEST_SOURCE_SHA: $(candidateCapacityTestSourceSha)
+    TEST_SOURCE_SHA: $(Build.SourceVersion)
     CAPACITY_BUILD_ID: $(candidateCapacityBuildId)
     CANDIDATE_ROOT: $(candidateRoot)
     CANDIDATE_EVIDENCE: $(candidateEvidence)
@@ -203,6 +206,7 @@ steps:
       set -euo pipefail
       [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Service connection must target the approved build subscription" >&2; exit 1; }
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
+      [[ "$TEST_SOURCE_SHA" == "$CAPACITY_TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Candidate test-source admission mismatch" >&2; exit 1; }
       [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
         default|classic-azure-cni|acns|otlp) max_run_seconds=28800 ;;
@@ -241,19 +245,21 @@ steps:
       trap stop_bootstrap_watcher EXIT
       trap 'exit 130' INT
       trap 'exit 143' TERM
-      "$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run \
+      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" run \
         --scenario "$CANDIDATE_SCENARIO" --run-id "$CANDIDATE_RUN_ID" --build-id "$PRODUCER_BUILD_ID" \
         --testkube-version 2.15.0 \
         "${retry_args[@]}" \
         --max-run-seconds "$max_run_seconds" \
-        --source-root "$CANDIDATE_ROOT" --test-source-root "$CANDIDATE_ROOT" \
-        --settings-root "$CANDIDATE_ROOT/otelcollector/test/scenarios/settings" \
+        --source-root "$CANDIDATE_ROOT" --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA" \
+        --settings-root "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/settings" \
         --receipt-tools-root "$BUILD_SOURCESDIRECTORY" --location "$CANDIDATE_LOCATION" \
         --tools-bin "$CANDIDATE_TOOLS" --evidence "$CANDIDATE_EVIDENCE"
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
     CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
+    TEST_SOURCE_SHA: $(Build.SourceVersion)
+    CAPACITY_TEST_SOURCE_SHA: $(candidateCapacityTestSourceSha)
     CANDIDATE_SCENARIO: ${{ parameters.scenario }}
     CANDIDATE_LOCATION: $(candidateLocation)
     CANDIDATE_ROOT: $(candidateRoot)
@@ -330,7 +336,7 @@ steps:
 - bash: |
     set -euo pipefail
     "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_coverage.py" \
-      --root "$CANDIDATE_ROOT/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
+      --root "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
       --output "$CANDIDATE_EVIDENCE/coverage.json" --require-unblocked
   displayName: "Gate candidate approval on complete scenario coverage"
   condition: always()
