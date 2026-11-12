@@ -379,6 +379,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
         self.assertIn('default|classic-azure-cni|acns|otlp) max_run_seconds=28800', run_script)
+        self.assertIn('validation_args=(--validation-lane)', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
         self.assertIn('case "$CANDIDATE_SCENARIO" in ' + "|".join((*SCENARIOS, *VALIDATION_SCENARIOS)) + ')',
                       input_validation["bash"])
@@ -442,7 +443,10 @@ class CandidateEvidenceTest(unittest.TestCase):
                                   if p.get("name") == "candidateScenario")
         self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS, *VALIDATION_SCENARIOS])
         self.assertIn("split('" + ",".join((*SCENARIOS, *VALIDATION_SCENARIOS)) + "', ',')", pipeline_path.read_text())
-        self.assertIn("not(in(scenario, 'ampls', 'ampls-acns'))", pipeline_path.read_text())
+        self.assertIn("notIn(scenario, 'private', 'proxy', 'proxy-custom-ca', 'ampls', 'ampls-acns', 'private-ampls')",
+                      pipeline_path.read_text())
+        self.assertIn("in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'private-ampls')",
+                      Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
         self.assertEqual(next(p["values"] for p in template["parameters"]
@@ -474,14 +478,14 @@ class CandidateEvidenceTest(unittest.TestCase):
                              ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked) + len(SCENARIOS), len(rows))
+            self.assertEqual(len(blocked | set(SCENARIOS)), len(rows))
             self.assertIn("customer-helm", blocked)
             self.assertIn("operator-secret-watch", blocked)
             self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
                 "helm-customer-values", "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
                 "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
             })
-        with patch("candidate_coverage.SCENARIOS", SCENARIOS[:-1]):
+        with patch("candidate_coverage.SCENARIOS", SCENARIOS[1:]):
             with self.assertRaisesRegex(ValueError, "every runnable matrix row"):
                 plan(root, "default")
         with self.assertRaisesRegex(ValueError, "Unsupported candidate"):
@@ -560,9 +564,9 @@ class CandidateEvidenceTest(unittest.TestCase):
             "buildId": 4401, "capacityReserved": False,
             "placements": {
                 name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
-                for name in SCENARIOS
+                for name in SCENARIOS if name not in ("private", "proxy", "proxy-custom-ca")
             },
-            "existing": {name: False for name in SCENARIOS},
+            "existing": {name: False for name in SCENARIOS if name not in ("private", "proxy", "proxy-custom-ca")},
             "regions": {"centralus": {}, "eastus2": {}},
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),

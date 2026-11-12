@@ -63,14 +63,32 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_private_api_recovery_rejects_nonprivate_scenarios(self):
+        for scenario_id in ("private-ampls", "ampls", "default", "unknown"):
+            with self.subTest(scenario=scenario_id), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                runner.save(root / "ownership.json", {"scenario": scenario_id})
+                runner.save(root / "deployment.json", {})
+                with patch.object(runner, "Host") as host, patch.object(runner, "close_private_api") as close:
+                    host.return_value.receipt = {"scenario": scenario_id}
+                    host.return_value.assert_owned = Mock()
+                    args = ["close-private-api", "--scenario", scenario_id, "--evidence", directory]
+                    if scenario_id == "private-ampls":
+                        self.assertEqual(runner.main(args), 0)
+                        close.assert_called_once()
+                    else:
+                        with self.assertRaises(ValueError):
+                            runner.main(args)
+                        host.assert_not_called()
+
     def test_ampls_opt_in_is_explicit_and_does_not_unblock_coverage(self):
         for scenario_id in ("ampls", "ampls-acns", "private-ampls", "ampls-proxy", "default", "all"):
             for opt_in in (False, True):
                 with self.subTest(scenario=scenario_id, opt_in=opt_in), tempfile.TemporaryDirectory() as directory:
                     args = ["plan", "--scenario", scenario_id, "--evidence", directory]
                     if opt_in:
-                        args.append("--validate-ampls")
-                    if opt_in and scenario_id in runner.AMPLS_VALIDATION_LOCATIONS:
+                        args.append("--validation-lane")
+                    if opt_in and scenario_id in runner.VALIDATION_LANES:
                         self.assertEqual(runner.main(args), 0)
                         self.assertIn("blockedReason", runner.load(Path(directory) / "plan.json")["scenario"])
                     elif scenario_id == "default" and not opt_in:
@@ -78,6 +96,160 @@ class Contracts(unittest.TestCase):
                     else:
                         with self.assertRaises(ValueError):
                             runner.main(args)
+
+    def test_private_deletion_protection_requires_actual_lock_readback(self):
+        for existing, level in ((True, "CanNotDelete"), (False, "CanNotDelete"), (True, "ReadOnly")):
+            with self.subTest(existing=existing, level=level), tempfile.TemporaryDirectory() as directory:
+                host = runner.Host(types.SimpleNamespace(evidence=Path(directory)), scenario(), Mock())
+                host.receipt = {"resourceGroup": "owned"}
+                host.assert_owned = Mock()
+                lock = {"id": "owned/locks/scenario-retain", "name": "scenario-retain", "level": "CanNotDelete"}
+                host.az = Mock(side_effect=[
+                    [lock] if existing else [],
+                    *([] if existing else [{}]),
+                    dict(lock, level=level),
+                ])
+                if level == "CanNotDelete":
+                    host.protect_host()
+                    self.assertTrue((Path(directory) / "deletion-protection.json").is_file())
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "deletion protection"):
+                        host.protect_host()
+
+    def test_ca_failure_requires_fresh_scraping_cert_errors_and_absent_ingestion(self):
+        proof = sys.modules["clusters.proxy_ca"].failure_proof
+        scrapes = [{"timestamp": 110, "health": "up"}]
+        observations = [{"time": value, "result": []} for value in (120, 155, 190)]
+        self.assertEqual(proof(scrapes, 1, observations, 100)["status"], "PASS")
+        for values in (([], 1, observations), (scrapes, 0, observations),
+                       (scrapes, 1, observations[:1]),
+                       (scrapes, 1, [{"time": value, "result": []} for value in (120, 130, 140)]),
+                       ([{"timestamp": 90, "health": "up"}], 1, observations),
+                       (scrapes, 1, [dict(row, result=[{"value": 1}]) for row in observations])):
+            with self.subTest(values=values), self.assertRaises(RuntimeError):
+                proof(*values, 100)
+
+    def test_private_api_uses_single_ip_pinned_host_and_cleans_up_on_failure(self):
+        adapter = sys.modules["clusters.private_api"]
+        self.assertEqual(adapter.agent_prefix("8.8.8.8\n"), "8.8.8.8/32")
+        for value in ("0.0.0.0/0", "8.8.8.8/24", "10.0.0.1", "::1", "invalid"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                adapter.agent_prefix(value)
+        for fail in (False, True):
+            with self.subTest(fail=fail), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                fqdn = "sc.privatelink.westcentralus.azmk8s.io"
+                kubeconfig = root / "kubeconfig"
+                kubeconfig.write_text(runner.yaml.safe_dump(
+                    {"clusters": [{"cluster": {"server": "https://" + fqdn}}]}))
+                host = Mock()
+                host.scenario = {"clusterFeatures": ["private-api"]}
+                host.receipt = {"resourceGroup": "owned-rg"}
+                host.args.evidence = root
+                host.kubeconfig = kubeconfig
+                host.commands.deadline = 123
+                host.az.side_effect = [
+                    {"privateFqdn": fqdn, "apiServerAccessProfile": {
+                        "enablePrivateCluster": True, "enablePrivateClusterPublicFqdn": False}},
+                    {}, {}, {"access": "Deny"},
+                ]
+                host.kube.return_value = "ok"
+                def keygen(args, **kwargs):
+                    Path(args[-1] + ".pub").write_text("ssh-ed25519 AAAA test")
+                host.commands.run.side_effect = keygen
+                process = Mock()
+                process.poll.return_value = None
+                outputs = {"clusterName": "sc", "orchestratorVmName": "runner",
+                           "orchestratorNsgName": "runner-nsg", "orchestratorPublicIp": "9.9.9.9"}
+                response = Mock()
+                response.__enter__ = Mock(return_value=io.BytesIO(b"8.8.8.8"))
+                response.__exit__ = Mock(return_value=False)
+                with patch.object(adapter, "urlopen", return_value=response), \
+                        patch.object(adapter.shutil, "which", side_effect=lambda name: name), \
+                        patch.object(adapter, "vm_script", side_effect=[
+                            {"privateIp": "10.224.0.9", "hostKey": "ssh-ed25519 AAAA root"},
+                            {"keyRemoved": True},
+                        ]) as remote, patch.object(adapter.subprocess, "Popen", return_value=process) as ssh:
+                    try:
+                        with adapter.private_api(host, outputs):
+                            forwarded = runner.yaml.safe_load(kubeconfig.read_text())["clusters"][0]["cluster"]
+                            self.assertEqual(forwarded["tls-server-name"], fqdn)
+                            self.assertTrue(forwarded["server"].startswith("https://127.0.0.1:"))
+                            if fail:
+                                raise RuntimeError("suite failed")
+                    except RuntimeError as error:
+                        if not fail or str(error) != "suite failed":
+                            raise
+                    arguments = ssh.call_args.args[0]
+                    self.assertIn("StrictHostKeyChecking=yes", arguments)
+                    self.assertIn("BatchMode=yes", arguments)
+                    create = host.az.call_args_list[1].args
+                    self.assertEqual(create[create.index("--source-address-prefixes") + 1], "8.8.8.8/32")
+                    cleanup = host.az.call_args_list[2].args
+                    self.assertEqual(cleanup[cleanup.index("--access") + 1], "Deny")
+                    self.assertIn("rm -f /home/scenario-tunnel/.ssh/authorized_keys", remote.call_args.args[2])
+                    process.terminate.assert_called_once()
+                    self.assertEqual(host.commands.deadline, 123)
+
+    def test_private_api_rejects_public_profile_before_opening_a_tunnel(self):
+        adapter = sys.modules["clusters.private_api"]
+        for profile in ({"enablePrivateCluster": False, "enablePrivateClusterPublicFqdn": False},
+                        {"enablePrivateCluster": True, "enablePrivateClusterPublicFqdn": True}):
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as directory:
+                host = Mock()
+                host.scenario = {"clusterFeatures": ["private-api"]}
+                host.receipt = {"resourceGroup": "owned"}
+                host.kubeconfig = Path(directory) / "kubeconfig"
+                fqdn = "sc.privatelink.westcentralus.azmk8s.io"
+                host.kubeconfig.write_text(runner.yaml.safe_dump(
+                    {"clusters": [{"cluster": {"server": "https://" + fqdn}}]}))
+                host.az.return_value = {"privateFqdn": fqdn, "apiServerAccessProfile": profile}
+                with patch.object(adapter, "urlopen") as discover, self.assertRaisesRegex(RuntimeError, "private-only"):
+                    with adapter.private_api(host, {"clusterName": "sc"}):
+                        self.fail("Public API profile entered the tunnel")
+                discover.assert_not_called()
+
+    def test_proxy_adapter_injects_collector_environment_and_public_trust_only(self):
+        documents = [
+            {"kind": kind, "spec": {"template": {"spec": {"containers": [
+                {"name": "prometheus-collector", "env": [{"name": "HTTPS_PROXY", "value": "wrong"}]},
+                {"name": "config-reader", "env": []},
+            ]}}}} for kind in ("Deployment", "DaemonSet")
+        ]
+        outputs = {"proxyEndpoint": "http://10.226.0.4:3128",
+                   "proxyNoProxyCsv": "localhost,10.244.0.0/16,.svc",
+                   "proxyTrustedCa": runner.base64.b64encode(
+                       b"-----BEGIN CERTIFICATE-----\npublic\n-----END CERTIFICATE-----\n").decode()}
+        runner.configure_proxy(documents, outputs)
+        for document in documents[:2]:
+            spec = document["spec"]["template"]["spec"]
+            env = spec["containers"][0]["env"]
+            self.assertEqual([entry["value"] for entry in env if entry["name"] == "HTTPS_PROXY"],
+                             [outputs["proxyEndpoint"]])
+            self.assertIn({"name": "NO_PROXY", "value": outputs["proxyNoProxyCsv"]}, env)
+            self.assertEqual(spec["containers"][0]["volumeMounts"][0]["mountPath"], "/anchors/proxy")
+            self.assertEqual(spec["containers"][1]["env"], [])
+        self.assertIn("public", documents[-1]["stringData"]["proxy-cert.crt"])
+        for change in ({"proxyEndpoint": "http://external:3128"}, {"proxyNoProxyCsv": "*"},
+                       {"proxyTrustedCa": "not-base64"}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                runner.configure_proxy([], dict(outputs, **change))
+        with self.assertRaisesRegex(ValueError, "both replica and node"):
+            runner.configure_proxy([], dict(outputs, proxyTrustedCa=""))
+
+    def test_proxy_routes_reject_missing_stale_bypass_or_unrelated_traffic(self):
+        route = "101.000 10.244.0.2 CONNECT ingest.monitor.azure.com 200 HIER_DIRECT/1.2.3.4"
+        def verify(log):
+            return runner.proxy_routes(log, 100, {"10.244.0.2"}, "ingest.monitor.azure.com",
+                                       {"10.244.0.3"})
+        self.assertEqual(len(verify(route)), 1)
+        for log in ("", route.replace("101.000", "99.000"),
+                    route.replace("10.244.0.2", "10.244.0.9"),
+                    route.replace(" 200 ", " 403 "),
+                    route.replace("ingest.monitor.azure.com", "query.monitor.azure.com"),
+                    route + "\n101.100 10.244.0.2 GET 10.244.0.3 200 HIER_DIRECT/10.244.0.3"):
+            with self.subTest(log=log), self.assertRaises(RuntimeError):
+                verify(log)
 
     def test_runner_must_come_from_expected_test_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1688,10 +1860,16 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "private-recovery-feature": (
+            '"private-api" not in scenario["clusterFeatures"]',
+            'False'),
+        "private-recovery-unknown": (
+            'if scenario is None or "private-api" not in scenario["clusterFeatures"]:',
+            'if False:'),
         "ampls-opt-in-scope": (
-            'if args.validate_ampls and args.scenario not in AMPLS_VALIDATION_LOCATIONS:', 'if False:'),
+            'if args.validation_lane and args.scenario not in VALIDATION_LANES:', 'if False:'),
         "ampls-keeps-coverage-blocked": (
-            'if scenario.get("blockedReason") and not (args.validate_ampls and args.scenario in AMPLS_VALIDATION_LOCATIONS):',
+            'if scenario.get("blockedReason") and not (args.validation_lane and args.scenario in VALIDATION_LANES):',
             'if False:'),
         "persistent-bootstrap-grants": (
             'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),

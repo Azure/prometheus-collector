@@ -33,7 +33,7 @@ param installationMode string = 'candidate-addon'
 param proxyEnabled bool = false
 param proxyCustomCa bool = false
 param noProxy string[] = []
-@description('Public SSH key for the owned proxy VM; no inbound SSH is opened.')
+@description('Initial public key for owned proxy/orchestrator VMs; NSGs deny inbound SSH by default.')
 param proxyAdminSshPublicKey string = ''
 param proxyVmSize string = 'Standard_D2s_v4'
 @allowed([1])
@@ -65,7 +65,7 @@ module guards 'guards.bicep' = {
     windows2022Version: any(empty(filter(nodePools, pool => pool.osSKU == 'Windows2022')) || int(split(kubernetesVersion, '.')[1]) < 37)
     windows2025Version: any(empty(filter(nodePools, pool => pool.osSKU == 'Windows2025')) || int(split(kubernetesVersion, '.')[1]) >= 32)
     acnsNeedsAzure: any(!acns || dataplane != 'kubenet')
-    proxyNeedsSshKey: any(!proxyEnabled || startsWith(proxyAdminSshPublicKey, 'ssh-'))
+    proxyNeedsSshKey: any(!effectivePrivateApi || startsWith(proxyAdminSshPublicKey, 'ssh-'))
     proxyCaNeedsProxy: any(!proxyCustomCa || proxyEnabled)
     proxyNoProxyIsScoped: any(!proxyEnabled || (!contains(join(noProxy, ','), '*') && !contains(noProxy, '0.0.0.0/0') && !contains(noProxy, '::/0')))
     validPoolPlan: any(length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
@@ -116,12 +116,31 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
+      {
+        name: 'orchestrator'
+        properties: {
+          addressPrefix: '10.227.0.0/24'
+          defaultOutboundAccess: false
+        }
+      }
     ]
   }
 }
 var nodeSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'nodes')
 var endpointSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'endpoints')
 var proxySubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'proxy')
+
+module orchestrator 'orchestrator.bicep' = if (effectivePrivateApi) {
+  name: '${clusterName}-orchestrator'
+  params: {
+    name: '${clusterName}-runner'
+    location: location
+    tags: tags
+    subnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'orchestrator')
+    adminSshPublicKey: proxyAdminSshPublicKey
+  }
+  dependsOn: [guards]
+}
 
 resource proxyIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = if (proxyEnabled) {
   name: '${clusterName}-proxy-egress'
@@ -530,6 +549,9 @@ output oidcIssuerEnabled bool = workloadIdentityEnabled
 output azureCniMode string = dataplane == 'kubenet' ? '' : azureCniMode
 output resourceTags object = tags
 output privateApiEnabled bool = effectivePrivateApi
+output orchestratorVmName string = effectivePrivateApi ? orchestrator!.outputs.vmName : ''
+output orchestratorNsgName string = effectivePrivateApi ? orchestrator!.outputs.nsgName : ''
+output orchestratorPublicIp string = effectivePrivateApi ? orchestrator!.outputs.publicIp : ''
 output proxyVmId string = proxyEnabled ? proxyHost[0]!.outputs.vmId : ''
 output proxyVmName string = proxyEnabled ? proxyHost[0]!.outputs.vmName : ''
 output proxyEndpoint string = proxyEnabled ? proxyHost[0]!.outputs.endpoint : ''

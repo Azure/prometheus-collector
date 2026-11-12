@@ -29,7 +29,7 @@ defaults are not candidate provenance.
 `regionTests` is a separate region/rule validation, not a cluster-health substitute.
 
 The explicit pipeline choices `ampls` and `ampls-acns` are experimental proof
-runs, excluded from `all`. They pass `--validate-ampls` to admission and execution;
+runs, excluded from `all`. They pass `--validation-lane` to admission and execution;
 the matrix's `blockedReason` and approval gate remain until live evidence passes.
 Before settings tests, these runs independently read DCR/DCE associations, AMPLS
 PrivateOnly modes and scoped DCEs, approved private endpoints and their NICs.
@@ -38,9 +38,15 @@ hosts exclusively to their corresponding private endpoint addresses. Authenticat
 public query and remote-write probes must receive an explicit network-denial 403;
 authentication failures, timeouts and generic 403s are not proof.
 The existing run-marked fresh-ingestion check then queries from the collector pod.
+Transient addon initialization uses the AKS resource update for disable, rather
+than the CLI's DCR-deleting cleanup, and restores the owned DCE ACL and DCRAs.
+The later independent proof still rejects public access or wrong associations.
 `ampls-acns` reuses the non-Cilium managed-ACNS traffic/ingestion spec.
 `AMPLS_PROOF`, `AMPLS_PRIVATE_INGESTION` and `CANDIDATE_JUNIT` records are emitted
-directly to build logs. Private-API AMPLS/proxy lanes still need the VNet orchestrator.
+directly to build logs. `private-ampls` reuses the private-API SSH context and its
+owned VNet orchestrator. `ampls-proxy` stays blocked until its forced public-proxy
+and private-monitor NO_PROXY evidence is implemented; private ingestion must not
+be asserted to traverse the public proxy.
 
 ## Prerequisites
 
@@ -200,6 +206,34 @@ Health suites use existing reference workloads and scrape fixtures. JUnit
 records executed/failed/skipped counts; skipped tests are not claimed as executed.
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
+
+Private/proxy lanes are opt-in validation lanes until their live proofs pass;
+`--validation-lane` permits exercising them without removing `blockedReason` or
+adding them to `all`. A retained VNet VM carries only the private API TCP tunnel;
+Helm, TestKube, credentials and evidence stay on the pipeline agent.
+`clusters.private_api.private_api(host, outputs)` pins the SSH host key obtained
+through authenticated VM run-command, restricts ingress to the active agent's
+public IPv4 `/32`, and uses an ephemeral forwarding-only key. Context exit removes
+temporary ingress and key, including on test failure; cleanup failure fails the lane.
+The retained SSH rule returns to `Deny` rather than being deleted because the
+resource-group lock prohibits ARM DELETE operations.
+The interface consumes `orchestratorVmName`, `orchestratorNsgName` and
+`orchestratorPublicIp` deployment outputs and rewrites only the execution kubeconfig.
+New private hosts require a persistent **Locks Contributor** grant scoped only
+to their own resource group; `scenario-retain` is a read-back-verified
+`CanNotDelete` lock, not a retention tag.
+
+The proxy adapter explicitly sets both cases of HTTP(S)_PROXY and NO_PROXY on
+candidate collectors and mounts the owned public CA at `/anchors/proxy`.
+Its run-specific ServiceMonitor enables `proxyFromEnvironment`; fresh marked
+reference samples, denied direct web egress, and complete Squid-log aggregation
+must agree. Proxy proof and per-execution JUnit counts are printed to build logs;
+configuration or successful infrastructure deployment alone is not lane coverage.
+The custom-CA lane removes all collector trust-anchor mounts and restarts the
+collectors. It requires fresh successful scraping, certificate-validation errors,
+and independent authenticated AMW queries with no samples for a new negative-phase
+marker. It restores and reads back the original mounts even after failure, then
+requires fresh ingestion after recovery.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and

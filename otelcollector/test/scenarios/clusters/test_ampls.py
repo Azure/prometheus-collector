@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -18,6 +19,38 @@ SPEC.loader.exec_module(proofs)
 
 
 class Proofs(unittest.TestCase):
+    def test_initialization_preserves_monitoring_resources_and_repairs_addon_overwrites(self):
+        self.outputs["clusterId"] = "/cluster"
+        for enabled in (False, True):
+            state = {"azureMonitorProfile": {"metrics": {"enabled": enabled}}}
+            self.resources[self.outputs["dceId"]]["networkAcls"]["publicNetworkAccess"] = "Enabled"
+            for name in ("ruleAssociationId", "configurationAssociationId"):
+                self.resources.pop(self.outputs[name], None)
+
+            def az(*args, **kwargs):
+                if args[:2] == ("aks", "show"):
+                    return state
+                if args[:2] == ("resource", "update"):
+                    target = args[args.index("--ids") + 1]
+                    if target == "/cluster":
+                        self.assertEqual(args[-1], "properties.azureMonitorProfile.metrics.enabled=false")
+                        state["azureMonitorProfile"]["metrics"]["enabled"] = False
+                    else:
+                        self.assertEqual(target, self.outputs["dceId"])
+                        self.assertEqual(args[-1], "properties.networkAcls.publicNetworkAccess=Disabled")
+                        self.resources[target]["networkAcls"]["publicNetworkAccess"] = "Disabled"
+                    return {}
+                url = args[args.index("--url") + 1]
+                target = url.split("https://management.azure.com", 1)[1].split("?", 1)[0]
+                if args[args.index("--method") + 1] == "put":
+                    self.resources[target] = json.loads(args[args.index("--body") + 1])["properties"]
+                return {"properties": copy.deepcopy(self.resources[target])}
+
+            self.host.az.side_effect = az
+            self.assertEqual(proofs.initialize(self.host, self.outputs), enabled)
+            self.assertFalse(state["azureMonitorProfile"]["metrics"]["enabled"])
+            self.assertEqual(proofs.verify_control_plane(self.host, self.outputs)["status"], "verified")
+
     def test_proof_requires_real_owned_group_lock_and_emits_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             host = Mock()
@@ -195,6 +228,7 @@ def mutations():
     original = proofs
     source = SOURCE.read_text()
     targets = [
+        'enabled is True',
         'protection.get("level") != "CanNotDelete"',
         'not same(rule.get("dataCollectionRuleId"), outputs["dcrId"])',
         'not same(configuration.get("dataCollectionEndpointId"), outputs["dceId"])',

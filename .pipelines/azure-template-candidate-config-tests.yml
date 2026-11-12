@@ -16,8 +16,12 @@ parameters:
   - classic-azure-cni
   - acns
   - otlp
+  - private
+  - proxy
+  - proxy-custom-ca
   - ampls
   - ampls-acns
+  - private-ampls
 
 steps:
 - checkout: self
@@ -71,7 +75,7 @@ steps:
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
     [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched regional capacity admission" >&2; exit 1; }
     [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$CAPACITY_TEST_SOURCE_SHA" == "$TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Missing or mismatched test-source admission" >&2; exit 1; }
-    case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp|ampls|ampls-acns) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
+    case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp|private|proxy|proxy-custom-ca|ampls|ampls-acns|private-ampls) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
     git cat-file -e "$CANDIDATE_SOURCE_SHA^{commit}"
@@ -213,7 +217,7 @@ steps:
       validation_args=()
       case "$CANDIDATE_SCENARIO" in
         default|classic-azure-cni|acns|otlp) max_run_seconds=28800 ;;
-        ampls|ampls-acns) max_run_seconds=28800; validation_args=(--validate-ampls) ;;
+        private|proxy|proxy-custom-ca|ampls|ampls-acns|private-ampls) max_run_seconds=28800; validation_args=(--validation-lane) ;;
         *) echo "Unsupported candidate scenario" >&2; exit 1 ;;
       esac
       CANDIDATE_RUN_ID="$("$PYTHON" -c 'import uuid; print(uuid.uuid4())')"
@@ -281,6 +285,23 @@ steps:
   condition: always()
   env:
     CANDIDATE_EVIDENCE: $(candidateEvidence)
+
+- task: AzureCLI@2
+  displayName: "Always revoke temporary private API ingress and SSH key"
+  condition: and(always(), in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'private-ampls'))
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -euo pipefail
+      [[ -f "$CANDIDATE_EVIDENCE/ownership.json" && -f "$CANDIDATE_EVIDENCE/deployment.json" ]] || exit 0
+      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" close-private-api \
+        --scenario "$CANDIDATE_SCENARIO" --evidence "$CANDIDATE_EVIDENCE"
+  env:
+    CANDIDATE_EVIDENCE: $(candidateEvidence)
+    CANDIDATE_SCENARIO: ${{ parameters.scenario }}
+    PYTHON: $(candidatePython)/bin/python
 
 - task: AzureCLI@2
   displayName: "Retain SRE-owned authenticated baseline/candidate scan comparison"

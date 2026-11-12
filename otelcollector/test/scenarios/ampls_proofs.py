@@ -7,6 +7,24 @@ import socket
 from urllib.parse import urlsplit
 
 
+def initialize(host, outputs):
+    # AKS CLI disable deletes DCRs/DCRAs still owned by this private-link fixture.
+    cluster = host.az("aks", "show", "--ids", outputs["clusterId"], json_output=True)
+    enabled = ((cluster.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled", False)
+    if enabled is True:
+        host.az("resource", "update", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",
+                "--set", "properties.azureMonitorProfile.metrics.enabled=false")
+    host.az("resource", "update", "--ids", outputs["dceId"], "--api-version", "2023-03-11",
+            "--set", "properties.networkAcls.publicNetworkAccess=Disabled")
+    for association, field, target in (
+            ("ruleAssociationId", "dataCollectionRuleId", "dcrId"),
+            ("configurationAssociationId", "dataCollectionEndpointId", "dceId")):
+        host.az("rest", "--method", "put", "--url",
+                f"https://management.azure.com{outputs[association]}?api-version=2023-03-11",
+                "--body", json.dumps({"properties": {field: outputs[target]}}))
+    return enabled
+
+
 def verify_control_plane(host, outputs):
     def get(resource, version):
         return host.az("rest", "--method", "get", "--url",
@@ -161,9 +179,8 @@ def verify_public_denial(host, outputs, proof):
 
 
 def verify(host, outputs):
-    protection = host.az("lock", "create", "--name", "ama-e2e-retain",
-                         "--resource-group", host.receipt["resourceGroup"], "--lock-type", "CanNotDelete",
-                         "--notes", "Retained AMPLS candidate scenario; no expiry", json_output=True)
+    protection = host.az("lock", "show", "--name", "scenario-retain",
+                         "--resource-group", host.receipt["resourceGroup"], json_output=True)
     if protection.get("level") != "CanNotDelete":
         raise RuntimeError("AMPLS retained resource group has no confirmed deletion lock")
     print("AMPLS_DELETION_PROTECTION " + json.dumps(protection), flush=True)
