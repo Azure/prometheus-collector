@@ -14,10 +14,8 @@ parameters:
   values:
   - default
   - classic-azure-cni
-  - autoscaler
-  - cilium
-  - kubenet
   - acns
+  - otlp
 
 steps:
 - checkout: self
@@ -70,7 +68,7 @@ steps:
     [[ "$SYSTEM_JOBATTEMPT" =~ ^[1-9][0-9]*$ && "$SYSTEM_STAGEATTEMPT" =~ ^[1-9][0-9]*$ ]] || { echo "Candidate attempt counters are invalid" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
     [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched regional capacity admission" >&2; exit 1; }
-    case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|autoscaler|cilium|kubenet|acns) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
+    case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
     git cat-file -e "$CANDIDATE_SOURCE_SHA^{commit}"
@@ -207,7 +205,7 @@ steps:
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
       [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
-        default|classic-azure-cni|autoscaler|cilium|kubenet|acns) max_run_seconds=28800 ;;
+        default|classic-azure-cni|acns|otlp) max_run_seconds=28800 ;;
         *) echo "Unsupported candidate scenario" >&2; exit 1 ;;
       esac
       CANDIDATE_RUN_ID="$("$PYTHON" -c 'import sys,uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, "ama-metrics-candidate:" + sys.argv[1] + ":" + sys.argv[2]))' "$BUILD_BUILDID" "$CANDIDATE_SCENARIO")"

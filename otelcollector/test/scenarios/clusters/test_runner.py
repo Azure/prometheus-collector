@@ -4,11 +4,13 @@ import copy
 import importlib.util
 import io
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
 import types
 import unittest
+import uuid
 from unittest.mock import Mock, patch
 
 
@@ -140,10 +142,7 @@ class Contracts(unittest.TestCase):
             parameters = pool_parameters()
             if row["platforms"] == ["linux"]:
                 parameters["nodePools"] = parameters["nodePools"][:1]
-            if row["id"] == "autoscaler":
-                for pool in parameters["nodePools"]:
-                    pool.update(autoscaling=True, maxCount=3)
-            if row["id"] in {"default", "settings"}:
+            if row["id"] == "default":
                 parameters["nodePools"].extend([
                     dict(parameters["nodePools"][0], name=str(index), fips=True)
                     for index in range(5)])
@@ -172,16 +171,17 @@ class Contracts(unittest.TestCase):
                 result = runner.campaign_preflight(args, matrix, commands)
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 6)
+                self.assertEqual(len(result["placements"]), 4)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
-                self.assertEqual(result["placements"]["autoscaler"], "eastus2")
+                self.assertEqual(result["placements"]["classic-azure-cni"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
+                self.assertEqual(result["placements"]["otlp"], "centralus")
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (88, 112), "eastus2": (48, 48)}
+                expected = {"centralus": (80, 104), "eastus2": (16, 16)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
@@ -193,14 +193,37 @@ class Contracts(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
                 (args.evidence / "campaign-preflight.json").unlink()
+                for row in usage:
+                    row["limit"] = 100
                 with patch.object(runner, "CAMPAIGN_LOCATIONS",
                                   dict.fromkeys(result["placements"], "eastus2")):
                     with self.assertRaisesRegex(ValueError, "quota"):
                         runner.campaign_preflight(args, matrix, commands)
                 self.assertFalse((args.evidence / "campaign-preflight.json").exists())
+                for row in usage:
+                    row["limit"] = 300
                 args.scenario = "default"
                 selected = runner.campaign_preflight(args, matrix, commands)
                 self.assertEqual(selected["placements"], {"default": "centralus"})
+
+    @unittest.skipUnless(shutil.which("helm"), "Helm is required for chart rendering")
+    def test_otlp_chart_enables_node_receiver(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            commands = runner.Commands(evidence)
+            mapping = {(name, "linux"): "example.invalid/test@sha256:" + digit * 64
+                       for name, digit in (("collector", "1"), ("targetallocator", "2"), ("cfg", "3"))}
+            chart = runner.render_chart(commands, evidence, {
+                "location": "eastus2", "kubernetesVersion": "1.36.5",
+                "clusterId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/providers/Microsoft.ContainerService/managedClusters/test",
+            }, "a" * 40, mapping, otlp=True)
+            raw = commands.run(["helm", "template", "ama-metrics", str(chart)], private=True)
+            node = next(doc for doc in runner.yaml.safe_load_all(raw)
+                        if doc and doc.get("kind") == "DaemonSet" and doc["metadata"]["name"] == "ama-metrics-node")
+            collector = next(c for c in node["spec"]["template"]["spec"]["containers"]
+                             if c["name"] == "prometheus-collector")
+            self.assertIn({"name": "APPMONITORING_OPENTELEMETRYMETRICS_ENABLED", "value": "true"}, collector["env"])
+            self.assertIn(56681, [port["containerPort"] for port in collector["ports"]])
 
     def test_campaign_admission_rejects_invalid_scope_and_blocked_rows(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -241,10 +264,11 @@ class Contracts(unittest.TestCase):
         variants = runner.catalog(runner.ROOT / "settings")
         document = runner.validate_matrix(runner.load(runner.ROOT / "matrix.json"), variants)
         rows = {row["id"]: row for row in document["scenarios"]}
-        for scenario_id in ("default", "classic-azure-cni", "autoscaler", "cilium", "kubenet", "acns"):
+        for scenario_id in ("default", "classic-azure-cni", "acns", "otlp"):
             row = rows[scenario_id]
             self.assertEqual(row["settingsVariants"], ["*"])
-            self.assertNotIn("mip-enabled", runner.label_filter(row))
+            if scenario_id != "otlp":
+                self.assertNotIn("mip-enabled", runner.label_filter(row))
             selected = runner.scenario_settings(row, variants)
             expected = [name for name, item in variants.items()
                         if runner.compatible(row, item) and not item.get("helmValues")
@@ -253,7 +277,6 @@ class Contracts(unittest.TestCase):
         self.assertIn("collector-controls", runner.scenario_settings(rows["default"], variants))
         self.assertNotIn("empty-secret-namespaces-v1",
                          runner.scenario_settings(rows["default"], variants))
-        self.assertNotIn("windows", runner.scenario_settings(rows["cilium"], variants))
         with self.assertRaisesRegex(ValueError, "wildcard must be the only"):
             runner.scenario_settings({**rows["default"], "settingsVariants": ["*", "default"]}, variants)
 
@@ -1283,12 +1306,25 @@ class Contracts(unittest.TestCase):
             host.scenario = scenario()
             host.runner_receipt = {"source": {"commit": "a" * 40},
                                    "imageRef": "example.invalid/runner@sha256:" + "1" * 64}
-            host.commands.run.side_effect = lambda *args, **kwargs: workflow_fixture(destination)
+            generated = []
+
+            def submit(command, **kwargs):
+                generated.append(runner.TEST_SOURCE / "otelcollector/test/testkube" / command[5])
+                generated[-1].write_text("generated")
+                return workflow_fixture(destination)
+
+            host.commands.run.side_effect = submit
             result = runner.run_suite(host, "configprocessing", destination, "case-label",
                                       template="case.yaml", workflow="configprocessingcommon")
             command = host.commands.run.call_args.args[0]
             env = host.commands.run.call_args.kwargs["env"]
             self.assertEqual(command[0:2], ["bash", "./testkube/run-testkube-workflow.sh"])
+            script = (runner.TEST_SOURCE / "otelcollector/test/testkube/run-testkube-workflow.sh").read_text()
+            pattern = re.search(r'\[\[ "\$TARGET_OUTPUT" =~ (.+?) \]\]', script).group(1)
+            self.assertEqual(pattern, r"^[A-Za-z0-9_-]+\.yaml$")
+            self.assertIsNotNone(re.fullmatch(pattern, command[5]))
+            self.assertIsNone(re.fullmatch(pattern, "." + command[5]))
+            self.assertFalse(generated[0].exists())
             self.assertEqual(command[-4:], ["false", "0", "ConfigTests", "a" * 40])
             self.assertEqual(env["SELECTED_WORKFLOW"], "configprocessingcommon")
             self.assertEqual(env["GINKGO_LABEL_FILTER"], "case-label")

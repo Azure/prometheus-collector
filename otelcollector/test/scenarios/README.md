@@ -76,12 +76,12 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario` also accepts one of the six runnable campaign rows. The
+`--scenario` also accepts one of the four runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
-verifier remains mandatory before deployment. `autoscaler` and `acns` run in
-`eastus2`; `default`, `classic-azure-cni`, `cilium` and `kubenet` run in `centralus`.
+verifier remains mandatory before deployment. `acns` runs in `eastus2`;
+`default`, `classic-azure-cni` and `otlp` run in `centralus`.
 Every pool's autoscaler
 maximum **and** declared surge counts toward the simultaneous regional and
 VM-family peak, including clusters retained after their tests finish.
@@ -284,13 +284,14 @@ Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
-The runnable matrix has six rows. Each row uses `settingsVariants: ["*"]` to
+The runnable candidate matrix has four rows. Each row uses `settingsVariants: ["*"]` to
 select every catalog variant compatible with its declared cluster features and
 platforms. The mixed `default` profile runs all 36 supported variants and the
 FIPS/ARM64 scheduling assertions; the duplicate settings-only cluster is removed.
-Classic CNI, autoscaler and non-Cilium ACNS also run all 36 compatible variants.
-Linux-only Cilium and kubenet run all 11 Linux-compatible variants, without
-claiming Windows coverage. Four empty/omitted-secret inputs share a Linux-only
+Classic CNI and managed non-Cilium ACNS also run all 36 compatible variants.
+The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
+shared metric assertions remain, but the autoscaler scale-up spec is no longer
+selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
 `operator-secret-watch` lane: the current regional default must be at least 1.37,
 otherwise preflight reports unsupported without provisioning. No historical
 version is selected. Customer Helm is separately blocked, giving 41 catalog inputs
@@ -308,9 +309,8 @@ rendered KSM arguments alone are not coverage.
 |---|---|---|
 | `default` | All 36 compatible settings variants; FIPS/ARM64 scheduling; common health, fresh Linux/Windows kubelet ingestion and node network-counter increases after DNS/service traffic. | Mixed-pool inventory alone is not proof; labeled scheduling and traffic assertions provide behavior evidence. |
 | `classic-azure-cni` | All 36 compatible settings variants; common health, per-node ingestion and node network-counter increases after DNS/service traffic. | Traffic traverses the actual profile; no claim is made about CNI-specific policy or flow records. |
-| `autoscaler` | All 36 compatible settings variants; creates owned CPU-requesting pods, requires Linux system-pool scale-up and waits for scale-down after cleanup; also checks network traffic counters. | The scale test uses only the run-owned autoscaler profile and cleans its annotated namespace on retries. |
-| `cilium`, `kubenet` | All 11 Linux-compatible settings variants; Linux health, per-node ingestion and node network-counter increases after DNS/service traffic. | The checks exercise data flow on each selected network profile; managed Cilium ACNS remains blocked separately. |
 | `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
+| `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |
 
 ### PR and scenario-source audit
 
@@ -323,7 +323,7 @@ local test or a prior release-image run is not a candidate-image pass.
 | #1305 MIP follow-up promise | Configprocessing checks the MIP log value. Querymetrics now also requires `node_filefd_allocated` to be absent while the `node` target remains up with MIP enabled, and present with MIP disabled. This is an executable candidate check; it still needs a compliant live run. |
 | #1536 and #1493 secret-access follow-up | The v1/v2 secret-transition specs prove invalid-to-valid reload, fresh scrape recovery and watch denial for empty/omitted allowlists where Kubernetes supports enforcement. Fixtures alone are not coverage; no live candidate result is recorded. |
 | #875, #1788 and #1590 | ARM64/FIPS placement is asserted by node labels and collector-pod scheduling. Windows/Linux metrics are queried per node. The managed `acns` row creates traffic and checks fresh node-level Retina plus pod-level Hubble metrics; it does not install standalone Retina. |
-| #1391/#1417, #1232/#1239 and #1393 | DCGM has config/job/interval/regex assertions but no GPU pool or GPU-metric ingestion proof. OTLP has labeled metric checks but no candidate enablement/producer path. `controlplane-istio` validates config generation with a fake member FQDN, not real target discovery or scraping. |
+| #1391/#1417, #1232/#1239 and #1393 | DCGM has config/job/interval/regex assertions but no GPU pool or GPU-metric ingestion proof. OTLP has a candidate HTTP ingestion scenario awaiting live execution. `controlplane-istio` validates config generation with a fake member FQDN, not real target discovery or scraping. |
 | #1687 | Operator HTTPS code checks cover loopback plaintext refusal, liveness and mTLS behavior. The PR's enabled/disabled deployment checks remain unverified in a live candidate run. |
 | #1029/#1032 region document | `regionTests` is separate and partial: it checks diagnostics, a nonempty `up` result, a recording-rule result and usage/limit response shape, but not the full cloud-parameter, AMCS/DCR/DCE, always/never-alert, alert-evaluation or actionable failure/request-ID contract. Fairfax, Mooncake, USSec and USNat access is not established. |
 | #1027/#1446/#1457 CCP; #896/#1338 Arc | CCP config and health scenarios require the standalone underlay documented under `test/ccp`; Arc uses Sonobuoy/conformance. Neither is exercised by ordinary AKS/TestKube, and neither has an adapter in this candidate runner. |
@@ -372,7 +372,7 @@ are not candidate tests, and no shared cluster was mutated.
 | Ubuntu/Azure Linux, AMD64/ARM64, FIPS | Compatible distinct pools on one host; ARM64 FIPS requires Azure Linux 3+ |
 | Windows 2022/2025 | Separate host pools; the protected Windows 2022 collector supports both through process isolation |
 | Windows 2019 | Unsupported on 1.33+; no substitution with Windows 2022 |
-| Cilium, kubenet, AKS HTTP proxy | Separate host configurations; these profiles cannot include Windows |
+| Standalone autoscaler, Cilium, kubenet | Removed from the candidate campaign; shared collector metrics/assertions remain. The `acns-cilium` row remains separately blocked pending its managed ACNS traffic proof. |
 | AMPLS/private ingestion + private query | Can share mixed-pool infrastructure; require distinct endpoint/DNS and data-path assertions |
 | Managed ACNS | The runnable `acns` row uses managed non-Cilium Retina; it requires fresh per-node `networkobservability_forward_bytes` and Linux pod-level `hubble_dns_queries_total` after generated DNS traffic. This is distinct from the standalone Retina Helm release and from Cilium ACNS. |
 | Customer Helm, candidate addon, Arc, CCP | Distinct installation ownership/adapters, not namespaces on the same managed addon |

@@ -354,9 +354,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
-        self.assertIn('default|classic-azure-cni|autoscaler|cilium|kubenet|acns) max_run_seconds=28800', run_script)
+        self.assertIn('default|classic-azure-cni|acns|otlp) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|autoscaler|cilium|kubenet|acns)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -409,16 +409,30 @@ class CandidateEvidenceTest(unittest.TestCase):
         matrix = json.loads((root / "matrix.json").read_text())
         rows = {row["id"]: row for row in matrix["scenarios"]}
         self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
+        self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
+        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp"))
+        pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
+        pipeline = yaml.safe_load(pipeline_path.read_text())
+        pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
+                                  if p.get("name") == "candidateScenario")
+        self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS])
+        self.assertIn("split('default,classic-azure-cni,acns,otlp', ',')", pipeline_path.read_text())
+        template = yaml.safe_load(Path(__file__).with_name(
+            "azure-template-candidate-config-tests.yml").read_text())
+        self.assertEqual(next(p["values"] for p in template["parameters"]
+                              if p.get("name") == "scenario"), list(SCENARIOS))
         self.assertNotIn("settings", rows)
         self.assertTrue({"fips", "arm64", "network-profile"} <= set(rows["default"]["ginkgoLabels"]))
         self.assertEqual(rows["default"]["settingsVariants"], ["*"])
         self.assertEqual(rows["classic-azure-cni"]["settingsVariants"], ["*"])
-        self.assertIn("autoscaler", rows["autoscaler"]["ginkgoLabels"])
-        self.assertIn("network-profile", rows["cilium"]["ginkgoLabels"])
-        self.assertIn("network-profile", rows["kubenet"]["ginkgoLabels"])
         self.assertNotIn("blockedReason", rows["acns"])
         self.assertIn("managed-acns", rows["acns"]["ginkgoLabels"])
+        self.assertTrue({"network-profile", "mip-enabled"} <= set(rows["acns"]["ginkgoLabels"]))
         self.assertEqual(rows["acns"]["settingsVariants"], ["*"])
+        self.assertEqual(rows["otlp"]["settingsVariants"], ["*"])
+        self.assertEqual(rows["otlp"]["platforms"], ["linux"])
+        self.assertIn("acns-cilium", rows)
+        self.assertIn("blockedReason", rows["acns-cilium"])
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])
@@ -429,7 +443,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                              ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked) + len(SCENARIOS), 18)
+            self.assertEqual(len(blocked) + len(SCENARIOS), len(rows))
             self.assertIn("customer-helm", blocked)
             self.assertIn("operator-secret-watch", blocked)
             self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
@@ -471,7 +485,7 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 12)
+            self.assertEqual(len(report["blockedScenarios"]), 11)
             self.assertEqual(len(report["blockedVariants"]), 5)
             self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
                              ["arc-conformance", "ccp-health", "regionTests"])

@@ -379,6 +379,31 @@ resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023
   properties: { dataCollectionRuleId: dcr.id }
 }
 
+resource otlpDcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (scenarioId == 'otlp') {
+  name: 'otlp-${clusterName}'
+  location: location
+  tags: tags
+  properties: {
+    dataCollectionEndpointId: dce.id
+    dataSources: any({
+      otelMetrics: [{ name: 'otlpMetricsDataSource', streams: ['Custom-Metrics-otlp'] }]
+    })
+    destinations: {
+      monitoringAccounts: [{ name: 'MonitoringAccount1', accountResourceId: workspace.id }]
+    }
+    dataFlows: [{
+      streams: ['Custom-Metrics-otlp']
+      destinations: ['MonitoringAccount1']
+    }]
+  }
+}
+
+resource otlpAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (scenarioId == 'otlp') {
+  name: 'otlp-${uniqueString(cluster.id)}'
+  scope: cluster
+  properties: { dataCollectionRuleId: otlpDcr!.id }
+}
+
 resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring) {
   name: 'configurationAccessEndpoint'
   scope: cluster

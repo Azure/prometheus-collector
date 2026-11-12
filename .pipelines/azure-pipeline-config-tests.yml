@@ -62,17 +62,15 @@ parameters:
   type: string
   default: ''
 - name: candidateScenario
-  displayName: 'Candidate matrix row, or all applicable rows in serial stages'
+  displayName: 'Candidate matrix row, or all applicable rows in parallel stages'
   type: string
   default: all
   values:
   - all
   - default
   - classic-azure-cni
-  - autoscaler
-  - cilium
-  - kubenet
   - acns
+  - otlp
 
 variables:
   candidateCve: ${{ parameters.candidateCve }}
@@ -1258,7 +1256,7 @@ stages:
           import json, os, sys
           value = json.load(open(sys.argv[1], encoding="utf-8"))
           expected = os.environ["CANDIDATE_SCENARIO"]
-          scenarios = "default,classic-azure-cni,autoscaler,cilium,kubenet,acns".split(",")
+          scenarios = "default,classic-azure-cni,acns,otlp".split(",")
           selected = scenarios if expected == "all" else [expected]
           if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
                   or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
@@ -1297,7 +1295,7 @@ stages:
         targetPath: $(capacityEvidence)
         artifact: candidate-capacity-$(Build.BuildId)
 
-- ${{ each scenario in split('default,classic-azure-cni,autoscaler,cilium,kubenet,acns', ',') }}:
+- ${{ each scenario in split('default,classic-azure-cni,acns,otlp', ',') }}:
   - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}

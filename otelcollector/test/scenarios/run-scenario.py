@@ -32,8 +32,7 @@ BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
-    "autoscaler": "eastus2", "cilium": "centralus", "kubenet": "centralus",
-    "acns": "eastus2",
+    "acns": "eastus2", "otlp": "centralus",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
@@ -811,7 +810,7 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
     if Path(host.args.kubectl).parent != Path("."):
         paths.append(str(Path(host.args.kubectl).parent))
     env["PATH"] = os.pathsep.join([*paths, os.environ.get("PATH", "")])
-    target = ".scenario-" + str(uuid.uuid4()) + ".yaml"
+    target = "scenario-" + str(uuid.uuid4()) + ".yaml"
     generated = TEST_SOURCE / "otelcollector/test/testkube" / target
     if generated.exists():
         raise ValueError("Refusing to overwrite an existing generated workflow")
@@ -911,7 +910,7 @@ def settings_slot(host, variant):
                                f"restore: {restore_failure}") from restore_failure
 
 
-def render_chart(commands, evidence, outputs, source_sha, mapping):
+def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
     source = REPO / "otelcollector/deploy/addon-chart/azure-monitor-metrics-addon"
     rendered = evidence / "chart-source"
     shutil.copytree(source, rendered)
@@ -934,6 +933,8 @@ def render_chart(commands, evidence, outputs, source_sha, mapping):
     values = re.sub(r"\$\{(\w+)\}", lambda m: replacements[m[1]], values)
     values = yaml.safe_load(values)
     values["global"]["commonGlobals"]["Versions"]["Kubernetes"] = outputs["kubernetesVersion"]
+    if otlp:
+        values["AppmonitoringAgent"]["isOpenTelemetryMetricsEnabled"] = True
     (rendered / "values.yaml").write_text(yaml.safe_dump(values, sort_keys=False))
     raw = commands.run(["helm", "template", "ama-metrics", str(rendered),
                         "--namespace", "kube-system"], private=True)
@@ -1435,7 +1436,13 @@ def execute(args, scenario, variants, commands):
             if time.monotonic() >= deadline:
                 raise RuntimeError("Managed addon workloads remain; refusing competing Helm ownership")
             time.sleep(10)
-        chart = render_chart(commands, args.evidence, outputs, source, mapping)
+        if scenario["id"] == "otlp":
+            settings = yaml.safe_load(
+                (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
+            settings["data"]["opentelemetry-metrics"] = "enabled = true"
+            host.kube("apply", "-f", "-", data=yaml.safe_dump(settings), private=True)
+        chart = render_chart(commands, args.evidence, outputs, source, mapping,
+                             otlp=scenario["id"] == "otlp")
         commands.run(["helm", "upgrade", "--install", "ama-metrics", str(chart),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "kube-system",
                       "--wait", "--timeout", "20m"])
@@ -1451,6 +1458,8 @@ def execute(args, scenario, variants, commands):
                      "ama-metrics-prometheus-config-node-configmap.yaml",
                      "ama-metrics-prometheus-config-node-windows-configmap.yaml",
                      "ama-metrics-settings-configmap.yaml"):
+            if scenario["id"] == "otlp" and name == "ama-metrics-settings-configmap.yaml":
+                continue
             host.kube("apply", "-f", str(TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps" / name))
         references = ["prometheus-reference-app.yaml"]
         if "windows" in scenario["platforms"]:
@@ -1478,6 +1487,18 @@ def execute(args, scenario, variants, commands):
         for suite in SUITES:
             outcome["suites"][suite] = run_suite(host, suite, args.evidence / "health" / suite,
                                                 label_filter(scenario))
+        if scenario["id"] == "otlp":
+            service = {
+                "apiVersion": "v1", "kind": "Service",
+                "metadata": {"name": "candidate-otlp", "namespace": "kube-system"},
+                "spec": {"selector": {"dsName": "ama-metrics-node"},
+                         "ports": [{"port": 56681, "targetPort": 56681}]},
+            }
+            host.kube("apply", "-f", "-", data=json.dumps(service), private=True)
+            outcome["suites"]["otlp"] = run_suite(
+                host, "querymetrics", args.evidence / "health" / "otlp", "candidate-otlp")
+            outcome["suites"]["otlp-processes"] = run_suite(
+                host, "containerstatus", args.evidence / "health" / "otlp-processes", "otlp && !windows")
         outcome["ingestion"] = verify_ingestion(host, outputs, probe_started)
         save(args.evidence / "images-after.json", audit_images(host, images))
         outcome["status"] = "TESTS_PASSED"

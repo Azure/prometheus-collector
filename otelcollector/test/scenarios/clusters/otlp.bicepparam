@@ -8,4 +8,4 @@ param kubernetesVersion = readEnvironmentVariable('SCENARIO_KUBERNETES_VERSION')
 param owner = readEnvironmentVariable('SCENARIO_OWNER')
 param expiresAt = readEnvironmentVariable('SCENARIO_EXPIRES_AT')
 param nodePools = linuxPools
-param installationMode = 'otlp'
+param installationMode = 'candidate-addon'

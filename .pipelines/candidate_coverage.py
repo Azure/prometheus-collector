@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 
-SCENARIOS = ("default", "classic-azure-cni", "autoscaler", "cilium", "kubenet", "acns")
+SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp")
 SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
 
 

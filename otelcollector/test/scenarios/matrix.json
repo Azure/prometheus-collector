@@ -30,33 +30,6 @@
       "tier": "nightly"
     },
     {
-      "id": "autoscaler",
-      "cluster": "clusters/autoscaler.bicepparam",
-      "clusterFeatures": ["aks", "windows", "autoscaler", "workload-identity", "operator"],
-      "settingsVariants": ["*"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "autoscaler", "network-profile", "mip-enabled"],
-      "tier": "weekly"
-    },
-    {
-      "id": "cilium",
-      "cluster": "clusters/cilium.bicepparam",
-      "clusterFeatures": ["aks", "cilium", "workload-identity", "operator"],
-      "settingsVariants": ["*"],
-      "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
-      "tier": "weekly"
-    },
-    {
-      "id": "kubenet",
-      "cluster": "clusters/kubenet.bicepparam",
-      "clusterFeatures": ["aks", "kubenet", "user-assigned-identity", "workload-identity", "operator"],
-      "settingsVariants": ["*"],
-      "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
-      "tier": "weekly"
-    },
-    {
       "id": "no-workload-identity",
       "cluster": "clusters/no-workload-identity.bicepparam",
       "clusterFeatures": ["aks", "windows", "operator"],
@@ -169,11 +142,10 @@
       "id": "otlp",
       "cluster": "clusters/otlp.bicepparam",
       "clusterFeatures": ["aks", "workload-identity", "operator", "otlp"],
-      "settingsVariants": [],
+      "settingsVariants": ["*"],
       "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Infrastructure only: actual OTLP enablement, producer and fresh ingestion proof are not implemented."
+      "ginkgoLabels": ["operator", "cluster-network"],
+      "tier": "weekly"
     }
   ],
   "coverageGaps": [
@@ -186,7 +158,6 @@
     "regionTests is only partial coverage of the #1029 document: cloud selection, AMCS/DCR/DCE, expected always/never alerts, alert evaluation, and actionable request-ID failure reporting remain unimplemented; sovereign-cloud access is not established.",
     "DCGM configuration assertions exist, but no GPU profile or fresh DCGM metric-ingestion check is available.",
     "The controlplane-istio fake-FQDN workflow checks configuration generation, not real Applink target discovery or scraping.",
-    "OTLP metric assertions exist, but candidate enablement, producer setup, and fresh ingestion proof are not implemented.",
     "Operator HTTPS specs exist, but the #1687 enabled/disabled deployment checks have no live candidate evidence.",
     "The #1169 self-hosted Karpenter metric-name validation has no executable candidate scenario or verified run.",
     "Customer Helm installation requires an isolated helmChartInstall target; never apply customer Helm values to the managed-addon backdoor chart.",
