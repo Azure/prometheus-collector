@@ -1375,8 +1375,9 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     role = RBAC_MONITORING_DATA_READER
     # The fresh private-query probe forwards the caller's token into the collector pod.
     for object_id, kind in ((identity["principalId"], "ServicePrincipal"), (principal, principal_type)):
-        assignments = host.az("role", "assignment", "list", "--assignee", object_id,
-                              "--scope", outputs["workspaceId"], json_output=True, private=True)
+        assignments = host.az("role", "assignment", "list", "--assignee-object-id", object_id,
+                              "--fill-principal-name", "false", "--scope", outputs["workspaceId"],
+                              json_output=True, private=True)
         if not any(row.get("scope", "").casefold() == outputs["workspaceId"].casefold()
                    and row.get("principalId", "").casefold() == object_id.casefold()
                    and row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() == role

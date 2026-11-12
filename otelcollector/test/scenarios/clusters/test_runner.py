@@ -1425,6 +1425,8 @@ class Contracts(unittest.TestCase):
                 if args[:2] == ("aks", "show"):
                     return cluster
                 if args[:3] == ("role", "assignment", "list"):
+                    self.assertIn(args[args.index("--assignee-object-id") + 1], ("identity-object", "caller-object"))
+                    self.assertEqual(args[args.index("--fill-principal-name") + 1], "false")
                     return existing_roles
                 return {}
 
