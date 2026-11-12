@@ -105,7 +105,7 @@ def private_api(host, outputs):
             proof = vm_script(host, vm, f"""set -eu
 id scenario-tunnel >/dev/null 2>&1 || useradd --create-home --shell /bin/bash scenario-tunnel
 install -d -m 700 -o scenario-tunnel -g scenario-tunnel /home/scenario-tunnel/.ssh
-printf '%s\\n' 'expiry-time="{expires}",no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc,command="/bin/false",permitopen="{fqdn}:443" {public_key}' > /home/scenario-tunnel/.ssh/authorized_keys
+printf '%s\\n' 'expiry-time="{expires}",no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc,command="/bin/false",permitopen="{fqdn}:443",permitlisten="none" {public_key}' > /home/scenario-tunnel/.ssh/authorized_keys
 chown scenario-tunnel:scenario-tunnel /home/scenario-tunnel/.ssh/authorized_keys
 chmod 600 /home/scenario-tunnel/.ssh/authorized_keys
 IP=$(getent ahostsv4 '{fqdn}' | head -n1 | cut -d' ' -f1)

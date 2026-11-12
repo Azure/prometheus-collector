@@ -1691,8 +1691,6 @@ def execute(args, scenario, variants, commands):
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
-        if "private-api" in scenario["clusterFeatures"]:
-            host.protect_private_host()
         resolved["existing"] = host.reused
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
@@ -1728,6 +1726,8 @@ def execute(args, scenario, variants, commands):
                 if time.monotonic() >= deadline:
                     raise RuntimeError("Managed addon workloads remain; refusing competing Helm ownership")
                 time.sleep(10)
+        if "private-api" in scenario["clusterFeatures"]:
+            host.protect_private_host()
         if scenario["id"] == "otlp":
             settings = yaml.safe_load(
                 (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
