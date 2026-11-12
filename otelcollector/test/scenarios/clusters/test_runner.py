@@ -1468,6 +1468,12 @@ class Contracts(unittest.TestCase):
                        "queryEndpoint": "https://amw.example"}
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
             self.assertEqual(host.az_with_rbac_retry.call_count, 1)
+            helm = next(c.args[0] for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            for setting in ("testkube-api.minio.podSecurityContext.fsGroup=1001",
+                            "mongodb.nodeAffinityPreset.type=hard",
+                            "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
+                            "mongodb.nodeAffinityPreset.values[0]=system"):
+                self.assertIn(setting, helm)
             role_calls = [c.args for c in host.az.call_args_list if c.args[:3] == ("role", "assignment", "create")]
             self.assertEqual(len(role_calls), 2)
             for args in role_calls:
