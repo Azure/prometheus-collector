@@ -1054,7 +1054,8 @@ def audit_images(host, images):
             status = statuses.get(container["name"], {})
             runtime = status.get("imageID", "")
             if not candidates or not status.get("ready") or not any(
-                    runtime.endswith(i["ref"].split("@")[1])
+                    any(runtime.endswith(ref.split("@")[1])
+                        for ref in (i["ref"], i.get("manifestRef")) if ref)
                     and container["image"] in {i["ref"], i.get("manifestRef")}
                     for i in candidates):
                 raise RuntimeError(f"Missing, unready or wrong candidate imageID: {pod['metadata']['name']}/{container['name']}")

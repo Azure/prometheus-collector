@@ -530,6 +530,25 @@ class Contracts(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
                         runner.audit_images(host, images)
+        images[1]["osVersion"] = "10.0.20348.456"
+        index = "example.invalid/test@sha256:" + "5" * 64
+        images[0]["manifestRef"] = index
+        pods[0]["spec"]["containers"][0]["image"] = index
+        status = pods[0]["status"]["containerStatuses"][0]
+        for runtime in (images[0]["ref"], index):
+            status["imageID"] = runtime
+            self.assertEqual(len(runner.audit_images(host, images)), 4)
+        status["imageID"] = "example.invalid/test@sha256:" + "6" * 64
+        with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
+            runner.audit_images(host, images)
+        status["imageID"] = index
+        status["ready"] = False
+        with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
+            runner.audit_images(host, images)
+        status["ready"] = True
+        images[0]["arch"] = "arm64"
+        with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
+            runner.audit_images(host, images)
 
     def test_empty_variant_labels_never_select_all_tests(self):
         manifest = variant()
