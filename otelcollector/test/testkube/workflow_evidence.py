@@ -70,7 +70,7 @@ def render_candidate(source, workflow, sha, image, label_filter=None, expectatio
             lines[index] = (
                 "GOTOOLCHAIN=\"$(go env GOVERSION)\" "
                 "go run github.com/onsi/ginkgo/v2/ginkgo@"
-                "\"$(go list -m -f '{{.Version}}' github.com/onsi/ginkgo/v2)\" run "
+                "\"$(go list -m github.com/onsi/ginkgo/v2 | cut -d ' ' -f 2)\" run "
                 + shlex.join(options)
             )
             container = step["container"]

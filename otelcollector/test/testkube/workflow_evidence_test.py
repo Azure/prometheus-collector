@@ -56,10 +56,11 @@ class WorkflowEvidenceTest(unittest.TestCase):
                     runs = [step for step in rendered["spec"]["steps"] if "shell" in step]
                     self.assertEqual(len(runs), 1)
                     self.assertEqual(runs[0]["container"]["image"], IMAGE)
+                    self.assertNotIn("{{", runs[0]["shell"])
                     self.assertIn(
                         "GOTOOLCHAIN=\"$(go env GOVERSION)\" "
                         "go run github.com/onsi/ginkgo/v2/ginkgo@"
-                        "\"$(go list -m -f '{{.Version}}' github.com/onsi/ginkgo/v2)\" run ",
+                        "\"$(go list -m github.com/onsi/ginkgo/v2 | cut -d ' ' -f 2)\" run ",
                         runs[0]["shell"],
                     )
                     self.assertIn("--fail-on-empty", runs[0]["shell"])
