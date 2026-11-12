@@ -1,5 +1,12 @@
 # Repeatable ama-metrics cluster scenarios
 
+Service-principal deployments and Monitoring Data Reader assignments retry only
+authorization denials naming `Microsoft.Authorization/roleAssignments/write`.
+The shared retry uses capped backoff for up to 10 minutes within the run budget;
+direct writes first check for the exact existing principal/type/role/scope.
+User-principal calls remain single-attempt. Token reacquisition uses the existing
+Azure CLI login only when the error recommends refreshing credentials.
+
 `matrix.json` assigns many settings variants to one compatible host. Linux and
 Windows tests share that host; variants modifying cluster-wide ConfigMaps run
 sequentially with reset and verified restoration, not on separate clusters.

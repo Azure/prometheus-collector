@@ -294,6 +294,177 @@ class Contracts(unittest.TestCase):
             self.assertEqual([record["exitCode"] for record in records], [1, 0])
             self.assertEqual(records[0]["command"], ["az", "deployment", "group", "create"])
 
+    def test_group_deployment_retries_wrapped_role_assignment_authorization_denial(self):
+        wrapped = RuntimeError(
+            "Command failed (1): az deployment: ERROR: {\"code\":\"InvalidTemplateDeployment\","
+            "\"message\":\"The template deployment failed: Authorization failed for template "
+            "resource 'assignment-id' of type 'Microsoft.Authorization/roleAssignments'. "
+            "The client does not have permission to perform action "
+            "'Microsoft.Authorization/roleAssignments/write'.\"}")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        host.az = Mock(side_effect=[wrapped, {"properties": {"outputs": {}}}])
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 1, 1]), \
+                patch.object(runner.time, "sleep") as sleep:
+            result = host.az_with_rbac_retry("deployment", "group", "create")
+        self.assertIn("properties", result)
+        self.assertEqual(host.az.call_args_list[0].args[:3], ("deployment", "group", "create"))
+        self.assertEqual(host.az.call_args_list[1].args[:3], ("deployment", "group", "create"))
+        sleep.assert_called_once_with(runner.RBAC_AUTH_RETRY_INTERVAL)
+
+
+    def test_provision_retries_only_service_principal_deployments(self):
+        for kind in ("User", "ServicePrincipal"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temporary:
+                args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub",
+                                             run_id="run", location="eastus2")
+                host = runner.Host(args, scenario(), Mock())
+                output = {"properties": {"outputs": {
+                    name: {"value": name} for name in
+                    ("nodeResourceGroupName", "amwManagedResourceGroupName")}}}
+                host.az = Mock(side_effect=["false", {}, output])
+                host.wait_for_rbac = Mock()
+                host.az_with_rbac_retry = Mock(return_value=output)
+                host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", kind)
+                self.assertEqual(host.az_with_rbac_retry.call_count, int(kind == "ServicePrincipal"))
+                self.assertEqual(host.wait_for_rbac.call_count, int(kind == "ServicePrincipal"))
+                self.assertTrue((Path(temporary) / "deployment.json").is_file())
+
+
+    def test_role_assignment_retries_authorization_failed_and_refreshes_only_on_guidance(self):
+        denied = RuntimeError(
+            "ERROR: (AuthorizationFailed) does not have authorization to perform action "
+            "'Microsoft.Authorization/roleAssignments/write'. If access was recently granted, "
+            "please refresh your credentials.")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        host.az = Mock(side_effect=[denied, [], None, "created"])
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 1]), \
+                patch.object(runner.time, "sleep") as sleep:
+            result = host.az_with_rbac_retry(
+                "role", "assignment", "create", "--assignee-object-id", "principal",
+                "--assignee-principal-type", "ServicePrincipal", "--role",
+                runner.RBAC_MONITORING_DATA_READER, "--scope", "/owned")
+        self.assertEqual(result, "created")
+        self.assertEqual(host.az.call_args_list[0].args[:3], ("role", "assignment", "create"))
+        self.assertEqual(host.az.call_args_list[1].args,
+                         ("role", "assignment", "list", "--scope", "/owned"))
+        refresh = host.az.call_args_list[2]
+        self.assertEqual(refresh.args, ("account", "get-access-token", "--output", "none"))
+        self.assertTrue(refresh.kwargs["private"])
+        self.assertEqual(host.az.call_args_list[3].args[:3], ("role", "assignment", "create"))
+        sleep.assert_called_once_with(runner.RBAC_AUTH_RETRY_INTERVAL)
+
+
+    def test_role_assignment_retry_accepts_exact_existing_assignment(self):
+        denied = RuntimeError(
+            "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        assignment = {"principalId": "principal", "principalType": "ServicePrincipal",
+                      "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/" +
+                                          runner.RBAC_MONITORING_DATA_READER,
+                      "scope": "/owned", "id": "/owned/roleAssignments/exact"}
+        host.az = Mock(side_effect=[denied, [assignment]])
+        with patch.object(runner.time, "monotonic", return_value=0):
+            result = host.az_with_rbac_retry(
+                "role", "assignment", "create", "--assignee-object-id", "principal",
+                "--assignee-principal-type", "ServicePrincipal", "--role",
+                runner.RBAC_MONITORING_DATA_READER, "--scope", "/owned")
+        self.assertEqual(result, assignment)
+        self.assertEqual(host.az.call_count, 2)
+        self.assertEqual(host.az.call_args_list[1].args,
+                         ("role", "assignment", "list", "--scope", "/owned"))
+
+
+    def test_role_assignment_retry_does_not_accept_a_different_role(self):
+        denied = RuntimeError(
+            "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        different_role = {"principalId": "principal", "principalType": "ServicePrincipal",
+                          "roleDefinitionId": runner.RBAC_ADMIN_ROLE, "scope": "/owned"}
+        host.az = Mock(side_effect=[denied, [different_role], "created"])
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 1]), \
+                patch.object(runner.time, "sleep"):
+            result = host.az_with_rbac_retry(
+                "role", "assignment", "create", "--assignee-object-id", "principal",
+                "--assignee-principal-type", "ServicePrincipal", "--role",
+                runner.RBAC_MONITORING_DATA_READER, "--scope", "/owned")
+        self.assertEqual(result, "created")
+        self.assertEqual(host.az.call_count, 3)
+
+
+    def test_rbac_retry_respects_the_run_deadline(self):
+        denial = RuntimeError(
+            "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = 300
+        host.az = Mock(side_effect=denial)
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 300]), \
+                patch.object(runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "AuthorizationFailed"):
+                host.az_with_rbac_retry("deployment", "group", "create")
+        self.assertEqual(host.az.call_count, 1)
+        self.assertEqual(host.commands.deadline, 300)
+        sleep.assert_called_once_with(30)
+
+
+    def test_rbac_retry_uses_a_capped_backoff_for_ten_minutes(self):
+        denial = RuntimeError(
+            "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        host.az = Mock(side_effect=[denial] * 5 + ["created"])
+        with patch.object(runner.time, "monotonic",
+                          side_effect=[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5]), \
+                patch.object(runner.time, "sleep") as sleep:
+            result = host.az_with_rbac_retry("deployment", "group", "create")
+        self.assertEqual(result, "created")
+        self.assertEqual(runner.RBAC_AUTH_RETRY_TIMEOUT, 600)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [30, 60, 120, 240, 300])
+
+
+    def test_rbac_retry_is_narrow_and_stops_after_ten_minutes(self):
+        denial = RuntimeError(
+            "InvalidTemplateDeployment: Authorization failed for "
+            "Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        host.az = Mock(side_effect=[denial, denial])
+        with patch.object(runner.time, "monotonic",
+                          side_effect=[0, 0, 1, runner.RBAC_AUTH_RETRY_TIMEOUT]), \
+                patch.object(runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "Authorization failed"):
+                host.az_with_rbac_retry("deployment", "group", "create")
+        self.assertEqual(host.az.call_count, 2)
+        sleep.assert_called_once_with(runner.RBAC_AUTH_RETRY_INTERVAL)
+        with self.assertRaisesRegex(ValueError, "limited"):
+            host.az_with_rbac_retry("group", "delete")
+        with self.assertRaisesRegex(ValueError, "Monitoring Data Reader"):
+            host.az_with_rbac_retry(
+                "role", "assignment", "create", "--assignee-object-id", "principal",
+                "--assignee-principal-type", "ServicePrincipal", "--role",
+                runner.RBAC_ADMIN_ROLE, "--scope", "/owned")
+        denied = RuntimeError(
+            "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/delete")
+        host.az = Mock(side_effect=denied)
+        with patch.object(runner.time, "monotonic", return_value=0):
+            with self.assertRaisesRegex(RuntimeError, "roleAssignments/delete"):
+                host.az_with_rbac_retry(
+                    "role", "assignment", "create", "--assignee-object-id", "principal",
+                    "--assignee-principal-type", "ServicePrincipal", "--role",
+                    runner.RBAC_MONITORING_DATA_READER, "--scope", "/owned")
+        host.az.assert_called_once()
+
+
     def test_rbac_bootstrap_accepts_only_exact_scoped_condition_and_times_out_closed(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)
@@ -785,10 +956,14 @@ class Contracts(unittest.TestCase):
                 return "testworkflows <none> testworkflows.testkube.io/v1 true TestWorkflow"
 
             host.az.side_effect = az
+            host.commands.deadline = None
+            host.az_with_rbac_retry.side_effect = lambda *args, **kwargs: runner.Host.az_with_rbac_retry(
+                host, *args, **kwargs)
             host.kube.side_effect = kube
             outputs = {"clusterName": "owned-cluster", "workspaceId": "/owned/workspace",
                        "queryEndpoint": "https://amw.example"}
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertEqual(host.az_with_rbac_retry.call_count, 1)
             role_calls = [c.args for c in host.az.call_args_list if c.args[:3] == ("role", "assignment", "create")]
             self.assertEqual(len(role_calls), 2)
             for args in role_calls:
@@ -929,6 +1104,19 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),
+        "rbac-retry-exact-role": ('options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER', "False"),
+        "rbac-retry-existing-role": (
+            'assigned_role.casefold() == role_assignment["roleDefinitionId"]', "True"),
+        "rbac-retry-backoff-cap": (
+            "interval = min(interval * 2, RBAC_AUTH_RETRY_MAX_INTERVAL)", "interval = interval * 2"),
+        "rbac-retry-ten-minute-window": ("RBAC_AUTH_RETRY_TIMEOUT = 600", "RBAC_AUTH_RETRY_TIMEOUT = 300"),
+        "rbac-retry-preserves-user-bootstrap": (
+            'assign = host.az_with_rbac_retry if kind == "ServicePrincipal" else host.az',
+            "assign = host.az_with_rbac_retry"),
+        "rbac-retry-preserves-user-deployment": (
+            'deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az',
+            "deploy = self.az_with_rbac_retry"),
         "rbac-before-deployment": ("self.wait_for_rbac(principal)", "pass"),
         "rbac-exact-scope": ('assignment.get("scope", "").casefold() == scope.casefold()', "True"),
         "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),
