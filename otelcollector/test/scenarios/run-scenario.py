@@ -300,6 +300,13 @@ class Commands:
                         diagnostic = diagnostic.replace(value, "[REDACTED]")
                 (self.evidence / "deployment-error.txt").write_text(diagnostic, encoding="utf-8")
                 detail = diagnostic[-6000:]
+            elif private and list(args[:4]) == ["az", "role", "assignment", "list"]:
+                codes = re.findall(
+                    r"\b(?:AuthorizationFailed|Authorization_RequestDenied|PrincipalNotFound|"
+                    r"Request_ResourceNotFound|InvalidAuthenticationToken|ExpiredAuthenticationToken)\b",
+                    completed.stderr)
+                if codes:
+                    detail = "(private command; error codes: " + ", ".join(sorted(set(codes))) + ")"
             raise RuntimeError(f"Command failed ({completed.returncode}): {args[0]} {args[1]}: {detail}")
         return json.loads(completed.stdout) if json_output else completed.stdout
 
