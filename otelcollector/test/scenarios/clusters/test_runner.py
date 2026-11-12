@@ -62,6 +62,68 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_cilium_handoff_restores_lock_on_failures_and_resumes_existing_addon(self):
+        for scenario_id, reused, enabled, failure in (
+                ("acns-cilium", False, False, "enable"), ("acns-cilium", True, True, "secret"),
+                ("acns-cilium", True, True, "disable"), ("acns-cilium", True, True, "after"),
+                ("acns-cilium", True, False, "after"), ("default", False, False, "enable")):
+            with self.subTest(reused=reused, enabled=enabled, failure=failure), tempfile.TemporaryDirectory() as directory:
+                args = types.SimpleNamespace(
+                    evidence=Path(directory), run_id=str(uuid.uuid4()), max_run_seconds=60,
+                    admitted_existing=reused, test_source_sha="b" * 40,
+                )
+                row = dict(scenario(), id=scenario_id, settingsVariants=[], clusterFeatures=[], platforms=[])
+                host = Mock(spec=runner.Host, args=args, reused=reused)
+                host.kubeconfig = Path(directory) / "kubeconfig"
+                host.receipt = {"resourceGroup": "owned"}
+                host.provision.return_value = {"clusterName": "cluster", "workspaceId": "/owned/amw"}
+                host.retain.return_value = {"retained": True}
+                events = []
+
+                def az(*a, **kw):
+                    if a[:2] == ("aks", "update"):
+                        action = "enable" if "--enable-azure-monitor-metrics" in a else "disable"
+                    elif a[:1] == ("lock",):
+                        action = a[1]
+                    else:
+                        action = "show"
+                    events.append(action)
+                    if action == failure:
+                        raise RuntimeError("probe-failure")
+                    return {"level": "CanNotDelete", "id": "/owned/lock", "kubernetesVersion": "1.36.5"}
+
+                def kube(*a, **kw):
+                    if "secret/aad-msi-auth-token" in a and failure == "secret":
+                        raise RuntimeError("probe-failure")
+                    return {"items": []}
+
+                host.az.side_effect = az
+                host.kube.side_effect = kube
+                with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
+                        patch.object(runner, "label_filter", return_value=""), \
+                        patch.object(runner, "preflight", return_value={
+                            "expectedPools": [], "kubernetesVersion": "1.36.5", "existing": reused}), \
+                        patch.object(runner, "candidate_receipt", return_value=([], {})), \
+                        patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
+                        patch.object(runner, "deployment_env", return_value={}), \
+                        patch.object(runner, "Host", return_value=host), \
+                        patch.object(runner, "bootstrap_testkube", return_value={
+                            "agentPoolProfiles": [], "azureMonitorProfile": {"metrics": {"enabled": enabled}}}), \
+                        patch.object(runner, "verify_pool_inventory", return_value={}), \
+                        patch.object(runner, "render_chart", side_effect=RuntimeError("probe-failure")):
+                    with self.assertRaisesRegex(RuntimeError, "probe-failure"):
+                        runner.execute(args, row, {}, Mock())
+                maintenance = scenario_id == "acns-cilium" and (not reused or enabled)
+                self.assertEqual(events.count("delete"), int(maintenance))
+                self.assertEqual(events.count("create"), int(maintenance))
+                if maintenance:
+                    self.assertLess(events.index("delete"), events.index("create"))
+                    self.assertIn("show", events[events.index("create") + 1:])
+                if reused and enabled and failure != "secret":
+                    self.assertIn("disable", events)
+                if reused:
+                    self.assertNotIn("enable", events)
+
     def test_cilium_profile_requires_managed_dataplane_observability_and_security(self):
         cluster = {"networkProfile": {
             "networkPlugin": "azure", "networkDataplane": "cilium",
@@ -1735,6 +1797,14 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "cilium-maintenance-scope": (
+            'maintenance = scenario["id"] == "acns-cilium" and handoff', 'maintenance = handoff'),
+        "cilium-lock-restoration": (
+            'host.az("lock", "create", "--resource-group", group, "--name", "retain-acns-cilium",',
+            'host.az("lock", "show", "--resource-group", group, "--name", "retain-acns-cilium",'),
+        "cilium-reused-handoff": (
+            'and ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled") is True)',
+            'and False)'),
         "cilium-dataplane": ('network.get("networkDataplane") != "cilium"', "False"),
         "cilium-plugin": ('if (network.get("networkPlugin") != "azure"', "if (False"),
         "cilium-managed-enabled": ('or advanced.get("enabled") is not True', "or False"),

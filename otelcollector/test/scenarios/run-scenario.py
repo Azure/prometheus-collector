@@ -1403,6 +1403,14 @@ def verify_cilium_profile(cluster):
         raise RuntimeError("AKS must report the managed Cilium ACNS dataplane, observability and security enabled")
 
 
+def verify_cilium_lock(host):
+    lock = host.az("lock", "show", "--resource-group", host.receipt["resourceGroup"],
+                   "--name", "retain-acns-cilium", json_output=True)
+    if lock.get("level") != "CanNotDelete":
+        raise RuntimeError("The persistent ACNS Cilium resource group requires a CanNotDelete lock")
+    print("Deletion protection verified: " + lock["id"], flush=True)
+
+
 def bootstrap_testkube(host, outputs, package, principal, principal_type):
     group = host.receipt["resourceGroup"]
     identity = host.az("identity", "create", "--resource-group", group,
@@ -1438,11 +1446,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             verify_cilium_profile(cluster)
             host.kube("rollout", "status", "daemonset/cilium", "-n", "kube-system", "--timeout=10m")
             print("Managed ACNS proof: " + json.dumps(cluster["networkProfile"]), flush=True)
-            lock = host.az("lock", "show", "--resource-group", group,
-                           "--name", "retain-acns-cilium", json_output=True)
-            if lock.get("level") != "CanNotDelete":
-                raise RuntimeError("The persistent ACNS Cilium resource group requires a CanNotDelete lock")
-            print("Deletion protection verified: " + lock["id"], flush=True)
+            verify_cilium_lock(host)
     save(host.args.evidence / "effective-upgrade.json", {
         "kubernetesVersion": cluster["kubernetesVersion"],
         "autoUpgradeProfile": cluster["autoUpgradeProfile"],
@@ -1572,19 +1576,33 @@ def execute(args, scenario, variants, commands):
         nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
         save(args.evidence / "pool-inventory.json",
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
-        if not resolved["existing"]:
-            host.az("aks", "update", "--resource-group", group, "--name", cluster,
-                    "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
-        host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
-                  "-n", "kube-system", "--timeout=15m", private=True)
-        if not resolved["existing"]:
-            host.az("aks", "update", "--resource-group", group, "--name", cluster,
-                    "--disable-azure-monitor-metrics")
+        handoff = not resolved["existing"] or (scenario["id"] == "acns-cilium"
+            and ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled") is True)
+        maintenance = scenario["id"] == "acns-cilium" and handoff
+        try:
+            if maintenance:
+                # AKS must delete its DCRA during addon handoff; restore protection even if that fails.
+                host.az("lock", "delete", "--resource-group", group, "--name", "retain-acns-cilium")
+                print("ACNS Cilium lock maintenance: managed-addon handoff only", flush=True)
+            if not resolved["existing"]:
+                host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                        "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
+            host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
+                      "-n", "kube-system", "--timeout=15m", private=True)
+            if handoff:
+                host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                        "--disable-azure-monitor-metrics")
+        finally:
+            if maintenance:
+                host.az("lock", "create", "--resource-group", group, "--name", "retain-acns-cilium",
+                        "--lock-type", "CanNotDelete",
+                        "--notes", "Persistent managed ACNS Cilium scenario; retain for future candidate runs.")
+                verify_cilium_lock(host)
         state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
         outputs["kubernetesVersion"] = state["kubernetesVersion"]
         if ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"):
             raise RuntimeError("Managed addon is still enabled; refusing competing Helm ownership")
-        if not resolved["existing"]:
+        if handoff:
             deadline = time.monotonic() + 600
             managed = {"ama-metrics", "ama-metrics-node", "ama-metrics-win-node",
                        "ama-metrics-operator-targets", "ama-metrics-ksm"}

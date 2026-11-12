@@ -85,6 +85,10 @@ verifier remains mandatory before deployment. `acns` runs in `eastus2`;
 from `all` until its live proof passes. The pipeline supplies `--prove-acns-cilium`;
 ordinary runner invocations still honor its `blockedReason`. Its resource group
 has a `CanNotDelete` lock and retains the same narrow bootstrap grants for reuse.
+During the one-time managed-addon handoff only, the runner temporarily removes
+that lane's lock so AKS can delete its DCR association, and restores and verifies
+the lock in `finally` before any candidate tests. A partial handoff is resumed on
+the same retained cluster, never by recreating it.
 New pools' autoscaler maximum **and** declared surge count toward the simultaneous
 regional and VM-family peak. Verified existing pools are already in current usage;
 only their declared surge is added. An admitted existing host that disappears fails
