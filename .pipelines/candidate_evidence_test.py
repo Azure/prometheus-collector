@@ -378,9 +378,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
-        self.assertIn('default|classic-azure-cni|acns|otlp) max_run_seconds=28800', run_script)
+        self.assertIn('default|classic-azure-cni|acns|otlp|private|proxy|proxy-custom-ca) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|otlp|private|proxy|proxy-custom-ca)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -434,13 +434,14 @@ class CandidateEvidenceTest(unittest.TestCase):
         rows = {row["id"]: row for row in matrix["scenarios"]}
         self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
         self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
-        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp"))
+        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp",
+                                    "private", "proxy", "proxy-custom-ca"))
         pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
         pipeline = yaml.safe_load(pipeline_path.read_text())
         pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
                                   if p.get("name") == "candidateScenario")
         self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS])
-        self.assertIn("split('default,classic-azure-cni,acns,otlp', ',')", pipeline_path.read_text())
+        self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", pipeline_path.read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
         self.assertEqual(next(p["values"] for p in template["parameters"]
@@ -467,14 +468,14 @@ class CandidateEvidenceTest(unittest.TestCase):
                              ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked) + len(SCENARIOS), len(rows))
+            self.assertEqual(len(blocked | set(SCENARIOS)), len(rows))
             self.assertIn("customer-helm", blocked)
             self.assertIn("operator-secret-watch", blocked)
             self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
                 "helm-customer-values", "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
                 "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
             })
-        with patch("candidate_coverage.SCENARIOS", SCENARIOS[:-1]):
+        with patch("candidate_coverage.SCENARIOS", SCENARIOS[1:]):
             with self.assertRaisesRegex(ValueError, "every runnable matrix row"):
                 plan(root, "default")
         with self.assertRaisesRegex(ValueError, "Unsupported candidate"):
@@ -553,9 +554,9 @@ class CandidateEvidenceTest(unittest.TestCase):
             "buildId": 4401, "capacityReserved": False,
             "placements": {
                 name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
-                for name in SCENARIOS
+                for name in SCENARIOS if name not in ("private", "proxy", "proxy-custom-ca")
             },
-            "existing": {name: False for name in SCENARIOS},
+            "existing": {name: False for name in SCENARIOS if name not in ("private", "proxy", "proxy-custom-ca")},
             "regions": {"centralus": {}, "eastus2": {}},
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),

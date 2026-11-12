@@ -2,10 +2,12 @@
 """Provision owned hosts, test compatible settings sequentially, and retain resources."""
 
 import argparse
+import base64
 import copy
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from functools import cache
 import hashlib
+import inspect
 import json
 import math
 import os
@@ -13,15 +15,19 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
+from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
 import jsonschema
 import yaml
+from clusters.private_api import close_private_api, private_api, vm_script
+from clusters.proxy_ca import verify_ca_recovery
 
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +38,9 @@ SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livene
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus",
+    "private": "westcentralus", "proxy": "westcentralus", "proxy-custom-ca": "westcentralus",
 }
+VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca"}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -478,6 +486,21 @@ class Host:
         save(self.args.evidence / "deployment.json", outputs)
         return outputs
 
+    def protect_private_host(self):
+        self.assert_owned()
+        group = self.receipt["resourceGroup"]
+        locks = self.az("lock", "list", "--resource-group", group, json_output=True)
+        if not any(row.get("level") == "CanNotDelete" and row.get("name") == "scenario-retain"
+                   for row in locks):
+            self.az("lock", "create", "--resource-group", group, "--name", "scenario-retain",
+                    "--lock-type", "CanNotDelete", "--notes", "Retained ama-metrics scenario; no expiry")
+        observed = self.az("lock", "show", "--resource-group", group, "--name", "scenario-retain",
+                           json_output=True)
+        if observed.get("level") != "CanNotDelete":
+            raise RuntimeError("Private scenario deletion protection was not confirmed")
+        save(self.args.evidence / "deletion-protection.json",
+             {"status": "PASS", "id": observed["id"], "level": observed["level"]})
+
     def persistent_state(self, env, expected_pools):
         if not expected_pools:
             raise ValueError("Persistent reuse requires the preflighted pool inventory")
@@ -673,6 +696,8 @@ class Host:
                 result = {"retained": False, "resourceGroup": group, "managedResourceGroups": []}
             else:
                 parent = self.assert_owned()
+                if "private-api" in self.scenario.get("clusterFeatures", []):
+                    self.protect_private_host()
                 groups = self.az("group", "list", "--query",
                                  "[?managedBy != null].{name:name,managedBy:managedBy}",
                                  json_output=True, private=True)
@@ -900,7 +925,9 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
         host.commands.run(["bash", "./testkube/run-testkube-workflow.sh", host.query_endpoint,
                           host.query_client_id, template, target, "false", "0", "ConfigTests", source_sha],
                          cwd=TEST_SOURCE / "otelcollector/test", env=env)
-        return workflow_result(destination, workflow, source_sha, image)
+        result = workflow_result(destination, workflow, source_sha, image)
+        print("TestKube JUnit: " + json.dumps({"suite": suite, **result}), flush=True)
+        return result
     finally:
         if generated.exists():
             generated.unlink()
@@ -1021,6 +1048,8 @@ def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
     raw = commands.run(["helm", "template", "ama-metrics", str(rendered),
                         "--namespace", "kube-system"], private=True)
     documents = pin_workloads(list(yaml.safe_load_all(raw)), mapping)
+    if outputs.get("proxyEndpoint"):
+        configure_proxy(documents, outputs)
     target = evidence / "candidate-chart"
     (target / "templates").mkdir(parents=True)
     (target / "files").mkdir()
@@ -1028,6 +1057,136 @@ def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
     (target / "files/manifests.yaml").write_text(yaml.safe_dump_all(documents))
     (target / "templates/resources.yaml").write_text('{{ .Files.Get "files/manifests.yaml" }}\n')
     return target
+
+
+def configure_proxy(documents, outputs):
+    endpoint = outputs["proxyEndpoint"]
+    exclusions = outputs["proxyNoProxyCsv"]
+    if endpoint != "http://10.226.0.4:3128" or not exclusions or "*" in exclusions:
+        raise ValueError("Proxy adapter requires the owned endpoint and scoped NO_PROXY")
+    certificate = outputs.get("proxyTrustedCa")
+    if certificate:
+        certificate = base64.b64decode(certificate, validate=True).decode("ascii")
+        if not certificate.startswith("-----BEGIN CERTIFICATE-----"):
+            raise ValueError("Proxy trust must be a public PEM certificate")
+        documents.append({
+            "apiVersion": "v1", "kind": "Secret",
+            "metadata": {"name": "scenario-proxy-ca", "namespace": "kube-system"},
+            "stringData": {"proxy-cert.crt": certificate},
+        })
+    collectors = 0
+    for document in documents:
+        if document.get("kind") not in {"Deployment", "DaemonSet"}:
+            continue
+        spec = document["spec"]["template"]["spec"]
+        for container in spec["containers"]:
+            if container["name"] != "prometheus-collector":
+                continue
+            collectors += 1
+            environment = {
+                "HTTP_PROXY": endpoint, "http_proxy": endpoint,
+                "HTTPS_PROXY": endpoint, "https_proxy": endpoint,
+                "NO_PROXY": exclusions, "no_proxy": exclusions,
+            }
+            container["env"] = [entry for entry in container.get("env", [])
+                                if entry["name"] not in environment]
+            container["env"].extend({"name": name, "value": value}
+                                    for name, value in environment.items())
+            if certificate:
+                container.setdefault("volumeMounts", []).append({
+                    "name": "scenario-proxy-ca", "mountPath": "/anchors/proxy", "readOnly": True,
+                })
+        if certificate and any(c["name"] == "prometheus-collector" for c in spec["containers"]):
+            spec.setdefault("volumes", []).append({
+                "name": "scenario-proxy-ca", "secret": {"secretName": "scenario-proxy-ca"},
+            })
+    if collectors < 2:
+        raise ValueError("Proxy adapter did not find both replica and node collectors")
+
+
+def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
+    routes = []
+    for line in log.splitlines():
+        fields = line.split()
+        if len(fields) != 6:
+            raise RuntimeError("Unexpected owned Squid route log format")
+        timestamp, source, method, destination, status, hierarchy = fields
+        if float(timestamp) < started or source not in collector_ips:
+            continue
+        if destination in bypass_ips:
+            raise RuntimeError("NO_PROXY target appeared in the collector's proxy route log")
+        if (destination == ingestion_hostname and method in {"CONNECT", "POST"}
+                and status == "200" and hierarchy.startswith("HIER_DIRECT/")):
+            routes.append({"timestamp": float(timestamp), "source": source,
+                           "destination": destination, "status": int(status)})
+    if not routes:
+        raise RuntimeError("No successful fresh collector-to-ingestion route in the owned proxy log")
+    return routes
+
+
+def network_probe_monitor(host, marker):
+    monitor = {
+        "apiVersion": "azmonitoring.coreos.com/v1", "kind": "ServiceMonitor",
+        "metadata": {"name": "scenario-network-probe", "namespace": "default"},
+        "spec": {"selector": {"matchLabels": {"app": "prometheus-reference-app"}},
+                 "endpoints": [{"port": "weather-app", "interval": "15s",
+                                "proxyFromEnvironment": True,
+                                "metricRelabelings": [
+                                    {"action": "keep", "sourceLabels": ["__name__"], "regex": "myapp_temperature"},
+                                    {"action": "replace", "targetLabel": "scenario_run", "replacement": marker},
+                                ]}]},
+    }
+    host.kube("apply", "-f", "-", data=yaml.safe_dump(monitor))
+    observed = host.kube("get", "servicemonitors.azmonitoring.coreos.com", "scenario-network-probe", "-n", "default",
+                         "-o", "json", json_output=True)
+    if observed["spec"] != monitor["spec"]:
+        raise RuntimeError("Run-specific proxy-from-environment scrape monitor did not read back")
+
+
+def verify_proxy(host, outputs, started):
+    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    sources = set()
+    for pod in pods:
+        if not any(c["name"] == "prometheus-collector" for c in pod["spec"]["containers"]):
+            continue
+        environment = host.kube(
+            "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
+            "--", "sh", "-c", 'printf "%s\\n%s\\n%s\\n" "$HTTP_PROXY" "$HTTPS_PROXY" "$NO_PROXY"')
+        expected = [outputs["proxyEndpoint"], outputs["proxyEndpoint"], outputs["proxyNoProxyCsv"]]
+        if environment.splitlines() != expected:
+            raise RuntimeError("Running candidate collector does not have the explicit proxy/NO_PROXY environment")
+        sources.update((pod["status"]["podIP"], pod["status"]["hostIP"]))
+    if not sources:
+        raise RuntimeError("No running collector source addresses for proxy proof")
+    references = host.kube("get", "pods", "-n", "default", "-l", "app=prometheus-reference-app",
+                           "-o", "json", json_output=True)["items"]
+    bypass = {pod["status"]["podIP"] for pod in references}
+    if not bypass:
+        raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
+    endpoint = outputs["dceMetricsIngestionEndpoint"]
+    host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
+              "--", "sh", "-c",
+              'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
+              'result=$?; test "$result" -eq 7 || test "$result" -eq 28',
+              "direct-egress-denial", endpoint)
+    script = ("python3 - <<'PY'\nimport json\n" + inspect.getsource(proxy_routes)
+              + "\ntry:\n"
+              + f"    routes = proxy_routes(open('/var/log/squid/access.log').read(), {started!r}, "
+              + f"{sources!r}, {urlparse(endpoint).hostname!r}, {bypass!r})\n"
+              + "    result = {'status': 'PASS', 'successfulRequests': len(routes), "
+              + "'first': routes[0], 'last': routes[-1], 'noProxyRoutes': 0}\n"
+              + "except (RuntimeError, ValueError) as error:\n"
+              + "    result = {'status': 'FAIL', 'error': str(error)}\n"
+              + "print('SCENARIO_RESULT=' + json.dumps(result))\nPY")
+    result = vm_script(host, outputs["proxyVmName"], script)
+    if result.get("status") != "PASS":
+        raise RuntimeError("Collector proxy route proof failed: " + result.get("error", "missing result"))
+    result.update(directWebDenied=True, scrapeProxyFromEnvironment=True,
+                  bypassTargets=sorted(bypass), logSource="complete owned Squid access.log",
+                  ingestionHostname=urlparse(endpoint).hostname)
+    save(host.args.evidence / "proxy-proof.json", result)
+    print("Collector proxy proof: " + json.dumps(result), flush=True)
+    return result
 
 
 def audit_images(host, images):
@@ -1151,7 +1310,7 @@ def verify_ingestion(host, outputs, started):
 
 
 def compiled_parameters(args, scenario, commands, version):
-    env = deployment_env(args, version, proxy="http-proxy" in scenario["clusterFeatures"])
+    env = deployment_env(args, version, proxy="private-api" in scenario["clusterFeatures"])
     envelope = commands.run(["az", "bicep", "build-params", "--file", str(ROOT / scenario["cluster"]),
                              "--stdout"], env=env, json_output=True, private=True)
     template = (json.loads(envelope["templateJson"]) if envelope.get("templateJson") else
@@ -1190,6 +1349,8 @@ def capacity_plan(parameters, scenario, version):
         if type(count) is not int or count < 1:
             raise ValueError("Proxy capacity must be explicit in compiled parameters")
         capacity.append({"name": "proxy", "vmSize": parameters["proxyVmSize"], "nodes": count, "surge": 0})
+    if "private-api" in scenario["clusterFeatures"]:
+        capacity.append({"name": "orchestrator", "vmSize": "Standard_D2s_v4", "nodes": 1, "surge": 0})
     return capacity
 
 
@@ -1274,9 +1435,12 @@ def campaign_preflight(args, matrix, commands):
         raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
-    selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
+    selected = ([name for name in CAMPAIGN_LOCATIONS if name not in VALIDATION_LANES]
+                if args.scenario == "all" else [args.scenario])
     if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")
+    if any(name in VALIDATION_LANES for name in selected) and not getattr(args, "validation_lane", False):
+        raise ValueError("Blocked scenario requires explicit validation-lane admission")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
     test_source = source_commit(commands, TEST_SOURCE, ["otelcollector/test/scenarios"])
     if test_source != args.test_source_sha:
@@ -1298,7 +1462,8 @@ def campaign_preflight(args, matrix, commands):
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
-            if not row or row.get("blockedReason"):
+            if not row or (row.get("blockedReason") and not (
+                    getattr(args, "validation_lane", False) and name in VALIDATION_LANES)):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
@@ -1517,19 +1682,23 @@ def execute(args, scenario, variants, commands):
             ],
         } for name in selected_settings
     })
-    env = deployment_env(args, resolved["kubernetesVersion"], proxy="http-proxy" in scenario["clusterFeatures"])
+    env = deployment_env(args, resolved["kubernetesVersion"], proxy="private-api" in scenario["clusterFeatures"])
     host = Host(args, scenario, commands)
+    transport = ExitStack()
     host.runner_receipt = runner_receipt
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
                "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
+        if "private-api" in scenario["clusterFeatures"]:
+            host.protect_private_host()
         resolved["existing"] = host.reused
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
                 "--file", str(host.kubeconfig), "--admin", private=True)
+        transport.enter_context(private_api(host, outputs))
         host.kube("wait", "nodes", "--all", "--for=condition=Ready", "--timeout=20m")
         state = bootstrap_testkube(host, outputs, *testkube)
         nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
@@ -1566,6 +1735,7 @@ def execute(args, scenario, variants, commands):
             host.kube("apply", "-f", "-", data=yaml.safe_dump(settings), private=True)
         chart = render_chart(commands, args.evidence, outputs, source, mapping,
                              otlp=scenario["id"] == "otlp")
+        proxy_started = time.time()
         commands.run(["helm", "upgrade", "--install", "ama-metrics", str(chart),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "kube-system",
                       "--wait", "--timeout", "20m"])
@@ -1622,7 +1792,14 @@ def execute(args, scenario, variants, commands):
                 host, "querymetrics", args.evidence / "health" / "otlp", "candidate-otlp")
             outcome["suites"]["otlp-processes"] = run_suite(
                 host, "containerstatus", args.evidence / "health" / "otlp-processes", "otlp && !windows")
+        if "private-api" in scenario["clusterFeatures"]:
+            probe_started = time.time()
+            network_probe_monitor(host, args.run_id)
         outcome["ingestion"] = verify_ingestion(host, outputs, probe_started)
+        if "custom-ca" in scenario["clusterFeatures"]:
+            outcome["ca"] = verify_ca_recovery(host, outputs, network_probe_monitor, verify_ingestion)
+        if "http-proxy" in scenario["clusterFeatures"]:
+            outcome["proxy"] = verify_proxy(host, outputs, proxy_started)
         save(args.evidence / "images-after.json", audit_images(host, images))
         outcome["status"] = "TESTS_PASSED"
     except (RuntimeError, ValueError, KeyError, OSError, ET.ParseError, yaml.YAMLError) as failure:
@@ -1631,7 +1808,10 @@ def execute(args, scenario, variants, commands):
     finally:
         commands.deadline = None
         try:
-            outcome["resources"] = host.retain()
+            try:
+                transport.close()
+            finally:
+                outcome["resources"] = host.retain()
             if outcome["status"] == "TESTS_PASSED":
                 if not outcome["resources"].get("retained"):
                     raise RuntimeError("Successful tests but retained resource inventory is incomplete")
@@ -1648,7 +1828,7 @@ def main(argv=None):
     global REPO, TEST_SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("validate", "compile", "plan", "preflight", "campaign-preflight", "run",
-                                           "cleanup", "revoke-bootstrap"))
+                                           "cleanup", "revoke-bootstrap", "close-private-api"))
     parser.add_argument("--matrix", type=Path, default=ROOT / "matrix.json")
     parser.add_argument("--settings-root", type=Path, default=ROOT / "settings")
     parser.add_argument("--source-root", type=Path, default=REPO,
@@ -1657,6 +1837,8 @@ def main(argv=None):
                         help="Existing clean test-source checkout matching --test-source-sha")
     parser.add_argument("--test-source-sha", help="Expected immutable test-source commit")
     parser.add_argument("--scenario", default="default")
+    parser.add_argument("--validation-lane", action="store_true",
+                        help="Exercise a private/proxy lane without claiming its matrix blocker is resolved")
     parser.add_argument("--subscription", default=BUILD_SUBSCRIPTION)
     parser.add_argument("--location", default="eastus2")
     parser.add_argument("--run-id", default=str(uuid.uuid4()))
@@ -1712,6 +1894,17 @@ def main(argv=None):
         with execution_lock(args.evidence):
             Host(args, {}, commands).revoke_bootstrap()
         return 0
+    if args.action == "close-private-api":
+        if not (args.evidence / "ownership.json").exists() or not (args.evidence / "deployment.json").exists():
+            return 0
+        if args.scenario not in VALIDATION_LANES:
+            raise ValueError("Private API recovery requires a private/proxy validation lane")
+        host = Host(args, {"id": args.scenario}, commands)
+        host.assert_owned()
+        if host.receipt["scenario"] != args.scenario:
+            raise ValueError("Private API recovery scenario differs from the ownership receipt")
+        close_private_api(host, load(args.evidence / "deployment.json"))
+        return 0
     variants = catalog(args.settings_root.resolve())
     matrix = validate_matrix(load(args.matrix), variants)
     if args.action == "validate":
@@ -1726,7 +1919,7 @@ def main(argv=None):
     scenario = next((s for s in matrix["scenarios"] if s["id"] == args.scenario), None)
     if not scenario:
         raise ValueError(f"Unknown scenario: {args.scenario}")
-    if scenario.get("blockedReason"):
+    if scenario.get("blockedReason") and not (args.validation_lane and args.scenario in VALIDATION_LANES):
         raise ValueError(f"BLOCKED: {scenario['blockedReason']}")
     if args.action == "plan":
         save(args.evidence / "plan.json", {"hostCount": 1, "scenario": scenario,
@@ -1735,8 +1928,15 @@ def main(argv=None):
     elif args.action == "preflight":
         preflight(args, scenario, commands)
     else:
-        with execution_lock(args.evidence):
-            execute(args, scenario, variants, commands)
+        def interrupted(signum, frame):
+            raise RuntimeError(f"Scenario interrupted by signal {signum}")
+        previous = {number: signal.signal(number, interrupted) for number in (signal.SIGINT, signal.SIGTERM)}
+        try:
+            with execution_lock(args.evidence):
+                execute(args, scenario, variants, commands)
+        finally:
+            for number, handler in previous.items():
+                signal.signal(number, handler)
     return 0
 
 

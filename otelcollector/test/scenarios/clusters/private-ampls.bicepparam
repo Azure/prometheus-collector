@@ -8,5 +8,6 @@ param kubernetesVersion = readEnvironmentVariable('SCENARIO_KUBERNETES_VERSION')
 param owner = readEnvironmentVariable('SCENARIO_OWNER')
 param windowsAdminPassword = readEnvironmentVariable('SCENARIO_WINDOWS_PASSWORD')
 param privateApi = true
+param proxyAdminSshPublicKey = readEnvironmentVariable('SCENARIO_PROXY_SSH_PUBLIC_KEY')
 param privateMonitoring = true
 param nodePools = defaultPools

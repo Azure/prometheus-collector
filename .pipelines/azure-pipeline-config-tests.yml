@@ -71,6 +71,9 @@ parameters:
   - classic-azure-cni
   - acns
   - otlp
+  - private
+  - proxy
+  - proxy-custom-ca
 
 variables:
   candidateCve: ${{ parameters.candidateCve }}
@@ -1251,6 +1254,7 @@ stages:
           [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
           [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Capacity test source does not match this pipeline revision" >&2; exit 1; }
           "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" campaign-preflight \
+            --validation-lane \
             --source-root "$CAPACITY_ROOT" --scenario "$CANDIDATE_SCENARIO" \
             --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA" \
             --build-id "$PRODUCER_BUILD_ID" --evidence "$CAPACITY_EVIDENCE"
@@ -1303,8 +1307,8 @@ stages:
         targetPath: $(capacityEvidence)
         artifact: candidate-capacity-$(Build.BuildId)
 
-- ${{ each scenario in split('default,classic-azure-cni,acns,otlp', ',') }}:
-  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
+- ${{ each scenario in split('default,classic-azure-cni,acns,otlp,private,proxy,proxy-custom-ca', ',') }}:
+  - ${{ if or(and(eq(parameters.candidateScenario, 'all'), notIn(scenario, 'private', 'proxy', 'proxy-custom-ca')), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
       lockBehavior: sequential

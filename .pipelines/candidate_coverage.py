@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 
-SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp")
+SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp", "private", "proxy", "proxy-custom-ca")
 SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
 
 
@@ -29,7 +29,7 @@ def plan(root, scenario):
     rows = {row["id"]: row for row in matrix["scenarios"]}
     runnable = {name for name, row in rows.items()
                 if not row.get("blockedReason") and name != "operator-secret-watch"}
-    if runnable != set(SCENARIOS):
+    if runnable - set(SCENARIOS):
         raise ValueError("Candidate selector does not account for every runnable matrix row")
     if scenario not in SCENARIOS:
         raise ValueError(f"Unsupported candidate scenario: {scenario}")

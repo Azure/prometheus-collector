@@ -116,12 +116,31 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
+      {
+        name: 'orchestrator'
+        properties: {
+          addressPrefix: '10.227.0.0/24'
+          defaultOutboundAccess: false
+        }
+      }
     ]
   }
 }
 var nodeSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'nodes')
 var endpointSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'endpoints')
 var proxySubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'proxy')
+
+module orchestrator 'orchestrator.bicep' = if (effectivePrivateApi) {
+  name: '${clusterName}-orchestrator'
+  params: {
+    name: '${clusterName}-runner'
+    location: location
+    tags: tags
+    subnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'orchestrator')
+    adminSshPublicKey: proxyAdminSshPublicKey
+  }
+  dependsOn: [guards]
+}
 
 resource proxyIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = if (proxyEnabled) {
   name: '${clusterName}-proxy-egress'
@@ -530,6 +549,9 @@ output oidcIssuerEnabled bool = workloadIdentityEnabled
 output azureCniMode string = dataplane == 'kubenet' ? '' : azureCniMode
 output resourceTags object = tags
 output privateApiEnabled bool = effectivePrivateApi
+output orchestratorVmName string = effectivePrivateApi ? orchestrator!.outputs.vmName : ''
+output orchestratorNsgName string = effectivePrivateApi ? orchestrator!.outputs.nsgName : ''
+output orchestratorPublicIp string = effectivePrivateApi ? orchestrator!.outputs.publicIp : ''
 output proxyVmId string = proxyEnabled ? proxyHost[0]!.outputs.vmId : ''
 output proxyVmName string = proxyEnabled ? proxyHost[0]!.outputs.vmName : ''
 output proxyEndpoint string = proxyEnabled ? proxyHost[0]!.outputs.endpoint : ''
