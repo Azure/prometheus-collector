@@ -1821,7 +1821,7 @@ def mutations():
         "query-auth-template": ("Bearer $token", "Bearer"),
         "fresh-sample": ("if not math.isfinite(observed) or not started <= observed <= time.time() + 60:", "if False:"),
         "empty-junit": ("if not executed or failed:", "if failed:"),
-        "cleanup-ownership": ('if any(group.get("tags", {}).get(k) != v for k, v in expected.items()):', "if False:"),
+        "cleanup-ownership": ('any(tags.get(k) != v for k, v in expected.items())', "False"),
         "retry-deployment-state": ('if properties.get("provisioningState") != "Succeeded":', "if False:"),
         "role-assignment-retry-loop": ('"do {\\n"', '"if ($false) {\\n"'),
         "managed-acns-enabled": (
