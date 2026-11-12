@@ -1319,6 +1319,7 @@ def campaign_preflight(args, matrix, commands):
               "subscription": args.subscription, "placements": placements, "existing": existing,
               "regions": regions, "capacityReserved": False}
     save(output, result)
+    print("CAMPAIGN_ADMISSION " + json.dumps(result), flush=True)
     return result
 
 
