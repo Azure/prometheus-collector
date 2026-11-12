@@ -1,12 +1,17 @@
 """Scan an authenticated candidate and released baseline with one private Trivy DB."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import sys
 
 import compare_trivy
 import fetch_candidate
 import scan_trivy
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from candidate_evidence import filter_json
 
 
 def run(build_id, commit, baseline, platform, requested, output, verified_candidate=None):
@@ -55,6 +60,39 @@ def main():
                  args.cve, args.output.resolve(), args.verified_candidate)
     print(json.dumps({"source": result["source"], "verdict": result["verdict"],
                       "comparison": str(args.output.resolve() / "comparison.json")}, indent=2))
+    secrets = sorted({value for key, value in os.environ.items()
+                      if len(value) >= 8 and re.search(r"(?i)token|secret|password", key)},
+                     key=len, reverse=True)
+    fields = ("id", "package", "path", "digest", "installed", "fixed", "severity")
+    reasons = {"OPEN": "finding remains in candidate", "CLOSED": "finding absent from covered package",
+               "NOT_REPORTED": "baseline finding or package not reported", "NEW": "new candidate finding"}
+
+    def public_finding(finding):
+        if finding is None:
+            return None
+        return {key: value if isinstance(value, str) else "[non-string field omitted]"
+                for key in fields if (value := finding.get(key)) is not None}
+
+    def log_row(label, row):
+        text = json.dumps(filter_json(row, secrets), ensure_ascii=True)
+        if len(text) <= 3000:
+            print(label + " " + text)
+        else:
+            parts = [text[index:index + 3000] for index in range(0, len(text), 3000)]
+            for index, part in enumerate(parts, 1):
+                print(label + "_PART " + json.dumps({"part": index, "parts": len(parts), "data": part}))
+
+    log_row("SCAN_IMAGES", {"baseline": result["baseline"]["requestedRef"],
+                            "candidate": result["candidate"]["requestedRef"]})
+    for row in result["baselineFindings"]:
+        public = {"status": row["status"], "reason": reasons[row["status"]],
+                  "baseline": public_finding(row["finding"]), "candidate": public_finding(row["candidateFinding"])}
+        log_row("SCAN_COMPARISON", public)
+    for finding in result["newFindings"]:
+        public = {"status": "NEW", "reason": reasons["NEW"], "candidate": public_finding(finding)}
+        log_row("SCAN_COMPARISON", public)
+    for row in result["smokeTests"]:
+        log_row("SCAN_SMOKE", {"id": row["id"], "status": row["status"], "reason": reasons[row["status"]]})
     return {"PASS": 0, "FAIL": 1, "BLOCKED": 2}[result["verdict"]]
 
 

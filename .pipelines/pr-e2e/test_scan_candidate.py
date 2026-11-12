@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+from contextlib import redirect_stdout
 import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -21,6 +23,42 @@ class CampaignScanTests(unittest.TestCase):
         }
         self.source = {"commit": "c" * 40, "buildId": "123"}
         self.receipt = {"source": self.source, "images": [self.image]}
+
+    def test_cli_logs_each_comparison_and_failure_reason_without_secrets(self):
+        baseline = {"id": "CVE-2026-63209", "package": "example/pkg/private-token-value", "path": "opt/main",
+                    "digest": "sha256:" + "a" * 64, "installed": "1", "fixed": "2",
+                    "evidence": "must-not-appear"}
+        new = dict(baseline, id="CVE-2026-99999", digest="sha256:" + "b" * 64, package="p" * 4000)
+        result = {"source": self.source, "verdict": "FAIL",
+                  "baseline": {"requestedRef": self.baseline}, "candidate": {"requestedRef": self.image["ref"]},
+                  "baselineFindings": [
+            {"finding": baseline, "candidateFinding": dict(baseline, installed="2"), "status": "OPEN"},
+            {"finding": dict(baseline, id="CVE-2026-11111"), "candidateFinding": None, "status": "CLOSED"},
+        ], "newFindings": [new], "smokeTests": [{"id": baseline["id"], "status": "OPEN"}]}
+        args = ["scan_candidate.py", "--build-id", "123", "--source-commit", self.source["commit"],
+                "--baseline-image", self.baseline, "--platform", "linux/amd64",
+                "--cve", baseline["id"], "--output", "evidence"]
+        output = io.StringIO()
+        with patch("sys.argv", args), patch.dict("os.environ", {"SYSTEM_ACCESSTOKEN": "private-token-value"}), \
+                patch.object(scan_candidate, "run", return_value=result), \
+                redirect_stdout(output):
+            self.assertEqual(scan_candidate.main(), 1)
+        text = output.getvalue()
+        for expected in ("CVE-2026-63209", "CVE-2026-11111", "CVE-2026-99999",
+                         "example/pkg", "opt/main", "OPEN", "CLOSED", "NEW",
+                         "finding remains in candidate", self.baseline, self.image["ref"]):
+            self.assertIn(expected, text)
+        rows = [json.loads(line.removeprefix("SCAN_COMPARISON ")) for line in text.splitlines()
+                if line.startswith("SCAN_COMPARISON ")]
+        parts = [json.loads(line.removeprefix("SCAN_COMPARISON_PART ")) for line in text.splitlines()
+                 if line.startswith("SCAN_COMPARISON_PART ")]
+        self.assertEqual([part["part"] for part in parts], list(range(1, len(parts) + 1)))
+        self.assertTrue(all(part["parts"] == len(parts) for part in parts))
+        rows.append(json.loads("".join(part["data"] for part in parts)))
+        self.assertEqual([row["status"] for row in rows], ["OPEN", "CLOSED", "NEW"])
+        self.assertEqual(rows[-1]["candidate"]["package"], "p" * 4000)
+        self.assertNotIn("must-not-appear", text)
+        self.assertNotIn("private-token-value", text)
 
     def test_validates_producer_then_scans_local_pair_with_one_database(self):
         comparison = {"source": self.source, "verdict": "PASS"}
