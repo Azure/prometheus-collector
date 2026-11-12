@@ -41,8 +41,9 @@ CAMPAIGN_LOCATIONS = {
     "acns": "eastus2", "otlp": "centralus",
     "private": "westcentralus", "proxy": "westcentralus", "proxy-custom-ca": "westcentralus",
     "ampls": "centralus", "ampls-acns": "eastus2", "private-ampls": "westcentralus",
+    "ampls-proxy": "westcentralus",
 }
-VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca", "ampls", "ampls-acns", "private-ampls"}
+VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca", "ampls", "ampls-acns", "private-ampls", "ampls-proxy"}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -1147,7 +1148,7 @@ def network_probe_monitor(host, marker):
         raise RuntimeError("Run-specific proxy-from-environment scrape monitor did not read back")
 
 
-def verify_proxy(host, outputs, started):
+def verify_proxy(host, outputs, started, ampls_proof=None):
     pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
     sources = set()
     for pod in pods:
@@ -1168,6 +1169,13 @@ def verify_proxy(host, outputs, started):
     if not bypass:
         raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
     endpoint = outputs["dceMetricsIngestionEndpoint"]
+    if ampls_proof is not None:
+        bypass.update(ip for addresses in ampls_proof["endpointAddresses"].values() for ip in addresses)
+        bypass.update(ampls_proof["hosts"].values())
+        endpoint = "https://management.azure.com/metadata/endpoints?api-version=2020-06-01"
+        host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
+                  "--", "curl", "--fail", "--silent", "--show-error", "--connect-timeout", "10",
+                  "--max-time", "30", "--output", "/dev/null", endpoint)
     host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
               "--", "sh", "-c",
               'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
@@ -1187,7 +1195,8 @@ def verify_proxy(host, outputs, started):
         raise RuntimeError("Collector proxy route proof failed: " + result.get("error", "missing result"))
     result.update(directWebDenied=True, scrapeProxyFromEnvironment=True,
                   bypassTargets=sorted(bypass), logSource="complete owned Squid access.log",
-                  ingestionHostname=urlparse(endpoint).hostname)
+                  routePurpose="public-dependency" if ampls_proof is not None else "metrics-ingestion")
+    result["publicDependencyHostname" if ampls_proof is not None else "ingestionHostname"] = urlparse(endpoint).hostname
     save(host.args.evidence / "proxy-proof.json", result)
     print("Collector proxy proof: " + json.dumps(result), flush=True)
     return result
@@ -1811,7 +1820,7 @@ def execute(args, scenario, variants, commands):
         if "custom-ca" in scenario["clusterFeatures"]:
             outcome["ca"] = verify_ca_recovery(host, outputs, network_probe_monitor, verify_ingestion)
         if "http-proxy" in scenario["clusterFeatures"]:
-            outcome["proxy"] = verify_proxy(host, outputs, proxy_started)
+            outcome["proxy"] = verify_proxy(host, outputs, proxy_started, outcome.get("ampls"))
         save(args.evidence / "images-after.json", audit_images(host, images))
         outcome["status"] = "TESTS_PASSED"
     except (RuntimeError, ValueError, KeyError, OSError, ET.ParseError, yaml.YAMLError) as failure:

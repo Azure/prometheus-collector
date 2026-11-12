@@ -443,9 +443,9 @@ class CandidateEvidenceTest(unittest.TestCase):
                                   if p.get("name") == "candidateScenario")
         self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS, *VALIDATION_SCENARIOS])
         self.assertIn("split('" + ",".join((*SCENARIOS, *VALIDATION_SCENARIOS)) + "', ',')", pipeline_path.read_text())
-        self.assertIn("notIn(scenario, 'private', 'proxy', 'proxy-custom-ca', 'ampls', 'ampls-acns', 'private-ampls')",
+        self.assertIn("notIn(scenario, 'private', 'proxy', 'proxy-custom-ca', 'ampls', 'ampls-acns', 'private-ampls', 'ampls-proxy')",
                       pipeline_path.read_text())
-        self.assertIn("in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'private-ampls')",
+        self.assertIn("in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'private-ampls', 'ampls-proxy')",
                       Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())

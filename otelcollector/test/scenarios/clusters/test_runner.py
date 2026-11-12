@@ -63,6 +63,71 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_failed_ampls_and_private_hosts_remain_deletion_protected(self):
+        for feature in ("ampls", "private-api"):
+            with self.subTest(feature=feature), tempfile.TemporaryDirectory() as directory:
+                args = types.SimpleNamespace(evidence=Path(directory), subscription=runner.BUILD_SUBSCRIPTION)
+                host = runner.Host(args, {"clusterFeatures": [feature]}, Mock())
+                host.receipt = {"resourceGroup": "owned", "subscription": args.subscription}
+                host.assert_owned = Mock(return_value={"id": "/owned", "tags": {}})
+                host.protect_host = Mock()
+                host.az = Mock(side_effect=["true", [], []])
+                self.assertTrue(host.retain()["retained"])
+                host.protect_host.assert_called_once()
+
+    def test_ampls_proxy_routes_public_dependency_but_never_private_monitors(self):
+        private = {"endpointAddresses": {"monitor": ["10.225.0.4"], "query": ["10.225.0.5"]},
+                   "hosts": {"configuration": "config.monitor.azure.com",
+                             "ingestion": "ingest.monitor.azure.com", "query": "query.monitor.azure.com"}}
+        metadata = "https://management.azure.com/metadata/endpoints?api-version=2020-06-01"
+        outputs = {"proxyEndpoint": "http://10.226.0.4:3128", "proxyNoProxyCsv": ".monitor.azure.com",
+                   "proxyVmName": "owned", "dceMetricsIngestionEndpoint": "https://ingest.monitor.azure.com"}
+        for case in ("valid", "normal", "private-ip", "private-host", "missing-public"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                host = Mock()
+                host.args.evidence = Path(directory)
+
+                def kube(*args, **kwargs):
+                    if args[:2] == ("get", "pods"):
+                        if "kube-system" in args:
+                            return {"items": [{"metadata": {"name": "collector"},
+                                               "spec": {"containers": [{"name": "prometheus-collector"}]},
+                                               "status": {"podIP": "10.244.0.2", "hostIP": "10.224.0.4"}}]}
+                        return {"items": [{"status": {"podIP": "10.244.0.3"}}]}
+                    if "printf" in args[-1]:
+                        return "\n".join([outputs["proxyEndpoint"]] * 2 + [outputs["proxyNoProxyCsv"]])
+                    return ""
+
+                def vm_script(host, name, script):
+                    destination = "ingest.monitor.azure.com" if case == "normal" else "management.azure.com"
+                    log = f"101.000 10.244.0.2 CONNECT {destination} 200 HIER_DIRECT/1.2.3.4\n"
+                    if case == "missing-public":
+                        log = ""
+                    elif case in ("private-ip", "private-host"):
+                        destination = "10.225.0.4" if case == "private-ip" else "query.monitor.azure.com"
+                        log += f"101.001 10.244.0.2 CONNECT {destination} 200 HIER_DIRECT/10.225.0.4\n"
+                    with patch("builtins.open", return_value=io.StringIO(log)), \
+                            patch("sys.stdout", new_callable=io.StringIO) as stdout:
+                        exec(script.split("\n", 1)[1].rsplit("\nPY", 1)[0], {})
+                    return runner.json.loads(stdout.getvalue().split("SCENARIO_RESULT=", 1)[1])
+
+                host.kube.side_effect = kube
+                with patch.object(runner, "vm_script", side_effect=vm_script):
+                    if case in ("valid", "normal"):
+                        result = runner.verify_proxy(host, outputs, 100, None if case == "normal" else private)
+                        if case == "valid":
+                            self.assertEqual(result["routePurpose"], "public-dependency")
+                            self.assertEqual(result["publicDependencyHostname"], "management.azure.com")
+                            calls = [call.args for call in host.kube.call_args_list if call.args[-1] == metadata]
+                            self.assertEqual(len(calls), 2)
+                            self.assertIn("--fail", calls[0])
+                            self.assertIn("direct-egress-denial", calls[1])
+                        else:
+                            self.assertEqual(result["ingestionHostname"], "ingest.monitor.azure.com")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "proxy route proof"):
+                            runner.verify_proxy(host, outputs, 100, private)
+
     def test_private_api_recovery_rejects_nonprivate_scenarios(self):
         for scenario_id in ("private-ampls", "ampls", "default", "unknown"):
             with self.subTest(scenario=scenario_id), tempfile.TemporaryDirectory() as directory:
@@ -1860,6 +1925,13 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "ampls-failed-retention-protection": (
+            '{"private-api", "ampls"} & set(self.scenario.get("clusterFeatures", []))', 'False'),
+        "ampls-proxy-public-dependency": ('if ampls_proof is not None:', 'if False:'),
+        "ampls-proxy-private-host-bypass": ('bypass.update(ampls_proof["hosts"].values())', 'pass'),
+        "ampls-proxy-private-ip-bypass": (
+            'bypass.update(ip for addresses in ampls_proof["endpointAddresses"].values() for ip in addresses)',
+            'pass'),
         "private-recovery-feature": (
             '"private-api" not in scenario["clusterFeatures"]',
             'False'),

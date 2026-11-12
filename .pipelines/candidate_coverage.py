@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp")
-VALIDATION_SCENARIOS = ("private", "proxy", "proxy-custom-ca", "ampls", "ampls-acns", "private-ampls")
+VALIDATION_SCENARIOS = ("private", "proxy", "proxy-custom-ca", "ampls", "ampls-acns", "private-ampls", "ampls-proxy")
 SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
 
 

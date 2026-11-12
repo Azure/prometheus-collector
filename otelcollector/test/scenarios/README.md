@@ -44,9 +44,12 @@ The later independent proof still rejects public access or wrong associations.
 `ampls-acns` reuses the non-Cilium managed-ACNS traffic/ingestion spec.
 `AMPLS_PROOF`, `AMPLS_PRIVATE_INGESTION` and `CANDIDATE_JUNIT` records are emitted
 directly to build logs. `private-ampls` reuses the private-API SSH context and its
-owned VNet orchestrator. `ampls-proxy` stays blocked until its forced public-proxy
-and private-monitor NO_PROXY evidence is implemented; private ingestion must not
-be asserted to traverse the public proxy.
+owned VNet orchestrator. `ampls-proxy` routes a public ARM metadata request through
+the proxy and rejects direct public web egress. Complete proxy logs must exclude
+the private monitor/query hostnames, their verified private IPs, and reference
+scrape targets. Its private ingestion/query proof is separate, never reported as
+ingestion through the proxy. Both dependent lanes remain opt-in with production
+coverage blocked until their live proofs pass.
 
 ## Prerequisites
 
