@@ -157,6 +157,24 @@ class Contracts(unittest.TestCase):
                     process.terminate.assert_called_once()
                     self.assertEqual(host.commands.deadline, 123)
 
+    def test_private_api_rejects_public_profile_before_opening_a_tunnel(self):
+        adapter = sys.modules["clusters.private_api"]
+        for profile in ({"enablePrivateCluster": False, "enablePrivateClusterPublicFqdn": False},
+                        {"enablePrivateCluster": True, "enablePrivateClusterPublicFqdn": True}):
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as directory:
+                host = Mock()
+                host.scenario = {"clusterFeatures": ["private-api"]}
+                host.receipt = {"resourceGroup": "owned"}
+                host.kubeconfig = Path(directory) / "kubeconfig"
+                fqdn = "sc.privatelink.westcentralus.azmk8s.io"
+                host.kubeconfig.write_text(runner.yaml.safe_dump(
+                    {"clusters": [{"cluster": {"server": "https://" + fqdn}}]}))
+                host.az.return_value = {"privateFqdn": fqdn, "apiServerAccessProfile": profile}
+                with patch.object(adapter, "urlopen") as discover, self.assertRaisesRegex(RuntimeError, "private-only"):
+                    with adapter.private_api(host, {"clusterName": "sc"}):
+                        self.fail("Public API profile entered the tunnel")
+                discover.assert_not_called()
+
     def test_proxy_adapter_injects_collector_environment_and_public_trust_only(self):
         documents = [
             {"kind": kind, "spec": {"template": {"spec": {"containers": [

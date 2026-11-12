@@ -1486,7 +1486,7 @@ def deployment_env(args, version, proxy=False):
     if proxy:
         executable = shutil.which("ssh-keygen")
         if not executable:
-            raise RuntimeError("ssh-keygen is required to mint an owned proxy VM public key")
+            raise RuntimeError("ssh-keygen is required to mint an owned private/proxy VM public key")
         with tempfile.TemporaryDirectory(prefix="ama-proxy-key-") as directory:
             key = Path(directory) / "key"
             subprocess.run([executable, "-q", "-t", "rsa", "-b", "3072", "-N", "", "-C", "ama-metrics-e2e",
