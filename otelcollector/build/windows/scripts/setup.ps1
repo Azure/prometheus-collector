@@ -14,17 +14,7 @@ New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAc
 New-Item -Type Directory -Path /etc/genevamonitoringagent
 New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyContinue
 ############################################################################################
-Write-Host ('Installing Visual C++ Redistributable Package')
-$vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
-$vcInstallerLocation = "\installation\vc_redist.x64.exe"
-$vcArgs = "/install /quiet /norestart /log \installation\vcredist.log"
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
-Write-Host 'Finished downloading Visual C++ Redistributable Package'
-$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
-# Retain the process handle so Windows PowerShell can read ExitCode after exit.
-$vcInstaller.Handle | Out-Null
-############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
     Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.227.1509.zip
@@ -56,6 +46,26 @@ catch {
 }
 Write-Host ('Finished installing fluentbit')
 ############################################################################################
+Write-Host ('Installing Visual C++ Redistributable Package')
+$vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
+$vcInstallerLocation = "\installation\vc_redist.x64.exe"
+$vcArgs = "/install /quiet /norestart /log \installation\vcredist.log"
+Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
+Write-Host 'Finished downloading Visual C++ Redistributable Package'
+$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
+# Retain the process handle so Windows PowerShell can read ExitCode after exit.
+$vcInstaller.Handle | Out-Null
+$vcInstaller.WaitForExit()
+Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
+Get-Content -Path '\installation\vcredist*.log' -ErrorAction Stop
+if ($vcInstaller.ExitCode -notin @(0, 3010)) {
+    throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
+}
+Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
+Write-Host ('Finished Installing Visual C++ Redistributable Package')
+############################################################################################
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
@@ -86,17 +96,6 @@ catch {
     exit 1
 }
 Write-Host ('Finished downloading GenevaMonitoringAgent')
-############################################################################################
-$vcInstaller.WaitForExit()
-Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
-Get-Content -Path '\installation\vcredist*.log' -ErrorAction Stop
-if ($vcInstaller.ExitCode -notin @(0, 3010)) {
-    throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
-}
-Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
-Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
-Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
-Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ############################################################################################
 Write-Host ("Removing Install folder")
 Remove-Item /installation -Recurse

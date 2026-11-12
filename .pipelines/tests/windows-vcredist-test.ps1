@@ -4,11 +4,17 @@ $setup = Get-Content $setupPath -Raw
 $start = [regex]::Match($setup, "(?s)Write-Host \('Installing Visual C\+\+ Redistributable Package'\).*?\`$vcInstaller.Handle \| Out-Null")
 $finish = [regex]::Match($setup, "(?s)\`$vcInstaller.WaitForExit\(\).*?Write-Host \('Finished Installing Visual C\+\+ Redistributable Package'\)")
 if (-not $start.Success -or -not $finish.Success) { throw 'VC++ setup blocks not found' }
-foreach ($marker in @('Finished installing Metrics Extension', 'Finished installing fluentbit', 'Finished downloading Telegraf', 'Finished downloading GenevaMonitoringAgent')) {
-    $position = $setup.IndexOf($marker)
-    if ($position -lt $start.Index + $start.Length -or $position -gt $finish.Index) {
-        throw "Component setup does not overlap installer: $marker"
-    }
+$progressIndex = $setup.IndexOf("`$ProgressPreference = 'SilentlyContinue'")
+$firstDownload = $setup.IndexOf('Invoke-WebRequest')
+if ($progressIndex -lt 0 -or $progressIndex -gt $firstDownload) {
+    throw 'Progress output must be suppressed before the first download'
+}
+foreach ($marker in @('Finished installing Metrics Extension', 'Finished installing fluentbit')) {
+    if ($start.Index -lt $setup.IndexOf($marker)) { throw "VC++ install must follow $marker" }
+}
+$telegraf = $setup.IndexOf("Write-Host ('Installing Telegraf')")
+if ($telegraf -lt ($finish.Index + $finish.Length)) {
+    throw 'VC++ install must finish before Telegraf setup'
 }
 $install = [scriptblock]::Create($start.Value + "`n" + $finish.Value)
 
