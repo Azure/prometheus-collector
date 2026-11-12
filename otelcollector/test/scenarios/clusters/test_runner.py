@@ -76,27 +76,34 @@ class Contracts(unittest.TestCase):
                                  "--test-source-root", str(test_source), "--test-source-sha", "a" * 40,
                                  "--build-id", "123", "--evidence", directory, flag, directory])
 
-    def test_retry_reuses_only_exact_live_candidate_deployment(self):
+    def test_persistent_reuse_requires_owned_contract_and_locked_fresh_execution(self):
         pools = pool_parameters()["nodePools"]
-        expiry = "2099-01-01T00:00:00Z"
-        token = "12345678-1234-1234-1234-123456789abc"
+        name, owner = runner.persistent_identity("mixed")
         cluster_id = "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ContainerService/managedClusters/sc"
         outputs = {
             "clusterId": cluster_id, "clusterName": "sc", "location": "eastus2",
             "nodeResourceGroupName": "node-rg", "amwManagedResourceGroupName": "amw-rg",
             "expectedPools": pools, "addonEnabled": False, "installationMode": "candidate-addon",
-            "identityType": "SystemAssigned",
+            "identityType": "SystemAssigned", "azureCniMode": "overlay",
             "resourceTags": {"owner": "ama-metrics-e2e", "scenario": "mixed",
-                             "run": "run", "expiresAt": expiry},
+                             "run": owner},
         }
-        for case in ("valid", "run", "deployment-state", "deployment-output", "cluster"):
+        pipeline = runner.yaml.safe_load((runner.REPO / ".pipelines/azure-pipeline-config-tests.yml").read_text())
+        loop = next(row for row in pipeline["stages"] if any(
+            key.startswith("${{ each scenario in split(") for key in row))
+        stage = next(iter(next(iter(loop.values()))[0].values()))[0]
+        self.assertEqual(stage["lockBehavior"], "sequential")
+        for case in ("valid", "new", "appeared", "active-deployment", "run", "expiry", "deployment-state",
+                     "deployment-output", "cluster", "cluster-pools", "missing-admitted"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 tags = {
-                    "scenario-token": token, "scenario-run": "run", "scenario": "mixed",
-                    "owner": "ama-metrics-e2e", "expiresAt": expiry,
+                    "scenario-token": owner, "scenario-run": owner, "scenario": "mixed",
+                    "owner": "ama-metrics-e2e",
                 }
                 if case == "run":
                     tags["scenario-run"] = "other"
+                if case == "expiry":
+                    tags["expiresAt"] = "2099-01-01T00:00:00Z"
                 deployment_outputs = copy.deepcopy(outputs)
                 if case == "deployment-output":
                     deployment_outputs["expectedPools"] = []
@@ -109,24 +116,45 @@ class Contracts(unittest.TestCase):
                     "provisioningState": "Succeeded", "powerState": {"code": "Running"},
                     "kubernetesVersion": "1.36.5", "nodeResourceGroup": "node-rg",
                     "identity": {"type": "SystemAssigned"},
+                    "networkProfile": {"networkPlugin": "azure", "networkPluginMode": "overlay"},
+                    "agentPoolProfiles": [{
+                        "name": pool["name"], "osType": pool["osType"], "osSKU": pool["osSKU"],
+                        "vmSize": pool["vmSize"], "mode": pool["mode"], "enableFIPS": pool["fips"],
+                        "enableAutoScaling": pool["autoscaling"], "count": pool["count"],
+                        "upgradeSettings": {"maxSurge": pool["maxSurge"]},
+                    } for pool in pools],
                 }
+                if case == "cluster-pools":
+                    cluster["agentPoolProfiles"] = []
                 host = runner.Host(types.SimpleNamespace(
                     evidence=Path(directory), subscription="sub", run_id="run", location="eastus2",
-                    reuse_existing=True,
+                    admitted_existing=case == "missing-admitted",
                 ), scenario(), Mock())
-                host.az = Mock(side_effect=[
-                    [{"name": "rg", "location": "eastus2", "tags": tags}],
-                    {"location": "eastus2", "tags": tags}, deployment, cluster,
-                ])
-                env = {"SCENARIO_EXPIRES_AT": expiry, "SCENARIO_KUBERNETES_VERSION": "1.36.5"}
-                if case == "valid":
+                group = {"location": "eastus2", "tags": tags}
+                if case == "new":
+                    calls = ["false", "false", {}, deployment]
+                elif case == "appeared":
+                    calls = ["false", "true", group, [{"id": cluster_id}], [], deployment]
+                elif case == "active-deployment":
+                    calls = ["false", "true", group, [], [{"properties": {"provisioningState": "Running"}}],
+                             deployment]
+                else:
+                    calls = ["false" if case == "missing-admitted" else "true",
+                             group, [{"id": cluster_id}], deployment, cluster]
+                host.az = Mock(side_effect=calls)
+                env = {"SCENARIO_KUBERNETES_VERSION": "1.36.5"}
+                if case in ("valid", "new"):
                     result = host.provision(env, "principal", "User", pools)
                     self.assertEqual(result["clusterName"], "sc")
-                    self.assertTrue((Path(directory) / "retry-reuse.json").is_file())
+                    self.assertEqual(host.reused, case == "valid")
+                    self.assertEqual(host.receipt["resourceGroup"], name)
+                    self.assertEqual(host.receipt["runId"], owner)
+                    self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(), case == "valid")
                 else:
-                    with self.assertRaises(ValueError):
+                    with self.assertRaises((ValueError, RuntimeError)):
                         host.provision(env, "principal", "User", pools)
-                self.assertFalse(any("group create" in str(call) for call in host.az.call_args_list))
+                creates = [call for call in host.az.call_args_list if call.args[:2] == ("group", "create")]
+                self.assertEqual(len(creates), int(case == "new"))
 
     def test_candidate_harness_region_guard_matches_campaign_locations(self):
         template = (runner.REPO / ".pipelines/azure-template-candidate-config-tests.yml").read_text(
@@ -167,6 +195,8 @@ class Contracts(unittest.TestCase):
             return parameters
 
         def command(args, **kwargs):
+            if args[:3] == ["az", "group", "exists"]:
+                return "false"
             if args[:3] == ["az", "aks", "get-versions"]:
                 return {"values": [{"isDefault": True, "patchVersions": {"1.36.5": {}}}]}
             if args[:3] == ["az", "vm", "list-skus"]:
@@ -214,6 +244,16 @@ class Contracts(unittest.TestCase):
                     {row["name"]: row["additional"]
                      for row in result["regions"]["centralus"]["quota"]}
                     ["standarddpsv5family"], 24)
+                args.evidence = Path(temporary) / "existing"
+                with patch.object(runner.Host, "persistent_state", autospec=True,
+                                  side_effect=lambda host, env, pools: {"clusterName": "existing"}
+                                  if host.scenario["id"] == "default" else None):
+                    reused = runner.campaign_preflight(args, matrix, commands)
+                quota = {row["name"]: row["additional"] for row in reused["regions"]["centralus"]["quota"]}
+                self.assertEqual((quota["cores"], quota["standarddsv4family"], quota["standarddpsv5family"]),
+                                 (64, 52, 12))
+                self.assertTrue(reused["existing"]["default"])
+                args.evidence = Path(temporary)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
                 (args.evidence / "campaign-preflight.json").unlink()
@@ -628,12 +668,13 @@ class Contracts(unittest.TestCase):
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                          location="eastus2")
             host = runner.Host(args, scenario(), Mock())
-            host.az = Mock(side_effect=[[], "false", {}])
+            host.az = Mock(side_effect=["false", {}])
             host.wait_for_rbac = Mock(side_effect=RuntimeError("waiting"))
-            with self.assertRaisesRegex(RuntimeError, "waiting"):
-                host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", "ServicePrincipal")
-            self.assertEqual(host.az.call_count, 3)
+            with patch.object(host, "persistent_state", return_value=None), self.assertRaisesRegex(RuntimeError, "waiting"):
+                host.provision({}, "principal", "ServicePrincipal", pool_parameters()["nodePools"])
+            self.assertEqual(host.az.call_count, 2)
             host.wait_for_rbac.assert_called_once_with("principal")
+            host.receipt["resourceGroup"] = "owned"
             host.receipt["managedGroups"] = []
             host.receipt["rbacBootstrapScope"] = "/subscriptions/sub/resourceGroups/owned"
             host.az = Mock(side_effect=["false", [{"scope": "/SUBSCRIPTIONS/SUB/RESOURCEGROUPS/OWNED"}]])
@@ -656,15 +697,15 @@ class Contracts(unittest.TestCase):
                 "The client 'app-id' with object id 'principal-id' does not have permission to "
                 "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
             host.az = Mock(side_effect=[
-                [], "false", None, failure,
+                "false", None, failure,
                 {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
             ])
-            with patch.object(host, "wait_for_rbac"), \
+            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "verify_deployment"), patch.object(host, "wait_for_rbac"), \
                     patch.object(runner.time, "monotonic", side_effect=[0, 0, 5]), \
                     patch.object(runner.time, "sleep") as sleep, \
                     patch("sys.stdout", new=io.StringIO()):
-                self.assertEqual(host.provision({"SCENARIO_EXPIRES_AT": "future"},
-                                                "principal", "ServicePrincipal"), outputs)
+                self.assertEqual(host.provision({}, "principal", "ServicePrincipal",
+                                                pool_parameters()["nodePools"]), outputs)
             deployment_calls = [call for call in host.az.call_args_list
                                 if call.args[:3] == ("deployment", "group", "create")]
             self.assertEqual(len(deployment_calls), 2)
@@ -683,10 +724,10 @@ class Contracts(unittest.TestCase):
                 args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                              location="eastus2")
                 host = runner.Host(args, scenario(), Mock())
-                host.az = Mock(side_effect=[[], "false", None, RuntimeError(failure)])
-                with patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
+                host.az = Mock(side_effect=["false", None, RuntimeError(failure)])
+                with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
                     with self.assertRaises(RuntimeError) as error:
-                        host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", principal_type)
+                        host.provision({}, "principal", principal_type, pool_parameters()["nodePools"])
                 self.assertEqual(str(error.exception), failure)
                 deployment_calls = [call for call in host.az.call_args_list
                                     if call.args[:3] == ("deployment", "group", "create")]
@@ -723,12 +764,12 @@ class Contracts(unittest.TestCase):
                 delays.append(delay)
                 now[0] += delay
 
-            with patch.object(host, "wait_for_rbac"), \
+            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), \
                     patch.object(runner.time, "monotonic", side_effect=lambda: now[0]), \
                     patch.object(runner.time, "sleep", side_effect=sleep), \
                     patch("sys.stdout", new=io.StringIO()):
                 with self.assertRaisesRegex(RuntimeError, "roleAssignments/write"):
-                    host.provision({"SCENARIO_EXPIRES_AT": "future"}, "principal", "ServicePrincipal")
+                    host.provision({}, "principal", "ServicePrincipal", pool_parameters()["nodePools"])
             deployment_calls = [call for call in host.az.call_args_list
                                 if call.args[:3] == ("deployment", "group", "create")]
             self.assertGreater(len(deployment_calls), 1)
@@ -840,12 +881,13 @@ class Contracts(unittest.TestCase):
             args = types.SimpleNamespace(
                 evidence=evidence, build_id=1, max_run_seconds=60, run_id="00000000-0000-0000-0000-000000000001",
                 subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0, test_source_sha="b" * 40,
+                admitted_existing=False,
             )
             row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=[])
             commands = runner.Commands(evidence)
             with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
                     patch.object(runner, "label_filter", return_value=""), \
-                    patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.36.5"}), \
+                    patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.36.5", "existing": False}), \
                     patch.object(runner, "candidate_receipt", return_value=([], {})), \
                     patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
                     patch.object(runner, "deployment_env", return_value={}), \
@@ -1193,7 +1235,8 @@ class Contracts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             host = Mock()
             host.args.evidence = Path(temporary)
-            host.receipt = {"token": "fresh-run-marker"}
+            host.args.run_id = "fresh-run-marker"
+            host.receipt = {"token": "persistent-owner"}
             host.commands.run.return_value = "test-token"
             host.commands.deadline = None
             host.kube.return_value = {"status": "success", "data": {"resultType": "vector", "result": [
@@ -1209,6 +1252,11 @@ class Contracts(unittest.TestCase):
             self.assertIn("Bearer $token", call.args[call.args.index("sh") + 2])
             self.assertEqual(call.kwargs["data"], "test-token\n")
             self.assertTrue(call.kwargs["private"])
+            host.args.run_id = "next-run-marker"
+            with patch.object(runner.time, "time", return_value=110):
+                next_run = runner.verify_ingestion(host, {"queryEndpoint": "https://amw.example"}, 100)
+            self.assertIn('scenario_run="next-run-marker"', next_run["query"])
+            self.assertNotEqual(result["query"], next_run["query"])
             for response in (
                 {"status": "error", "data": {"result": []}},
                 {"status": "success", "data": {"resultType": "vector", "result": [{"value": [99, "99"]}]}},
@@ -1226,6 +1274,7 @@ class Contracts(unittest.TestCase):
             host.receipt = {"resourceGroup": "owned"}
             host.scenario = {"clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
+            existing_roles = []
             cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
                        "kubernetesVersion": "1.36.5", "autoUpgradeProfile": {"upgradeChannel": "stable"},
                        "securityProfile": {"workloadIdentity": {"enabled": True}}}
@@ -1235,6 +1284,8 @@ class Contracts(unittest.TestCase):
                     return identity
                 if args[:2] == ("aks", "show"):
                     return cluster
+                if args[:3] == ("role", "assignment", "list"):
+                    return existing_roles
                 return {}
 
             def kube(*args, **kwargs):
@@ -1252,6 +1303,14 @@ class Contracts(unittest.TestCase):
             for args in role_calls:
                 self.assertEqual(args[args.index("--scope") + 1], "/owned/workspace")
                 self.assertEqual(args[args.index("--role") + 1], "b0d8363b-8ddd-447d-831f-62ca05bff136")
+            existing_roles.extend({
+                "scope": "/owned/workspace", "principalId": object_id,
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136",
+            } for object_id in ("identity-object", "caller-object"))
+            host.az.reset_mock()
+            runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertFalse(any(c.args[:3] == ("role", "assignment", "create")
+                                 for c in host.az.call_args_list))
             federation = next(c.args for c in host.az.call_args_list if c.args[:2] == ("identity", "federated-credential"))
             self.assertEqual(federation[federation.index("--issuer") + 1], "https://issuer.example/")
             proof = runner.load(Path(temporary) / "testkube-bootstrap.json")

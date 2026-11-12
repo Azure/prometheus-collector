@@ -60,14 +60,13 @@ The build subscription is explicitly restricted to
 failed cluster is an implicit target. The runner creates a separately owned
 resource group and validates its recorded ownership tags before recording the
 parent and AKS-managed resource groups.
-Infrastructure remains provisioned after every run, including failed runs, until
-the explicit `cleanup` action is requested. Its generated names are derived from
-the recorded execution identity; a first attempt refuses an existing group.
-An explicit same-build ADO retry reuses only the same build/scenario run ID after
-checking its ownership, expiry, retained deployment and live AKS state. New builds
-never reuse old resources. Do not start the same execution/evidence directory concurrently on multiple machines;
-the calling protected runner must serialize that execution. Separate fresh
-executions do not share clusters.
+Each campaign profile uses one deterministic persistent resource group. The first
+run provisions it; later builds reuse it only after verifying ownership, deployment,
+location, topology and live AKS state. Persistent resources have no expiry tag and
+the runner refuses to clean them up. Older run-owned groups are not adopted.
+Pipeline 979 uses a sequential stage-level exclusive lock per profile. Direct
+execution outside the corresponding locked 979 stage is refused; each attempt has
+a separate execution ID and ingestion marker.
 
 Before provisioning any host in a full campaign, run the read-only aggregate
 admission once against its clean, exact-source checkout:
@@ -82,9 +81,10 @@ producer `buildId` to a `placements` map and regional `compute`/`quota` evidence
 The producer ID is a correlation field here; the existing authenticated candidate
 verifier remains mandatory before deployment. `acns` runs in `eastus2`;
 `default`, `classic-azure-cni` and `otlp` run in `centralus`.
-Every pool's autoscaler
-maximum **and** declared surge counts toward the simultaneous regional and
-VM-family peak, including clusters retained after their tests finish.
+New pools' autoscaler maximum **and** declared surge count toward the simultaneous
+regional and VM-family peak. Verified existing pools are already in current usage;
+only their declared surge is added. An admitted existing host that disappears fails
+closed rather than being recreated without admission.
 
 The pipeline must require successful admission and use its per-row location
 outputs. Failure emits no success receipt. This is a point-in-time check, not a
@@ -229,12 +229,9 @@ when cloud cleanup fails. CI publication must unconditionally exclude credential
 files in case the process was killed before `finally`.
 When an administrator bootstrap was recorded, cleanup also verifies its role
 assignment disappeared after deleting the owned group.
-A four-hour execution
-budget bounds commands; retention recording and kubeconfig removal still run after
-the budget expires. Explicit cleanup remains available after the budget expires.
-`--max-run-seconds` changes that explicit budget. Expiry tags include cleanup grace,
-but tags alone do not automatically delete Azure resources. To explicitly remove a
-retained execution, use:
+A four-hour execution budget bounds commands; retention recording and kubeconfig
+removal still run after the budget expires. `--max-run-seconds` changes that budget.
+The cleanup action applies only to earlier nonpersistent executions:
 
 ```powershell
 python otelcollector\test\scenarios\run-scenario.py cleanup --evidence C:\temp\ama-candidate-run

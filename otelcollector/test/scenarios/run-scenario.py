@@ -4,7 +4,6 @@
 import argparse
 import copy
 from contextlib import contextmanager
-from datetime import datetime
 from functools import cache
 import hashlib
 import json
@@ -313,6 +312,13 @@ RBAC_ALLOWED_ROLES = [
 RBAC_PROXY_READER = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 
 
+def persistent_identity(scenario):
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", scenario):
+        raise ValueError("Invalid persistent scenario identity")
+    owner = str(uuid.uuid5(uuid.NAMESPACE_URL, "ama-metrics-persistent:" + scenario))
+    return "ama-e2e-persistent-" + scenario, owner
+
+
 def rbac_condition(allowed):
     clauses = []
     for action, source in (("write", "Request"), ("delete", "Resource")):
@@ -331,6 +337,7 @@ class Host:
         self.kubeconfig = args.evidence / "kubeconfig"
         self.receipt_path = args.evidence / "ownership.json"
         self.receipt = None
+        self.reused = False
 
     def az(self, *args, **kwargs):
         return self.commands.run(["az", *args, "--subscription", self.args.subscription,
@@ -346,25 +353,37 @@ class Host:
     def provision(self, env, principal, principal_type, expected_pools=None):
         if self.receipt_path.exists() or self.kubeconfig.exists():
             raise ValueError("An ownership receipt or kubeconfig already exists; cleanup that execution first")
-        if getattr(self.args, "reuse_existing", False):
-            return self.reuse_existing(env, expected_pools)
-        if self.az("group", "list", "--tag", f"scenario-run={self.args.run_id}",
-                   json_output=True):
-            raise ValueError("A resource group already exists for this run; refusing duplicate provisioning")
-        token = str(uuid.uuid4())
-        name = "ama-e2e-" + hashlib.sha256(
-            (self.args.run_id + self.scenario["id"] + token).encode()).hexdigest()[:14]
-        if self.az("group", "exists", "--name", name).strip() != "false":
-            raise ValueError("Refusing to take over an existing resource group")
+        name, owner = persistent_identity(self.scenario["id"])
+        existing = self.persistent_state(env, expected_pools)
+        if existing:
+            self.reused = True
+            save(self.receipt_path, self.receipt)
+            save(self.args.evidence / "deployment.json", existing)
+            save(self.args.evidence / "persistent-reuse.json", {
+                "status": "verified", "resourceGroup": name, "runId": self.args.run_id,
+                "scenario": self.scenario["id"], "location": self.args.location,
+            })
+            return existing
+        if getattr(self.args, "admitted_existing", False):
+            raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
         self.receipt = {"subscription": self.args.subscription, "resourceGroup": name,
-                        "runId": self.args.run_id, "scenario": self.scenario["id"], "token": token}
+                        "runId": owner, "scenario": self.scenario["id"], "token": owner}
         save(self.receipt_path, self.receipt)
-        self.az("group", "create", "--name", name, "--location", self.args.location,
-                "--tags", f"scenario-token={token}", f"scenario-run={self.args.run_id}",
-                f"scenario={self.scenario['id']}", "owner=ama-metrics-e2e",
-                f"expiresAt={env['SCENARIO_EXPIRES_AT']}")
+        if self.az("group", "exists", "--name", name).strip() == "false":
+            self.az("group", "create", "--name", name, "--location", self.args.location,
+                    "--tags", f"scenario-token={owner}", f"scenario-run={owner}",
+                    f"scenario={self.scenario['id']}", "owner=ama-metrics-e2e")
+        else:
+            self.assert_owned()
+            if self.az("aks", "list", "--resource-group", name, json_output=True):
+                raise ValueError("A cluster appeared after admission; refusing deployment")
+            deployments = self.az("deployment", "group", "list", "--resource-group", name, json_output=True)
+            if any(row.get("properties", {}).get("provisioningState") not in ("Succeeded", "Failed", "Canceled")
+                   for row in deployments):
+                raise ValueError("A deployment is still active; refusing concurrent provisioning")
         if principal_type == "ServicePrincipal":
             self.wait_for_rbac(principal)
+        env = dict(env, SCENARIO_RUN_NAME=owner)
         retry_deadline = time.monotonic() + 600
         retry_delay = 5
         while True:
@@ -389,7 +408,7 @@ class Host:
                     raise
                 retry_delay = min(retry_delay * 2, 30)
         if expected_pools is not None:
-            self.verify_deployment(result, expected_pools, {"expiresAt": env["SCENARIO_EXPIRES_AT"]})
+            self.verify_deployment(result, expected_pools)
         outputs = {key: value["value"] for key, value in result["properties"]["outputs"].items()}
         managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
         if any(not isinstance(group, str) or not group for group in managed_groups):
@@ -399,66 +418,62 @@ class Host:
         save(self.args.evidence / "deployment.json", outputs)
         return outputs
 
-    def reuse_existing(self, env, expected_pools):
+    def persistent_state(self, env, expected_pools):
         if not expected_pools:
-            raise ValueError("Retry reuse requires the preflighted pool inventory")
-        groups = self.az("group", "list", "--tag", f"scenario-run={self.args.run_id}",
-                         json_output=True)
-        if not isinstance(groups, list) or len(groups) != 1:
-            raise ValueError("Retry reuse requires exactly one existing resource group for this run")
-        group = groups[0]
-        name, tags = group.get("name"), group.get("tags") or {}
-        token = tags.get("scenario-token")
-        try:
-            expires = datetime.fromisoformat(tags["expiresAt"].replace("Z", "+00:00"))
-        except (KeyError, ValueError):
-            raise ValueError("Retry resource group has no valid expiry") from None
-        if (not name or not token or expires.tzinfo is None or expires.timestamp() <= time.time()
-                or group.get("location", "").casefold() != self.args.location.casefold()):
-            raise ValueError("Retry resource group is expired or has an invalid identity")
+            raise ValueError("Persistent reuse requires the preflighted pool inventory")
+        name, owner = persistent_identity(self.scenario["id"])
+        if self.az("group", "exists", "--name", name).strip() == "false":
+            return None
         self.receipt = {"subscription": self.args.subscription, "resourceGroup": name,
-                        "runId": self.args.run_id, "scenario": self.scenario["id"],
-                        "token": token}
+                        "runId": owner, "scenario": self.scenario["id"], "token": owner}
         owned = self.assert_owned()
         if owned.get("location", "").casefold() != self.args.location.casefold():
-            raise ValueError("Retry resource group location changed")
+            raise ValueError("Persistent resource group location changed")
+        clusters = self.az("aks", "list", "--resource-group", name, json_output=True)
+        if not clusters:
+            return None
+        if len(clusters) != 1:
+            raise ValueError("Persistent resource group must contain exactly one cluster")
         deployment = self.az("deployment", "group", "show", "--resource-group", name,
                              "--name", "scenario", json_output=True)
-        self.verify_deployment(deployment, expected_pools, tags)
+        self.verify_deployment(deployment, expected_pools)
         outputs = {key: value["value"] for key, value in deployment["properties"]["outputs"].items()}
         cluster = self.az("aks", "show", "--resource-group", name, "--name", outputs["clusterName"],
                           json_output=True)
-        if (cluster.get("id", "").casefold() != outputs["clusterId"].casefold()
+        network = cluster.get("networkProfile") or {}
+        expected_mode = "classic" if self.scenario["id"] == "classic-azure-cni" else "overlay"
+        advanced = network.get("advancedNetworking") or {}
+        if (clusters[0].get("id", "").casefold() != outputs["clusterId"].casefold()
+                or cluster.get("id", "").casefold() != outputs["clusterId"].casefold()
                 or cluster.get("location", "").casefold() != self.args.location.casefold()
                 or cluster.get("provisioningState") != "Succeeded"
                 or (cluster.get("powerState") or {}).get("code") != "Running"
                 or cluster.get("kubernetesVersion") != env["SCENARIO_KUBERNETES_VERSION"]
                 or cluster.get("nodeResourceGroup") != outputs["nodeResourceGroupName"]
-                or (cluster.get("identity") or {}).get("type") != outputs["identityType"]):
-            raise ValueError("Retry AKS cluster does not match the retained deployment contract")
+                or (cluster.get("identity") or {}).get("type") != outputs["identityType"]
+                or outputs.get("azureCniMode") != expected_mode
+                or network.get("networkPlugin") != "azure"
+                or (network.get("networkPluginMode") or "classic") != expected_mode
+                or bool(advanced.get("enabled")) != (self.scenario["id"] == "acns")
+                or (self.scenario["id"] == "acns"
+                    and (advanced.get("observability") or {}).get("enabled") is not True)):
+            raise ValueError("Persistent AKS cluster does not match the retained deployment contract")
+        verify_pool_configuration(expected_pools, cluster.get("agentPoolProfiles") or [])
         managed_groups = [outputs["nodeResourceGroupName"], outputs["amwManagedResourceGroupName"]]
         if any(not isinstance(value, str) or not value for value in managed_groups):
             raise ValueError("Retained deployment does not identify both managed resource groups")
         self.receipt["managedGroups"] = sorted(set(managed_groups))
-        save(self.receipt_path, self.receipt)
-        save(self.args.evidence / "deployment.json", outputs)
-        save(self.args.evidence / "retry-reuse.json", {
-            "status": "verified", "resourceGroup": name, "runId": self.args.run_id,
-            "scenario": self.scenario["id"], "location": self.args.location,
-        })
         return outputs
 
-    def verify_deployment(self, deployment, expected_pools, tags=None):
+    def verify_deployment(self, deployment, expected_pools):
         properties = deployment.get("properties", {})
         if properties.get("provisioningState") != "Succeeded":
             raise ValueError("Retained candidate deployment is not successful")
         outputs = {key: value["value"] for key, value in properties.get("outputs", {}).items()}
         resource_tags = outputs.get("resourceTags") or {}
-        expiry = (tags or {}).get("expiresAt")
-        if (not expiry or resource_tags.get("expiresAt") != expiry
-                or resource_tags.get("owner") != "ama-metrics-e2e"
+        if (resource_tags.get("owner") != "ama-metrics-e2e"
                 or resource_tags.get("scenario") != self.scenario["id"]
-                or resource_tags.get("run") != self.args.run_id
+                or resource_tags.get("run") != self.receipt["runId"]
                 or outputs.get("location") != self.args.location
                 or (expected_pools is not None and outputs.get("expectedPools") != expected_pools)
                 or outputs.get("addonEnabled") is not False
@@ -527,7 +542,9 @@ class Host:
         group = self.az("group", "show", "--name", self.receipt["resourceGroup"], json_output=True)
         expected = {"scenario-token": self.receipt["token"], "scenario-run": self.receipt["runId"],
                     "scenario": self.receipt["scenario"], "owner": "ama-metrics-e2e"}
-        if any(group.get("tags", {}).get(k) != v for k, v in expected.items()):
+        tags = group.get("tags", {})
+        if (any(tags.get(k) != v for k, v in expected.items())
+                or (self.receipt["resourceGroup"].startswith("ama-e2e-persistent-") and "expiresAt" in tags)):
             raise ValueError("Resource group ownership changed; refusing mutation/deletion")
         return group
 
@@ -538,6 +555,8 @@ class Host:
             if self.receipt is None:
                 self.receipt = load(self.receipt_path)
             group = self.receipt["resourceGroup"]
+            if group.startswith("ama-e2e-persistent-"):
+                raise ValueError("Persistent campaign resources are not eligible for cleanup")
             if self.receipt["subscription"] != self.args.subscription:
                 raise ValueError("Cleanup subscription mismatch")
             discovery_error = None
@@ -620,7 +639,8 @@ class Host:
                 missing = [name for name in managed if name not in inventoried]
                 result = {
                     "retained": not missing, "subscription": self.args.subscription,
-                    "resourceGroup": group, "runId": self.receipt.get("runId"),
+                    "resourceGroup": group, "runId": getattr(self.args, "run_id", self.receipt.get("runId")),
+                    "ownerRunId": self.receipt.get("runId"),
                     "scenario": self.receipt.get("scenario"), "managedResourceGroups": managed,
                     "missingManagedResourceGroups": missing,
                     "inventory": resource_groups,
@@ -670,7 +690,7 @@ class Host:
             raise ValueError("Retained resource-group ownership tags are missing")
         self.receipt = {
             "subscription": self.args.subscription, "resourceGroup": group,
-            "runId": run["runId"], "scenario": run["scenario"],
+            "runId": retained.get("ownerRunId", run["runId"]), "scenario": run["scenario"],
             "token": parent["tags"]["scenario-token"],
         }
         self.assert_owned()
@@ -992,11 +1012,10 @@ def audit_images(host, images):
     return evidence
 
 
-def verify_pool_inventory(expected, actual, nodes):
+def verify_pool_configuration(expected, actual):
     observed = {pool["name"]: {key.casefold(): value for key, value in pool.items()} for pool in actual}
     if set(observed) != {pool["name"] for pool in expected}:
         raise RuntimeError("Deployed pool names do not match the compiled inventory")
-    evidence = []
     for pool in expected:
         row = observed[pool["name"]]
         fields = {"ostype": pool["osType"], "ossku": pool["osSKU"], "vmsize": pool["vmSize"],
@@ -1008,6 +1027,14 @@ def verify_pool_inventory(expected, actual, nodes):
         if (pool["autoscaling"] and (row.get("mincount"), row.get("maxcount")) != (pool["minCount"], pool["maxCount"])
                 or not pool["autoscaling"] and row.get("count") != pool["count"]):
             raise RuntimeError(f"Deployed pool capacity disagrees with compiled inventory: {pool['name']}")
+    return observed
+
+
+def verify_pool_inventory(expected, actual, nodes):
+    observed = verify_pool_configuration(expected, actual)
+    evidence = []
+    for pool in expected:
+        row = observed[pool["name"]]
         members = [node for node in nodes
                    if node["metadata"]["labels"].get("kubernetes.azure.com/agentpool") == pool["name"]]
         minimum = pool["minCount"] if pool["autoscaling"] else pool["count"]
@@ -1028,7 +1055,7 @@ def verify_ingestion(host, outputs, started):
                                "-o", "tsv"], private=True).strip()
     if not token:
         raise RuntimeError("Azure CLI returned no AMW query token")
-    marker = host.receipt["token"]
+    marker = host.args.run_id
     query = f'min(timestamp(myapp_temperature{{scenario_run="{marker}"}}))'
     script = 'IFS= read -r token; exec curl --fail-with-body --silent --show-error --max-time 60 -H "Authorization: Bearer $token" --get --data-urlencode "$1" "$2"'
     last_error = "No fresh run-specific sample"
@@ -1164,8 +1191,15 @@ def preflight(args, scenario, commands):
         raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
     parameters = compiled_parameters(args, scenario, commands, version)
     capacity = capacity_plan(parameters, scenario, version)
+    existing = bool(Host(args, scenario, commands).persistent_state(
+        {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
+    if getattr(args, "admitted_existing", False) and not existing:
+        raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
+    if existing:
+        capacity = [dict(pool, nodes=0) for pool in capacity]
     result = {"scenario": scenario["id"], "subscription": args.subscription, "location": args.location,
               "kubernetesVersion": version, "upgradeChannel": "stable", "expectedPools": parameters["nodePools"],
+              "existing": existing,
               **regional_capacity(args, capacity, commands)}
     save(args.evidence / "preflight.json", result)
     return result
@@ -1186,6 +1220,7 @@ def campaign_preflight(args, matrix, commands):
         raise ValueError("Campaign test source does not match the expected test source SHA")
     placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
     regions = {}
+    existing = {}
     for location in sorted(set(placements.values())):
         regional = copy.copy(args)
         regional.location = location
@@ -1203,12 +1238,14 @@ def campaign_preflight(args, matrix, commands):
             if not row or row.get("blockedReason"):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
-            capacity.extend({**pool, "scenario": name}
+            existing[name] = bool(Host(regional, row, commands).persistent_state(
+                {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
+            capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
                             for pool in capacity_plan(parameters, row, version))
         regions[location] = {"kubernetesVersion": version,
                              **regional_capacity(regional, capacity, commands)}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
-              "subscription": args.subscription, "placements": placements,
+              "subscription": args.subscription, "placements": placements, "existing": existing,
               "regions": regions, "capacityReserved": False}
     save(output, result)
     return result
@@ -1217,8 +1254,6 @@ def campaign_preflight(args, matrix, commands):
 def deployment_env(args, version, proxy=False):
     env = dict(os.environ, SCENARIO_RUN_NAME=args.run_id, SCENARIO_LOCATION=args.location,
                SCENARIO_KUBERNETES_VERSION=version, SCENARIO_OWNER="ama-metrics-e2e",
-               SCENARIO_EXPIRES_AT=time.strftime("%Y-%m-%dT%H:%M:%SZ",
-                                                time.gmtime(time.time() + args.max_run_seconds + 1800)),
                SCENARIO_WINDOWS_PASSWORD=secrets.token_urlsafe(32) + "!aA1")
     if proxy:
         executable = shutil.which("ssh-keygen")
@@ -1285,8 +1320,14 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     role = "b0d8363b-8ddd-447d-831f-62ca05bff136"
     # The fresh private-query probe forwards the caller's token into the collector pod.
     for object_id, kind in ((identity["principalId"], "ServicePrincipal"), (principal, principal_type)):
-        host.az("role", "assignment", "create", "--assignee-object-id", object_id,
-                "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
+        assignments = host.az("role", "assignment", "list", "--assignee", object_id,
+                              "--scope", outputs["workspaceId"], json_output=True, private=True)
+        if not any(row.get("scope", "").casefold() == outputs["workspaceId"].casefold()
+                   and row.get("principalId", "").casefold() == object_id.casefold()
+                   and row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() == role
+                   and not row.get("condition") for row in assignments):
+            host.az("role", "assignment", "create", "--assignee-object-id", object_id,
+                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
                       json_output=True)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
@@ -1391,6 +1432,7 @@ def execute(args, scenario, variants, commands):
     label_filter(scenario)
     source = candidate["source"]["commit"]
     resolved = preflight(args, scenario, commands)
+    args.admitted_existing = args.admitted_existing or resolved["existing"]
     images, mapping = candidate_receipt(candidate, source, scenario["platforms"],
                                        scenario["clusterFeatures"], resolved["expectedPools"])
     testkube = prepare_testkube(args, commands)
@@ -1412,6 +1454,7 @@ def execute(args, scenario, variants, commands):
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
+        resolved["existing"] = host.reused
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
@@ -1421,27 +1464,30 @@ def execute(args, scenario, variants, commands):
         nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
         save(args.evidence / "pool-inventory.json",
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
-        host.az("aks", "update", "--resource-group", group, "--name", cluster,
-                "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
+        if not resolved["existing"]:
+            host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                    "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
         host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
                   "-n", "kube-system", "--timeout=15m", private=True)
-        host.az("aks", "update", "--resource-group", group, "--name", cluster,
-                "--disable-azure-monitor-metrics")
+        if not resolved["existing"]:
+            host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                    "--disable-azure-monitor-metrics")
         state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
         outputs["kubernetesVersion"] = state["kubernetesVersion"]
         if ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"):
             raise RuntimeError("Managed addon is still enabled; refusing competing Helm ownership")
-        deadline = time.monotonic() + 600
-        managed = {"ama-metrics", "ama-metrics-node", "ama-metrics-win-node",
-                   "ama-metrics-operator-targets", "ama-metrics-ksm"}
-        while True:
-            remaining = host.kube("get", "deployments,daemonsets", "-n", "kube-system",
-                                  "-o", "json", json_output=True)["items"]
-            if not any(resource["metadata"]["name"] in managed for resource in remaining):
-                break
-            if time.monotonic() >= deadline:
-                raise RuntimeError("Managed addon workloads remain; refusing competing Helm ownership")
-            time.sleep(10)
+        if not resolved["existing"]:
+            deadline = time.monotonic() + 600
+            managed = {"ama-metrics", "ama-metrics-node", "ama-metrics-win-node",
+                       "ama-metrics-operator-targets", "ama-metrics-ksm"}
+            while True:
+                remaining = host.kube("get", "deployments,daemonsets", "-n", "kube-system",
+                                      "-o", "json", json_output=True)["items"]
+                if not any(resource["metadata"]["name"] in managed for resource in remaining):
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Managed addon workloads remain; refusing competing Helm ownership")
+                time.sleep(10)
         if scenario["id"] == "otlp":
             settings = yaml.safe_load(
                 (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
@@ -1482,7 +1528,7 @@ def execute(args, scenario, variants, commands):
             for field in ("endpoints", "podMetricsEndpoints"):
                 for endpoint in monitor["spec"].get(field, []):
                     endpoint.setdefault("metricRelabelings", []).append({
-                        "action": "replace", "targetLabel": "scenario_run", "replacement": host.receipt["token"],
+                        "action": "replace", "targetLabel": "scenario_run", "replacement": args.run_id,
                     })
                     marked += 1
         if not marked:
@@ -1544,8 +1590,8 @@ def main(argv=None):
     parser.add_argument("--location", default="eastus2")
     parser.add_argument("--run-id", default=str(uuid.uuid4()))
     parser.add_argument("--build-id", type=int, help="Successful pipeline-440 candidate build with protected receipts")
-    parser.add_argument("--reuse-existing", action="store_true",
-                        help="Reuse only the exact, unexpired resource group owned by this validation run")
+    parser.add_argument("--admitted-existing", choices=("true", "false"),
+                        help="Whether aggregate admission verified an existing persistent host")
     parser.add_argument("--receipt-tools-root", type=Path, default=ROOT.parents[2],
                         help="Trusted tools checkout providing .pipelines/pr-e2e/fetch_candidate.py")
     parser.add_argument("--testkube-version", help="Explicit TestKube Helm chart version; required for run")
@@ -1555,6 +1601,8 @@ def main(argv=None):
     parser.add_argument("--settle-seconds", type=int, default=360)
     parser.add_argument("--max-run-seconds", type=int, default=14400)
     args = parser.parse_args(argv)
+    admitted_existing = args.admitted_existing
+    args.admitted_existing = admitted_existing == "true"
     REPO = args.source_root.resolve()
     TEST_SOURCE = (args.test_source_root or REPO).resolve()
     if args.action in ("run", "campaign-preflight"):
@@ -1569,6 +1617,20 @@ def main(argv=None):
     commands = Commands(args.evidence)
     if args.action == "run" and not args.build_id:
         raise ValueError("--build-id must identify a protected candidate build before provisioning")
+    if args.action == "run":
+        if admitted_existing is None:
+            raise ValueError("Run requires the aggregate admission's existing-host decision")
+        if args.scenario not in CAMPAIGN_LOCATIONS:
+            raise ValueError("Persistent execution requires a campaign scenario")
+        pipeline = yaml.safe_load((TEST_SOURCE / ".pipelines/azure-pipeline-config-tests.yml").read_text())
+        loop = next(row for row in pipeline["stages"] if any(
+            key.startswith("${{ each scenario in split(") for key in row))
+        conditional = next(iter(loop.values()))[0]
+        stage = next(iter(conditional.values()))[0]
+        if (os.environ.get("SYSTEM_DEFINITIONID") != "979"
+                or os.environ.get("SYSTEM_STAGENAME") != "Candidate_" + args.scenario.replace("-", "_")
+                or stage.get("lockBehavior") != "sequential"):
+            raise ValueError("Persistent hosts require the locked pipeline 979 scenario stage")
     if args.action in ("run", "campaign-preflight") and not re.fullmatch(r"[0-9a-f]{40}", args.test_source_sha or ""):
         raise ValueError("--test-source-sha must identify the immutable test source")
     if args.action == "cleanup":

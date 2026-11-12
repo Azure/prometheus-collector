@@ -348,10 +348,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', run_script)
         self.assertIn('--scenario "$CANDIDATE_SCENARIO"', run_script)
         self.assertIn('--run-id "$CANDIDATE_RUN_ID"', run_script)
-        self.assertIn('uuid.uuid5(uuid.NAMESPACE_URL, "ama-metrics-candidate:" + sys.argv[1] + ":" + sys.argv[2])',
-                      run_script)
-        self.assertIn('if [[ "$SYSTEM_STAGEATTEMPT" -gt 1 || "$SYSTEM_JOBATTEMPT" -gt 1 ]]; then', run_script)
-        self.assertIn("retry_args+=(--reuse-existing)", run_script)
+        self.assertIn("uuid.uuid4()", run_script)
+        self.assertIn('--admitted-existing "$CANDIDATE_EXISTING"', run_script)
         self.assertIn('--location "$CANDIDATE_LOCATION"', run_script)
         self.assertIn('"$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2', run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_LOCATION"], "$(candidateLocation)")
@@ -535,12 +533,14 @@ class CandidateEvidenceTest(unittest.TestCase):
                 name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
                 for name in SCENARIOS
             },
+            "existing": {name: False for name in SCENARIOS},
             "regions": {"centralus": {}, "eastus2": {}},
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),
                  ("source", {"sourceSha": "b" * 40}, False), ("build", {"buildId": 4402}, False),
                  ("test-source", {"testSourceSha": "d" * 40}, False),
                  ("missing", {"placements": {}}, False), ("reservation", {"capacityReserved": True}, False),
+                 ("missing-existing", {"existing": {}}, False),
                  ("unapproved", {"placements": {name: "eastus" for name in SCENARIOS}}, False),
                  ("missing-region", {"regions": {}}, False)]
         for name, updates, passes in cases:

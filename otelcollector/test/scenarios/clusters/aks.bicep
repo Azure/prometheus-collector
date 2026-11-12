@@ -13,8 +13,6 @@ param location string
 param kubernetesVersion string
 @minLength(1)
 param owner string
-@minLength(1)
-param expiresAt string
 @secure()
 param windowsAdminPassword string = ''
 param windowsAdminUsername string = 'scenarioadmin'
@@ -49,7 +47,6 @@ var tags = {
   owner: owner
   scenario: scenarioId
   run: runName
-  expiresAt: expiresAt
 }
 var networkContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
 var effectivePrivateApi = privateApi || proxyEnabled

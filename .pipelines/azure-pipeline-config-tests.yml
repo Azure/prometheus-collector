@@ -1264,7 +1264,9 @@ stages:
                   or value.get("testSourceSha") != os.environ["TEST_SOURCE_SHA"]
                   or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
                   or value.get("capacityReserved") is not False
-                  or set(value.get("placements", {})) != set(selected)):
+                  or set(value.get("placements", {})) != set(selected)
+                  or set(value.get("existing", {})) != set(selected)
+                  or any(type(value["existing"][name]) is not bool for name in selected)):
               raise ValueError("Aggregate capacity admission source/build/placement contract mismatch")
           for scenario, region in value["placements"].items():
               if region not in ("centralus", "eastus2", "westcentralus") or region not in value.get("regions", {}):
@@ -1272,6 +1274,7 @@ stages:
           for scenario, region in value["placements"].items():
               key = scenario.replace("-", "_")
               print(f"##vso[task.setvariable variable=location_{key};isOutput=true]{region}")
+              print(f"##vso[task.setvariable variable=existing_{key};isOutput=true]{str(value['existing'][scenario]).lower()}")
           print(f"##vso[task.setvariable variable=sourceSha;isOutput=true]{value['sourceSha']}")
           print(f"##vso[task.setvariable variable=testSourceSha;isOutput=true]{value['testSourceSha']}")
           print(f"##vso[task.setvariable variable=validationBuildId;isOutput=true]{os.environ['BUILD_BUILDID']}")
@@ -1304,11 +1307,13 @@ stages:
   - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
+      lockBehavior: sequential
       dependsOn:
       - CandidateCapacity
       condition: and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))
       variables:
         candidateLocation: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.location_${{ replace(scenario, '-', '_') }}'] ]
+        candidateExisting: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.existing_${{ replace(scenario, '-', '_') }}'] ]
         candidateCapacitySourceSha: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.sourceSha'] ]
         candidateCapacityTestSourceSha: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.testSourceSha'] ]
         candidateCapacityBuildId: $[ stageDependencies.CandidateCapacity.Capacity.outputs['admit.validationBuildId'] ]
