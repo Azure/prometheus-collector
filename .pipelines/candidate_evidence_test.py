@@ -109,6 +109,28 @@ class CandidateEvidenceTest(unittest.TestCase):
                                                  "CANDIDATE_SCENARIO": scenario})
                     self.assertEqual(result.returncode == 0, scenario in SCENARIOS, result.stderr)
 
+    def test_bootstrap_storage_is_isolated_by_scenario_and_attempt(self):
+        template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
+        run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
+        upload = next(line.strip() for line in run["inputs"]["inlineScript"].splitlines()
+                      if "##vso[artifact.upload " in line)
+        for scenario in SCENARIOS:
+            for stage_attempt, job_attempt in (("1", "1"), ("1", "2"), ("2", "1")):
+                with self.subTest(scenario=scenario, stage=stage_attempt, job=job_attempt):
+                    command = upload
+                    for variable, value in (("Build.BuildId", "979123"),
+                                            ("System.StageAttempt", stage_attempt),
+                                            ("System.JobAttempt", job_attempt)):
+                        command = command.replace(f"$({variable})", value)
+                    result = subprocess.run(
+                        ["bash", "-c", "set -eu\n" + command], capture_output=True, text=True,
+                        env={**os.environ, "CANDIDATE_SCENARIO": scenario,
+                             "public": "rbac-bootstrap-public.json"},
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    folder = result.stdout.split("containerfolder=", 1)[1].split(";", 1)[0]
+                    self.assertEqual(folder, f"candidate-rbac-bootstrap-979123-{scenario}-{stage_attempt}-{job_attempt}")
+
     def test_bootstrap_publishes_live_and_watcher_stops_without_changing_exit_status(self):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
@@ -149,7 +171,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                     if process.poll() is not None:
                         self.fail("Publication must precede harness completion: " + process.communicate(timeout=10)[1])
                     public = self.evidence / "rbac-bootstrap-public.json"
-                    self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=rbac-bootstrap;artifactname=candidate-rbac-bootstrap-979123-default-1-2]" + public.as_posix())
+                    self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=candidate-rbac-bootstrap-979123-default-1-2;artifactname=candidate-rbac-bootstrap-979123-default-1-2]" + public.as_posix())
                     data = json.loads(public.read_text())
                     self.assertNotIn("DO_NOT_UPLOAD", public.read_text())
                     self.assertEqual((data["validationBuildId"], data["candidateSourceSha"], data["producerBuildId"], data["scenario"]), ("979123", "source", "131161", "default"))

@@ -225,7 +225,7 @@ steps:
               validationBuildId: $buildId, candidateSourceSha: $sourceSha, producerBuildId: $producerBuildId, scenario: $scenario, runId: $runId}' \
             "$proof" > "$public.tmp" 2>/dev/null; then
             mv "$public.tmp" "$public"
-            echo "##vso[artifact.upload containerfolder=rbac-bootstrap;artifactname=candidate-rbac-bootstrap-$(Build.BuildId)-$CANDIDATE_SCENARIO-$(System.StageAttempt)-$(System.JobAttempt)]$public"
+            echo "##vso[artifact.upload containerfolder=candidate-rbac-bootstrap-$(Build.BuildId)-$CANDIDATE_SCENARIO-$(System.StageAttempt)-$(System.JobAttempt);artifactname=candidate-rbac-bootstrap-$(Build.BuildId)-$CANDIDATE_SCENARIO-$(System.StageAttempt)-$(System.JobAttempt)]$public"
             return
           fi
           sleep 2
