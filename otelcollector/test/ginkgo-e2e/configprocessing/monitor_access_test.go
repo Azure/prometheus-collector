@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,6 +151,22 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 		if !parsed.AtLeast(utilversion.MustParseSemantic("v1.37.0")) {
 			Skip("scoped secret watching is supported on Kubernetes 1.37+; use the current auto-upgrading lane")
 		}
+		namespace := "default"
+		if empty {
+			namespace = "ama-secret-watch-test"
+			for _, verb := range []string{"get", "list", "watch"} {
+				review, err := K8sClient.AuthorizationV1().SubjectAccessReviews().Create(context.Background(),
+					&authv1.SubjectAccessReview{Spec: authv1.SubjectAccessReviewSpec{
+						User:   "system:serviceaccount:kube-system:ama-metrics-serviceaccount",
+						Groups: []string{"system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"},
+						ResourceAttributes: &authv1.ResourceAttributes{
+							Namespace: namespace, Verb: verb, Resource: "secrets", Name: "ama-e2e-denied-secret",
+						},
+					}}, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(review.Status.Allowed).To(BeTrue(), "denial must come from the empty allowlist, not missing %s RBAC", verb)
+			}
+		}
 		cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
 			"ama-metrics-settings-configmap", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -164,13 +181,13 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 		} else {
 			Expect(namespaces).To(Equal("basic-auth-test"), "restricted-allowlist fixture required")
 		}
-		secret, err := K8sClient.CoreV1().Secrets("default").Create(context.Background(), &corev1.Secret{
+		secret, err := K8sClient.CoreV1().Secrets(namespace).Create(context.Background(), &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "ama-e2e-denied-secret"},
 			StringData: map[string]string{"username": "synthetic-user", "password": "synthetic-not-a-credential"},
 		}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
-			Expect(K8sClient.CoreV1().Secrets("default").Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
+			Expect(K8sClient.CoreV1().Secrets(namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
 		})
 		allowed, denied := []string{}, []string{}
 		for _, resource := range []string{"servicemonitors", "podmonitors"} {
@@ -180,8 +197,8 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 					"password": map[string]interface{}{"name": name, "key": "password"},
 				}}
 			}
-			denied = append(denied, createMonitor(resource, "default", basic(secret.Name)))
-			allowed = append(allowed, createMonitor(resource, "default", map[string]interface{}{"port": "ba-metrics"}))
+			denied = append(denied, createMonitor(resource, namespace, basic(secret.Name)))
+			allowed = append(allowed, createMonitor(resource, namespace, map[string]interface{}{"port": "ba-metrics"}))
 			if !empty {
 				allowed = append(allowed, createMonitor(resource, "basic-auth-test", basic("basic-auth-creds")))
 			}

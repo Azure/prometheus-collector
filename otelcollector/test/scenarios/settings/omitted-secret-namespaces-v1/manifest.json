@@ -4,7 +4,7 @@
   "platforms": ["linux"],
   "requires": {"clusterFeatures": ["operator", "secrets-watch-enforcement"]},
   "configmaps": ["settings.yaml"],
-  "customResources": [],
+  "customResources": ["../secret-watch-rbac.yaml"],
   "addonParams": {},
   "ginkgoLabels": ["config-processing-empty-secret-namespaces"],
   "expectedOutcome": "healthy"

@@ -31,7 +31,7 @@ BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
-    "acns": "eastus2", "otlp": "centralus",
+    "acns": "eastus2", "otlp": "centralus", "operator-secret-watch": "eastus2",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
@@ -125,13 +125,15 @@ def validate_matrix(document, variants, check_paths=True):
     return document
 
 
-def select_version(document):
+def select_version(document, scenario=None):
+    scoped_secrets = scenario is not None and "secrets-watch-enforcement" in scenario["clusterFeatures"]
     rows = [r for r in document.get("values", document.get("orchestrators", []))
             if not r.get("isPreview") and
-            ("KubernetesOfficial" in r.get("capabilities", {}).get("supportPlan", ["KubernetesOfficial"]))]
-    defaults = []
+            ("KubernetesOfficial" in r.get("capabilities", {}).get(
+                "supportPlan", [] if scoped_secrets else ["KubernetesOfficial"]))]
+    eligible = []
     for row in rows:
-        if not (row.get("isDefault") or row.get("default")):
+        if not scoped_secrets and not (row.get("isDefault") or row.get("default")):
             continue
         versions = row.get("patchVersions", {})
         if not versions and row.get("orchestratorVersion"):
@@ -139,10 +141,14 @@ def select_version(document):
         for version in versions:
             if re.fullmatch(r"\d+\.\d+\.\d+", version):
                 key = tuple(map(int, version.split(".")))
-                defaults.append(key)
-    if not defaults:
+                if not scoped_secrets or key >= (1, 37, 0):
+                    eligible.append(key)
+    if not eligible:
+        if scoped_secrets:
+            raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
+                             "stable official regional Kubernetes>=1.37 version")
         raise ValueError("Region returned no stable official default Kubernetes version")
-    return ".".join(map(str, max(defaults)))
+    return ".".join(map(str, max(eligible)))
 
 
 def windows_image_compatible(host, image):
@@ -1249,9 +1255,7 @@ def preflight(args, scenario, commands):
     versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
                              "--location", args.location, "--only-show-errors", "-o", "json"],
                             json_output=True)
-    version = select_version(versions)
-    if "secrets-watch-enforcement" in scenario["clusterFeatures"] and tuple(map(int, version.split(".")[:2])) < (1, 37):
-        raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
+    version = select_version(versions, scenario)
     parameters = compiled_parameters(args, scenario, commands, version)
     capacity = capacity_plan(parameters, scenario, version)
     existing = bool(Host(args, scenario, commands).persistent_state(
@@ -1292,20 +1296,22 @@ def campaign_preflight(args, matrix, commands):
         versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
                                  "--location", location, "--only-show-errors", "-o", "json"],
                                 json_output=True)
-        version = select_version(versions)
         capacity = []
+        selected_versions = {}
         for name in selected:
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
             if not row or row.get("blockedReason"):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
+            version = select_version(versions, row)
+            selected_versions[name] = version
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
                 {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
             capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
                             for pool in capacity_plan(parameters, row, version))
-        regions[location] = {"kubernetesVersion": version,
+        regions[location] = {"kubernetesVersions": selected_versions,
                              **regional_capacity(regional, capacity, commands)}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
               "subscription": args.subscription, "placements": placements, "existing": existing,

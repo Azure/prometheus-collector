@@ -214,6 +214,8 @@ class SettingsCatalogTests(unittest.TestCase):
                     else:
                         self.assertNotIn(prefix + "secrets_access_namespaces", values)
                     self.assertIn("config-processing-empty-secret-namespaces", manifest["ginkgoLabels"])
+                    self.assertIn("secrets-watch-enforcement", manifest["requires"]["clusterFeatures"])
+                    self.assertEqual(manifest["customResources"], ["../secret-watch-rbac.yaml"])
 
     def test_transition_inputs_preserve_settings_and_resource_ownership(self):
         auth = list(yaml.safe_load_all((ROOT / "auth-targets.yaml").read_text()))

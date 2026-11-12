@@ -198,7 +198,11 @@ class Contracts(unittest.TestCase):
             if args[:3] == ["az", "group", "exists"]:
                 return "false"
             if args[:3] == ["az", "aks", "get-versions"]:
-                return {"values": [{"isDefault": True, "patchVersions": {"1.36.5": {}}}]}
+                return {"values": [
+                    {"isDefault": True, "patchVersions": {"1.36.5": {}}},
+                    {"isPreview": None, "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+                     "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
+                ]}
             if args[:3] == ["az", "vm", "list-skus"]:
                 return copy.deepcopy(skus)
             if args[:3] == ["az", "vm", "list-usage"]:
@@ -225,17 +229,20 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 4)
+                self.assertEqual(len(result["placements"]), 5)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
                 self.assertEqual(result["placements"]["classic-azure-cni"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(result["placements"]["otlp"], "centralus")
+                self.assertEqual(result["placements"]["operator-secret-watch"], "eastus2")
+                self.assertEqual(result["regions"]["eastus2"]["kubernetesVersions"],
+                                 {"acns": "1.36.5", "operator-secret-watch": "1.37.1"})
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (80, 104), "eastus2": (16, 16)}
+                expected = {"centralus": (80, 104), "eastus2": (24, 24)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
@@ -372,6 +379,47 @@ class Contracts(unittest.TestCase):
         versions["values"] = [versions["values"][0]]
         with self.assertRaisesRegex(ValueError, "no stable official default"):
             runner.select_version(versions)
+
+    def test_secret_watch_selects_supported_nondefault_without_changing_other_scenarios(self):
+        versions = {"values": [
+            {"version": "1.36", "isDefault": True, "patchVersions": {"1.36.5": {}}},
+            {"version": "1.37", "isPreview": None,
+             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
+            {"version": "1.38", "isPreview": True,
+             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.38.0": {}}},
+            {"version": "1.39", "capabilities": {"supportPlan": ["AKSLongTermSupport"]},
+             "patchVersions": {"1.39.0": {}}},
+            {"version": "1.40", "patchVersions": {"1.40.0": {}}},
+        ]}
+        rows = runner.load(runner.ROOT / "matrix.json")["scenarios"]
+        row = next(row for row in rows if row["id"] == "operator-secret-watch")
+        for selected, expected in ((scenario(), "1.36.5"), (row, "1.37.1")):
+            with self.subTest(scenario=selected["id"]), tempfile.TemporaryDirectory() as directory:
+                args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
+                                             location="eastus2", evidence=Path(directory))
+                commands = Mock()
+                commands.run.return_value = versions
+                parameters = pool_parameters()
+                if selected["platforms"] == ["linux"]:
+                    parameters["nodePools"] = parameters["nodePools"][:1]
+                with patch.object(runner, "compiled_parameters", return_value=parameters) as compiled, \
+                        patch.object(runner.Host, "persistent_state", return_value=None), \
+                        patch.object(runner, "regional_capacity", return_value={}):
+                    result = runner.preflight(args, selected, commands)
+                self.assertEqual(result["kubernetesVersion"], expected)
+                self.assertEqual(compiled.call_args.args[-1], expected)
+        for invalid in (
+                [versions["values"][0]],
+                [versions["values"][0], *versions["values"][2:]],
+                [{"orchestratorVersion": "1.37.1", "isPreview": True,
+                  "capabilities": {"supportPlan": ["KubernetesOfficial"]}}]):
+            with self.subTest(versions=invalid), patch.object(
+                    runner, "compiled_parameters", side_effect=AssertionError("Unsupported profile compiled")):
+                commands.run.return_value = {"values": invalid}
+                with self.assertRaisesRegex(ValueError, "Unsupported scenario"):
+                    runner.preflight(args, row, commands)
 
     def test_capacity_includes_autoscaler_surge_and_explicit_proxy_count(self):
         parameters = pool_parameters()

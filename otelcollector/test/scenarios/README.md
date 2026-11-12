@@ -75,7 +75,7 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario` also accepts one of the four runnable campaign rows. The
+`--scenario` also accepts one of the five runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
@@ -281,7 +281,7 @@ coverage gaps until their real adapter and live evidence exist.
 
 ## Auto-upgrade and combination semantics
 
-There is no Kubernetes-version-history matrix. Every run resolves the currently
+There is no Kubernetes-version-history matrix. Ordinary runs resolve the currently
 supported stable **KubernetesOfficial** regional default and every provisioned AKS
 host must report effective `autoUpgradeProfile.upgradeChannel=stable` from Azure.
 The observation is retained in `effective-upgrade.json`; template intent alone is
@@ -297,7 +297,7 @@ Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
-The runnable candidate matrix has four rows. Each row uses `settingsVariants: ["*"]` to
+The runnable candidate matrix has five rows. Four rows use `settingsVariants: ["*"]` to
 select every catalog variant compatible with its declared cluster features and
 platforms. The mixed `default` profile runs all 36 supported variants and the
 FIPS/ARM64 scheduling assertions; the duplicate settings-only cluster is removed.
@@ -305,9 +305,12 @@ Classic CNI and managed non-Cilium ACNS also run all 36 compatible variants.
 The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
 shared metric assertions remain, but the autoscaler scale-up spec is no longer
 selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
-`operator-secret-watch` lane: the current regional default must be at least 1.37,
-otherwise preflight reports unsupported without provisioning. No historical
-version is selected. Customer Helm is separately blocked, giving 41 catalog inputs
+`operator-secret-watch` lane in eastus2: only this row selects the highest explicitly
+advertised stable **KubernetesOfficial** regional version >=1.37, even when it is
+not the regional default. `isPreview: null` is not a preview opt-in; explicit preview
+and LTS-only versions are excluded. If no eligible version exists, preflight fails
+before provisioning. Other rows retain the regional default; aggregate admission
+records each row's version separately. Customer Helm is separately blocked, giving 41 catalog inputs
 (40 runnable) without claiming live passes. Deferred true password rotation is
 metadata, not an executable settings assignment.
 
@@ -324,6 +327,7 @@ rendered KSM arguments alone are not coverage.
 | `classic-azure-cni` | All 36 compatible settings variants; common health, per-node ingestion and node network-counter increases after DNS/service traffic. | Traffic traverses the actual profile; no claim is made about CNI-specific policy or flow records. |
 | `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
 | `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |
+| `operator-secret-watch` | Four empty/omitted v1/v2 allowlists reject secret-backed ServiceMonitor and PodMonitor jobs on every collector while file-free controls reconcile. A dedicated fixture namespace grants the collector secret get/list/watch and SubjectAccessReview verifies those permissions, so missing RBAC cannot masquerade as enforcement. | Requires a region-advertised stable official Kubernetes >=1.37 and real passing TestKube cases; unsupported/skipped is not coverage. No live candidate result is recorded. |
 
 ### PR and scenario-source audit
 

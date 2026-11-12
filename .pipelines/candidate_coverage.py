@@ -5,8 +5,7 @@ import json
 from pathlib import Path
 
 
-SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp")
-SECRET_WATCH_BLOCKER = "Secret-watch enforcement requires an available Kubernetes >=1.37 baseline; current approved baseline is 1.36.5."
+SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp", "operator-secret-watch")
 
 
 def selected_variants(root, row, catalog):
@@ -28,13 +27,12 @@ def plan(root, scenario):
     catalog = json.loads((root / "settings" / "catalog.json").read_text())
     rows = {row["id"]: row for row in matrix["scenarios"]}
     runnable = {name for name, row in rows.items()
-                if not row.get("blockedReason") and name != "operator-secret-watch"}
+                if not row.get("blockedReason")}
     if runnable != set(SCENARIOS):
         raise ValueError("Candidate selector does not account for every runnable matrix row")
     if scenario not in SCENARIOS:
         raise ValueError(f"Unsupported candidate scenario: {scenario}")
     blocked = {name: row["blockedReason"] for name, row in rows.items() if row.get("blockedReason")}
-    blocked["operator-secret-watch"] = SECRET_WATCH_BLOCKER
     covered = {variant for name in SCENARIOS
                for variant in selected_variants(root, rows[name], catalog)}
     variants = []
