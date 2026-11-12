@@ -689,9 +689,10 @@ class Contracts(unittest.TestCase):
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                          location="eastus2")
             host = runner.Host(args, scenario(), Mock())
+            host.commands.deadline = None
             outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
             failure = RuntimeError(
-                "ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
+                "Command failed (1): az deployment: ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
                 "\"The template deployment failed with error: 'Authorization failed for template "
                 "resource 'assignment-id' of type 'Microsoft.Authorization/roleAssignments'. "
                 "The client 'app-id' with object id 'principal-id' does not have permission to "
@@ -701,7 +702,7 @@ class Contracts(unittest.TestCase):
                 {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
             ])
             with patch.object(host, "persistent_state", return_value=None), patch.object(host, "verify_deployment"), patch.object(host, "wait_for_rbac"), \
-                    patch.object(runner.time, "monotonic", side_effect=[0, 0, 5]), \
+                    patch.object(runner.time, "monotonic", side_effect=[0, 0, 30]), \
                     patch.object(runner.time, "sleep") as sleep, \
                     patch("sys.stdout", new=io.StringIO()):
                 self.assertEqual(host.provision({}, "principal", "ServicePrincipal",
@@ -709,7 +710,7 @@ class Contracts(unittest.TestCase):
             deployment_calls = [call for call in host.az.call_args_list
                                 if call.args[:3] == ("deployment", "group", "create")]
             self.assertEqual(len(deployment_calls), 2)
-            sleep.assert_called_once_with(5)
+            sleep.assert_called_once_with(30)
 
     def test_provision_fails_immediately_for_other_deployment_errors(self):
         for principal_type, failure in (
@@ -724,6 +725,7 @@ class Contracts(unittest.TestCase):
                 args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                              location="eastus2")
                 host = runner.Host(args, scenario(), Mock())
+                host.commands.deadline = None
                 host.az = Mock(side_effect=["false", None, RuntimeError(failure)])
                 with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
                     with self.assertRaises(RuntimeError) as error:
@@ -739,6 +741,7 @@ class Contracts(unittest.TestCase):
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                          location="eastus2")
             host = runner.Host(args, scenario(), Mock())
+            host.commands.deadline = None
             now, delays = [0], []
             failure = RuntimeError(
                 "ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
@@ -775,6 +778,126 @@ class Contracts(unittest.TestCase):
             self.assertGreater(len(deployment_calls), 1)
             self.assertGreater(sum(delays), 300)
             self.assertLessEqual(sum(delays), 600)
+            self.assertEqual(delays, [30, 60, 120, 240, 150])
+            self.assertIsNone(host.commands.deadline)
+
+    def test_provision_routes_only_service_principal_deployments_through_retry(self):
+        for kind in ("User", "ServicePrincipal"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                host = runner.Host(types.SimpleNamespace(
+                    evidence=Path(directory), subscription="sub", location="eastus2", run_id="run"),
+                    scenario(), Mock())
+                outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+                deployment = {"properties": {"outputs": {
+                    key: {"value": value} for key, value in outputs.items()}}}
+                host.az = Mock(side_effect=["false", {}, deployment])
+                with patch.object(host, "persistent_state", return_value=None), \
+                        patch.object(host, "wait_for_rbac") as wait, \
+                        patch.object(host, "az_with_rbac_retry", return_value=deployment) as retry:
+                    self.assertEqual(host.provision({}, "principal", kind), outputs)
+                self.assertEqual(retry.call_count, int(kind == "ServicePrincipal"))
+                self.assertEqual(wait.call_count, int(kind == "ServicePrincipal"))
+
+    def test_role_assignment_retry_matches_only_exact_unconditional_service_principal_grants(self):
+        denial = RuntimeError("(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        role = runner.RBAC_MONITORING_DATA_READER
+        expected = {"principalId": "principal", "principalType": "ServicePrincipal",
+                    "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/" + role,
+                    "scope": "/owned"}
+        command = ("role", "assignment", "create", "--assignee-object-id", "principal",
+                   "--assignee-principal-type", "ServicePrincipal", "--role", role, "--scope", "/owned")
+        for field, value in ((None, None), ("principalId", "other"), ("principalType", "User"),
+                             ("roleDefinitionId", runner.RBAC_ADMIN_ROLE), ("scope", "/other"),
+                             ("condition", "restricted")):
+            with self.subTest(field=field):
+                host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                                   scenario(), Mock())
+                host.commands.deadline = None
+                observed = dict(expected)
+                if field:
+                    observed[field] = value
+                host.az = Mock(side_effect=[denial, [observed], "created"])
+                with patch.object(runner.time, "monotonic", return_value=0), \
+                        patch.object(runner.time, "sleep") as sleep:
+                    result = host.az_with_rbac_retry(*command)
+                self.assertEqual(result, "created" if field else expected)
+                self.assertEqual(host.az.call_count, 3 if field else 2)
+                self.assertEqual(sleep.call_count, int(bool(field)))
+                self.assertIsNone(host.commands.deadline)
+
+    def test_rbac_retry_refreshes_only_on_guidance_and_preserves_run_deadline(self):
+        for refresh in (False, True):
+            with self.subTest(refresh=refresh):
+                host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                                   scenario(), Mock())
+                host.commands.deadline = 90
+                denial = RuntimeError(
+                    "(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write" +
+                    (". If access was recently granted, please refresh your credentials." if refresh else ""))
+                host.az = Mock(side_effect=[denial, [], *([None] if refresh else []), "created"])
+                observed_deadlines = []
+                with patch.object(runner.time, "monotonic", return_value=0), \
+                        patch.object(runner.time, "sleep",
+                                     side_effect=lambda delay: observed_deadlines.append(host.commands.deadline)):
+                    result = host.az_with_rbac_retry(
+                        "role", "assignment", "create", "--assignee-object-id", "principal",
+                        "--assignee-principal-type", "ServicePrincipal", "--role",
+                        runner.RBAC_MONITORING_DATA_READER, "--scope", "/owned")
+                self.assertEqual(result, "created")
+                self.assertEqual(observed_deadlines, [90])
+                self.assertEqual(host.commands.deadline, 90)
+                token_calls = [call for call in host.az.call_args_list if call.args[:2] == ("account", "get-access-token")]
+                self.assertEqual(len(token_calls), int(refresh))
+                if refresh:
+                    self.assertEqual(token_calls[0].args, ("account", "get-access-token", "--output", "none"))
+                    self.assertTrue(token_calls[0].kwargs["private"])
+
+    def test_rbac_retry_honors_execution_deadline_and_restores_it_on_failure(self):
+        denial = RuntimeError("(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = 10
+        host.az = Mock(side_effect=denial)
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0, 10]), \
+                patch.object(runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "AuthorizationFailed"):
+                host.az_with_rbac_retry("deployment", "group", "create")
+        host.az.assert_called_once()
+        sleep.assert_called_once_with(10)
+        self.assertEqual(host.commands.deadline, 10)
+
+    def test_rbac_retry_rejects_broader_writes_and_unrelated_errors(self):
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        for kind, role in (("User", runner.RBAC_MONITORING_DATA_READER),
+                           ("ServicePrincipal", runner.RBAC_ADMIN_ROLE)):
+            with self.subTest(kind=kind, role=role), self.assertRaisesRegex(ValueError, "Monitoring Data Reader"):
+                host.az_with_rbac_retry("role", "assignment", "create", "--assignee-object-id", "principal",
+                                        "--assignee-principal-type", kind, "--role", role, "--scope", "/owned")
+        with self.assertRaisesRegex(ValueError, "limited"):
+            host.az_with_rbac_retry("group", "delete")
+        for message in ("AuthorizationFailed Microsoft.Authorization/roleAssignments/delete",
+                        "AuthorizationFailed Microsoft.Compute/virtualMachines/write",
+                        "InvalidTemplateDeployment Microsoft.Authorization/roleAssignments/write"):
+            host.az = Mock(side_effect=RuntimeError(message))
+            with self.subTest(message=message), patch.object(runner.time, "sleep") as sleep, \
+                    patch.object(runner.time, "monotonic", side_effect=[0, 0, 600]):
+                with self.assertRaises(RuntimeError):
+                    host.az_with_rbac_retry("deployment", "group", "create")
+                host.az.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_rbac_retry_caps_backoff(self):
+        denial = RuntimeError("(AuthorizationFailed) Microsoft.Authorization/roleAssignments/write")
+        host = runner.Host(types.SimpleNamespace(evidence=Path("evidence"), subscription="sub"),
+                           scenario(), Mock())
+        host.commands.deadline = None
+        host.az = Mock(side_effect=[denial] * 5 + ["created"])
+        with patch.object(runner.time, "monotonic", return_value=0), \
+                patch.object(runner.time, "sleep") as sleep:
+            self.assertEqual(host.az_with_rbac_retry("deployment", "group", "create"), "created")
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [30, 60, 120, 240, 300])
 
     def test_pin_only_candidate_workloads_and_require_all_components(self):
         document = {"kind": "Deployment", "metadata": {"name": "ama-metrics"},
@@ -953,6 +1076,23 @@ class Contracts(unittest.TestCase):
             receipt = runner.load(evidence / "rbac-bootstrap-revocation.json")
             self.assertTrue(receipt["verifiedAbsent"])
             self.assertEqual(set(receipt["preservedRoleAssignmentIds"]), {network_id, monitor_id})
+
+    def test_revoke_bootstrap_refuses_persistent_grants_before_any_azure_call(self):
+        for group in ("ama-e2e-persistent-default", "AMA-E2E-PERSISTENT-default"):
+            with self.subTest(group=group), tempfile.TemporaryDirectory() as directory:
+                evidence = Path(directory)
+                runner.save(evidence / "retained-resources.json", {"resourceGroup": group})
+                runner.save(evidence / "result.json", {})
+                runner.save(evidence / "rbac-bootstrap.json", {
+                    "assignmentId": "/subscriptions/sub/resourceGroups/owned/providers/"
+                                    "Microsoft.Authorization/roleAssignments/11111111-1111-4111-8111-111111111111",
+                })
+                host = runner.Host(types.SimpleNamespace(evidence=evidence, subscription="sub"), {}, Mock())
+                host.az = Mock()
+                with self.assertRaisesRegex(ValueError, "Persistent campaign bootstrap grants must be retained"):
+                    host.revoke_bootstrap()
+                host.az.assert_not_called()
+                self.assertFalse((evidence / "rbac-bootstrap-revocation.json").exists())
 
     def test_revoke_bootstrap_rejects_a_mismatched_assignment_without_deleting_it(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -1294,10 +1434,16 @@ class Contracts(unittest.TestCase):
                 return "testworkflows <none> testworkflows.testkube.io/v1 true TestWorkflow"
 
             host.az.side_effect = az
+            host.commands.deadline = None
+            def retry(*args, **kwargs):
+                self.assertEqual(args[args.index("--assignee-principal-type") + 1], "ServicePrincipal")
+                return runner.Host.az_with_rbac_retry(host, *args, **kwargs)
+            host.az_with_rbac_retry.side_effect = retry
             host.kube.side_effect = kube
             outputs = {"clusterName": "owned-cluster", "workspaceId": "/owned/workspace",
                        "queryEndpoint": "https://amw.example"}
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertEqual(host.az_with_rbac_retry.call_count, 1)
             role_calls = [c.args for c in host.az.call_args_list if c.args[:3] == ("role", "assignment", "create")]
             self.assertEqual(len(role_calls), 2)
             for args in role_calls:
@@ -1308,7 +1454,9 @@ class Contracts(unittest.TestCase):
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136",
             } for object_id in ("identity-object", "caller-object"))
             host.az.reset_mock()
+            host.az_with_rbac_retry.reset_mock()
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            host.az_with_rbac_retry.assert_not_called()
             self.assertFalse(any(c.args[:3] == ("role", "assignment", "create")
                                  for c in host.az.call_args_list))
             federation = next(c.args for c in host.az.call_args_list if c.args[:2] == ("identity", "federated-credential"))
@@ -1472,6 +1620,26 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "persistent-bootstrap-grants": (
+            'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),
+        "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),
+        "rbac-retry-exact-role": ('options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER', "False"),
+        "rbac-retry-existing-role": ('assigned_role.casefold() == role_assignment["roleDefinitionId"]', "True"),
+        "rbac-retry-existing-principal": (
+            '== role_assignment["principalId"].casefold()', "== assignment.get(\"principalId\", \"\").casefold()"),
+        "rbac-retry-existing-scope": (
+            '== role_assignment["scope"].casefold()', "== assignment.get(\"scope\", \"\").casefold()"),
+        "rbac-retry-existing-condition": ('and not assignment.get("condition")', "and True"),
+        "rbac-retry-backoff-cap": (
+            "interval = min(interval * 2, RBAC_AUTH_RETRY_MAX_INTERVAL)", "interval = interval * 2"),
+        "rbac-retry-ten-minute-window": ("RBAC_AUTH_RETRY_TIMEOUT = 600", "RBAC_AUTH_RETRY_TIMEOUT = 300"),
+        "rbac-retry-run-deadline": ("deadline = min(deadline, run_deadline)", "pass"),
+        "rbac-retry-preserves-user-bootstrap": (
+            'assign = host.az_with_rbac_retry if kind == "ServicePrincipal" else host.az',
+            "assign = host.az_with_rbac_retry"),
+        "rbac-retry-preserves-user-deployment": (
+            'deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az',
+            "deploy = self.az_with_rbac_retry"),
         "rbac-before-deployment": ("self.wait_for_rbac(principal)", "pass"),
         "rbac-exact-scope": ('assignment.get("scope", "").casefold() == scope.casefold()', "True"),
         "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),

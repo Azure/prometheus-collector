@@ -305,9 +305,13 @@ class Commands:
 
 
 RBAC_ADMIN_ROLE = "f58310d9-a9f6-439a-9e8d-f62e7b41a168"
+RBAC_MONITORING_DATA_READER = "b0d8363b-8ddd-447d-831f-62ca05bff136"
+RBAC_AUTH_RETRY_TIMEOUT = 600
+RBAC_AUTH_RETRY_INTERVAL = 30
+RBAC_AUTH_RETRY_MAX_INTERVAL = 300
 RBAC_ALLOWED_ROLES = [
     "4d97b98b-1d4f-4787-a291-c67834d212e7",
-    "b0d8363b-8ddd-447d-831f-62ca05bff136",
+    RBAC_MONITORING_DATA_READER,
 ]
 RBAC_PROXY_READER = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 
@@ -342,6 +346,73 @@ class Host:
     def az(self, *args, **kwargs):
         return self.commands.run(["az", *args, "--subscription", self.args.subscription,
                                   "--only-show-errors"], **kwargs)
+
+    def az_with_rbac_retry(self, *args, **kwargs):
+        operation = tuple(args[:3])
+        if operation not in {("deployment", "group", "create"),
+                             ("role", "assignment", "create")}:
+            raise ValueError("RBAC retry is limited to role assignment creation and group deployments")
+        role_assignment = None
+        if operation == ("role", "assignment", "create"):
+            options = dict(zip(args[3::2], args[4::2]))
+            role_assignment = {
+                "principalId": options.get("--assignee-object-id"),
+                "principalType": options.get("--assignee-principal-type"),
+                "roleDefinitionId": RBAC_MONITORING_DATA_READER,
+                "scope": options.get("--scope"),
+            }
+            if (not role_assignment["principalId"] or not role_assignment["scope"]
+                    or role_assignment["principalType"] != "ServicePrincipal"
+                    or options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER):
+                raise ValueError("RBAC retry is limited to Monitoring Data Reader service-principal assignments")
+        run_deadline = self.commands.deadline
+        deadline = None
+        last_failure = None
+        interval = RBAC_AUTH_RETRY_INTERVAL
+        try:
+            while True:
+                if last_failure is not None:
+                    if time.monotonic() >= deadline:
+                        raise last_failure
+                    self.commands.deadline = deadline
+                try:
+                    return self.az(*args, **kwargs)
+                except RuntimeError as failure:
+                    last_failure = failure
+                    message = str(failure).casefold()
+                    if ("microsoft.authorization/roleassignments/write" not in message
+                            or not any(marker in message for marker in
+                                       ("authorizationfailed", "authorization failed"))):
+                        raise
+                    if deadline is None:
+                        deadline = time.monotonic() + RBAC_AUTH_RETRY_TIMEOUT
+                        if run_deadline is not None:
+                            deadline = min(deadline, run_deadline)
+                    self.commands.deadline = deadline
+                    if role_assignment:
+                        existing = self.az("role", "assignment", "list", "--scope",
+                                           role_assignment["scope"], json_output=True, private=True)
+                        for assignment in existing:
+                            assigned_role = assignment.get("roleDefinitionId", "").rstrip("/").rsplit("/", 1)[-1]
+                            if (assignment.get("principalId", "").casefold()
+                                    == role_assignment["principalId"].casefold()
+                                    and assignment.get("principalType", "").casefold() == "serviceprincipal"
+                                    and assigned_role.casefold() == role_assignment["roleDefinitionId"]
+                                    and assignment.get("scope", "").casefold()
+                                    == role_assignment["scope"].casefold()
+                                    and not assignment.get("condition")):
+                                return assignment
+                    if "if access was recently granted, please refresh your credentials" in message:
+                        self.az("account", "get-access-token", "--output", "none", private=True)
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise
+                    delay = min(interval, remaining)
+                    print(f"Retrying role-assignment authorization failure in {delay:g}s", flush=True)
+                    time.sleep(delay)
+                    interval = min(interval * 2, RBAC_AUTH_RETRY_MAX_INTERVAL)
+        finally:
+            self.commands.deadline = run_deadline
 
     def kube(self, *args, **kwargs):
         return self.commands.run([getattr(self.args, "kubectl", "kubectl"),
@@ -384,29 +455,11 @@ class Host:
         if principal_type == "ServicePrincipal":
             self.wait_for_rbac(principal)
         env = dict(env, SCENARIO_RUN_NAME=owner)
-        retry_deadline = time.monotonic() + 600
-        retry_delay = 5
-        while True:
-            try:
-                result = self.az("deployment", "group", "create", "--resource-group", name,
-                                 "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
-                                 env=env, json_output=True, private=True)
-                break
-            except RuntimeError as error:
-                detail = str(error).casefold()
-                if (principal_type != "ServicePrincipal"
-                        or ("authorizationfailed" not in detail and "authorization failed" not in detail)
-                        or "microsoft.authorization/roleassignments/write" not in detail):
-                    raise
-                remaining = retry_deadline - time.monotonic()
-                if remaining <= 0:
-                    raise
-                delay = min(retry_delay, remaining)
-                print(f"Retrying role-assignment authorization failure in {delay:g}s", flush=True)
-                time.sleep(delay)
-                if time.monotonic() >= retry_deadline:
-                    raise
-                retry_delay = min(retry_delay * 2, 30)
+        deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az
+        result = deploy(
+            "deployment", "group", "create", "--resource-group", name,
+            "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
+            env=env, json_output=True, private=True)
         if expected_pools is not None:
             self.verify_deployment(result, expected_pools)
         outputs = {key: value["value"] for key, value in result["properties"]["outputs"].items()}
@@ -655,10 +708,12 @@ class Host:
             self.remove_kubeconfig()
 
     def revoke_bootstrap(self):
-        run = load(self.args.evidence / "result.json")
         retained = load(self.args.evidence / "retained-resources.json")
-        proof = load(self.args.evidence / "rbac-bootstrap.json")
         group = retained["resourceGroup"]
+        if group.casefold().startswith("ama-e2e-persistent-"):
+            raise ValueError("Persistent campaign bootstrap grants must be retained for future runs")
+        run = load(self.args.evidence / "result.json")
+        proof = load(self.args.evidence / "rbac-bootstrap.json")
         scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{group}"
         assignment_id = proof["assignmentId"]
         if not isinstance(assignment_id, str):
@@ -1317,7 +1372,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     identity = host.az("identity", "create", "--resource-group", group,
                        "--name", "ama-e2e-tests", json_output=True)
     # This subscription also has a broader custom role with the same display name.
-    role = "b0d8363b-8ddd-447d-831f-62ca05bff136"
+    role = RBAC_MONITORING_DATA_READER
     # The fresh private-query probe forwards the caller's token into the collector pod.
     for object_id, kind in ((identity["principalId"], "ServicePrincipal"), (principal, principal_type)):
         assignments = host.az("role", "assignment", "list", "--assignee", object_id,
@@ -1326,8 +1381,9 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                    and row.get("principalId", "").casefold() == object_id.casefold()
                    and row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() == role
                    and not row.get("condition") for row in assignments):
-            host.az("role", "assignment", "create", "--assignee-object-id", object_id,
-                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
+            assign = host.az_with_rbac_retry if kind == "ServicePrincipal" else host.az
+            assign("role", "assignment", "create", "--assignee-object-id", object_id,
+                   "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
                       json_output=True)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":

@@ -201,17 +201,25 @@ The delegation is **Role Based Access Control Administrator**, scoped only to th
 new group, with condition version 2.0 restricting both assignment creation and
 deletion to Network Contributor and Monitoring Data Reader for service principals.
 Only the custom-CA profile additionally permits Reader. It cannot delegate Owner,
-User Access Administrator or itself. A precreated group is still refused.
+User Access Administrator or itself. Only groups matching the persistent ownership
+contract can be reused.
 The gate requires the exact principal, group, role and condition; missing or wider
 delegations do not satisfy it. Timeout fails and retains any created resources for
 inspection. Actual ARM deployment remains the permission-propagation check, not
-the presence of a grant. That deployment retries the same authorization failure
-for at most 10 minutes; this treats propagation/cache delay as plausible, not
-confirmed. The authorized Owner identity removes the exact
-temporary administrator assignment after a successful run; the narrower
-workload roles remain with the retained cluster. The pipeline identity cannot
-delete its own conditional administrator assignment, so run this action from the
-authorized user Azure session:
+the presence of a grant. Service-principal deployments and Monitoring Data Reader
+service-principal writes share one retry implementation: only role-assignment
+write authorization failures (including wrapped ARM errors) retry, for at most
+10 minutes or the remaining execution budget, with 30-second exponential backoff
+capped at 5 minutes. Direct writes recheck the exact unconditional assignment
+after a denial; credentials are refreshed only when the error requests it.
+User writes remain single-attempt, and unrelated failures are not retried.
+Bootstrap prechecks skip existing exact workspace grants on reused hosts.
+
+Persistent hosts retain their conditional administrator delegation and narrower
+workload grants for future runs. The runner refuses bootstrap revocation for
+persistent groups, and the pipeline does not revoke them automatically.
+For older **nonpersistent** retained runs only, an authorized user can revoke the
+exact recorded administrator assignment:
 
 ```powershell
 python otelcollector\test\scenarios\run-scenario.py revoke-bootstrap --evidence C:\temp\ama-candidate-run
