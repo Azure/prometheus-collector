@@ -1492,7 +1492,8 @@ class Contracts(unittest.TestCase):
                             "mongodb.nodeAffinityPreset.type=hard",
                             "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
                             "mongodb.nodeAffinityPreset.values[0]=system",
-                            "mongodb.updateStrategy.type=Recreate"):
+                            "mongodb.updateStrategy.type=Recreate",
+                            "global.testWorkflows.builtinTemplatesInstaller.nodeSelector.kubernetes\\.io/os=linux"):
                 self.assertIn(setting, helm)
             role_calls = [c.args for c in host.az.call_args_list if c.args[:3] == ("role", "assignment", "create")]
             self.assertEqual(len(role_calls), 2)
