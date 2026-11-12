@@ -699,6 +699,19 @@ class Contracts(unittest.TestCase):
             self.assertTrue(receipt["verifiedAbsent"])
             self.assertEqual(set(receipt["preservedRoleAssignmentIds"]), {network_id, monitor_id})
 
+    def test_revoke_bootstrap_preserves_persistent_cluster_grants(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            runner.save(evidence / "result.json", {"status": "PASS"})
+            runner.save(evidence / "retained-resources.json",
+                        {"resourceGroup": "ama-e2e-persistent-default"})
+            runner.save(evidence / "rbac-bootstrap.json", {})
+            host = runner.Host(types.SimpleNamespace(evidence=evidence), {}, Mock())
+            host.az = Mock()
+            with self.assertRaisesRegex(ValueError, "Persistent bootstrap grants are retained"):
+                host.revoke_bootstrap()
+            host.az.assert_not_called()
+
     def test_revoke_bootstrap_rejects_a_mismatched_assignment_without_deleting_it(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)
@@ -1105,6 +1118,8 @@ def mutations():
     source = SOURCE.read_text()
     changes = {
         "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),
+        "persistent-bootstrap-retention": (
+            'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),
         "rbac-retry-exact-role": ('options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER', "False"),
         "rbac-retry-existing-role": (
             'assigned_role.casefold() == role_assignment["roleDefinitionId"]', "True"),

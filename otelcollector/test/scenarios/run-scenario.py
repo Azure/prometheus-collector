@@ -577,6 +577,8 @@ class Host:
         retained = load(self.args.evidence / "retained-resources.json")
         proof = load(self.args.evidence / "rbac-bootstrap.json")
         group = retained["resourceGroup"]
+        if group.casefold().startswith("ama-e2e-persistent-"):
+            raise ValueError("Persistent bootstrap grants are retained for subsequent runs")
         scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{group}"
         assignment_id = proof["assignmentId"]
         if not isinstance(assignment_id, str):
