@@ -532,13 +532,6 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	// collector a second time through its client-cert watch. tlsRotationAge still bounds the age of
 	// the material in use through healthHandler.
 	generationTime := time.Now()
-	issuedAt, reuseErr := reuseExistingOperatorTargetsTLS(generationTime)
-	if reuseErr == nil {
-		activeTLSIssuedAt = issuedAt
-		log.Printf("Reusing existing operator-targets TLS certificates issued at %s; secrets not updated", issuedAt.UTC().Format(time.RFC3339))
-		return nil, nil, nil, nil, nil
-	}
-	log.Printf("Existing operator-targets TLS certificates not reused: %v", reuseErr)
 
 	log.Println("Generating TLS certificates and secret")
 	certCreator := certCreator.NewCertCreator()
