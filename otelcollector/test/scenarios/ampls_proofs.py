@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 
 def initialize(host, outputs):
     # AKS CLI disable deletes DCRs/DCRAs still owned by this private-link fixture.
-    cluster = host.az("aks", "show", "--ids", outputs["clusterId"], json_output=True)
+    cluster = host.az("resource", "show", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",
+                      json_output=True)["properties"]
     enabled = ((cluster.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled", False)
     if enabled is True:
         host.az("resource", "update", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",

@@ -28,8 +28,10 @@ class Proofs(unittest.TestCase):
                 self.resources.pop(self.outputs[name], None)
 
             def az(*args, **kwargs):
-                if args[:2] == ("aks", "show"):
-                    return state
+                if args[:2] == ("resource", "show"):
+                    self.assertEqual(args, ("resource", "show", "--ids", "/cluster",
+                                            "--api-version", "2024-10-01"))
+                    return {"properties": state}
                 if args[:2] == ("resource", "update"):
                     target = args[args.index("--ids") + 1]
                     if target == "/cluster":
@@ -261,11 +263,15 @@ def mutations():
         'not re.search(\n'
         '                    r"public network|private[\\s-]+(?:link|endpoint)|network access", body, re.IGNORECASE)',
     ]
-    for target in targets:
+    changes = [(target, "False") for target in targets]
+    changes.append((
+        'host.az("resource", "show", "--ids", outputs["clusterId"],',
+        'host.az("aks", "show", "--ids", outputs["clusterId"],'))
+    for target, replacement in changes:
         if source.count(target) != 1:
             raise AssertionError("Mutation target changed: " + target)
         mutant = types.ModuleType("ampls_mutant")
-        exec(compile(source.replace(target, "False"), str(SOURCE), "exec"), mutant.__dict__)
+        exec(compile(source.replace(target, replacement), str(SOURCE), "exec"), mutant.__dict__)
         proofs = mutant
         result = unittest.TextTestRunner(stream=io.StringIO()).run(
             unittest.defaultTestLoader.loadTestsFromTestCase(Proofs))
