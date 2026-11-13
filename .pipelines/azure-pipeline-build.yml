@@ -33,7 +33,7 @@ variables:
   Codeql.Enabled: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
   GOLANG_VERSION: '1.26.11'
   FLUENTBIT_GOLANG_VERSION: '1.26.11'
-  TESTKUBE_GOLANG_VERSION: '1.26.9'
+  TESTKUBE_GOLANG_VERSION: '1.26.10'
   SRE_TESTKUBE_RUNNER_IMAGE: 'docker.io/cerebro31/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57'
   FLUENT_BIT_VERSION: '4.2.2'
   PROMETHEUS_VERSION: '3.2.1'
@@ -1845,6 +1845,10 @@ extends:
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
         - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
+        - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
             Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
@@ -1869,7 +1873,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2019 image"
           retryCountOnTaskFailure: 2
@@ -2028,6 +2032,10 @@ extends:
             artifactName: sre-push-windows2022
         steps:
         - powershell: |
+            .\build\windows\tests\Test-MicrosoftSignature.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Test: Microsoft signature verification guards"
+        - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
             Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
@@ -2052,7 +2060,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
         - powershell: |
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2022 image"
           retryCountOnTaskFailure: 2
@@ -2422,6 +2430,11 @@ extends:
           HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
         steps:
+        # Explicit checkout with persisted credentials so `git push` below can authenticate.
+        # Without it the push fails with "could not read Username for 'https://github.com'"
+        # (main build 130965, after 1ES PT template / NetIso task updates on Nov 4 2026).
+        - checkout: self
+          persistCredentials: true
         - bash: |
             git config --global user.name "AzureDevOps Agent"
             git tag "v$(HELM_SEMVER)"

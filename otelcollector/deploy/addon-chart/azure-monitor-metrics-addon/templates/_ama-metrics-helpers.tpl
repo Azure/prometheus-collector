@@ -8,6 +8,10 @@
 {{- "mcr.microsoft.eaglex.ic.gov" }}
 {{- else if (eq $cloud_environment "ussec") }}
 {{- "mcr.microsoft.scloud" }}
+{{- else if (eq $cloud_environment "azurebleucloud") }}
+{{- "mcr.sovcloud-azure.fr" }}
+{{- else if (eq $cloud_environment "azuredeloscloud") }}
+{{- "mcr.sovcloud-azure.de" }}
 {{- else }}
 {{- "mcr.microsoft.com" }}
 {{- end }}

@@ -161,10 +161,18 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Build: install golang $(GOLANG_VERSION)"
 
-          - task: HelmInstaller@1
+          - bash: |
+              set -euo pipefail
+              # HelmInstaller@1 downloads a .zip and needs `unzip`, which this agent image
+              # does not have. Install the official tarball directly instead.
+              HELM_VERSION=v3.12.3
+              tmp=$(mktemp -d)
+              curl -fsSL --retry 5 --retry-delay 5 "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" -o "$tmp/helm.tgz"
+              tar -xzf "$tmp/helm.tgz" -C "$tmp"
+              sudo install -m 0755 "$tmp/linux-amd64/helm" /usr/local/bin/helm
+              rm -rf "$tmp"
+              helm version
             displayName: "Install Helm for chart regression tests"
-            inputs:
-              helmVersionToInstall: '3.12.3'
 
           - bash: |
               set -euo pipefail
