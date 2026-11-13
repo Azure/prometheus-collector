@@ -1795,7 +1795,8 @@ class Contracts(unittest.TestCase):
                         {"name": name, "value": value}
                         for key, value in (("HTTP_PROXY", proxy["httpProxy"]),
                                            ("HTTPS_PROXY", profile.get("httpsProxy", proxy["httpProxy"])),
-                                           ("NO_PROXY", ",".join(proxy["effectiveNoProxy"])))
+                                           ("NO_PROXY", ",".join([*proxy["effectiveNoProxy"],
+                                                                  "testkube-api-server:8089"])))
                         for name in (key, key.lower())
                     ]
                     self.assertEqual(runner.yaml.safe_load(helm_call.kwargs["data"]), {
@@ -1813,7 +1814,8 @@ class Contracts(unittest.TestCase):
             helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
             template = runner.yaml.safe_load(helm_call.kwargs["data"])["global"]["testWorkflows"]["globalTemplate"]
             environment = {entry["name"]: entry["value"] for entry in template["spec"]["container"]["env"]}
-            self.assertEqual(environment["NO_PROXY"], ",".join(proxy["effectiveNoProxy"]))
+            self.assertEqual(environment["NO_PROXY"], ",".join([*proxy["effectiveNoProxy"],
+                                                                 "testkube-api-server:8089"]))
             self.assertEqual(environment["no_proxy"], environment["NO_PROXY"])
             self.assertNotEqual(environment["NO_PROXY"], ",".join(proxy["noProxy"]))
             self.assertTrue(helm_call.kwargs["private"])
