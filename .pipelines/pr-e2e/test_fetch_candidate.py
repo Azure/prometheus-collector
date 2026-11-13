@@ -248,7 +248,7 @@ class FetchTests(unittest.TestCase):
                         cli = json.loads(stdout.getvalue())
                         metadata = json.loads((output / fetch_candidate.SCAN_ARTIFACT / "trivy" / "metadata.json").read_text())
                         self.assertEqual(cli["trivyVersion"], metadata["version"])
-                        template = Path(__file__).parents[1] / "azure-template-candidate-config-tests.yml"
+                        template = Path(__file__).parents[1] / "azure-pipeline-config-tests.yml"
                         self.assertIn('json.load(sys.stdin)["trivyVersion"]', template.read_text())
                         (output / fetch_candidate.SCAN_ARTIFACT / "trivy" / "result.json").write_text("tampered")
                         with self.assertRaisesRegex(ValueError, "hash mismatch"):

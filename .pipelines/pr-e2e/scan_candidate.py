@@ -59,13 +59,16 @@ def main():
     result = run(args.build_id, args.source_commit, args.baseline_image, args.platform,
                  args.cve, args.output.resolve(), args.verified_candidate)
     print(json.dumps({"source": result["source"], "verdict": result["verdict"],
+                      "scope": result["scope"], "findingPolicy": result["findingPolicy"],
                       "comparison": str(args.output.resolve() / "comparison.json")}, indent=2))
     secrets = sorted({value for key, value in os.environ.items()
                       if len(value) >= 8 and re.search(r"(?i)token|secret|password", key)},
                      key=len, reverse=True)
     fields = ("id", "package", "path", "digest", "installed", "fixed", "severity")
     reasons = {"OPEN": "finding remains in candidate", "CLOSED": "finding absent from covered package",
-               "NOT_REPORTED": "baseline finding or package not reported", "NEW": "new candidate finding"}
+               "NOT_REPORTED": "baseline finding or package not reported",
+               "DEFERRED": "existing finding deferred to the separately managed Collector upgrade",
+               "NEW": "new candidate finding"}
 
     def public_finding(finding):
         if finding is None:

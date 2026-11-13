@@ -8,6 +8,11 @@ from datetime import datetime, timedelta, timezone
 
 import normalize
 
+DEFERRED_TARGETS = frozenset({
+    "opt/microsoft/otelcollector/otelcollector",
+    "opt/promconfigvalidator",
+})
+
 
 def load(directory, now):
     metadata = normalize.read_json(directory / "trivy" / "metadata.json")
@@ -76,29 +81,40 @@ def compare(baseline, candidate, receipt, requested, now=None):
     for finding in previous["findings"]:
         candidate_finding = candidate_by_identity.get(identity(finding))
         covered = (finding["path"], finding["package"]) in inventory
+        status = "OPEN" if candidate_finding else "CLOSED" if covered else "NOT_REPORTED"
+        if status == "OPEN" and finding["path"] in DEFERRED_TARGETS:
+            status = "DEFERRED"
         baseline_findings.append({
             "finding": finding,
             "candidateFinding": candidate_finding,
-            "status": "OPEN" if candidate_finding else "CLOSED" if covered else "NOT_REPORTED",
+            "status": status,
         })
 
     smoke_tests = []
     for cve in sorted(set(requested)):
         prior = [f for f in previous["findings"] if f["id"] == cve]
-        present = any(f["id"] == cve for f in current["findings"])
-        statuses = [row["status"] for row in baseline_findings if row["finding"]["id"] == cve]
-        status = ("OPEN" if present else "NOT_REPORTED" if not prior or "NOT_REPORTED" in statuses
-                  else "CLOSED")
+        present = any(f["id"] == cve and f["path"] not in DEFERRED_TARGETS
+                      for f in current["findings"])
+        statuses = [row["status"] for row in baseline_findings
+                    if row["finding"]["id"] == cve]
+        if present:
+            status = "OPEN"
+        elif "NOT_REPORTED" in statuses:
+            status = "NOT_REPORTED"
+        elif "DEFERRED" in statuses:
+            status = "DEFERRED"
+        else:
+            status = "CLOSED" if prior else "NOT_REPORTED"
         smoke_tests.append({"id": cve, "status": status})
-    statuses = [row["status"] for row in baseline_findings] + [
-        row["status"] for row in smoke_tests]
+    statuses = [row["status"] for row in baseline_findings + smoke_tests if row["status"] != "DEFERRED"]
     verdict = ("BLOCKED" if "NOT_REPORTED" in statuses
                else "FAIL" if current["newFindings"] or "OPEN" in statuses else "PASS")
     return {
         "schemaVersion": 1,
-        "scope": "all Linux/amd64 collector Trivy findings; not full image clearance",
+        "scope": "Linux/amd64 collector Trivy findings; still-present baseline findings in exact deferred targets are reported but not readiness-gated; not full image clearance",
         "source": receipt["source"], "baseline": before_meta, "candidate": after_meta,
-        "findingPolicy": "Evaluate every baseline finding without severity or fixability filters",
+        "findingPolicy": "No severity or fixability filters; still-present baseline findings in exact deferred targets are deferred; missing evidence and all new findings block",
+        "deferredTargets": sorted(DEFERRED_TARGETS),
         "baselineFindingCount": len(baseline_findings),
         "baselineFindings": baseline_findings,
         "smokeTests": smoke_tests,

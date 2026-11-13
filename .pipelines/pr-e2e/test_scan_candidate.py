@@ -30,10 +30,14 @@ class CampaignScanTests(unittest.TestCase):
                     "evidence": "must-not-appear"}
         new = dict(baseline, id="CVE-2026-99999", digest="sha256:" + "b" * 64, package="p" * 4000)
         result = {"source": self.source, "verdict": "FAIL",
+                  "scope": "Linux/amd64 collector Trivy findings; existing deferred findings are reported",
+                  "findingPolicy": "No severity or fixability filters; new findings block",
                   "baseline": {"requestedRef": self.baseline}, "candidate": {"requestedRef": self.image["ref"]},
                   "baselineFindings": [
             {"finding": baseline, "candidateFinding": dict(baseline, installed="2"), "status": "OPEN"},
             {"finding": dict(baseline, id="CVE-2026-11111"), "candidateFinding": None, "status": "CLOSED"},
+            {"finding": dict(baseline, path="opt/promconfigvalidator"),
+             "candidateFinding": dict(baseline, path="opt/promconfigvalidator"), "status": "DEFERRED"},
         ], "newFindings": [new], "smokeTests": [{"id": baseline["id"], "status": "OPEN"}]}
         args = ["scan_candidate.py", "--build-id", "123", "--source-commit", self.source["commit"],
                 "--baseline-image", self.baseline, "--platform", "linux/amd64",
@@ -45,8 +49,11 @@ class CampaignScanTests(unittest.TestCase):
             self.assertEqual(scan_candidate.main(), 1)
         text = output.getvalue()
         for expected in ("CVE-2026-63209", "CVE-2026-11111", "CVE-2026-99999",
-                         "example/pkg", "opt/main", "OPEN", "CLOSED", "NEW",
-                         "finding remains in candidate", self.baseline, self.image["ref"]):
+                         "example/pkg", "opt/main", "opt/promconfigvalidator", "OPEN", "CLOSED",
+                         "DEFERRED", "NEW", "finding remains in candidate",
+                         "deferred to the separately managed Collector upgrade",
+                         "existing deferred findings are reported", "new findings block",
+                         self.baseline, self.image["ref"]):
             self.assertIn(expected, text)
         rows = [json.loads(line.removeprefix("SCAN_COMPARISON ")) for line in text.splitlines()
                 if line.startswith("SCAN_COMPARISON ")]
@@ -55,7 +62,7 @@ class CampaignScanTests(unittest.TestCase):
         self.assertEqual([part["part"] for part in parts], list(range(1, len(parts) + 1)))
         self.assertTrue(all(part["parts"] == len(parts) for part in parts))
         rows.append(json.loads("".join(part["data"] for part in parts)))
-        self.assertEqual([row["status"] for row in rows], ["OPEN", "CLOSED", "NEW"])
+        self.assertEqual([row["status"] for row in rows], ["OPEN", "CLOSED", "DEFERRED", "NEW"])
         self.assertEqual(rows[-1]["candidate"]["package"], "p" * 4000)
         self.assertNotIn("must-not-appear", text)
         self.assertNotIn("private-token-value", text)

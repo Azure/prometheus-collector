@@ -3,9 +3,6 @@ parameters:
   type: string
 - name: sourceSha
   type: string
-- name: cve
-  type: string
-  default: ''
 - name: azureSubscription
   type: string
 - name: scenario
@@ -75,18 +72,9 @@ steps:
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
     git fetch --no-tags origin "$CANDIDATE_SOURCE_SHA"
     git cat-file -e "$CANDIDATE_SOURCE_SHA^{commit}"
-    if [[ -z "$CANDIDATE_CVE" ]]; then
-      git cat-file -e "$CANDIDATE_SOURCE_SHA:.pipelines/pr-e2e/campaign.json" || { echo "Campaign-selected CVE or campaign.json is required in candidate source" >&2; exit 1; }
-      CANDIDATE_CVE="$(git show "$CANDIDATE_SOURCE_SHA:.pipelines/pr-e2e/campaign.json" | jq -er 'select(.schemaVersion == 1) | .cve | select(type == "string" and test("^CVE-[0-9]{4}-[0-9]+$"))')"
-    fi
-    [[ "$CANDIDATE_CVE" =~ ^CVE-[0-9]{4}-[0-9]+$ ]] || { echo "Require one campaign-selected CVE" >&2; exit 1; }
-    echo "##vso[task.setvariable variable=candidateCve]$CANDIDATE_CVE"
     git worktree add --detach "$CANDIDATE_ROOT" "$CANDIDATE_SOURCE_SHA"
     [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
     [[ -z "$(git -C "$CANDIDATE_ROOT" status --porcelain)" ]]
-    for file in .pipelines/pr-e2e/fetch_candidate.py .pipelines/pr-e2e/scan_candidate.py; do
-      [[ -f "$BUILD_SOURCESDIRECTORY/$file" ]] || { echo "Trusted pipeline checkout lacks $file" >&2; exit 1; }
-    done
     python3 -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_coverage.py" \
       --root "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
       --output "$CANDIDATE_EVIDENCE/coverage.json"
@@ -97,7 +85,6 @@ steps:
     PR_SOURCE_COMMIT: $(System.PullRequest.SourceCommitId)
     PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
     CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
-    CANDIDATE_CVE: ${{ parameters.cve }}
     CANDIDATE_SCENARIO: ${{ parameters.scenario }}
     CAPACITY_SOURCE_SHA: $(candidateCapacitySourceSha)
     CAPACITY_TEST_SOURCE_SHA: $(candidateCapacityTestSourceSha)
@@ -132,23 +119,6 @@ steps:
     for tool in unzip az kubectl jq envsubst; do command -v "$tool"; done
   displayName: "Install candidate host prerequisites"
 
-- bash: |
-    set -euo pipefail
-    [[ ! -e "$PRODUCER_EVIDENCE" ]] || { echo "Producer evidence directory must be new" >&2; exit 1; }
-    fetched="$(python3 "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
-      --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-      --output "$PRODUCER_EVIDENCE")"
-    trivy_version="$(printf '%s' "$fetched" | python3 -c 'import json,sys; print(json.load(sys.stdin)["trivyVersion"])')"
-    [[ "$trivy_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
-    echo "##vso[task.setvariable variable=candidateTrivyVersion]$trivy_version"
-    echo "Verified producer Trivy version $trivy_version"
-  displayName: "Fetch exact producer evidence and Trivy version"
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-    PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
-    CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
-    PRODUCER_EVIDENCE: $(Agent.TempDirectory)/candidate-producer-$(candidateAttempt)
-
 - task: HelmInstaller@1
   inputs:
     helmVersionToInstall: '3.19.0'
@@ -167,35 +137,17 @@ steps:
     tar -xzf testkube.tar.gz kubectl-testkube
     rm testkube.tar.gz
     chmod +x kubectl-testkube
-    version="$CANDIDATE_TRIVY_VERSION"
-    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
-    archive="trivy_${version}_Linux-64bit.tar.gz"
-    checksums="trivy_${version}_checksums.txt"
-    curl --fail --silent --show-error --location --retry 3 \
-      "https://github.com/aquasecurity/trivy/releases/download/v${version}/${archive}" -o "$archive"
-    curl --fail --silent --show-error --location --retry 3 \
-      "https://github.com/aquasecurity/trivy/releases/download/v${version}/${checksums}" -o "$checksums"
-    checksum="$(grep -E "[[:space:]]${archive}$" "$checksums" || true)"
-    [[ -n "$checksum" ]] || { echo "Trivy release checksum is missing" >&2; exit 1; }
-    printf '%s\n' "$checksum" | sha256sum --check
-    tar -xzf "$archive" trivy
-    rm "$archive" "$checksums"
-    chmod +x trivy
-    installed_version="$(./trivy --version --format json | "$CANDIDATE_PYTHON/bin/python" -c 'import json,sys; print(json.load(sys.stdin)["Version"])')"
-    [[ "$installed_version" == "$version" ]] || { echo "Installed Trivy version does not match producer scan" >&2; exit 1; }
     echo "##vso[task.prependpath]$CANDIDATE_TOOLS"
     for tool in az kubectl helm bash jq envsubst; do command -v "$tool"; done
     ./kubectl-testkube run testworkflow --help > /dev/null
     az bicep version
     "$CANDIDATE_PYTHON/bin/python" -B \
       "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_evidence_test.py" -v
-    echo "##vso[task.setvariable variable=candidateScanPrerequisitesReady]true"
   workingDirectory: $(candidateRoot)
   displayName: "Prepare scoped pinned CLI and verify harness prerequisites"
   env:
     CANDIDATE_PYTHON: $(candidatePython)
     CANDIDATE_TOOLS: $(candidateTools)
-    CANDIDATE_TRIVY_VERSION: $(candidateTrivyVersion)
 
 - task: AzureCLI@2
   displayName: "Run authenticated candidate scenario through existing TestKube harness"
@@ -278,32 +230,6 @@ steps:
   condition: always()
   env:
     CANDIDATE_EVIDENCE: $(candidateEvidence)
-
-- task: AzureCLI@2
-  displayName: "Retain SRE-owned authenticated baseline/candidate scan comparison"
-  condition: and(always(), not(canceled()), eq(variables['candidateScanPrerequisitesReady'], 'true'))
-  inputs:
-    azureSubscription: ${{ parameters.azureSubscription }}
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      set -euo pipefail
-      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
-        --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-        --output "$CANDIDATE_EVIDENCE/pipeline-verification"
-      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan_candidate.py" \
-        --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
-        --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
-        --platform linux/amd64 --cve "$CANDIDATE_CVE" \
-        --verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification" \
-        --output "$CANDIDATE_EVIDENCE/scans"
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-    PRODUCER_BUILD_ID: ${{ parameters.producerBuildId }}
-    CANDIDATE_SOURCE_SHA: ${{ parameters.sourceSha }}
-    CANDIDATE_CVE: $(candidateCve)
-    CANDIDATE_EVIDENCE: $(candidateEvidence)
-    PYTHON: $(candidatePython)/bin/python
 
 - bash: |
     set -euo pipefail

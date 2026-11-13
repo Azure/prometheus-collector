@@ -1180,7 +1180,7 @@ stages:
               artifact: configtests-evidence
 
 - stage: CandidateCapacity
-  displayName: Read-only regional admission before candidate provisioning
+  displayName: Read-only regional admission and one-time vulnerability gate
   condition: and(not(canceled()), or(eq('${{ parameters.candidateMode }}', 'True'), eq(variables['Build.Reason'], 'ResourceTrigger'), and(eq(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/'), contains(variables['System.PullRequest.SourceBranch'], '/ama-metrics-sre-')))))
   jobs:
   - job: Capacity
@@ -1193,6 +1193,9 @@ stages:
       capacityRoot: $(Agent.TempDirectory)/candidate-capacity-source-$(Build.BuildId)
       capacityEvidence: $(Build.ArtifactStagingDirectory)/candidate-capacity-$(Build.BuildId)
       capacityPython: $(Agent.TempDirectory)/candidate-capacity-python-$(Build.BuildId)
+      candidateScanEvidence: $(Agent.TempDirectory)/candidate-scan-$(Build.BuildId)
+      candidateScanTools: $(Agent.TempDirectory)/candidate-scan-tools-$(Build.BuildId)
+      candidateScanPublication: $(Build.ArtifactStagingDirectory)/candidate-scan-$(Build.BuildId)
     steps:
     - checkout: self
       clean: true
@@ -1294,6 +1297,100 @@ stages:
         PYTHON: $(capacityPython)/bin/python
     - bash: |
         set -euo pipefail
+        [[ ! -e "$SCAN_EVIDENCE" && ! -e "$SCAN_TOOLS" ]] || { echo "Candidate scan paths must be new" >&2; exit 1; }
+        mkdir -p "$SCAN_EVIDENCE" "$SCAN_TOOLS"
+        fetched="$("$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/fetch_candidate.py" \
+          --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
+          --output "$SCAN_EVIDENCE/verified")"
+        version="$(printf '%s' "$fetched" | "$PYTHON" -c 'import json,sys; print(json.load(sys.stdin)["trivyVersion"])')"
+        [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
+        cve="$CANDIDATE_CVE"
+        if [[ -z "$cve" ]]; then
+          cve="$("$PYTHON" - "$CAPACITY_ROOT" "$CANDIDATE_SOURCE_SHA" <<'PY'
+        import json
+        import re
+        import subprocess
+        import sys
+        root, source = sys.argv[1:]
+        raw = subprocess.check_output(
+            ["git", "-C", root, "show", f"{source}:.pipelines/pr-e2e/campaign.json"],
+            text=True,
+        )
+        value = json.loads(raw)
+        cve = value.get("cve")
+        if value.get("schemaVersion") != 1 or not isinstance(cve, str) or not re.fullmatch(r"CVE-[0-9]{4}-[0-9]+", cve):
+            raise ValueError("Candidate source must select exactly one campaign CVE")
+        print(cve)
+        PY
+          )"
+        fi
+        [[ "$cve" =~ ^CVE-[0-9]{4}-[0-9]+$ ]] || { echo "Require one campaign-selected CVE" >&2; exit 1; }
+        cd "$SCAN_TOOLS"
+        archive="trivy_${version}_Linux-64bit.tar.gz"
+        checksums="trivy_${version}_checksums.txt"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/aquasecurity/trivy/releases/download/v${version}/${archive}" -o "$archive"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/aquasecurity/trivy/releases/download/v${version}/${checksums}" -o "$checksums"
+        checksum="$(grep -E "[[:space:]]${archive}$" "$checksums" || true)"
+        [[ -n "$checksum" ]] || { echo "Trivy release checksum is missing" >&2; exit 1; }
+        printf '%s\n' "$checksum" | sha256sum --check
+        tar -xzf "$archive" trivy
+        rm "$archive" "$checksums"
+        chmod +x trivy
+        installed="$("$SCAN_TOOLS/trivy" --version --format json | "$PYTHON" -c 'import json,sys; print(json.load(sys.stdin)["Version"])')"
+        [[ "$installed" == "$version" ]] || { echo "Installed Trivy version does not match producer scan" >&2; exit 1; }
+        PATH="$SCAN_TOOLS:$PATH" "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan_candidate.py" \
+          --build-id "$PRODUCER_BUILD_ID" --source-commit "$CANDIDATE_SOURCE_SHA" \
+          --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
+          --platform linux/amd64 --cve "$cve" \
+          --verified-candidate "$SCAN_EVIDENCE/verified" --output "$SCAN_EVIDENCE/scans"
+      displayName: Verify exact producer scan and run one fresh baseline/candidate comparison
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        PRODUCER_BUILD_ID: $(capacityProducerBuildId)
+        CANDIDATE_SOURCE_SHA: $(capacitySourceSha)
+        CANDIDATE_CVE: $(candidateCve)
+        CAPACITY_ROOT: $(capacityRoot)
+        PYTHON: $(capacityPython)/bin/python
+        SCAN_EVIDENCE: $(candidateScanEvidence)
+        SCAN_TOOLS: $(candidateScanTools)
+    - bash: |
+        set -euo pipefail
+        mkdir -p "$SCAN_EVIDENCE/publication-input"
+        if [[ -d "$SCAN_EVIDENCE/verified" ]]; then
+          mkdir -p "$SCAN_EVIDENCE/publication-input/pipeline-verification"
+          cp -a "$SCAN_EVIDENCE/verified/." "$SCAN_EVIDENCE/publication-input/pipeline-verification/"
+        fi
+        if [[ -d "$SCAN_EVIDENCE/scans" ]]; then
+          cp -a "$SCAN_EVIDENCE/scans" "$SCAN_EVIDENCE/publication-input/"
+        fi
+        printf 'Candidate scan job status: %s\n' "$AGENT_JOBSTATUS" \
+          > "$SCAN_EVIDENCE/publication-input/scan-status.txt"
+        if [[ "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ ]]; then
+          "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_evidence.py" \
+            --evidence "$SCAN_EVIDENCE/publication-input" --output "$SCAN_PUBLICATION" \
+            --source-sha "$CANDIDATE_SOURCE_SHA" --producer-build-id "$PRODUCER_BUILD_ID"
+        else
+          mkdir -p "$SCAN_PUBLICATION"
+          cp "$SCAN_EVIDENCE/publication-input/scan-status.txt" "$SCAN_PUBLICATION/"
+        fi
+      displayName: Always stage filtered one-time candidate scan evidence
+      condition: always()
+      env:
+        PRODUCER_BUILD_ID: $(capacityProducerBuildId)
+        CANDIDATE_SOURCE_SHA: $(capacitySourceSha)
+        SCAN_EVIDENCE: $(candidateScanEvidence)
+        SCAN_PUBLICATION: $(candidateScanPublication)
+        PYTHON: $(capacityPython)/bin/python
+    - task: PublishPipelineArtifact@1
+      displayName: Retain one filtered candidate vulnerability comparison
+      condition: always()
+      inputs:
+        targetPath: $(candidateScanPublication)
+        artifact: candidate-scan-$(Build.BuildId)
+    - bash: |
+        set -euo pipefail
         mkdir -p "$CAPACITY_EVIDENCE"
         printf 'Job status: %s\nThis diagnostic is not capacity admission proof; require the source-bound campaign-preflight.json PASS.\n' \
           "$AGENT_JOBSTATUS" > "$CAPACITY_EVIDENCE/job-status.txt"
@@ -1347,6 +1444,5 @@ stages:
                 parameters:
                   producerBuildId: $(campaignProducerBuildId)
                   sourceSha: $(campaignSourceSha)
-                  cve: $(candidateCve)
                   scenario: ${{ scenario }}
                   azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})

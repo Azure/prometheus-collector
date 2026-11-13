@@ -13,6 +13,49 @@ import normalize
 
 
 class ComparisonTests(unittest.TestCase):
+    def compare_fixture(self, baseline_results, candidate_results, requested):
+        now = datetime.now(timezone.utc)
+        image = lambda char: "example.invalid/collector@sha256:" + char * 64
+        configuration = {
+            "scanners": ["vuln"], "listAllPkgs": True,
+            "ignoreSha256": hashlib.sha256(b"").hexdigest(),
+            "configSha256": hashlib.sha256(b"{}\n").hexdigest(),
+        }
+
+        def write(root, ref, results):
+            folder = root / "trivy"
+            folder.mkdir(parents=True)
+            data = {"Metadata": {"RepoDigests": [ref],
+                                 "ImageConfig": {"os": "linux", "architecture": "amd64"}},
+                    "Results": results}
+            raw = json.dumps(data).encode()
+            (folder / "result.json").write_bytes(raw)
+            (folder / "metadata.json").write_text(json.dumps({
+                "exitCode": 0, "requestedRef": ref, "platform": "linux/amd64",
+                "version": "test-version", "dbUpdatedAt": now.isoformat(),
+                "finishedUtc": now.isoformat(), "dbSha256": "c" * 64,
+                "configuration": configuration, "resultSha256": hashlib.sha256(raw).hexdigest(),
+            }))
+
+        receipt = {"product": "ama-metrics", "source": {"repo": "Azure/prometheus-collector",
+                   "commit": "a" * 40, "buildId": "123"}, "buildResult": "succeeded",
+                   "requestedQids": [], "requestedCves": requested,
+                   "images": [{"name": "collector", "ref": image("b"), "os": "linux", "arch": "amd64"}]}
+        with tempfile.TemporaryDirectory() as directory:
+            baseline, candidate = [Path(directory) / name for name in ("before", "after")]
+            write(baseline, image("a"), baseline_results)
+            write(candidate, image("b"), candidate_results)
+            return compare_trivy.compare(baseline, candidate, receipt, requested, now)
+
+    @staticmethod
+    def binary(target, cves):
+        return {"Target": target, "Class": "lang-pkgs", "Type": "gobinary",
+                "Packages": [{"Name": "example/pkg", "Version": "1"}],
+                "Vulnerabilities": [
+                    {"VulnerabilityID": cve, "PkgName": "example/pkg", "InstalledVersion": "1",
+                     "FixedVersion": "2", "Severity": "HIGH"} for cve in cves
+                ]}
+
     def test_load_accepts_nanosecond_database_timestamp(self):
         now = datetime.now(timezone.utc)
         image = "example.invalid/collector@sha256:" + "a" * 64
@@ -161,9 +204,49 @@ class ComparisonTests(unittest.TestCase):
             current["newFindings"] = []
         with patch.object(normalize, "compare_findings", side_effect=broken):
             result = unittest.TestResult()
-            ComparisonTests("test_only_matched_present_to_absent_without_new_findings_passes").run(result)
-        self.assertTrue(result.failures, result.errors)
-        self.assertFalse(result.errors)
+            ComparisonTests("test_new_findings_in_deferred_targets_still_block").run(result)
+            self.assertTrue(result.failures, result.errors)
+            self.assertFalse(result.errors)
+        with patch.object(compare_trivy, "DEFERRED_TARGETS", frozenset()):
+            result = unittest.TestResult()
+            ComparisonTests("test_existing_findings_in_exact_deferred_targets_are_reported_not_gated").run(result)
+            self.assertTrue(result.failures, result.errors)
+            self.assertFalse(result.errors)
+
+    def test_existing_findings_in_exact_deferred_targets_are_reported_not_gated(self):
+        targets = ("opt/microsoft/otelcollector/otelcollector", "opt/promconfigvalidator")
+        self.assertEqual(compare_trivy.DEFERRED_TARGETS, frozenset(targets))
+        for target in targets:
+            with self.subTest(target=target):
+                result = self.binary(target, ["CVE-2026-1234"])
+                comparison = self.compare_fixture([result], [result], ["CVE-2026-1234"])
+                self.assertEqual(comparison["verdict"], "PASS")
+                self.assertEqual(comparison["baselineFindings"][0]["status"], "DEFERRED")
+                self.assertEqual(comparison["unresolvedFindings"], comparison["baselineFindings"])
+                self.assertEqual(comparison["remainingFindings"][0]["path"], target)
+                self.assertEqual(comparison["smokeTests"], [{"id": "CVE-2026-1234", "status": "DEFERRED"}])
+                missing = dict(result, Packages=[], Vulnerabilities=[])
+                comparison = self.compare_fixture([result], [missing], ["CVE-2026-1234"])
+                self.assertEqual(comparison["verdict"], "BLOCKED")
+                self.assertEqual(comparison["baselineFindings"][0]["status"], "NOT_REPORTED")
+
+    def test_same_cve_in_an_in_scope_target_still_blocks(self):
+        cve = "CVE-2026-1234"
+        baseline = [self.binary("opt/microsoft/otelcollector/otelcollector", [cve]),
+                    self.binary("opt/microsoft/otelcollector/prometheusui", [cve])]
+        comparison = self.compare_fixture(baseline, baseline, [cve])
+        self.assertEqual(comparison["verdict"], "FAIL")
+        self.assertEqual([row["status"] for row in comparison["baselineFindings"]],
+                         ["DEFERRED", "OPEN"])
+        self.assertEqual(comparison["smokeTests"], [{"id": cve, "status": "OPEN"}])
+
+    def test_new_findings_in_deferred_targets_still_block(self):
+        target = "opt/promconfigvalidator"
+        baseline = [self.binary("opt/main", ["CVE-2026-1234"]), self.binary(target, [])]
+        candidate = [self.binary("opt/main", []), self.binary(target, ["CVE-2026-9999"])]
+        comparison = self.compare_fixture(baseline, candidate, ["CVE-2026-1234"])
+        self.assertEqual(comparison["verdict"], "FAIL")
+        self.assertEqual([finding["id"] for finding in comparison["newFindings"]], ["CVE-2026-9999"])
 
 
 if __name__ == "__main__":

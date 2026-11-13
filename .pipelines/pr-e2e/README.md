@@ -24,13 +24,14 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   child digest/platform, empty ignore/config files and recorded scanner/DB/hash.
   It does not use or change the Docker daemon. Exit zero means the scanner ran,
   not that vulnerabilities are absent.
-- `compare_trivy.py`: every baseline Linux CVE finding and no-new-findings comparison
-  for matched scanner/configuration/DB hashes, complete target/package inventory
-  and a candidate bound to the successful build receipt. It cannot clear a
-  Qualys QID or claim full-image coverage. Every baseline finding is evaluated
-  without severity/fixability filters; unresolved, unreported, or new findings
-  block readiness. OS targets must match the scan's exact image ref and OS
-  metadata before comparing their distribution/version; binary paths remain exact.
+- `compare_trivy.py`: baseline Linux CVE and no-new-findings comparison for
+  matched scanner/configuration/DB hashes, complete target/package inventory
+  and a candidate bound to the successful build receipt. Still-present baseline
+  findings in the exact targets `opt/microsoft/otelcollector/otelcollector` and
+  `opt/promconfigvalidator` are reported as deferred to the separate Collector
+  upgrade; missing target/package evidence and new findings in any target still
+  block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
+  must match the scan's exact image ref and OS metadata; binary paths remain exact.
 - `published_discovery.py` and `published-images.json`: compare the pinned
   production and latest-main collector `linux/amd64` child digests with Trivy
   0.76.1, the same database snapshot and identical configuration. The main image
@@ -240,14 +241,20 @@ producer signs only `payload.json` in the collector and allocator signing folder
 the original Buildx `push-metadata.json` remains readable JSON for immutable
 push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
 This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
-the scanner also evaluates every baseline finding without severity or fixability
-filters. A
+the scanner evaluates every baseline finding without severity or fixability
+filters. Still-present baseline findings in the exact
+`opt/microsoft/otelcollector/otelcollector` and `opt/promconfigvalidator` targets
+are reported unresolved/deferred to the
+separate Collector upgrade, not treated as fixed. New findings in those targets
+and the same CVE in any other target still block; missing evidence also blocks.
+All raw findings remain in the comparison evidence. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
 resource group and publish its inventory; the pipeline removes its local kubeconfig
 but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
 `default`, `linux`, `settings`, `classic-azure-cni`, `mixed`, `autoscaler`, `uai`,
-`cilium` and `kubenet` in serial stages, even if an earlier row fails. Each row
+`cilium` and `kubenet` in parallel stages after the aggregate capacity gate,
+even if an earlier row fails. Each row
 has its own UUID, checkout, evidence, retained resource group and bootstrap
 artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
 in the approved build subscription. A named selector runs just that row.
