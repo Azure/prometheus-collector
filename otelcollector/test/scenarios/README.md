@@ -205,7 +205,7 @@ records executed/failed/skipped counts; skipped tests are not claimed as execute
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
 
-Private/proxy lanes are opt-in validation lanes until their live proofs pass;
+Proxy lanes are opt-in validation lanes until their live proofs pass;
 `--validation-lane` permits exercising them without removing `blockedReason` or
 adding them to `all`. A retained VNet VM carries only the private API TCP tunnel;
 Helm, TestKube, credentials and evidence stay on the pipeline agent.
@@ -228,13 +228,6 @@ Retained retries check the actual addon token and managed-addon state, so an
 interrupted first initialization is resumed rather than mistaken for completion.
 Partial deployment retries preserve immutable VM creation public keys; these are
 separate from the forwarding-only authentication key minted and removed each run.
-
-The private lane's functional proof passed in pipeline 979 build 132159
-(producer 131983, product source `d34c33d1`, test source `5dbd1597`): all six
-suites passed, fresh run-specific AMW ingestion was verified, and temporary SSH
-access was revoked while retaining the resources. Its matrix blocker is removed;
-the build's independent vulnerability-scan and global coverage gates still failed.
-Fresh-ingestion proof is also printed to build logs without the AMW query token.
 
 The proxy adapter explicitly sets both cases of HTTP(S)_PROXY and NO_PROXY on
 candidate collectors and mounts the owned public CA at `/anchors/proxy`.

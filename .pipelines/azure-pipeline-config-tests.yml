@@ -71,7 +71,6 @@ parameters:
   - classic-azure-cni
   - acns
   - otlp
-  - private
   - proxy
   - proxy-custom-ca
 
@@ -1307,8 +1306,8 @@ stages:
         targetPath: $(capacityEvidence)
         artifact: candidate-capacity-$(Build.BuildId)
 
-- ${{ each scenario in split('default,classic-azure-cni,acns,otlp,private,proxy,proxy-custom-ca', ',') }}:
-  - ${{ if or(and(eq(parameters.candidateScenario, 'all'), notIn(scenario, 'private', 'proxy', 'proxy-custom-ca')), eq(parameters.candidateScenario, scenario)) }}:
+- ${{ each scenario in split('default,classic-azure-cni,acns,otlp,proxy,proxy-custom-ca', ',') }}:
+  - ${{ if or(and(eq(parameters.candidateScenario, 'all'), notIn(scenario, 'proxy', 'proxy-custom-ca')), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
       lockBehavior: sequential

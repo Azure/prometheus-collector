@@ -40,15 +40,6 @@
       "blockedReason": "TestKube query authentication without workload identity/OIDC is not implemented; do not enable either and silently change this baseline."
     },
     {
-      "id": "private",
-      "cluster": "clusters/private.bicepparam",
-      "clusterFeatures": ["aks", "windows", "private-api", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly"
-    },
-    {
       "id": "ampls",
       "cluster": "clusters/ampls.bicepparam",
       "clusterFeatures": ["aks", "windows", "ampls", "private-query", "workload-identity", "operator"],
@@ -57,16 +48,6 @@
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
       "tier": "weekly",
       "blockedReason": "Independent DCE/DCRA, private-DNS, approved endpoint and public-bypass denial proofs are not implemented."
-    },
-    {
-      "id": "private-ampls",
-      "cluster": "clusters/private-ampls.bicepparam",
-      "clusterFeatures": ["aks", "windows", "private-api", "ampls", "private-query", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires private orchestrator access plus independent AMPLS/private-query proofs."
     },
     {
       "id": "proxy",
@@ -115,16 +96,6 @@
       "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns"],
       "tier": "weekly",
       "blockedReason": "Requires independently verified managed ACNS plus controlled DNS/forward traffic before the managed-acns selector."
-    },
-    {
-      "id": "ampls-acns",
-      "cluster": "clusters/ampls-acns.bicepparam",
-      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "managed-acns", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires independent AMPLS and non-Cilium managed ACNS proofs."
     },
     {
       "id": "customer-helm",

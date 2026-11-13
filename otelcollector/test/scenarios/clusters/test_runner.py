@@ -1796,15 +1796,26 @@ class Contracts(unittest.TestCase):
             host.args.settle_seconds = 0
             deletes = 0
             always_fail = False
+            reset_name = runner.RESET[-1]
+            reset_config = {
+                "apiVersion": "v1",
+                "kind": "ConfigMap",
+                "metadata": {"name": reset_name, "namespace": "kube-system"},
+            }
+            restored_configmaps = 0
 
             def kube(*args, **kwargs):
-                nonlocal deletes
+                nonlocal deletes, restored_configmaps
                 if args[0] == "get":
+                    if args[1:3] == ("ConfigMap", reset_name):
+                        return json.dumps(reset_config)
                     return ""
                 if args[:3] == ("delete", "Pod", "annotation-target"):
                     deletes += 1
                     if deletes == 1 or always_fail:
                         raise RuntimeError("Error from server (ServiceUnavailable)")
+                if args[0] == "replace":
+                    restored_configmaps += 1
                 return ""
 
             host.kube.side_effect = kube
@@ -1816,13 +1827,16 @@ class Contracts(unittest.TestCase):
             self.assertEqual(deletes, 2)
             always_fail = True
             deletes = 0
+            restored_configmaps = 0
             host.args.evidence = Path(temporary) / "exhausted"
             with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
                     runner, "label_filter", return_value="case-label"), patch.object(
                     runner, "run_suite", return_value={"executed": 1}), patch.object(runner.time, "sleep"):
-                with self.assertRaisesRegex(RuntimeError, "Restoration failed"):
+                with self.assertRaisesRegex(
+                        RuntimeError, "Restoration failed.*Pod/annotation-target.*ServiceUnavailable"):
                     runner.settings_slot(host, manifest)
             self.assertEqual(deletes, 4)
+            self.assertEqual(restored_configmaps, 1)
 
     def test_existing_fixture_namespace_is_refused_before_any_mutation(self):
         with tempfile.TemporaryDirectory() as temporary:

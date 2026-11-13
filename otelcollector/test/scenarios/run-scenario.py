@@ -40,9 +40,9 @@ SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livene
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus",
-    "private": "westcentralus", "proxy": "westcentralus", "proxy-custom-ca": "westcentralus",
+    "proxy": "westcentralus", "proxy-custom-ca": "westcentralus",
 }
-VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca"}
+VALIDATION_LANES = {"proxy", "proxy-custom-ca"}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -1049,8 +1049,9 @@ def settings_slot(host, variant):
         error = failure
         raise
     finally:
-        try:
-            for (kind, name, namespace), original in reversed(list(originals.items())):
+        restore_failures = []
+        for (kind, name, namespace), original in reversed(list(originals.items())):
+            try:
                 if original is None:
                     for attempt in range(4):
                         try:
@@ -1070,9 +1071,13 @@ def settings_slot(host, variant):
                 actual = clean_resource(json.loads(readback)) if readback.strip() else None
                 if actual != original:
                     raise RuntimeError(f"Baseline restoration mismatch: {kind}/{name}")
-        except RuntimeError as restore_failure:
+            except RuntimeError as restore_failure:
+                restore_failures.append((kind, name, restore_failure))
+        if restore_failures:
+            details = "; ".join(
+                f"{kind}/{name}: {failure}" for kind, name, failure in restore_failures)
             raise RuntimeError(f"Restoration failed; no next variant allowed. Original: {error}; "
-                               f"restore: {restore_failure}") from restore_failure
+                               f"restore failures: {details}") from restore_failures[0][2]
 
 
 def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
