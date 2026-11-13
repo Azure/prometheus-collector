@@ -54,6 +54,17 @@ scrape targets. Its private ingestion/query proof is separate, never reported as
 ingestion through the proxy. Both dependent lanes remain opt-in with production
 coverage blocked until their live proofs pass.
 
+For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
+`httpProxyConfig` into inline global workflow container defaults so Git-clone init
+containers receive it even when admission only injects regular containers.
+Both environment-variable casings retain the complete `effectiveNoProxy` list,
+including AKS-injected defaults; a missing effective list fails closed.
+The cluster read and Helm stdin values are private; no proxy values enter command
+arguments or logs. Inline values are persisted in the API Deployment, so
+credential-bearing proxy URLs are rejected rather than stored there; AKS does not
+support proxy username/password authentication. Absent or explicitly disabled
+proxy configurations add no defaults.
+
 ## Prerequisites
 
 Use Python 3.10+ and the packages pinned in `clusters/requirements.txt`, Azure CLI
