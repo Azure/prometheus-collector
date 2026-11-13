@@ -38,7 +38,8 @@ def workflow_fixture(destination, test_sha="a" * 40):
     artifact_dir = destination / "testkube-executions/ConfigTests/configprocessingcommon/exact-id/artifacts"
     reports = artifact_dir / "nested"
     reports.mkdir(parents=True)
-    (reports / "junit.xml").write_text("<testsuite><testcase/><testcase><skipped/></testcase></testsuite>")
+    (reports / "junit.xml").write_text(
+        '<testsuite><testcase name="[It] passed"/><testcase name="[It] skipped"><skipped/></testcase></testsuite>')
     runner.save(reports / "ginkgo.json", [{
         "SuiteSucceeded": True, "SpecReports": [{"State": "passed", "LeafNodeType": "It"},
                                              {"State": "skipped", "LeafNodeType": "It"}],
@@ -1243,7 +1244,8 @@ class Contracts(unittest.TestCase):
                 path.write_text(content)
                 with self.subTest(xml=content), self.assertRaises(RuntimeError):
                     runner.junit_summary(path)
-            path.write_text("<testsuite><testcase/><testcase><skipped/></testcase></testsuite>")
+            path.write_text(
+                '<testsuite><testcase name="[It] passed"/><testcase name="[It] skipped"><skipped/></testcase></testsuite>')
             self.assertEqual(runner.junit_summary(path), {"executed": 1, "failed": 0, "skipped": 1})
 
     def test_fixture_paths_must_exist_and_remain_in_checkout(self):
@@ -1867,6 +1869,28 @@ class Contracts(unittest.TestCase):
             runner.save(destination / "testkube-results-ConfigTests.json", value)
             (reports / "junit.xml").write_text("<testsuite><testcase><skipped/></testcase></testsuite>")
             with self.assertRaisesRegex(RuntimeError, "executed"):
+                runner.workflow_result(destination, "configprocessingcommon", "a" * 40, value["runner_image"])
+
+    def test_workflow_counts_specs_but_rejects_lifecycle_failures_and_count_mismatches(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary)
+            value, reports = workflow_fixture(destination)
+            path = reports / "junit.xml"
+            original = path.read_text()
+            path.write_text(original.replace(
+                "</testsuite>", '<testcase name="[BeforeSuite]"/><testcase name="[AfterSuite]"/></testsuite>'))
+            result = runner.workflow_result(destination, "configprocessingcommon", "a" * 40, value["runner_image"])
+            self.assertEqual((result["executed"], result["failed"], result["skipped"]), (1, 0, 1))
+            for name, tag in (("[BeforeSuite]", "failure"), ("[AfterSuite]", "error")):
+                path.write_text(original.replace(
+                    "</testsuite>", f'<testcase name="{name}"><{tag}/></testcase></testsuite>'))
+                with self.subTest(node=name), self.assertRaisesRegex(RuntimeError, "successful tests"):
+                    runner.workflow_result(destination, "configprocessingcommon", "a" * 40, value["runner_image"])
+            path.write_text('<testsuite><testcase name="[BeforeSuite]"/><testcase name="[AfterSuite]"/></testsuite>')
+            with self.assertRaisesRegex(RuntimeError, "executed"):
+                runner.workflow_result(destination, "configprocessingcommon", "a" * 40, value["runner_image"])
+            path.write_text(original.replace("</testsuite>", '<testcase name="[It] extra"/></testsuite>'))
+            with self.assertRaisesRegex(RuntimeError, "executionId=exact-id.*submittedPassed=1"):
                 runner.workflow_result(destination, "configprocessingcommon", "a" * 40, value["runner_image"])
 
     def test_workflow_rejects_other_executions_and_artifact_directories(self):

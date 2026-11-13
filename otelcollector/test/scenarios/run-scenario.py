@@ -241,9 +241,10 @@ def clean_resource(document):
 def junit_summary(path):
     root = ET.parse(path).getroot()
     cases = list(root.iter("testcase"))
-    executed = [c for c in cases if c.find("skipped") is None]
-    failed = [c for c in executed if c.find("failure") is not None or c.find("error") is not None]
-    result = {"executed": len(executed), "failed": len(failed), "skipped": len(cases) - len(executed)}
+    specs = [c for c in cases if c.get("name", "").startswith("[It]")]
+    executed = [c for c in specs if c.find("skipped") is None]
+    failed = [c for c in cases if c.find("failure") is not None or c.find("error") is not None]
+    result = {"executed": len(executed), "failed": len(failed), "skipped": len(specs) - len(executed)}
     if not executed or failed:
         raise RuntimeError(f"JUnit must contain executed, successful tests: {path}: {result}")
     return result
@@ -924,7 +925,9 @@ def workflow_result(destination, workflow, source_sha, image):
                    for spec in suites[0].get("SpecReports", []))):
         raise RuntimeError("Ginkgo JSON did not contain a successful suite with executed cases")
     if junit["executed"] != row["passed"]:
-        raise RuntimeError("JUnit executed cases disagree with the submitted execution result")
+        raise RuntimeError(
+            f"JUnit executed cases disagree with the submitted execution result: "
+            f"workflow={workflow}, executionId={execution_id}, JUnit={junit}, submittedPassed={row['passed']}")
     return {"workflow": workflow, "executionId": execution_id, "status": "passed",
             **junit, "artifacts": str(artifact_dir)}
 
