@@ -193,7 +193,9 @@ alias/annotation-namespace ingestion; configprocessing alone does not.
 Catalog `overrideWorkflowLabels: true` declares intentional source-filter
 replacement and is retained in `selection.json`; filters are replaced, not appended.
 
-Health suites use existing reference workloads and scrape fixtures. JUnit
+Health suites use existing reference workloads and scrape fixtures. Windows hosts
+also deploy and await the existing `internal/windowsExporterInstaller` DaemonSet
+before checking the default Windows exporter target. JUnit
 records executed/failed/skipped counts; skipped tests are not claimed as executed.
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
