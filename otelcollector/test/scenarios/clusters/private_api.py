@@ -12,7 +12,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
-from urllib.request import urlopen
+from urllib.request import ProxyHandler, build_opener
 
 import yaml
 
@@ -96,7 +96,7 @@ def private_api(host, outputs):
     for tool in ("ssh", "ssh-keygen"):
         if not shutil.which(tool):
             raise RuntimeError(f"Private API adapter requires {tool}")
-    with urlopen("https://api.ipify.org", timeout=30) as response:
+    with build_opener(ProxyHandler({})).open("https://api.ipify.org", timeout=30) as response:
         prefix = agent_prefix(response.read(128).decode("ascii"))
     group = host.receipt["resourceGroup"]
     vm, nsg = outputs["orchestratorVmName"], outputs["orchestratorNsgName"]
@@ -112,8 +112,12 @@ def private_api(host, outputs):
             key_attempted = True
             proof = vm_script(host, vm, f"""set -eu
 id scenario-tunnel >/dev/null 2>&1 || useradd --create-home --shell /bin/bash scenario-tunnel
+printf '%s\\n' 'Match User scenario-tunnel' '    AuthenticationMethods publickey' '    AllowTcpForwarding local' 'Match all' > /etc/ssh/sshd_config.d/00-scenario-tunnel.conf
+sshd -t
+test "$(sshd -T -C user=scenario-tunnel,host=localhost,addr=127.0.0.1 | awk '$1 == "allowtcpforwarding" {{print $2}}')" = local
+systemctl reload ssh
 install -d -m 700 -o scenario-tunnel -g scenario-tunnel /home/scenario-tunnel/.ssh
-printf '%s\\n' 'expiry-time="{expires}",no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc,command="/bin/false",permitopen="{fqdn}:443",permitlisten="none" {public_key}' > /home/scenario-tunnel/.ssh/authorized_keys
+printf '%s\\n' 'expiry-time="{expires}",no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc,command="/bin/false",permitopen="{fqdn}:443" {public_key}' > /home/scenario-tunnel/.ssh/authorized_keys
 chown scenario-tunnel:scenario-tunnel /home/scenario-tunnel/.ssh/authorized_keys
 chmod 600 /home/scenario-tunnel/.ssh/authorized_keys
 IP=$(getent ahostsv4 '{fqdn}' | head -n1 | cut -d' ' -f1)
@@ -131,6 +135,7 @@ printf 'SCENARIO_RESULT={{"privateIp":"%s","hostKey":"%s"}}\\n' "$IP" "$KEY"
                     "--access", "Allow", "--direction", "Inbound", "--protocol", "Tcp",
                     "--source-address-prefixes", prefix, "--source-port-ranges", "*",
                     "--destination-address-prefixes", "*", "--destination-port-ranges", "22")
+            print(f"Private API ingress: {prefix} -> {public_ip}:22 (direct IPv4 discovery)", flush=True)
             with socket.socket() as listener:
                 listener.bind(("127.0.0.1", 0))
                 port = listener.getsockname()[1]

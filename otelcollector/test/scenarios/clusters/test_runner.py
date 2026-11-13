@@ -149,12 +149,13 @@ class Contracts(unittest.TestCase):
                 response = Mock()
                 response.__enter__ = Mock(return_value=io.BytesIO(b"8.8.8.8"))
                 response.__exit__ = Mock(return_value=False)
-                with patch.object(adapter, "urlopen", return_value=response), \
+                with patch.object(adapter, "build_opener") as opener, \
                         patch.object(adapter.shutil, "which", side_effect=lambda name: name), \
                         patch.object(adapter, "vm_script", side_effect=[
                             {"privateIp": "10.224.0.9", "hostKey": "ssh-ed25519 AAAA root"},
                             {"keyRemoved": True},
                         ]) as remote, patch.object(adapter.subprocess, "Popen", return_value=process) as ssh:
+                    opener.return_value.open.return_value = response
                     try:
                         with adapter.private_api(host, outputs):
                             forwarded = runner.yaml.safe_load(kubeconfig.read_text())["clusters"][0]["cluster"]
@@ -168,6 +169,12 @@ class Contracts(unittest.TestCase):
                     arguments = ssh.call_args.args[0]
                     self.assertIn("StrictHostKeyChecking=yes", arguments)
                     self.assertIn("BatchMode=yes", arguments)
+                    self.assertEqual(opener.call_args.args[0].proxies, {})
+                    bootstrap = remote.call_args_list[0].args[2]
+                    self.assertIn("'Match User scenario-tunnel'", bootstrap)
+                    self.assertIn("'    AuthenticationMethods publickey'", bootstrap)
+                    self.assertIn("'    AllowTcpForwarding local' 'Match all'", bootstrap)
+                    self.assertNotIn('permitlisten="none"', bootstrap)
                     create = host.az.call_args_list[1].args
                     self.assertEqual(create[create.index("--source-address-prefixes") + 1], "8.8.8.8/32")
                     cleanup = host.az.call_args_list[2].args
@@ -189,7 +196,7 @@ class Contracts(unittest.TestCase):
                 host.kubeconfig.write_text(runner.yaml.safe_dump(
                     {"clusters": [{"cluster": {"server": "https://" + fqdn}}]}))
                 host.az.return_value = {"privateFqdn": fqdn, "apiServerAccessProfile": profile}
-                with patch.object(adapter, "urlopen") as discover, self.assertRaisesRegex(RuntimeError, "private-only"):
+                with patch.object(adapter, "build_opener") as discover, self.assertRaisesRegex(RuntimeError, "private-only"):
                     with adapter.private_api(host, {"clusterName": "sc"}):
                         self.fail("Public API profile entered the tunnel")
                 discover.assert_not_called()

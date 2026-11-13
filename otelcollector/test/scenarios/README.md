@@ -193,7 +193,9 @@ adding them to `all`. A retained VNet VM carries only the private API TCP tunnel
 Helm, TestKube, credentials and evidence stay on the pipeline agent.
 `clusters.private_api.private_api(host, outputs)` pins the SSH host key obtained
 through authenticated VM run-command, restricts ingress to the active agent's
-public IPv4 `/32`, and uses an ephemeral forwarding-only key. Context exit removes
+public IPv4 `/32` discovered without HTTP proxies, and uses an ephemeral forwarding-only key.
+A user-scoped sshd rule requires public-key authentication and permits only local
+forwarding; the key restricts the destination to the private API. Context exit removes
 temporary ingress and key, including on test failure; cleanup failure fails the lane.
 The retained SSH rule returns to `Deny` rather than being deleted because the
 resource-group lock prohibits ARM DELETE operations.
