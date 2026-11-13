@@ -5,6 +5,7 @@ import argparse
 import base64
 import copy
 from contextlib import contextmanager, ExitStack
+from datetime import datetime
 from functools import cache
 import hashlib
 import inspect
@@ -964,6 +965,16 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
             generated.unlink()
 
 
+def enable_otlp_settings(text):
+    documents = list(yaml.safe_load_all(text))
+    for document in documents:
+        if (document and document.get("kind") == "ConfigMap"
+                and document["metadata"]["name"] == "ama-metrics-settings-configmap"
+                and document["metadata"].get("namespace") == "kube-system"):
+            document.setdefault("data", {})["opentelemetry-metrics"] = "enabled = true"
+    return yaml.safe_dump_all(documents)
+
+
 def settings_slot(host, variant):
     if variant.get("helmValues"):
         raise ValueError("Customer Helm install adapter is not implemented; refusing addon substitution")
@@ -980,6 +991,8 @@ def settings_slot(host, variant):
     })
     sources = {path: path.read_text(encoding="utf-8-sig")
                for path in variant["configmaps"] + variant["customResources"]}
+    if host.scenario["id"] == "ampls-proxy":
+        sources = {path: enable_otlp_settings(text) for path, text in sources.items()}
     documents = [doc for text in sources.values() for doc in yaml.safe_load_all(text) if doc]
     save(host.args.evidence / variant["id"] / "applied-resources.json", [
         {"source": str(path), "appliedTextSha256": hashlib.sha256(text.encode()).hexdigest()}
@@ -1153,6 +1166,68 @@ def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
     if not routes:
         raise RuntimeError("No successful fresh collector-to-ingestion route in the owned proxy log")
     return routes
+
+
+def verify_me_configuration(host, proof, started):
+    immutable_id = proof["immutableDcrId"]
+    if not re.fullmatch(r"dcr-[0-9a-f]{32}", immutable_id):
+        raise RuntimeError("ME configuration proof requires the independently verified immutable DCR ID")
+    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    observed = []
+    for pod in pods:
+        if not any(c["name"] == "prometheus-collector" for c in pod["spec"]["containers"]):
+            continue
+        status = next(c for c in pod["status"]["containerStatuses"] if c["name"] == "prometheus-collector")
+        container_started = datetime.fromisoformat(
+            status["state"]["running"]["startedAt"].replace("Z", "+00:00")).timestamp()
+        if not status["ready"] or container_started < started:
+            raise RuntimeError("ME configuration proof requires a fresh ready collector")
+        command = r'''set -eu
+enabled=false; mdsd=0; me=0; localControl=0
+for proc in /proc/[0-9]*; do
+  name=$(cat "$proc/comm" 2>/dev/null) || continue
+  case "$name" in
+    mdsd) mdsd=$((mdsd + 1));;
+    MetricsExtensio*)
+      me=$((me + 1))
+      if tr '\0' '\n' < "$proc/environ" | grep -qx 'AZMON_FULL_OTLP_ENABLED=true'; then
+        enabled=true
+      fi
+      if tr '\0' '\n' < "$proc/cmdline" | grep -qx -- '-LocalControlChannel'; then
+        localControl=$((localControl + 1))
+      fi;;
+  esac
+done
+printf '%s\n' "$enabled"
+printf 'mdsd=%s me=%s localControl=%s\n' "$mdsd" "$me" "$localControl"
+for attempt in $(seq 1 60); do
+  if test -s "/etc/mdsd.d/config-cache/me/dcrs/$1"; then break; fi
+  sleep 5
+done
+if test -s "/etc/mdsd.d/config-cache/me/dcrs/$1"; then
+  stat -c '%Y %s' "/etc/mdsd.d/config-cache/me/dcrs/$1"
+else
+  printf 'configuration-missing\n'
+fi
+'''
+        lines = host.kube("exec", pod["metadata"]["name"], "-n", "kube-system",
+                          "-c", "prometheus-collector", "--", "sh", "-c", command,
+                          "me-configuration-proof", immutable_id, private=True).splitlines()
+        if len(lines) != 3 or lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]:
+            raise RuntimeError("AMPLS-proxy requires OTLP enabled and ME-only AMCS configuration")
+        if lines[2] == "configuration-missing":
+            raise RuntimeError("ME did not download the owned DCR configuration within five minutes")
+        modified, size = map(int, lines[2].split())
+        if modified < int(container_started) or size <= 0:
+            raise RuntimeError("ME configuration cache must be freshly downloaded, not inherited")
+        observed.append({"pod": pod["metadata"]["name"], "uid": pod["metadata"]["uid"],
+                         "containerStarted": container_started, "configurationModified": modified,
+                         "configurationBytes": size, "mdsdRunning": False, "meLocalControl": False})
+    if len(observed) < 2:
+        raise RuntimeError("ME configuration proof requires replica and node collectors")
+    result = {"status": "PASS", "immutableDcrId": immutable_id, "collectors": observed}
+    print("AMPLS_ME_CONFIGURATION " + json.dumps(result), flush=True)
+    return result
 
 
 def network_probe_monitor(host, marker):
@@ -1813,13 +1888,12 @@ def execute(args, scenario, variants, commands):
                 time.sleep(10)
         if {"private-api", "ampls"} & set(scenario["clusterFeatures"]):
             host.protect_host()
-        if scenario["id"] == "otlp":
-            settings = yaml.safe_load(
+        if scenario["id"] in {"otlp", "ampls-proxy"}:
+            settings = enable_otlp_settings(
                 (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
-            settings["data"]["opentelemetry-metrics"] = "enabled = true"
-            host.kube("apply", "-f", "-", data=yaml.safe_dump(settings), private=True)
+            host.kube("apply", "-f", "-", data=settings, private=True)
         chart = render_chart(commands, args.evidence, outputs, source, mapping,
-                             otlp=scenario["id"] == "otlp")
+                             otlp=scenario["id"] in {"otlp", "ampls-proxy"})
         proxy_started = time.time()
         commands.run(["helm", "upgrade", "--install", "ama-metrics", str(chart),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "kube-system",
@@ -1837,6 +1911,14 @@ def execute(args, scenario, variants, commands):
         save(args.evidence / "images-before.json", audit_images(host, images))
         if "ampls" in scenario["clusterFeatures"]:
             outcome["ampls"] = ampls_proofs.verify(host, outputs)
+        if scenario["id"] == "ampls-proxy":
+            verify_me_configuration(host, outcome["ampls"], 0)
+            # Start the route window after legacy mdsd pods leave, then prove a cold ME config fetch.
+            proxy_started = time.time()
+            for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
+                host.kube("rollout", "restart", resource, "-n", "kube-system")
+                host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
+            outcome["meConfiguration"] = verify_me_configuration(host, outcome["ampls"], proxy_started)
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
         # Health suites depend on the repository's existing reference-app scrape fixtures.
@@ -1844,7 +1926,7 @@ def execute(args, scenario, variants, commands):
                      "ama-metrics-prometheus-config-node-configmap.yaml",
                      "ama-metrics-prometheus-config-node-windows-configmap.yaml",
                      "ama-metrics-settings-configmap.yaml"):
-            if scenario["id"] == "otlp" and name == "ama-metrics-settings-configmap.yaml":
+            if scenario["id"] in {"otlp", "ampls-proxy"} and name == "ama-metrics-settings-configmap.yaml":
                 continue
             host.kube("apply", "-f", str(TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps" / name))
         references = ["prometheus-reference-app.yaml"]
@@ -1883,6 +1965,7 @@ def execute(args, scenario, variants, commands):
             host.kube("apply", "-f", "-", data=json.dumps(service), private=True)
             outcome["suites"]["otlp"] = run_suite(
                 host, "querymetrics", args.evidence / "health" / "otlp", "candidate-otlp")
+        if scenario["id"] in {"otlp", "ampls-proxy"}:
             outcome["suites"]["otlp-processes"] = run_suite(
                 host, "containerstatus", args.evidence / "health" / "otlp-processes", "otlp && !windows")
         if {"private-api", "ampls"} & set(scenario["clusterFeatures"]):

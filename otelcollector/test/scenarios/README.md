@@ -76,6 +76,19 @@ NO_PROXY enforcement. Diagnostic curl from all three collector pods reached that
 private IP directly with their existing environment. Socket sampling did not
 identify the process responsible for the offending short-lived connections.
 
+The AMPLS-proxy validation path now enables `opentelemetry-metrics` with
+`enabled = true` in the baseline and each settings slot, matching the
+proxy-authenticated TSG on `grwehner/tsg-tooling-and-devbox`. The existing chart
+OTLP flag keeps this mode active during ConfigMap resets. This skips mdsd and
+lets MetricsExtension fetch AMCS configuration without `-LocalControlChannel`;
+it does not disable the proxy globally or change the candidate image.
+After legacy pods leave, the route window includes a cold collector rollout.
+`AMPLS_ME_CONFIGURATION` requires ME-only processes and a nonempty cache file for
+the verified immutable DCR, written after the new container started. Existing
+private-DNS, public-bypass, fresh-ingestion and proxy-route guards remain in force.
+This is bounded POC validation, not a claim that the documented private-AKS/proxy
+support boundary is resolved. The lane remains blocked until live proof passes.
+
 For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
 `httpProxyConfig` into inline global workflow container defaults so Git-clone init
 containers receive it even when admission only injects regular containers.

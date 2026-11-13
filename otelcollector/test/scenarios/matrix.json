@@ -93,7 +93,7 @@
       "clusterFeatures": ["aks", "private-api", "http-proxy", "ampls", "private-query", "workload-identity", "operator"],
       "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
       "platforms": ["linux"],
-      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "ginkgoLabels": ["operator", "cluster-network"],
       "tier": "weekly",
       "blockedReason": "Build 132184 passed native JUnit and fresh private ingestion, but private DCE configuration traffic appeared in the owned Squid log; NO_PROXY route proof remains blocked."
     },

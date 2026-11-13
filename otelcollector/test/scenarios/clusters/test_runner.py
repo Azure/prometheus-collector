@@ -64,6 +64,80 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_ampls_proxy_otlp_settings_preserve_customer_resources_and_other_lanes(self):
+        original = {
+            "apiVersion": "v1", "kind": "ConfigMap",
+            "metadata": {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"},
+            "data": {"schema-version": "v2", "cluster-metrics": 'cluster_alias = "Customer Config POC"'},
+        }
+        unrelated = {"apiVersion": "v1", "kind": "ConfigMap",
+                     "metadata": {"name": "unrelated", "namespace": "kube-system"},
+                     "data": {"preserved": "true"}}
+        for lane in ("ampls-proxy", "private-ampls"):
+            with self.subTest(lane=lane), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "settings.yaml"
+                path.write_text(runner.yaml.safe_dump_all([original, unrelated]))
+                host = Mock()
+                host.scenario = dict(scenario(), id=lane)
+                host.args.evidence = Path(temporary)
+                host.args.settle_seconds = 0
+                host.kube.return_value = ""
+                manifest = dict(variant(), configmaps=[path])
+                with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), \
+                        patch.object(runner, "run_suite", return_value={"executed": 1}):
+                    runner.settings_slot(host, manifest)
+                applied = next(call.kwargs["data"] for call in host.kube.call_args_list
+                               if call.args[:2] == ("apply", "-f"))
+                actual, other = list(runner.yaml.safe_load_all(applied))
+                expected = copy.deepcopy(original)
+                if lane == "ampls-proxy":
+                    expected["data"]["opentelemetry-metrics"] = "enabled = true"
+                self.assertEqual(actual, expected)
+                self.assertEqual(other, unrelated)
+                self.assertNotIn("opentelemetry-metrics", original["data"])
+
+    def test_me_configuration_rejects_native_mode_stale_cache_and_old_collectors(self):
+        started = 1767225600
+        for case in ("fresh", "mdsd", "local-control", "disabled", "stale-cache", "empty-cache",
+                     "missing-cache", "old-pod"):
+            with self.subTest(case=case):
+                host = Mock()
+                pod = {
+                    "metadata": {"name": "collector", "uid": "new-pod"},
+                    "spec": {"containers": [{"name": "prometheus-collector"}]},
+                    "status": {"containerStatuses": [{
+                        "name": "prometheus-collector", "ready": True,
+                        "state": {"running": {"startedAt": "2026-01-01T00:00:00Z"}},
+                    }]},
+                }
+                flags = "mdsd=0 me=1 localControl=0"
+                enabled = "false" if case == "disabled" else "true"
+                if case == "mdsd":
+                    flags = "mdsd=1 me=1 localControl=0"
+                elif case == "local-control":
+                    flags = "mdsd=0 me=1 localControl=1"
+                cache_time = started - 1 if case == "stale-cache" else started + 5
+                cache_size = 0 if case == "empty-cache" else 100
+                cache = "configuration-missing" if case == "missing-cache" else f"{cache_time} {cache_size}"
+                host.kube.side_effect = [
+                    {"items": [pod, copy.deepcopy(pod)]},
+                    f"{enabled}\n{flags}\n{cache}\n",
+                    f"{enabled}\n{flags}\n{cache}\n",
+                ]
+                window = started + 1 if case == "old-pod" else started
+                proof = {"immutableDcrId": "dcr-" + "a" * 32}
+                if case == "fresh":
+                    with patch("sys.stdout", new_callable=io.StringIO):
+                        result = runner.verify_me_configuration(host, proof, window)
+                    self.assertEqual(len(result["collectors"]), 2)
+                    command = host.kube.call_args.args[-3]
+                    self.assertIn('"/etc/mdsd.d/config-cache/me/dcrs/$1"', command)
+                    self.assertIn('"$proc/environ"', command)
+                    self.assertEqual(host.kube.call_args.args[-1], proof["immutableDcrId"])
+                else:
+                    with self.assertRaises(RuntimeError):
+                        runner.verify_me_configuration(host, proof, window)
+
     def test_failed_ampls_and_private_hosts_remain_deletion_protected(self):
         for feature in ("ampls", "private-api"):
             with self.subTest(feature=feature), tempfile.TemporaryDirectory() as directory:
@@ -2249,6 +2323,13 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "ampls-proxy-otlp-slot": (
+            'if host.scenario["id"] == "ampls-proxy":', 'if False:'),
+        "ampls-proxy-me-only": (
+            'lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]', 'False'),
+        "ampls-proxy-fresh-config": ('modified < int(container_started)', 'False'),
+        "ampls-proxy-nonempty-config": ('size <= 0', 'False'),
+        "ampls-proxy-cold-collector": ('container_started < started', 'False'),
         "bootstrap-resumes-missing-token": (
             'if needs_token and not managed_enabled:', 'if not resolved["existing"]:'),
         "bootstrap-disables-retained-addon": (
