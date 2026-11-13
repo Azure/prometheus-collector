@@ -77,15 +77,13 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario` also accepts one of the four runnable campaign rows. The
+`--scenario` also accepts one of the five runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
-verifier remains mandatory before deployment. `acns` runs in `eastus2`;
+verifier remains mandatory before deployment. `acns` and `acns-cilium` run in `eastus2`;
 `default`, `classic-azure-cni` and `otlp` run in `centralus`.
-`acns-cilium` is an explicit proof-only pipeline selection in `eastus2`, excluded
-from `all` until its live proof passes. The pipeline supplies `--prove-acns-cilium`;
-ordinary runner invocations still honor its `blockedReason`. Its resource group
+`acns-cilium` is included in `all` after its successful live proof. Its resource group
 has a `CanNotDelete` lock and retains the same narrow bootstrap grants for reuse.
 The managed-addon handoff uses the AKS resource API, not the CLI disable path
 that deletes the fixture's DCR/DCRAs. It restores and verifies the owned DCR
@@ -191,9 +189,10 @@ candidate deployment.
 Fixture-declared namespaces must not already exist. Transition specs may change
 initially declared resource identities within the selected workflow; no separate
 phase executor or manifest fields are supported.
-Customer v1/v2 alias slots also run only `querymetrics` / `cluster-identity` with
+Customer v1/v2 alias slots also run `querymetrics` / `cluster-identity` with
 `EXPECTED_CLUSTER=Customer_Config_POC` **before restoration**. This proves fresh
 alias/annotation-namespace ingestion; configprocessing alone does not.
+The Cilium lane also requires `managed-acns-cilium` in each of these slots.
 Catalog `overrideWorkflowLabels: true` declares intentional source-filter
 replacement and is retained in `selection.json`; filters are replaced, not appended.
 
@@ -339,6 +338,7 @@ rendered KSM arguments alone are not coverage.
 | `default` | All 36 compatible settings variants; FIPS/ARM64 scheduling; common health, fresh Linux/Windows kubelet ingestion and node network-counter increases after DNS/service traffic. | Mixed-pool inventory alone is not proof; labeled scheduling and traffic assertions provide behavior evidence. |
 | `classic-azure-cni` | All 36 compatible settings variants; common health, per-node ingestion and node network-counter increases after DNS/service traffic. | Traffic traverses the actual profile; no claim is made about CNI-specific policy or flow records. |
 | `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
+| `acns-cilium` | Customer-settings v1/v2; independently verified managed ACNS/Cilium, fresh per-node `cilium_forward_bytes_total` and pod-level `hubble_dns_queries_total`, and positive traffic increases after controlled DNS/HTTP requests in both slots. | Retained Linux-only Cilium cluster; the real deletion lock and owned DCR association remain intact. |
 | `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |
 
 ### PR and scenario-source audit
@@ -401,7 +401,7 @@ are not candidate tests, and no shared cluster was mutated.
 | Ubuntu/Azure Linux, AMD64/ARM64, FIPS | Compatible distinct pools on one host; ARM64 FIPS requires Azure Linux 3+ |
 | Windows 2022/2025 | Separate host pools; the protected Windows 2022 collector supports both through process isolation |
 | Windows 2019 | Unsupported on 1.33+; no substitution with Windows 2022 |
-| Standalone autoscaler, Cilium, kubenet | Removed from the candidate campaign; shared collector metrics/assertions remain. The managed `acns-cilium` proof-only selection independently verifies the AKS Cilium/ACNS profile and ready Cilium DaemonSet, then requires fresh per-node Cilium forwarding and Hubble DNS traffic increases in both customer-settings v1/v2 slots before restoration. Its blocker remains until live evidence passes. |
+| Standalone autoscaler, Cilium, kubenet | Removed from the candidate campaign; shared collector metrics/assertions remain. The separate managed `acns-cilium` lane verifies the AKS Cilium/ACNS profile and ready Cilium DaemonSet, then requires fresh per-node Cilium forwarding and Hubble DNS traffic increases in both customer-settings v1/v2 slots before restoration. |
 | AMPLS/private ingestion + private query | Can share mixed-pool infrastructure; require distinct endpoint/DNS and data-path assertions |
 | Managed ACNS | The runnable `acns` row uses managed non-Cilium Retina; it requires fresh per-node `networkobservability_forward_bytes` and Linux pod-level `hubble_dns_queries_total` after generated DNS traffic. This is distinct from the standalone Retina Helm release and from Cilium ACNS. |
 | Customer Helm, candidate addon, Arc, CCP | Distinct installation ownership/adapters, not namespaces on the same managed addon |

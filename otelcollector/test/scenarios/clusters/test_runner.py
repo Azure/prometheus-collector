@@ -171,18 +171,15 @@ class Contracts(unittest.TestCase):
             with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, "managed Cilium ACNS"):
                 runner.verify_cilium_profile(broken)
 
-    def test_cilium_proof_opt_in_preserves_blocker_and_all_campaign(self):
+    def test_verified_cilium_is_runnable_with_both_settings_slots(self):
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, "BLOCKED"):
-                runner.main(["plan", "--scenario", "acns-cilium", "--evidence", directory])
-            runner.main(["plan", "--scenario", "acns-cilium", "--prove-acns-cilium",
-                         "--evidence", directory])
+            runner.main(["plan", "--scenario", "acns-cilium", "--evidence", directory])
             self.assertEqual(runner.load(Path(directory) / "plan.json")["settingsSlots"],
                              ["customer-settings-v1", "customer-settings-v2"])
-            self.assertNotIn("acns-cilium", runner.CAMPAIGN_LOCATIONS)
+            self.assertEqual(runner.CAMPAIGN_LOCATIONS["acns-cilium"], "eastus2")
             row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
                        if row["id"] == "acns-cilium")
-            self.assertIn("blockedReason", row)
+            self.assertNotIn("blockedReason", row)
 
     def test_cilium_customer_settings_query_runs_before_restoration(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -365,17 +362,18 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 4)
+                self.assertEqual(len(result["placements"]), 5)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
                 self.assertEqual(result["placements"]["classic-azure-cni"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(result["placements"]["otlp"], "centralus")
+                self.assertEqual(result["placements"]["acns-cilium"], "eastus2")
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (80, 104), "eastus2": (16, 16)}
+                expected = {"centralus": (80, 104), "eastus2": (24, 24)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}

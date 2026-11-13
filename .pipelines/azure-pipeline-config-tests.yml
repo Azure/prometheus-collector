@@ -1251,10 +1251,7 @@ stages:
           [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Capacity admission requires the approved build subscription" >&2; exit 1; }
           [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
           [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Capacity test source does not match this pipeline revision" >&2; exit 1; }
-          proof_args=()
-          [[ "$CANDIDATE_SCENARIO" != acns-cilium ]] || proof_args+=(--prove-acns-cilium)
           "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" campaign-preflight \
-            "${proof_args[@]}" \
             --source-root "$CAPACITY_ROOT" --scenario "$CANDIDATE_SCENARIO" \
             --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA" \
             --build-id "$PRODUCER_BUILD_ID" --evidence "$CAPACITY_EVIDENCE"
@@ -1262,7 +1259,7 @@ stages:
           import json, os, sys
           value = json.load(open(sys.argv[1], encoding="utf-8"))
           expected = os.environ["CANDIDATE_SCENARIO"]
-          scenarios = "default,classic-azure-cni,acns,otlp".split(",")
+          scenarios = "default,classic-azure-cni,acns,otlp,acns-cilium".split(",")
           selected = scenarios if expected == "all" else [expected]
           if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
                   or value.get("testSourceSha") != os.environ["TEST_SOURCE_SHA"]
@@ -1308,7 +1305,7 @@ stages:
         artifact: candidate-capacity-$(Build.BuildId)
 
 - ${{ each scenario in split('default,classic-azure-cni,acns,otlp,acns-cilium', ',') }}:
-  - ${{ if or(and(eq(parameters.candidateScenario, 'all'), ne(scenario, 'acns-cilium')), eq(parameters.candidateScenario, scenario)) }}:
+  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
       lockBehavior: sequential

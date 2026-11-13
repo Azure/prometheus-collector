@@ -31,9 +31,8 @@ BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
-    "acns": "eastus2", "otlp": "centralus",
+    "acns": "eastus2", "otlp": "centralus", "acns-cilium": "eastus2",
 }
-ACNS_CILIUM_LOCATION = "eastus2"
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
@@ -1311,16 +1310,13 @@ def campaign_preflight(args, matrix, commands):
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
     selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
-    locations = dict(CAMPAIGN_LOCATIONS)
-    if getattr(args, "prove_acns_cilium", False) and args.scenario == "acns-cilium":
-        locations["acns-cilium"] = ACNS_CILIUM_LOCATION
-    if any(name not in locations for name in selected):
+    if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
     test_source = source_commit(commands, TEST_SOURCE, ["otelcollector/test/scenarios"])
     if test_source != args.test_source_sha:
         raise ValueError("Campaign test source does not match the expected test source SHA")
-    placements = {name: locations[name] for name in selected}
+    placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
     regions = {}
     existing = {}
     for location in sorted(set(placements.values())):
@@ -1337,8 +1333,7 @@ def campaign_preflight(args, matrix, commands):
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
-            if not row or (row.get("blockedReason") and not (
-                    name == "acns-cilium" and getattr(args, "prove_acns_cilium", False))):
+            if not row or row.get("blockedReason"):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
@@ -1754,8 +1749,6 @@ def main(argv=None):
                         help="Existing clean test-source checkout matching --test-source-sha")
     parser.add_argument("--test-source-sha", help="Expected immutable test-source commit")
     parser.add_argument("--scenario", default="default")
-    parser.add_argument("--prove-acns-cilium", action="store_true",
-                        help="Explicit acns-cilium-only proof run; does not enable it in the all campaign")
     parser.add_argument("--subscription", default=BUILD_SUBSCRIPTION)
     parser.add_argument("--location", default="eastus2")
     parser.add_argument("--run-id", default=str(uuid.uuid4()))
@@ -1790,8 +1783,7 @@ def main(argv=None):
     if args.action == "run":
         if admitted_existing is None:
             raise ValueError("Run requires the aggregate admission's existing-host decision")
-        if args.scenario not in CAMPAIGN_LOCATIONS and not (
-                args.scenario == "acns-cilium" and args.prove_acns_cilium):
+        if args.scenario not in CAMPAIGN_LOCATIONS:
             raise ValueError("Persistent execution requires a campaign scenario")
         pipeline = yaml.safe_load((TEST_SOURCE / ".pipelines/azure-pipeline-config-tests.yml").read_text())
         loop = next(row for row in pipeline["stages"] if any(
@@ -1826,7 +1818,7 @@ def main(argv=None):
     scenario = next((s for s in matrix["scenarios"] if s["id"] == args.scenario), None)
     if not scenario:
         raise ValueError(f"Unknown scenario: {args.scenario}")
-    if scenario.get("blockedReason") and not (args.scenario == "acns-cilium" and args.prove_acns_cilium):
+    if scenario.get("blockedReason"):
         raise ValueError(f"BLOCKED: {scenario['blockedReason']}")
     if args.action == "plan":
         save(args.evidence / "plan.json", {"hostCount": 1, "scenario": scenario,

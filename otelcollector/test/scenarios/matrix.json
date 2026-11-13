@@ -115,8 +115,7 @@
       "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns-cilium"],
-      "tier": "weekly",
-      "blockedReason": "Requires independently verified managed ACNS plus controlled DNS/forward traffic before the managed-acns selector."
+      "tier": "weekly"
     },
     {
       "id": "ampls-acns",
