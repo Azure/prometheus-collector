@@ -885,7 +885,7 @@ function Ensure-Grant([string] $scope, [string] $identity, [string] $role, [stri
             ($row.condition -replace '\s','') -cne ($legacyCondition -replace '\s','')) {
           throw 'Parent delegation migration would change an unapproved assignment'
         }
-        $update = @{ id=$row.id; scope=$row.scope; principalId=$row.principalId; principalType=$row.principalType;
+        $update = @{ id=$row.id; name=$row.id.Substring($prefix.Length); scope=$row.scope; principalId=$row.principalId; principalType=$row.principalType;
                      roleDefinitionId=$row.roleDefinitionId; condition=$parentCondition; conditionVersion='2.0' }
         $file = [IO.Path]::GetTempFileName()
         [IO.File]::WriteAllText($file, (ConvertTo-Json -InputObject $update -Depth 10 -Compress), [Text.UTF8Encoding]::new($false))

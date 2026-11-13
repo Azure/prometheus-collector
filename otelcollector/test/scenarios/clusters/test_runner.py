@@ -1326,6 +1326,9 @@ function az {
     'role assignment list' { ,@($global:assignments); break }
     'role assignment update' {
       $update = Get-Content -LiteralPath (option '--role-assignment') -Raw | ConvertFrom-Json
+      if (!$update.name -or !$update.scope -or $update.id -cne "$($update.scope)/providers/Microsoft.Authorization/roleAssignments/$($update.name)") {
+        throw 'Invalid native role assignment update shape'
+      }
       $global:assignments = @($global:assignments | ForEach-Object { if ($_.id -eq $update.id) { $update } else { $_ } })
       $global:updated += $update
       break
@@ -1395,7 +1398,7 @@ function Start-Sleep { throw 'Unexpected polling' }
                             self.assertEqual(created, [] if case == "existing" else expected[1:] if case == "legacy" else expected)
                             updated = json.loads(result.stdout.split("UPDATED:")[-1])
                             self.assertEqual(updated, [dict(row(group, delegation["principalId"], runner.RBAC_ADMIN_ROLE, condition),
-                                                          id=modern["id"])] if case == "legacy" else [])
+                                                          id=modern["id"], name=modern["id"].rsplit("/", 1)[-1])] if case == "legacy" else [])
                         else:
                             self.assertNotEqual(result.returncode, 0, result.stdout)
                             self.assertIn({"invalid-parent-id": "unapproved assignment",
@@ -2875,6 +2878,9 @@ def mutations():
         "retained-delegation-in-place-migration": (
             "$args = @('role','assignment','update','--subscription',$subscription,'--role-assignment',$file,'--output','none')",
             "$args = @('role','assignment','create','--subscription',$subscription,'--role-assignment',$file,'--output','none')"),
+        "retained-delegation-native-name": (
+            "name=$row.id.Substring($prefix.Length); scope=$row.scope;",
+            "scope=$row.scope;"),
         "managed-acns-enabled": (
             'if (advanced.get("enabled") is not True\n                or (advanced.get("observability") or {}).get("enabled") is not True):',
             "if False:"),
