@@ -207,6 +207,8 @@ class Proofs(unittest.TestCase):
                 self.assertNotIn("collector-secret", " ".join(args))
                 self.assertIn('--noproxy "*"', args[2])
                 self.assertIn("--resolve", args[2])
+                if "2603:" in args[-2]:
+                    raise RuntimeError("No IPv6 egress from the IPv4 orchestrator")
                 if case == "timeout":
                     raise RuntimeError("timeout")
                 if case == "public-query" and not ingestion or case == "public-ingest" and ingestion:
@@ -217,14 +219,20 @@ class Proofs(unittest.TestCase):
                     return '{"error":"Public network access is disabled"}\n200'
                 return '{"error":"Public network access is disabled"}\n403'
             self.host.commands.run.side_effect = run
-            with self.subTest(case=case), patch.object(proofs.socket, "getaddrinfo", return_value=[
-                    (None, None, None, None, ("10.0.0.4" if case == "private-dns" else "20.1.1.1", 443))]):
+            def resolve(hostname, port, family=0, type=0):
+                ipv4 = (None, None, None, None, ("10.0.0.4" if case == "private-dns" else "20.1.1.1", 443))
+                return [ipv4] if family == proofs.socket.AF_INET else [
+                    ipv4, (None, None, None, None, ("2603:1030:b:3::b9", 443))]
+            with self.subTest(case=case), patch.object(proofs.socket, "getaddrinfo", side_effect=resolve):
                 if case == "valid":
-                    self.assertEqual(set(proofs.verify_public_denial(self.host, self.outputs, proof)),
-                                     {"query", "ingestion"})
+                    evidence = proofs.verify_public_denial(self.host, self.outputs, proof)
+                    self.assertEqual(set(evidence), {"query", "ingestion"})
+                    self.assertTrue(all(row["addressFamily"] == "IPv4" for row in evidence.values()))
                 else:
-                    with self.assertRaises(RuntimeError):
+                    with self.assertRaises(RuntimeError) as failure:
                         proofs.verify_public_denial(self.host, self.outputs, proof)
+                    if case == "timeout":
+                        self.assertIn("query bypass transport failed for 20.1.1.1", str(failure.exception))
 
 
 def mutations():
@@ -259,6 +267,7 @@ def mutations():
         '                                for ip in addresses)',
         'set(selected) != set(host.scenario["platforms"])',
         'not addresses or not set(addresses) <= set(allowed)',
+        'socket.AF_INET',
         'not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses)',
         'not token',
         'status.strip() != "403"',

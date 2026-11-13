@@ -143,7 +143,8 @@ def verify_public_denial(host, outputs, proof):
              "https://" + proof["hosts"]["ingestion"] + "/dataCollectionRules/"
              + proof["immutableDcrId"] + "/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24")):
         hostname = urlsplit(url).hostname
-        addresses = sorted({row[4][0] for row in socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)})
+        addresses = sorted({row[4][0] for row in socket.getaddrinfo(
+            hostname, 443, family=socket.AF_INET, type=socket.SOCK_STREAM)})
         if not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses):
             raise RuntimeError("AMPLS public-bypass proof requires a public-DNS orchestrator")
         if kind == "ingestion":
@@ -169,16 +170,20 @@ def verify_public_denial(host, outputs, proof):
             )
         attempts = []
         for address in addresses:
-            resolve = f"{hostname}:443:[{address}]" if ":" in address else f"{hostname}:443:{address}"
-            response = host.commands.run(["bash", "-c", script, "public-bypass", resolve, url],
-                                         data=token + "\n", private=True)
+            resolve = f"{hostname}:443:{address}"
+            try:
+                response = host.commands.run(["bash", "-c", script, "public-bypass", resolve, url],
+                                             data=token + "\n", private=True)
+            except RuntimeError as error:
+                raise RuntimeError(f"AMPLS public {kind} bypass transport failed for {address}: {error}") from error
             body, status = response.rsplit("\n", 1)
             if (status.strip() != "403" or not re.search(
                     r"public network|private[\s-]+(?:link|endpoint)|network access", body, re.IGNORECASE)):
                 raise RuntimeError(f"AMPLS public {kind} bypass did not return an explicit network denial: "
                                    f"HTTP {status.strip()} {body[:1000]}")
             attempts.append({"address": address, "httpStatus": 403, "body": body})
-        evidence[kind] = {"host": hostname, "origin": "public-DNS pipeline orchestrator", "attempts": attempts}
+        evidence[kind] = {"host": hostname, "origin": "public-DNS pipeline orchestrator",
+                          "addressFamily": "IPv4", "attempts": attempts}
     return evidence
 
 

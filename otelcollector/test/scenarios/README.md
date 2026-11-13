@@ -35,10 +35,11 @@ Before settings tests, these runs independently read DCR/DCE associations, AMPLS
 PrivateOnly modes and scoped DCEs, approved private endpoints and their NICs.
 Both Linux and Windows collectors must resolve configuration, ingestion and query
 hosts exclusively to their corresponding private endpoint addresses. Authenticated
-public query and remote-write probes must receive an explicit network-denial 403;
+public IPv4 query and remote-write probes must receive an explicit network-denial 403;
 authentication failures, timeouts and generic 403s are not proof.
 The ingestion probe reuses the collector's existing token; the runner's identity
 has query-only access and is not granted ingestion permissions for this check.
+These IPv4-only scenarios do not claim IPv6 data-path coverage.
 The existing run-marked fresh-ingestion check then queries from the collector pod.
 Transient addon initialization uses the AKS resource update for disable, rather
 than the CLI's DCR-deleting cleanup, and restores the owned DCE ACL and DCRAs.
