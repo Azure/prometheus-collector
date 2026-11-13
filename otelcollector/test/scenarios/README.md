@@ -223,6 +223,8 @@ public IPv4 `/32` discovered without HTTP proxies, and uses an ephemeral forward
 A user-scoped sshd rule requires public-key authentication and permits only local
 forwarding; the key restricts the destination to the private API. Context exit removes
 temporary ingress and key, including on test failure; cleanup failure fails the lane.
+Connect timeouts retry for up to ten minutes, freshly observing and replacing the
+single admitted `/32` each time; authentication failures are not retried.
 The retained SSH rule returns to `Deny` rather than being deleted because the
 resource-group lock prohibits ARM DELETE operations.
 The interface consumes `orchestratorVmName`, `orchestratorNsgName` and
