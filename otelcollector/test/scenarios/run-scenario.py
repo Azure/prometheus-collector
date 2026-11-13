@@ -1643,6 +1643,12 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                     raise ValueError("Inline TestKube defaults require credential-free HTTP(S) proxy endpoints") from None
         bypass = proxy.get("effectiveNoProxy")
         if bypass is None:
+            # Core CLI can omit read-only fields; use the raw ARM response.
+            raw_cluster = host.az("rest", "--method", "get", "--url",
+                                  cluster["id"] + "?api-version=2026-09-01",
+                                  json_output=True, private=True)
+            bypass = ((raw_cluster.get("properties") or {}).get("httpProxyConfig") or {}).get("effectiveNoProxy")
+        if bypass is None:
             raise ValueError("AKS effectiveNoProxy is required to preserve injected bypass defaults")
         # AKS admission can omit clone init containers; workflow defaults reach them.
         environment = [
