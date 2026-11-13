@@ -1026,6 +1026,34 @@ class Contracts(unittest.TestCase):
             self.assertEqual(len(deployment_calls), 2)
             sleep.assert_called_once_with(30)
 
+    def test_partial_private_deployment_preserves_immutable_vm_keys(self):
+        for keys in ([], ["ssh-rsa retained"] * 2, ["ssh-rsa first", "ssh-rsa second"], [""]):
+            with self.subTest(keys=keys), tempfile.TemporaryDirectory() as temporary:
+                args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                             location="westcentralus")
+                row = dict(scenario(), clusterFeatures=["private-api"])
+                host = runner.Host(args, row, Mock())
+                vms = [{"osProfile": {"linuxConfiguration": {"ssh": {
+                    "publicKeys": [{"keyData": key}] if key else []}}}} for key in keys]
+                outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+                host.az = Mock(side_effect=[
+                    "true", [], [], vms,
+                    {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
+                ])
+                valid = not keys or len(set(keys)) == 1 and bool(keys[0])
+                with patch.object(host, "persistent_state", return_value=None), \
+                        patch.object(host, "assert_owned"), patch.object(host, "verify_deployment"):
+                    if valid:
+                        host.provision({"SCENARIO_PROXY_SSH_PUBLIC_KEY": "ssh-rsa new"}, "caller", "User",
+                                       pool_parameters()["nodePools"])
+                        self.assertEqual(host.az.call_args.kwargs["env"]["SCENARIO_PROXY_SSH_PUBLIC_KEY"],
+                                         keys[0] if keys else "ssh-rsa new")
+                    else:
+                        with self.assertRaisesRegex(ValueError, "matching initial public key"):
+                            host.provision({}, "caller", "User", pool_parameters()["nodePools"])
+                        self.assertFalse(any(call.args[:3] == ("deployment", "group", "create")
+                                             for call in host.az.call_args_list))
+
     def test_provision_fails_immediately_for_other_deployment_errors(self):
         for principal_type, failure in (
                 ("ServicePrincipal", "AuthorizationFailed: Microsoft.Compute/virtualMachines/write"),
