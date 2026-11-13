@@ -141,12 +141,15 @@ def select_version(document, scenario=None):
         for version in versions:
             if re.fullmatch(r"\d+\.\d+\.\d+", version):
                 key = tuple(map(int, version.split(".")))
-                if not scoped_secrets or key >= (1, 37, 0):
+                if (not scoped_secrets or
+                        (key >= (1, 37, 0) and
+                         (scenario["id"] != "operator-secret-watch" or key[:2] == (1, 37)))):
                     eligible.append(key)
     if not eligible:
         if scoped_secrets:
+            requirement = "1.37" if scenario["id"] == "operator-secret-watch" else ">=1.37"
             raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
-                             "stable official regional Kubernetes>=1.37 version")
+                             f"stable official regional Kubernetes {requirement} version")
         raise ValueError("Region returned no stable official default Kubernetes version")
     return ".".join(map(str, max(eligible)))
 
@@ -506,6 +509,7 @@ class Host:
         outputs = {key: value["value"] for key, value in deployment["properties"]["outputs"].items()}
         cluster = self.az("aks", "show", "--resource-group", name, "--name", outputs["clusterName"],
                           json_output=True)
+        verify_secret_watch_version(self.scenario, cluster)
         network = cluster.get("networkProfile") or {}
         expected_mode = "classic" if self.scenario["id"] == "classic-azure-cni" else "overlay"
         advanced = network.get("advancedNetworking") or {}
@@ -537,8 +541,9 @@ class Host:
             raise ValueError("Retained candidate deployment is not successful")
         outputs = {key: value["value"] for key, value in properties.get("outputs", {}).items()}
         resource_tags = outputs.get("resourceTags") or {}
+        expected_scenario = "linux" if self.scenario["id"] == "operator-secret-watch" else self.scenario["id"]
         if (resource_tags.get("owner") != "ama-metrics-e2e"
-                or resource_tags.get("scenario") != self.scenario["id"]
+                or resource_tags.get("scenario") != expected_scenario
                 or resource_tags.get("run") != self.receipt["runId"]
                 or outputs.get("location") != self.args.location
                 or (expected_pools is not None and outputs.get("expectedPools") != expected_pools)
@@ -1167,7 +1172,15 @@ def compiled_parameters(args, scenario, commands, version):
               if "defaultValue" in definition}
     values.update({name: definition["value"]
                    for name, definition in json.loads(envelope["parametersJson"])["parameters"].items()})
+    if scenario["id"] == "operator-secret-watch" and values.get("scenarioId") != "linux":
+        raise ValueError("Secret-watch compiled scenarioId must be linux")
     return values
+
+
+def verify_secret_watch_version(scenario, cluster):
+    if (scenario["id"] == "operator-secret-watch"
+            and not re.fullmatch(r"1\.37\.\d+", cluster.get("kubernetesVersion") or "")):
+        raise ValueError("Secret-watch cluster must run Kubernetes 1.37")
 
 
 def capacity_plan(parameters, scenario, version):
@@ -1401,6 +1414,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
                       json_output=True)
+    verify_secret_watch_version(host.scenario, cluster)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
         raise RuntimeError("The effective AKS auto-upgrade channel must be stable")
     if "managed-acns" in host.scenario["clusterFeatures"]:

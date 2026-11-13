@@ -94,10 +94,16 @@ class Contracts(unittest.TestCase):
         stage = next(iter(next(iter(loop.values()))[0].values()))[0]
         self.assertEqual(stage["lockBehavior"], "sequential")
         for case in ("valid", "new", "appeared", "active-deployment", "run", "expiry", "deployment-state",
-                     "deployment-output", "cluster", "cluster-pools", "missing-admitted"):
+                     "deployment-output", "cluster", "cluster-pools", "missing-admitted",
+                     "secret-watch", "secret-watch-tag", "secret-watch-version", "other-linux-tag"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                row = scenario()
+                if case.startswith("secret-watch"):
+                    row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                               if row["id"] == "operator-secret-watch")
+                name, owner = runner.persistent_identity(row["id"])
                 tags = {
-                    "scenario-token": owner, "scenario-run": owner, "scenario": "mixed",
+                    "scenario-token": owner, "scenario-run": owner, "scenario": row["id"],
                     "owner": "ama-metrics-e2e",
                 }
                 if case == "run":
@@ -105,6 +111,11 @@ class Contracts(unittest.TestCase):
                 if case == "expiry":
                     tags["expiresAt"] = "2099-01-01T00:00:00Z"
                 deployment_outputs = copy.deepcopy(outputs)
+                deployment_outputs["resourceTags"]["run"] = owner
+                if case.startswith("secret-watch") or case == "other-linux-tag":
+                    deployment_outputs["resourceTags"]["scenario"] = "linux"
+                if case == "secret-watch-tag":
+                    deployment_outputs["resourceTags"]["scenario"] = "wrong"
                 if case == "deployment-output":
                     deployment_outputs["expectedPools"] = []
                 deployment = {"properties": {
@@ -126,10 +137,12 @@ class Contracts(unittest.TestCase):
                 }
                 if case == "cluster-pools":
                     cluster["agentPoolProfiles"] = []
+                if case.startswith("secret-watch"):
+                    cluster["kubernetesVersion"] = "1.36.5" if case == "secret-watch-version" else "1.37.1"
                 host = runner.Host(types.SimpleNamespace(
                     evidence=Path(directory), subscription="sub", run_id="run", location="eastus2",
                     admitted_existing=case == "missing-admitted",
-                ), scenario(), Mock())
+                ), row, Mock())
                 group = {"location": "eastus2", "tags": tags}
                 if case == "new":
                     calls = ["false", "false", {}, deployment]
@@ -142,14 +155,15 @@ class Contracts(unittest.TestCase):
                     calls = ["false" if case == "missing-admitted" else "true",
                              group, [{"id": cluster_id}], deployment, cluster]
                 host.az = Mock(side_effect=calls)
-                env = {"SCENARIO_KUBERNETES_VERSION": "1.36.5"}
-                if case in ("valid", "new"):
+                env = {"SCENARIO_KUBERNETES_VERSION": cluster["kubernetesVersion"]}
+                if case in ("valid", "new", "secret-watch"):
                     result = host.provision(env, "principal", "User", pools)
                     self.assertEqual(result["clusterName"], "sc")
-                    self.assertEqual(host.reused, case == "valid")
+                    self.assertEqual(host.reused, case in ("valid", "secret-watch"))
                     self.assertEqual(host.receipt["resourceGroup"], name)
                     self.assertEqual(host.receipt["runId"], owner)
-                    self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(), case == "valid")
+                    self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(),
+                                     case in ("valid", "secret-watch"))
                 else:
                     with self.assertRaises((ValueError, RuntimeError)):
                         host.provision(env, "principal", "User", pools)
@@ -165,6 +179,22 @@ class Contracts(unittest.TestCase):
                    for clause in guard.split("]]", 1)[0].split("||") if "==" in clause}
         self.assertEqual(allowed, {"centralus", "eastus2", "westcentralus"})
         self.assertLessEqual(set(runner.CAMPAIGN_LOCATIONS.values()), allowed)
+
+    def test_secret_watch_requires_linux_compiled_profile(self):
+        row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                   if row["id"] == "operator-secret-watch")
+        args = types.SimpleNamespace(run_id="run", location="eastus2")
+        for profile in ("linux", "operator-secret-watch", "other"):
+            commands = Mock()
+            commands.run.return_value = {
+                "templateJson": runner.json.dumps({"parameters": {}}),
+                "parametersJson": runner.json.dumps({"parameters": {"scenarioId": {"value": profile}}}),
+            }
+            if profile == "linux":
+                self.assertEqual(runner.compiled_parameters(args, row, commands, "1.37.1")["scenarioId"], profile)
+            else:
+                with self.assertRaisesRegex(ValueError, "scenarioId"):
+                    runner.compiled_parameters(args, row, commands, "1.37.1")
 
     def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
@@ -389,6 +419,8 @@ class Contracts(unittest.TestCase):
             {"version": "1.38", "isPreview": True,
              "capabilities": {"supportPlan": ["KubernetesOfficial"]},
              "patchVersions": {"1.38.0": {}}},
+            {"version": "1.38", "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.38.1": {}}},
             {"version": "1.39", "capabilities": {"supportPlan": ["AKSLongTermSupport"]},
              "patchVersions": {"1.39.0": {}}},
             {"version": "1.40", "patchVersions": {"1.40.0": {}}},
@@ -1501,7 +1533,7 @@ class Contracts(unittest.TestCase):
             host.args.evidence = Path(temporary)
             host.kubeconfig = Path(temporary) / "kubeconfig"
             host.receipt = {"resourceGroup": "owned"}
-            host.scenario = {"clusterFeatures": []}
+            host.scenario = {"id": "default", "clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
             existing_roles = []
             cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
@@ -1562,7 +1594,7 @@ class Contracts(unittest.TestCase):
             self.assertEqual(federation[federation.index("--issuer") + 1], "https://issuer.example/")
             proof = runner.load(Path(temporary) / "testkube-bootstrap.json")
             self.assertIn("not submitted", proof["workloadIdentityExecution"])
-            host.scenario = {"clusterFeatures": ["managed-acns"]}
+            host.scenario = {"id": "acns", "clusterFeatures": ["managed-acns"]}
             cluster["networkProfile"] = {"advancedNetworking": {
                 "enabled": True, "observability": {"enabled": True},
             }}
