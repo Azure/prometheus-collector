@@ -56,8 +56,7 @@
       "settingsVariants": ["default", "customer-settings-v1", "customer-settings-v2"],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Independent DCE/DCRA, private-DNS, approved endpoint and public-bypass denial proofs are not implemented."
+      "tier": "weekly"
     },
     {
       "id": "private-ampls",
@@ -66,8 +65,7 @@
       "settingsVariants": ["default"],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires private orchestrator access plus independent AMPLS/private-query proofs."
+      "tier": "weekly"
     },
     {
       "id": "proxy",
@@ -125,8 +123,7 @@
       "settingsVariants": ["default"],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns"],
-      "tier": "weekly",
-      "blockedReason": "Requires independent AMPLS and non-Cilium managed ACNS proofs."
+      "tier": "weekly"
     },
     {
       "id": "customer-helm",

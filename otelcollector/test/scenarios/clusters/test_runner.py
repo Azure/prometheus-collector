@@ -147,7 +147,7 @@ class Contracts(unittest.TestCase):
                             runner.main(args)
                         host.assert_not_called()
 
-    def test_ampls_opt_in_is_explicit_and_does_not_unblock_coverage(self):
+    def test_ampls_opt_in_preserves_unverified_blockers(self):
         for scenario_id in ("ampls", "ampls-acns", "private-ampls", "ampls-proxy", "default", "all"):
             for opt_in in (False, True):
                 with self.subTest(scenario=scenario_id, opt_in=opt_in), tempfile.TemporaryDirectory() as directory:
@@ -156,8 +156,10 @@ class Contracts(unittest.TestCase):
                         args.append("--validation-lane")
                     if opt_in and scenario_id in runner.VALIDATION_LANES:
                         self.assertEqual(runner.main(args), 0)
-                        self.assertIn("blockedReason", runner.load(Path(directory) / "plan.json")["scenario"])
-                    elif scenario_id == "default" and not opt_in:
+                        self.assertEqual(
+                            "blockedReason" in runner.load(Path(directory) / "plan.json")["scenario"],
+                            scenario_id == "ampls-proxy")
+                    elif scenario_id in ("default", "ampls", "ampls-acns", "private-ampls") and not opt_in:
                         self.assertEqual(runner.main(args), 0)
                     else:
                         with self.assertRaises(ValueError):

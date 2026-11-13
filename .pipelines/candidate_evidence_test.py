@@ -463,22 +463,24 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(rows["otlp"]["platforms"], ["linux"])
         self.assertIn("acns-cilium", rows)
         self.assertIn("blockedReason", rows["acns-cilium"])
+        verified = {"ampls", "ampls-acns", "private-ampls"}
         for scenario in VALIDATION_SCENARIOS:
             result = plan(root, scenario)
-            self.assertIn(scenario, {row["id"] for row in result["blockedScenarios"]})
-            self.assertNotIn(scenario, result["applicableScenarios"])
+            self.assertEqual(scenario in {row["id"] for row in result["blockedScenarios"]},
+                             scenario not in verified)
+            self.assertEqual(scenario in result["applicableScenarios"], scenario in verified)
         self.assertIn("managed-acns", rows["ampls-acns"]["ginkgoLabels"])
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])
             self.assertEqual(result["status"], "PLANNED_WITH_BLOCKERS")
             self.assertEqual(result["selectedScenario"], scenario)
-            self.assertEqual(set(result["applicableScenarios"]), set(SCENARIOS))
+            self.assertEqual(set(result["applicableScenarios"]), set(SCENARIOS) | verified)
             self.assertEqual([item["id"] for item in result["blockedTestSuites"]],
                              ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked | set(SCENARIOS)), len(rows))
+            self.assertEqual(len(blocked | set(result["applicableScenarios"])), len(rows))
             self.assertIn("customer-helm", blocked)
             self.assertIn("operator-secret-watch", blocked)
             self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
@@ -520,7 +522,7 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 11)
+            self.assertEqual(len(report["blockedScenarios"]), 8)
             self.assertEqual(len(report["blockedVariants"]), 5)
             self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
                              ["arc-conformance", "ccp-health", "regionTests"])

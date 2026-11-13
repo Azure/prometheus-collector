@@ -20,17 +20,18 @@ addon or silently substitute another configuration.
 Live candidate tests must execute through the existing TestKube workflows, using
 the coverage owner's pinned workflow adapter. The harness invokes only the selected
 workflow and rejects missing provenance, artifacts or executed cases. **No live
-candidate pass is recorded by the offline evidence in this repository; a matching
-protected producer and full candidate validation are required for a live pass.
+candidate pass follows from offline evidence alone; a matching protected producer
+and full candidate validation are required for a live pass.
 It never falls back to direct local Ginkgo or treats installation as a pass. It captures
 the exact submitted execution IDs, immutable test-source SHA and runner-image
 digest, terminal passed status and nonempty JUnit/artifacts. Legacy `main`/`latest`
 defaults are not candidate provenance.
 `regionTests` is a separate region/rule validation, not a cluster-health substitute.
 
-The explicit pipeline choices `ampls` and `ampls-acns` are experimental proof
-runs, excluded from `all`. They pass `--validation-lane` to admission and execution;
-the matrix's `blockedReason` and approval gate remain until live evidence passes.
+The explicit AMPLS pipeline choices remain excluded from `all` and pass
+`--validation-lane` to admission and execution. Live scenario validation removed
+the matrix blockers for `ampls`, `ampls-acns` and `private-ampls`; scan and global
+coverage approval gates remain independent.
 Before settings tests, these runs independently read DCR/DCE associations, AMPLS
 PrivateOnly modes and scoped DCEs, approved private endpoints and their NICs.
 Both Linux and Windows collectors must resolve configuration, ingestion and query
@@ -51,8 +52,20 @@ owned VNet orchestrator. `ampls-proxy` routes a public ARM metadata request thro
 the proxy and rejects direct public web egress. Complete proxy logs must exclude
 the private monitor/query hostnames, their verified private IPs, and reference
 scrape targets. Its private ingestion/query proof is separate, never reported as
-ingestion through the proxy. Both dependent lanes remain opt-in with production
-coverage blocked until their live proofs pass.
+ingestion through the proxy. `ampls-proxy` remains blocked pending its complete
+private-ingestion and forced-proxy proof.
+
+| Verified scenario | ADO build / immutable test source | Native It passed / failed / skipped |
+|---|---|---|
+| `ampls` | 132161 / `1eaa122369ed917688676930939613744924939a` | 98 / 0 / 363 |
+| `ampls-acns` | 132149 / `718c06e23c2c2d6f47d6424c276a970e0c8a0a50` | 85 / 0 / 114 |
+| `private-ampls` | 132150 / `718c06e23c2c2d6f47d6424c276a970e0c8a0a50` | 84 / 0 / 115 |
+
+These runs used producer 131983 and product source
+`d34c33d1dda4ed82600d54ebda91d4254c0d70c4`. Their scenario tasks and published
+JUnit passed, with fresh `AMPLS_PRIVATE_INGESTION` in log 29. Overall builds failed
+the all-findings scan (16 open findings) and global coverage gates; these results
+do not approve the candidate image.
 
 For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
 `httpProxyConfig` into inline global workflow container defaults so Git-clone init
@@ -233,9 +246,8 @@ records executed/failed/skipped counts; skipped tests are not claimed as execute
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
 
-Private/proxy lanes are opt-in validation lanes until their live proofs pass;
-`--validation-lane` permits exercising them without removing `blockedReason` or
-adding them to `all`. A retained VNet VM carries only the private API TCP tunnel;
+Private/proxy lanes remain opt-in; `--validation-lane` permits exercising blocked
+lanes without adding them to `all`. A retained VNet VM carries only the private API TCP tunnel;
 Helm, TestKube, credentials and evidence stay on the pipeline agent.
 `clusters.private_api.private_api(host, outputs)` pins the SSH host key obtained
 through authenticated VM run-command, restricts ingress to the active agent's

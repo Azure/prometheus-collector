@@ -30,7 +30,7 @@ def plan(root, scenario):
     rows = {row["id"]: row for row in matrix["scenarios"]}
     runnable = {name for name, row in rows.items()
                 if not row.get("blockedReason") and name != "operator-secret-watch"}
-    if runnable != set(SCENARIOS):
+    if runnable - set(VALIDATION_SCENARIOS) != set(SCENARIOS):
         raise ValueError("Candidate selector does not account for every runnable matrix row")
     if scenario not in (*SCENARIOS, *VALIDATION_SCENARIOS):
         raise ValueError(f"Unsupported candidate scenario: {scenario}")
@@ -49,7 +49,7 @@ def plan(root, scenario):
         variants.append({"id": name, "status": "BLOCKED", "reason": "; ".join(reasons)})
     return {
         "status": "PLANNED_WITH_BLOCKERS", "executed": False, "selectedScenario": scenario,
-        "applicableScenarios": list(SCENARIOS),
+        "applicableScenarios": [*SCENARIOS, *(name for name in VALIDATION_SCENARIOS if name in runnable)],
         "blockedScenarios": [{"id": name, "status": "BLOCKED", "reason": reason}
                              for name, reason in blocked.items()],
         "blockedVariants": variants,
