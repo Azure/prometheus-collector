@@ -85,7 +85,7 @@
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
       "tier": "weekly",
-      "blockedReason": "Requires proxy path/trust injection and deliberate CA failure/recovery proof; template TLS interception alone is not validation."
+      "blockedReason": "Build 132185 has no collector certificate-error proof after CA distrust; actual ingestion-failure/recovery remains unverified."
     },
     {
       "id": "ampls-proxy",

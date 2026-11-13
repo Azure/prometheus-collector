@@ -255,13 +255,23 @@ collectors. It requires fresh successful scraping, certificate-validation errors
 and independent authenticated AMW queries with no samples for a new negative-phase
 marker. Certificate errors are read privately from `/MetricsExtensionConsoleDebugLog.log`;
 MetricsExtension uses file logging rather than container stdout. It restores and
-reads back the original mounts even after failure, then
-requires fresh ingestion after recovery.
+reads back the original mounts even after failure. Successful negative proof must
+then be followed by fresh ingestion after recovery.
 TLS interception is limited to AMW ingestion; public registry and test-source
 connections retain their public certificates so the harness can initialize.
 Its deployment first prepares the retained proxy, then reads only the public CA
 through authenticated VM run-command before creating AKS with that trust.
 No deployment-script container, storage account or CA-reader identity is needed.
+
+The custom-CA blocker remains after build 132185 (producer 131983, product source
+`d34c33d1`, test source `275c8684`): all nine native executions passed, but the
+collector certificate-error guard failed. An isolated retained-cluster diagnostic
+reproduced zero trust-anchor mounts and curl exit 60 in all three collectors while
+the ME debug files contained no matching certificate-validation errors and Squid
+recorded decrypted DCE POSTs with HTTP 200. Exact mount restoration/readback and
+subsequent fresh AMW samples passed.
+Curl-only distrust is not accepted as collector failure/recovery proof; the
+collector's behavior needs investigation before this lane can be unblocked.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and
