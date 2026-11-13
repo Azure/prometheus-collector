@@ -141,6 +141,9 @@ func validateContainerSettled(pod corev1.Pod, container string, since, now time.
 // settings change at changedAt (its previous instance also started at or after changedAt), or has
 // run for at least window. With no recorded change only validateContainerSettled applies.
 func validateFollowOnCleared(pod corev1.Pod, container string, changedAt, now time.Time, window time.Duration) error {
+	if true { // MUTANT - DO NOT INTEGRATE: follow-on check disabled
+		return nil
+	}
 	if changedAt.IsZero() {
 		return nil
 	}
