@@ -1291,7 +1291,9 @@ def campaign_preflight(args, matrix, commands):
         raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
-    selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
+    selected = (list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else
+                ["default", "classic-azure-cni", "acns", "otlp"]
+                if args.scenario == "four-lane" else [args.scenario])
     if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])

@@ -281,6 +281,13 @@ class Contracts(unittest.TestCase):
                     {row["name"]: row["additional"]
                      for row in result["regions"]["centralus"]["quota"]}
                     ["standarddpsv5family"], 24)
+                args.evidence = Path(temporary) / "four-lane"
+                args.scenario = "four-lane"
+                four = runner.campaign_preflight(args, matrix, commands)
+                self.assertEqual(set(four["placements"]), {"default", "classic-azure-cni", "acns", "otlp"})
+                self.assertEqual(set(four["existing"]), set(four["placements"]))
+                self.assertEqual(four["regions"]["eastus2"]["kubernetesVersions"], {"acns": "1.36.5"})
+                args.scenario = "all"
                 args.evidence = Path(temporary) / "existing"
                 with patch.object(runner.Host, "persistent_state", autospec=True,
                                   side_effect=lambda host, env, pools: {"clusterName": "existing"}

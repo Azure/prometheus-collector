@@ -75,6 +75,8 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
+`--scenario four-lane` selects default, classic Azure CNI, ACNS and OTLP without
+the isolated secret-watch row; it still checks their combined regional peak.
 `--scenario` also accepts one of the five runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.

@@ -67,6 +67,7 @@ parameters:
   default: all
   values:
   - all
+  - four-lane
   - default
   - classic-azure-cni
   - acns
@@ -1260,7 +1261,9 @@ stages:
           value = json.load(open(sys.argv[1], encoding="utf-8"))
           expected = os.environ["CANDIDATE_SCENARIO"]
           scenarios = "default,classic-azure-cni,acns,otlp,operator-secret-watch".split(",")
-          selected = scenarios if expected == "all" else [expected]
+          selected = (scenarios if expected == "all" else
+                      ["default", "classic-azure-cni", "acns", "otlp"]
+                      if expected == "four-lane" else [expected])
           if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
                   or value.get("testSourceSha") != os.environ["TEST_SOURCE_SHA"]
                   or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
@@ -1305,7 +1308,7 @@ stages:
         artifact: candidate-capacity-$(Build.BuildId)
 
 - ${{ each scenario in split('default,classic-azure-cni,acns,otlp,operator-secret-watch', ',') }}:
-  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario)) }}:
+  - ${{ if or(eq(parameters.candidateScenario, 'all'), eq(parameters.candidateScenario, scenario), and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'classic-azure-cni', 'acns', 'otlp'))) }}:
     - stage: Candidate_${{ replace(scenario, '-', '_') }}
       displayName: Candidate ${{ scenario }}
       lockBehavior: sequential

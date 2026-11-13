@@ -299,7 +299,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(jobs[1]["timeoutInMinutes"], 900)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
-        self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS})
+        self.assertEqual(set(scenario["values"]), {"all", "four-lane", *SCENARIOS})
         cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
         self.assertEqual(cve["default"], "")
         campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
@@ -439,7 +439,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load(pipeline_path.read_text())
         pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
                                   if p.get("name") == "candidateScenario")
-        self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS])
+        self.assertEqual(pipeline_scenarios, ["all", "four-lane", *SCENARIOS])
         self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", pipeline_path.read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
@@ -540,6 +540,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         conditional = loop[0]
         stage = conditional[next(key for key in conditional if key.startswith("${{ if or("))][0]
         self.assertEqual(stage["dependsOn"], ["CandidateCapacity"])
+        self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'classic-azure-cni', 'acns', 'otlp'))",
+                      next(iter(conditional)))
 
     def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
@@ -585,6 +587,17 @@ class CandidateEvidenceTest(unittest.TestCase):
                     self.assertIn("variable=validationBuildId;isOutput=true]9791", result.stdout)
                 else:
                     self.assertNotIn("isOutput=true", result.stdout)
+        four = {**proof, "placements": {name: proof["placements"][name] for name in SCENARIOS[:-1]},
+                "existing": {name: False for name in SCENARIOS[:-1]}}
+        for value, passes in ((four, True), (proof, False)):
+            path = self.root / ("four-valid.json" if passes else "four-extra.json")
+            path.write_text(json.dumps(value))
+            result = subprocess.run([sys.executable, "-c", parser, str(path)], capture_output=True, text=True,
+                                    env={**os.environ, "CANDIDATE_SCENARIO": "four-lane",
+                                         "CANDIDATE_SOURCE_SHA": self.sha, "TEST_SOURCE_SHA": "c" * 40,
+                                         "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
+            self.assertEqual(result.returncode == 0, passes, result.stderr)
+            self.assertEqual("variable=location_operator_secret_watch" in result.stdout, False)
 
     def test_failed_aggregate_check_cannot_emit_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
