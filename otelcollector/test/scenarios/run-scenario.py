@@ -303,6 +303,15 @@ class Commands:
                 log.write(json.dumps(record) + "\n" + completed.stdout + completed.stderr + "\n")
         if completed.returncode:
             detail = "(private command; output redacted)" if private else completed.stderr[-6000:]
+            if not private:
+                # Workflow CLI failures can be stdout-only; never echo arbitrary workflow output.
+                markers = [message for message in (
+                    "Internal Access Denied", "AccessDenied", "NoSuchBucket",
+                    "InvalidAccessKeyId", "SignatureDoesNotMatch", "connection refused",
+                    "i/o timeout", "TestWorkflow did not pass",
+                ) if message.casefold() in completed.stdout.casefold()]
+                detail += ("\nstdout diagnostics: " + (", ".join(markers) or "no recognized error markers")
+                           + f"; full output retained in {self.evidence / 'commands.log'}")
             if private and list(args[:4]) == ["az", "deployment", "group", "create"]:
                 diagnostic = completed.stderr
                 for name, value in (env or os.environ).items():
@@ -960,6 +969,10 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
         result = workflow_result(destination, workflow, source_sha, image)
         print("TestKube JUnit: " + json.dumps({"suite": suite, **result}), flush=True)
         return result
+    except (RuntimeError, ValueError) as failure:
+        raise RuntimeError(
+            f"TestKube suite failed: suite={suite}, workflow={workflow}, evidence={destination}: {failure}"
+        ) from failure
     finally:
         if generated.exists():
             generated.unlink()
@@ -1617,6 +1630,8 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     host.commands.run(["helm", "upgrade", "--install", "testkube", str(package),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "testkube",
                       "--create-namespace", "--values", str(TEST_SOURCE / "otelcollector/test/testkube/values.yaml"),
+                      # Match the cluster's .svc/.cluster.local bypasses without replacing proxy environment.
+                      "--set-string", "testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
                       "--set", "testkube-api.minio.podSecurityContext.fsGroup=1001",
                       "--set", "mongodb.nodeAffinityPreset.type=hard",
                       "--set-string", "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
