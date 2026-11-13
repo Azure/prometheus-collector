@@ -1458,17 +1458,18 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
-    def test_retained_cluster_resumes_interrupted_addon_token_initialization(self):
-        for token, enabled, enable, disable in (
-                ("", False, 1, 1), ("", True, 0, 1), ("secret/aad-msi-auth-token", True, 0, 1),
-                ("secret/aad-msi-auth-token", False, 0, 0)):
+    def test_retained_cluster_resumes_addon_token_and_windows_exporter_bootstrap(self):
+        for token, enabled, enable, disable, platforms in (
+                ("", False, 1, 1, ["linux", "windows"]), ("", True, 0, 1, ["linux"]),
+                ("secret/aad-msi-auth-token", True, 0, 1, ["linux"]),
+                ("secret/aad-msi-auth-token", False, 0, 0, ["linux"])):
             with self.subTest(token=token, enabled=enabled), tempfile.TemporaryDirectory() as temporary:
                 evidence = Path(temporary)
                 args = types.SimpleNamespace(
                     evidence=evidence, build_id=1, max_run_seconds=60, run_id="test",
                     subscription=runner.BUILD_SUBSCRIPTION, location="westcentralus",
                     test_source_sha="b" * 40, admitted_existing=False)
-                row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=[])
+                row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=platforms)
                 host = Mock(spec=runner.Host, reused=True, receipt={"resourceGroup": "owned"},
                             scenario=row, kubeconfig=evidence / "kubeconfig")
                 host.provision.return_value = {"clusterName": "owned", "workspaceId": "workspace"}
@@ -1487,12 +1488,22 @@ class Contracts(unittest.TestCase):
                         patch.object(runner, "bootstrap_testkube", return_value={"agentPoolProfiles": []}), \
                         patch.object(runner, "verify_pool_inventory", return_value={}), \
                         patch.object(runner, "Host", return_value=host), \
-                        patch.object(runner, "render_chart", side_effect=RuntimeError("bootstrap reached")):
+                        patch.object(runner, "render_chart", return_value=evidence / "chart"), \
+                        patch.object(runner, "audit_images", side_effect=RuntimeError("bootstrap reached")):
                     with self.assertRaisesRegex(RuntimeError, "bootstrap reached"):
-                        runner.execute(args, row, {}, runner.Commands(evidence))
+                        runner.execute(args, row, {}, Mock())
                 calls = [call.args for call in host.az.call_args_list]
                 self.assertEqual(sum("--enable-azure-monitor-metrics" in call for call in calls), enable)
                 self.assertEqual(sum("--disable-azure-monitor-metrics" in call for call in calls), disable)
+                calls = [call.args for call in host.kube.call_args_list]
+                exporter = ("apply", "-f", str(
+                    runner.TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
+                ready = ("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=15m")
+                if "windows" in platforms:
+                    self.assertLess(calls.index(exporter), calls.index(ready))
+                else:
+                    self.assertNotIn(exporter, calls)
+                    self.assertNotIn(ready, calls)
 
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:

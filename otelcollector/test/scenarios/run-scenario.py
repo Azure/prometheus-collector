@@ -1675,7 +1675,7 @@ def verified_candidate(args, commands):
     source = source_commit(commands, REPO, ["otelcollector/deploy/addon-chart"])
     test_source = source_commit(commands, TEST_SOURCE, [
         "otelcollector/test/scenarios", "otelcollector/test/ginkgo-e2e", "otelcollector/test/test-cluster-yamls",
-        "otelcollector/test/testkube", "internal/referenceapp",
+        "otelcollector/test/testkube", "internal/referenceapp", "internal/windowsExporterInstaller",
     ])
     if test_source != args.test_source_sha:
         raise ValueError("Candidate test source does not match the expected test source SHA")
@@ -1791,6 +1791,8 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
+            host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
+            host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=15m")
         save(args.evidence / "images-before.json", audit_images(host, images))
         if "ampls" in scenario["clusterFeatures"]:
             outcome["ampls"] = ampls_proofs.verify(host, outputs)
