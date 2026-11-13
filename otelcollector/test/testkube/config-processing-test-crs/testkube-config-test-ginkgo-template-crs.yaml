@@ -1,0 +1,39 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: configprocessingginkgo
+  namespace: testkube
+spec:
+  config:
+    labelFilter:
+      type: string
+    timeoutFlag:
+      type: string
+      default: ""
+    parallelFlag:
+      type: string
+      default: ""
+  content:
+    git:
+      uri: https://github.com/Azure/prometheus-collector
+      revision: $BRANCH_NAME
+      paths:
+        - otelcollector/test/ginkgo-e2e
+  container:
+    workingDir: /data/repo/otelcollector/test/ginkgo-e2e
+    image: cerebro31/ginkgo-test:latest
+  steps:
+    - name: Run test
+      shell: |
+        mkdir -p /data/reports
+        ginkgo run --fail-on-empty {{ config.timeoutFlag }} --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r {{ config.parallelFlag }} --label-filter "{{ config.labelFilter }}" ./configprocessing
+    - name: Retain Ginkgo evidence
+      condition: always
+      artifacts:
+        workingDir: /data/reports
+        paths:
+          - "**/*"
+  pod:
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
