@@ -95,7 +95,7 @@
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
       "tier": "weekly",
-      "blockedReason": "Requires both private AMPLS/query and forced-proxy/NO_PROXY proofs from a VNet-connected orchestrator."
+      "blockedReason": "Build 132184 passed native JUnit and fresh private ingestion, but private DCE configuration traffic appeared in the owned Squid log; NO_PROXY route proof remains blocked."
     },
     {
       "id": "acns",

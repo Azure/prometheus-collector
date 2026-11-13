@@ -67,6 +67,15 @@ JUnit passed, with fresh `AMPLS_PRIVATE_INGESTION` in log 29. Overall builds fai
 the all-findings scan (16 open findings) and global coverage gates; these results
 do not approve the candidate image.
 
+`ampls-proxy` build 132184 (`804b56b01c03e170c16d99228d36f9f2c99953be`)
+passed all nine native suites (62 It passed, 0 failed, 294 skipped) and fresh
+private ingestion. The final route guard failed: the owned Squid log contained
+successful CONNECTs to the private DCE configuration host, resolving upstream to
+`10.225.0.5`. The lane remains blocked; successful ingestion does not waive
+NO_PROXY enforcement. Diagnostic curl from all three collector pods reached that
+private IP directly with their existing environment. Socket sampling did not
+identify the process responsible for the offending short-lived connections.
+
 For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
 `httpProxyConfig` into inline global workflow container defaults so Git-clone init
 containers receive it even when admission only injects regular containers.
