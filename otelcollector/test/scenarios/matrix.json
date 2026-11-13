@@ -150,7 +150,7 @@
   "coverageGaps": [
     "No live candidate evidence exists until a source-bound digest receipt is supplied and the scenario finishes.",
     "Compiled infrastructure is not live coverage. blockedReason prevents provisioning before its missing execution/proof adapter exists.",
-    "Operator empty/omitted-secret watch enforcement selects the latest explicitly advertised regional AKS Kubernetes preview >=1.37 only for its dedicated Linux scenario; it fails if no qualifying preview exists, never falls back to stable, and upgrades its retained cluster in place when needed. Ordinary rows retain the regional default; unsupported/skipped is not a pass.",
+    "Operator empty/omitted-secret watch enforcement selects the newest explicitly advertised regional AKS Kubernetes version >=1.37 only for its dedicated Linux scenario, including 1.38 when available; it fails if no qualifying version exists and upgrades its retained cluster in place when needed. Ordinary rows retain the regional default; unsupported/skipped is not a pass.",
     "The default profile includes mixed Linux/Windows, ARM64, Azure Linux 3, FIPS, and Windows2025 pools; actual runtime image compatibility remains required.",
     "Windows2019 is unsupported on currently supported official Kubernetes versions; do not pin older Kubernetes to recreate it.",
     "Arc onboarding and CCP standalone health validation require their separate authorized adapters; ordinary AKS is not equivalent.",

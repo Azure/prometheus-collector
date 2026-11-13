@@ -647,7 +647,7 @@ class Contracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no stable official default"):
             runner.select_version(versions)
 
-    def test_secret_watch_selects_latest_preview_without_changing_other_scenarios(self):
+    def test_secret_watch_selects_latest_offered_without_changing_other_scenarios(self):
         versions = {"values": [
             {"version": "1.36", "isDefault": True, "patchVersions": {"1.36.5": {}}},
             {"version": "1.37", "isPreview": None,
@@ -664,7 +664,7 @@ class Contracts(unittest.TestCase):
         ]}
         rows = runner.load(runner.ROOT / "matrix.json")["scenarios"]
         row = next(row for row in rows if row["id"] == "operator-secret-watch")
-        for selected, expected in ((scenario(), "1.36.5"), (row, "1.38.2")):
+        for selected, expected in ((scenario(), "1.36.5"), (row, "1.40.0")):
             with self.subTest(scenario=selected["id"]), tempfile.TemporaryDirectory() as directory:
                 args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
                                              location="eastus2", evidence=Path(directory))
@@ -686,6 +686,11 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(compiled.call_args.args[-1], expected)
         other_secret_watch = dict(scenario(), id="secret-watch-other",
                                   clusterFeatures=["secrets-watch-enforcement"])
+        for offered, expected in (
+                ([versions["values"][1]], "1.37.1"),
+                ([versions["values"][1], versions["values"][3]], "1.38.2"),
+                ([{"orchestratorVersion": "1.37.1"}], "1.37.1")):
+            self.assertEqual(runner.select_version({"values": offered}, row), expected)
         self.assertEqual(runner.select_version({"values": [{
             "version": "1.38", "isPreview": None,
             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
@@ -693,11 +698,8 @@ class Contracts(unittest.TestCase):
         }]}, other_secret_watch), "1.38.1")
         for invalid in (
                 [versions["values"][0]],
-                [versions["values"][0], versions["values"][1]],
-                [{"orchestratorVersion": "1.37.1", "isPreview": None,
-                  "capabilities": {"supportPlan": ["KubernetesOfficial"]}}],
                 [{"isPreview": True, "patchVersions": {"1.36.9": {}}}],
-                [{"isPreview": None, "patchVersions": {"1.40.0": {}}}]):
+                [{"patchVersions": {"invalid": {}}}]):
             with self.subTest(versions=invalid), patch.object(
                     runner, "compiled_parameters", side_effect=AssertionError("Unsupported profile compiled")):
                 commands.run.return_value = {"values": invalid}
@@ -790,10 +792,10 @@ class Contracts(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "did not reach"):
             runner.upgrade_retained_secret_watch(host, outputs, plan)
 
-    def test_secret_watch_execution_requires_exact_selected_preview(self):
+    def test_secret_watch_execution_requires_exact_selected_version(self):
         row = {"id": "operator-secret-watch"}
         runner.verify_secret_watch_version(row, {"kubernetesVersion": "1.38.2"}, "1.38.2")
-        with self.assertRaisesRegex(ValueError, "selected preview"):
+        with self.assertRaisesRegex(ValueError, "selected Kubernetes"):
             runner.verify_secret_watch_version(row, {"kubernetesVersion": "1.38.1"}, "1.38.2")
 
     def test_capacity_includes_autoscaler_surge_and_explicit_proxy_count(self):
@@ -2704,7 +2706,8 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
-        "preview-only-selection": ('r.get("isPreview") is True', 'not r.get("isPreview")'),
+        "latest-offered-selection": ('if latest_secrets or (not r.get("isPreview")',
+                                    'if (not r.get("isPreview")'),
         "preview-minimum-version": ('if not scoped_secrets or key >= (1, 37, 0):',
                                     'if not scoped_secrets or key >= (1, 36, 0):'),
         "non-operator-secret-watch-minor": (

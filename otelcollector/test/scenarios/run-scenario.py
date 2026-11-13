@@ -129,10 +129,10 @@ def validate_matrix(document, variants, check_paths=True):
 
 def select_version(document, scenario=None):
     scoped_secrets = scenario is not None and "secrets-watch-enforcement" in scenario["clusterFeatures"]
-    preview_secrets = scenario is not None and scenario["id"] == "operator-secret-watch"
+    latest_secrets = scenario is not None and scenario["id"] == "operator-secret-watch"
     rows = [r for r in document.get("values", document.get("orchestrators", []))
-            if ((r.get("isPreview") is True) if preview_secrets else not r.get("isPreview"))
-            and (preview_secrets or "KubernetesOfficial" in r.get("capabilities", {}).get(
+            if latest_secrets or (not r.get("isPreview")
+            and "KubernetesOfficial" in r.get("capabilities", {}).get(
                 "supportPlan", [] if scoped_secrets else ["KubernetesOfficial"]))]
     eligible = []
     for row in rows:
@@ -148,7 +148,7 @@ def select_version(document, scenario=None):
                     eligible.append(key)
     if not eligible:
         if scoped_secrets:
-            requirement = "preview >=1.37" if preview_secrets else "stable official >=1.37"
+            requirement = ">=1.37" if latest_secrets else "stable official >=1.37"
             raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
                              f"regional Kubernetes {requirement} version")
         raise ValueError("Region returned no stable official default Kubernetes version")
@@ -163,7 +163,7 @@ def version_key(version):
 
 def log_resolved_version(scenario, location, version):
     if scenario["id"] == "operator-secret-watch":
-        print(f"Resolved latest regional AKS preview for {location}: Kubernetes {version}", flush=True)
+        print(f"Resolved latest regional AKS version for {location}: Kubernetes {version}", flush=True)
 
 
 def windows_image_compatible(host, image):
@@ -1650,7 +1650,7 @@ def verify_secret_watch_version(scenario, cluster, expected=None):
         if not supported:
             raise ValueError("Secret-watch cluster must run Kubernetes >=1.37")
         if expected is not None and actual != expected:
-            raise ValueError(f"Secret-watch cluster must run the selected preview Kubernetes {expected}")
+            raise ValueError(f"Secret-watch cluster must run the selected Kubernetes {expected}")
 
 
 def capacity_plan(parameters, scenario, version):
