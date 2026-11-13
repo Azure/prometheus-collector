@@ -27,7 +27,7 @@ spec:
           value: "auto"
       shell: |
         mkdir -p /data/reports
-        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r -v -p --label-filter "(config-processing-basic-auth-smon)" ./configprocessing
+        ginkgo run --timeout=3h --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r -v -p --label-filter "(config-processing-basic-auth-smon)" ./configprocessing
     - name: Retain Ginkgo evidence
       condition: always
       artifacts:

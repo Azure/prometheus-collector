@@ -85,6 +85,7 @@ func TestConfigProcessingWorkflowsUseSharedTemplate(t *testing.T) {
 			break
 		}
 	}
+
 	if run.Name != "Run test" ||
 		!strings.Contains(ginkgoCommand, "--fail-on-empty {{ config.timeoutFlag }}") ||
 		!strings.Contains(ginkgoCommand, `--label-filter "{{ config.labelFilter }}"`) ||
@@ -176,6 +177,36 @@ func TestConfigProcessingWorkflowsUseSharedTemplate(t *testing.T) {
 			}
 			if !found {
 				t.Fatalf("workflow %s was not found in %s", tt.name, tt.file)
+			}
+		})
+	}
+}
+
+func TestBasicAuthServiceMonitorWorkflowTimeouts(t *testing.T) {
+	_, source, _, _ := runtime.Caller(0)
+	for _, name := range []string{"basic-auth-smon", "basic-auth-smon-v2"} {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(filepath.Dir(source), "config-processing-test-crs", "testkube-config-test-"+name+"-crs.yaml")
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var workflow struct {
+				Spec struct {
+					Steps []struct {
+						Shell string `json:"shell"`
+					} `json:"steps"`
+				} `json:"spec"`
+			}
+			if err := yaml.Unmarshal(data, &workflow); err != nil {
+				t.Fatal(err)
+			}
+			if len(workflow.Spec.Steps) == 0 {
+				t.Fatal("missing Ginkgo step")
+			}
+			command := workflow.Spec.Steps[0].Shell
+			if !strings.Contains(command, "ginkgo run --timeout=3h ") || strings.Count(command, "--timeout") != 1 {
+				t.Fatalf("supported-watch transitions need the 3h carrier timeout: %s", command)
 			}
 		})
 	}
