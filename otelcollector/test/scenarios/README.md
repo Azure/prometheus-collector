@@ -222,6 +222,8 @@ collectors. It requires fresh successful scraping, certificate-validation errors
 and independent authenticated AMW queries with no samples for a new negative-phase
 marker. It restores and reads back the original mounts even after failure, then
 requires fresh ingestion after recovery.
+TLS interception is limited to AMW ingestion; public registry and test-source
+connections retain their public certificates so the harness can initialize.
 Its deployment first prepares the retained proxy, then reads only the public CA
 through authenticated VM run-command before creating AKS with that trust.
 No deployment-script container, storage account or CA-reader identity is needed.

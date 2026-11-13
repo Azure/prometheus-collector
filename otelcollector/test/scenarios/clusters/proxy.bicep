@@ -38,8 +38,10 @@ if [ '__CUSTOM_CA__' = 'true' ]; then
 http_port 3128 ssl-bump cert=/etc/squid/ssl_cert/ca.crt key=/etc/squid/ssl_cert/ca.key generate-host-certificates=on dynamic_cert_mem_cache_size=4MB
 sslcrtd_program /usr/lib/squid/security_file_certgen -s /var/lib/squid/ssl_db -M 4MB
 acl step1 at_step SslBump1
+acl metrics_ingestion ssl::server_name .ingest.monitor.azure.com
 ssl_bump peek step1
-ssl_bump bump all
+ssl_bump bump metrics_ingestion
+ssl_bump splice all
 tls_outgoing_options cafile=/etc/ssl/certs/ca-certificates.crt
 SQUID_TLS
 else
@@ -67,7 +69,7 @@ systemctl enable squid >&2
 systemctl restart squid
 systemctl is-active --quiet squid
 if [ '__CUSTOM_CA__' = 'true' ]; then
-  curl --noproxy '' --proxy http://127.0.0.1:3128 --cacert /etc/squid/ssl_cert/ca.crt \
+  curl --noproxy '' --proxy http://127.0.0.1:3128 --cacert /etc/squid/ssl_cert/ca.crt --capath /etc/ssl/certs \
     --retry 5 --retry-connrefused --retry-delay 5 --fail --silent --show-error \
     --output /dev/null '__PROBE_URL__'
   base64 -w0 /etc/squid/ssl_cert/ca.crt
