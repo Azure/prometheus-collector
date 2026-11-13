@@ -63,6 +63,21 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("az"), "Azure CLI/Bicep is required for template compilation")
+    def test_compiled_associations_keep_cluster_scope_after_conditional_bootstrap(self):
+        with tempfile.TemporaryDirectory() as directory:
+            template = runner.Commands(Path(directory)).run([
+                "az", "bicep", "build", "--file", SOURCE.parent / "clusters" / "aks.bicep", "--stdout",
+            ], json_output=True)
+        resources = template["resources"]
+        associations = [value for value in (resources.values() if isinstance(resources, dict) else resources)
+                        if value["type"] == "Microsoft.Insights/dataCollectionRuleAssociations"]
+        self.assertEqual(len(associations), 3)
+        for value in associations:
+            with self.subTest(name=value["name"]):
+                self.assertIn("Microsoft.ContainerService/managedClusters", value.get("scope", ""))
+                self.assertIn("not(parameters('proxyBootstrapOnly'))", value["condition"])
+
     def test_vm_script_reads_actual_azure_envelope_but_not_stderr_or_failed_records(self):
         adapter = sys.modules["clusters.private_api"]
         result = 'SCENARIO_RESULT={"keyRemoved":true}'

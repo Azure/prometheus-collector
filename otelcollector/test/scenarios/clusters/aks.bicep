@@ -398,7 +398,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
 
 resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (!proxyBootstrapOnly) {
   name: 'prometheus-${uniqueString(cluster!.id)}'
-  scope: cluster!
+  scope: cluster
   properties: { dataCollectionRuleId: dcr.id }
 }
 
@@ -423,13 +423,13 @@ resource otlpDcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (scena
 
 resource otlpAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (scenarioId == 'otlp' && !proxyBootstrapOnly) {
   name: 'otlp-${uniqueString(cluster!.id)}'
-  scope: cluster!
+  scope: cluster
   properties: { dataCollectionRuleId: otlpDcr!.id }
 }
 
 resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring && !proxyBootstrapOnly) {
   name: 'configurationAccessEndpoint'
-  scope: cluster!
+  scope: cluster
   properties: { dataCollectionEndpointId: dce.id }
 }
 
