@@ -63,6 +63,25 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_vm_script_reads_actual_azure_envelope_but_not_stderr_or_failed_records(self):
+        adapter = sys.modules["clusters.private_api"]
+        result = 'SCENARIO_RESULT={"keyRemoved":true}'
+        for code, message, passed in (
+                ("ComponentStatus/StdOut/succeeded", result, True),
+                ("ProvisioningState/succeeded", "Enable succeeded: \n[stdout]\n" + result + "\n\n[stderr]\n", True),
+                ("ProvisioningState/succeeded", "Enable succeeded: \n[stdout]\n\n[stderr]\n" + result, False),
+                ("ProvisioningState/failed", "[stdout]\n" + result + "\n[stderr]\n", False),
+                ("ProvisioningState/succeeded", "[stdout]\n" + result + "\n" + result + "\n[stderr]\n", False)):
+            with self.subTest(code=code, message=message):
+                host = Mock()
+                host.receipt = {"resourceGroup": "owned"}
+                host.az.return_value = {"value": [{"code": code, "message": message}]}
+                if passed:
+                    self.assertEqual(adapter.vm_script(host, "runner", "script"), {"keyRemoved": True})
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "one successful scenario result"):
+                        adapter.vm_script(host, "runner", "script")
+
     def test_private_deletion_protection_requires_actual_lock_readback(self):
         for existing, level in ((True, "CanNotDelete"), (False, "CanNotDelete"), (True, "ReadOnly")):
             with self.subTest(existing=existing, level=level), tempfile.TemporaryDirectory() as directory:

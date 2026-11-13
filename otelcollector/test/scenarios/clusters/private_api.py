@@ -29,8 +29,16 @@ def vm_script(host, name, script):
         "vm", "run-command", "invoke", "--resource-group", host.receipt["resourceGroup"],
         "--name", name, "--command-id", "RunShellScript", "--scripts", script,
         json_output=True, private=True)
-    stdout = "\n".join(row["message"] for row in response.get("value", [])
-                       if row.get("code") == "ComponentStatus/StdOut/succeeded")
+    streams = []
+    for row in response.get("value", []):
+        if row.get("code") == "ComponentStatus/StdOut/succeeded":
+            streams.append(row["message"])
+        elif row.get("code") == "ProvisioningState/succeeded":
+            match = re.search(r"\[stdout\]\r?\n(.*?)\r?\n\[stderr\](?:\r?\n|$)",
+                              row["message"], re.DOTALL)
+            if match:
+                streams.append(match[1])
+    stdout = "\n".join(streams)
     values = re.findall(r"^SCENARIO_RESULT=(.+)$", stdout, re.MULTILINE)
     if len(values) != 1:
         raise RuntimeError("Owned VM command did not return one successful scenario result")
