@@ -144,53 +144,7 @@ resource configure 'Microsoft.Compute/virtualMachines/runCommands@2024-07-01' = 
   }
 }
 
-// Only the public certificate crosses the VM boundary; the signing key remains on its retained disk.
-resource certificateReader 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (customCa) {
-  name: '${name}-certificate-reader'
-  location: location
-  tags: tags
-}
-resource readerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (customCa) {
-  name: guid(vm.id, certificateReader!.id, 'Reader')
-  scope: vm
-  properties: {
-    principalId: certificateReader!.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
-  }
-}
-resource certificate 'Microsoft.Resources/deploymentScripts@2023-08-01' = if (customCa) {
-  name: '${name}-public-certificate'
-  location: location
-  tags: tags
-  kind: 'AzureCLI'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: { '${certificateReader!.id}': {} }
-  }
-  properties: {
-    azCliVersion: '2.89.1'
-    timeout: 'PT10M'
-    retentionInterval: 'PT1H'
-    cleanupPreference: 'Always'
-    environmentVariables: [
-      { name: 'PROXY_RESOURCE_GROUP', value: resourceGroup().name }
-      { name: 'PROXY_VM', value: vm.name }
-    ]
-    scriptContent: '''
-set -euo pipefail
-CA=$(az vm run-command show --resource-group "$PROXY_RESOURCE_GROUP" --vm-name "$PROXY_VM" --name proxy-bootstrap --expand instanceView --query instanceView.output --output tsv)
-printf '%s' "$CA" | base64 -d | openssl x509 -noout -checkend 3600 >/dev/null
-SHA256=$(printf '%s' "$CA" | base64 -d | openssl x509 -outform DER | sha256sum | cut -d ' ' -f 1)
-jq -n --arg ca "$CA" --arg sha "$SHA256" '{trustedCa: $ca, sha256: $sha}' > "$AZ_SCRIPTS_OUTPUT_PATH"
-'''
-  }
-  dependsOn: [configure, readerRole]
-}
-
 output vmId string = vm.id
 output vmName string = vm.name
 output endpoint string = 'http://10.226.0.4:3128'
-output trustedCa string = customCa ? certificate!.properties.outputs.trustedCa : ''
-output caFingerprintSha256 string = customCa ? certificate!.properties.outputs.sha256 : ''
 output bootstrapCommandId string = configure.id

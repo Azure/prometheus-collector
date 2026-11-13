@@ -10,6 +10,8 @@ param nodePools = linuxPools
 param privateApi = true
 param proxyEnabled = true
 param proxyCustomCa = true
+param proxyBootstrapOnly = readEnvironmentVariable('SCENARIO_PROXY_BOOTSTRAP_ONLY', 'false') == 'true'
+param proxyTrustCertificate = readEnvironmentVariable('SCENARIO_PROXY_TRUST_CERTIFICATE', '')
 param proxyAdminSshPublicKey = readEnvironmentVariable('SCENARIO_PROXY_SSH_PUBLIC_KEY')
 param proxyVmSize = 'Standard_D2s_v4'
 param proxyVmCount = 1

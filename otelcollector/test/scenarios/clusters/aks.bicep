@@ -32,6 +32,8 @@ param privateMonitoring bool = false
 param installationMode string = 'candidate-addon'
 param proxyEnabled bool = false
 param proxyCustomCa bool = false
+param proxyBootstrapOnly bool = false
+param proxyTrustCertificate string = ''
 param noProxy string[] = []
 @description('Initial public key for owned proxy/orchestrator VMs; NSGs deny inbound SSH by default.')
 param proxyAdminSshPublicKey string = ''
@@ -256,7 +258,7 @@ resource uaiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
   }
 }
 
-resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
+resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = if (!proxyBootstrapOnly) {
   name: clusterName
   location: location
   tags: tags
@@ -295,7 +297,7 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
       httpProxy: proxyHost[0]!.outputs.endpoint
       httpsProxy: proxyHost[0]!.outputs.endpoint
       noProxy: effectiveNoProxy
-      trustedCa: proxyCustomCa ? proxyHost[0]!.outputs.trustedCa : null
+      trustedCa: proxyCustomCa ? proxyTrustCertificate : null
     } : null
     networkProfile: {
       networkPlugin: dataplane == 'kubenet' ? 'kubenet' : 'azure'
@@ -343,11 +345,11 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
 }
 
 // SAI is allocated by AKS creation; grant subsequent subnet/LB operations on the owned VNet.
-resource saiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useUai) {
-  name: guid(vnet.id, cluster.id, networkContributor)
+resource saiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useUai && !proxyBootstrapOnly) {
+  name: guid(vnet.id, cluster!.id, networkContributor)
   scope: vnet
   properties: {
-    principalId: cluster.identity.principalId!
+    principalId: cluster!.identity.principalId!
     principalType: 'ServicePrincipal'
     roleDefinitionId: networkContributor
   }
@@ -394,9 +396,9 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   }
 }
 
-resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = {
-  name: 'prometheus-${uniqueString(cluster.id)}'
-  scope: cluster
+resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (!proxyBootstrapOnly) {
+  name: 'prometheus-${uniqueString(cluster!.id)}'
+  scope: cluster!
   properties: { dataCollectionRuleId: dcr.id }
 }
 
@@ -419,15 +421,15 @@ resource otlpDcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (scena
   }
 }
 
-resource otlpAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (scenarioId == 'otlp') {
-  name: 'otlp-${uniqueString(cluster.id)}'
-  scope: cluster
+resource otlpAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (scenarioId == 'otlp' && !proxyBootstrapOnly) {
+  name: 'otlp-${uniqueString(cluster!.id)}'
+  scope: cluster!
   properties: { dataCollectionRuleId: otlpDcr!.id }
 }
 
-resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring) {
+resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring && !proxyBootstrapOnly) {
   name: 'configurationAccessEndpoint'
-  scope: cluster
+  scope: cluster!
   properties: { dataCollectionEndpointId: dce.id }
 }
 
@@ -523,8 +525,8 @@ resource queryDns 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-
   }
 }
 
-output clusterId string = cluster.id
-output clusterName string = cluster.name
+output clusterId string = proxyBootstrapOnly ? '' : cluster!.id
+output clusterName string = clusterName
 output location string = location
 output workspaceId string = workspace.id
 output queryEndpoint string = workspace.properties.metrics.prometheusQueryEndpoint
@@ -534,8 +536,8 @@ output dceId string = dce.id
 output dceConfigurationEndpoint string = dce.properties.configurationAccess.endpoint
 output dceMetricsIngestionEndpoint string = dce.properties.metricsIngestion.endpoint
 output configurationDceId string = privateMonitoring ? dce.id : ''
-output configurationAssociationId string = privateMonitoring ? configurationAssociation!.id : ''
-output ruleAssociationId string = ruleAssociation.id
+output configurationAssociationId string = privateMonitoring && !proxyBootstrapOnly ? configurationAssociation!.id : ''
+output ruleAssociationId string = proxyBootstrapOnly ? '' : ruleAssociation!.id
 output workspaceDefaultDceId string = workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId
 output vnetId string = vnet.id
 output subnetId string = nodeSubnetId
@@ -548,7 +550,7 @@ output expectedPools array = nodePools
 output addonEnabled bool = false
 output installationMode string = installationMode
 output identityType string = useUai ? 'UserAssigned' : 'SystemAssigned'
-output oidcIssuerUrl string = workloadIdentityEnabled ? cluster.properties.oidcIssuerProfile!.issuerURL! : ''
+output oidcIssuerUrl string = workloadIdentityEnabled && !proxyBootstrapOnly ? cluster!.properties.oidcIssuerProfile!.issuerURL! : ''
 output workloadIdentityEnabled bool = workloadIdentityEnabled
 output oidcIssuerEnabled bool = workloadIdentityEnabled
 output azureCniMode string = dataplane == 'kubenet' ? '' : azureCniMode
@@ -560,8 +562,7 @@ output orchestratorPublicIp string = effectivePrivateApi ? orchestrator!.outputs
 output proxyVmId string = proxyEnabled ? proxyHost[0]!.outputs.vmId : ''
 output proxyVmName string = proxyEnabled ? proxyHost[0]!.outputs.vmName : ''
 output proxyEndpoint string = proxyEnabled ? proxyHost[0]!.outputs.endpoint : ''
-output proxyTrustedCa string = proxyEnabled ? proxyHost[0]!.outputs.trustedCa : ''
-output proxyCaFingerprintSha256 string = proxyEnabled ? proxyHost[0]!.outputs.caFingerprintSha256 : ''
+output proxyTrustedCa string = proxyTrustCertificate
 output proxyBootstrapCommandId string = proxyEnabled ? proxyHost[0]!.outputs.bootstrapCommandId : ''
 output proxyAccessLogPath string = proxyEnabled ? '/var/log/squid/access.log' : ''
 output proxyCaCertificatePath string = proxyCustomCa ? '/etc/squid/ssl_cert/ca.crt' : ''
@@ -573,7 +574,7 @@ output proxyEgressPublicIp string = proxyEnabled ? proxyIp!.properties.ipAddress
 output proxyNoProxy array = proxyEnabled ? effectiveNoProxy : []
 output proxyNoProxyCsv string = proxyEnabled ? join(effectiveNoProxy, ',') : ''
 output proxyTlsInterceptionEnabled bool = proxyEnabled && proxyCustomCa
-output nodeResourceGroupName string = cluster.properties.nodeResourceGroup
-output nodeResourceGroupId string = '${subscription().id}/resourceGroups/${cluster.properties.nodeResourceGroup}'
+output nodeResourceGroupName string = proxyBootstrapOnly ? '' : cluster!.properties.nodeResourceGroup
+output nodeResourceGroupId string = proxyBootstrapOnly ? '' : '${subscription().id}/resourceGroups/${cluster!.properties.nodeResourceGroup}'
 output amwManagedResourceGroupName string = split(workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId, '/')[4]
 output amwManagedResourceGroupId string = '${subscription().id}/resourceGroups/${split(workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId, '/')[4]}'

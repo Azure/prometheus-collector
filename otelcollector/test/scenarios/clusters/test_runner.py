@@ -955,6 +955,38 @@ class Contracts(unittest.TestCase):
                         self.assertFalse(any(call.args[:3] == ("deployment", "group", "create")
                                              for call in host.az.call_args_list))
 
+    def test_custom_ca_reads_successful_vm_output_before_creating_aks(self):
+        certificate = runner.base64.b64encode(
+            b"-----BEGIN CERTIFICATE-----\nQ0E=\n-----END CERTIFICATE-----\n").decode()
+        for state, exit_code, output in (
+                ("Succeeded", 0, certificate), ("Failed", 0, certificate),
+                ("Succeeded", 1, certificate), ("Succeeded", 0, "malformed")):
+            with self.subTest(state=state, exit_code=exit_code, output=output), tempfile.TemporaryDirectory() as temporary:
+                args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
+                                             location="westcentralus")
+                host = runner.Host(args, dict(scenario(), clusterFeatures=["private-api", "custom-ca"]), Mock())
+                prepared = {"properties": {"outputs": {"proxyVmName": {"value": "owned-proxy"}}}}
+                outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+                host.az = Mock(side_effect=[
+                    "false", {}, prepared,
+                    {"instanceView": {"executionState": state, "exitCode": exit_code, "output": output}},
+                    {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
+                ])
+                valid = state == "Succeeded" and exit_code == 0 and output == certificate
+                with patch.object(host, "persistent_state", return_value=None), \
+                        patch.object(host, "verify_deployment"), patch("sys.stdout", new=io.StringIO()):
+                    if valid:
+                        self.assertEqual(host.provision({}, "caller", "User", pool_parameters()["nodePools"]), outputs)
+                    else:
+                        with self.assertRaises((RuntimeError, ValueError)):
+                            host.provision({}, "caller", "User", pool_parameters()["nodePools"])
+                deployments = [call for call in host.az.call_args_list if call.args[:3] == ("deployment", "group", "create")]
+                self.assertEqual(deployments[0].kwargs["env"]["SCENARIO_PROXY_BOOTSTRAP_ONLY"], "true")
+                self.assertEqual(len(deployments), 2 if valid else 1)
+                if valid:
+                    self.assertEqual(deployments[1].kwargs["env"]["SCENARIO_PROXY_TRUST_CERTIFICATE"], certificate)
+                    self.assertEqual(deployments[1].kwargs["env"]["SCENARIO_PROXY_BOOTSTRAP_ONLY"], "false")
+
     def test_provision_fails_immediately_for_other_deployment_errors(self):
         for principal_type, failure in (
                 ("ServicePrincipal", "AuthorizationFailed: Microsoft.Compute/virtualMachines/write"),

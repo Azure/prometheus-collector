@@ -218,6 +218,9 @@ collectors. It requires fresh successful scraping, certificate-validation errors
 and independent authenticated AMW queries with no samples for a new negative-phase
 marker. It restores and reads back the original mounts even after failure, then
 requires fresh ingestion after recovery.
+Its deployment first prepares the retained proxy, then reads only the public CA
+through authenticated VM run-command before creating AKS with that trust.
+No deployment-script container, storage account or CA-reader identity is needed.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and
@@ -237,8 +240,8 @@ or credential is transferred to the runner.
 The delegation is **Role Based Access Control Administrator**, scoped only to this
 new group, with condition version 2.0 restricting both assignment creation and
 deletion to Network Contributor and Monitoring Data Reader for service principals.
-Only the custom-CA profile additionally permits Reader. It cannot delegate Owner,
-User Access Administrator or itself. Only groups matching the persistent ownership
+It cannot delegate Owner, User Access Administrator or itself; no separate
+CA-reader Reader grant is needed. Only groups matching the persistent ownership
 contract can be reused.
 The gate requires the exact principal, group, role and condition; missing or wider
 delegations do not satisfy it. Timeout fails and retains any created resources for

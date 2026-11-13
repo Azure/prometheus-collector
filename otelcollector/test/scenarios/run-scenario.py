@@ -16,6 +16,7 @@ import re
 import secrets
 import shutil
 import signal
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -480,6 +481,27 @@ class Host:
             self.wait_for_rbac(principal)
         env = dict(env, SCENARIO_RUN_NAME=owner)
         deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az
+        if "custom-ca" in self.scenario["clusterFeatures"]:
+            prepared = deploy(
+                "deployment", "group", "create", "--resource-group", name,
+                "--name", "scenario-proxy-bootstrap", "--parameters", str(ROOT / self.scenario["cluster"]),
+                env=dict(env, SCENARIO_PROXY_BOOTSTRAP_ONLY="true"),
+                json_output=True, private=True)
+            vm = prepared["properties"]["outputs"]["proxyVmName"]["value"]
+            command = self.az(
+                "vm", "run-command", "show", "--resource-group", name, "--vm-name", vm,
+                "--name", "proxy-bootstrap", "--expand", "instanceView", json_output=True, private=True)
+            view = command.get("instanceView") or {}
+            if view.get("executionState") != "Succeeded" or view.get("exitCode") != 0:
+                raise RuntimeError("Proxy CA bootstrap did not complete successfully")
+            certificate = view["output"].strip()
+            der = ssl.PEM_cert_to_DER_cert(base64.b64decode(certificate, validate=True).decode("ascii"))
+            proof = {"status": "PASS", "vm": vm, "sha256": hashlib.sha256(der).hexdigest(),
+                     "reader": "authenticated Azure VM run-command", "signingKey": "retained only on VM"}
+            save(self.args.evidence / "proxy-ca-bootstrap.json", proof)
+            print("Proxy CA bootstrap: " + json.dumps(proof), flush=True)
+            env = dict(env, SCENARIO_PROXY_BOOTSTRAP_ONLY="false",
+                       SCENARIO_PROXY_TRUST_CERTIFICATE=certificate)
         result = deploy(
             "deployment", "group", "create", "--resource-group", name,
             "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
@@ -576,8 +598,6 @@ class Host:
         uuid.UUID(principal)
         scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
         allowed = list(RBAC_ALLOWED_ROLES)
-        if "custom-ca" in self.scenario["clusterFeatures"]:
-            allowed.append(RBAC_PROXY_READER)
         condition = rbac_condition(allowed)
         command = (
             "$deadline = [DateTimeOffset]::UtcNow.AddMinutes(10)\n"
