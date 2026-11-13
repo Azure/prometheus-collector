@@ -187,8 +187,10 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 			Skip("scoped secret watching is supported on Kubernetes 1.37+; use the current auto-upgrading lane")
 		}
 		namespace := "default"
+		secretName := "ama-e2e-denied-secret"
 		if empty {
 			namespace = "ama-secret-watch-test"
+			secretName = "settings-auth-creds"
 		}
 		verbs := []string{"get"}
 		if empty {
@@ -200,7 +202,7 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 					User:   "system:serviceaccount:kube-system:ama-metrics-serviceaccount",
 					Groups: []string{"system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"},
 					ResourceAttributes: &authv1.ResourceAttributes{
-						Namespace: namespace, Verb: verb, Resource: "secrets", Name: "ama-e2e-denied-secret",
+						Namespace: namespace, Verb: verb, Resource: "secrets", Name: secretName,
 					},
 				}}, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -221,13 +223,16 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 			Expect(namespaces).To(Equal("basic-auth-test"), "restricted-allowlist fixture required")
 		}
 		secret, err := K8sClient.CoreV1().Secrets(namespace).Create(context.Background(), &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "ama-e2e-denied-secret"},
+			ObjectMeta: metav1.ObjectMeta{Name: secretName},
 			StringData: map[string]string{"username": "synthetic-user", "password": "synthetic-not-a-credential"},
 		}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(func() {
-			Expect(K8sClient.CoreV1().Secrets(namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
-		})
+		if !empty {
+			DeferCleanup(func() {
+				Expect(K8sClient.CoreV1().Secrets(namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
+			})
+		}
+		// The empty-case secret is removed with its owned fixture namespace.
 		allowed, denied := []string{}, []string{}
 		secretJobs := []string{}
 		for _, resource := range []string{"servicemonitors", "podmonitors"} {
