@@ -28,6 +28,17 @@ digest, terminal passed status and nonempty JUnit/artifacts. Legacy `main`/`late
 defaults are not candidate provenance.
 `regionTests` is a separate region/rule validation, not a cluster-health substitute.
 
+For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
+`httpProxyConfig` into inline global workflow container defaults so Git-clone init
+containers receive it even when admission only injects regular containers.
+Both environment-variable casings retain the complete `effectiveNoProxy` list,
+including AKS-injected defaults; a missing effective list fails closed.
+The cluster read and Helm stdin values are private; no proxy values enter command
+arguments or logs. Inline values are persisted in the API Deployment, so
+credential-bearing proxy URLs are rejected rather than stored there; AKS does not
+support proxy username/password authentication. Absent or explicitly disabled
+proxy configurations add no defaults.
+
 ## Prerequisites
 
 Use Python 3.10+ and the packages pinned in `clusters/requirements.txt`, Azure CLI

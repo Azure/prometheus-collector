@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import urlsplit
 import uuid
 from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
@@ -1604,7 +1605,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             assign("role", "assignment", "create", "--assignee-object-id", object_id,
                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
-                      json_output=True)
+                      json_output=True, private=True)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
         raise RuntimeError("The effective AKS auto-upgrade channel must be stable")
     if "managed-acns" in host.scenario["clusterFeatures"]:
@@ -1627,9 +1628,39 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             "--identity-name", identity["name"], "--name", "testkube",
             "--issuer", issuer, "--subject", "system:serviceaccount:testkube:testkube-api-server-tests-job",
             "--audience", "api://AzureADTokenExchange")
+    workflow_values = None
+    proxy = cluster.get("httpProxyConfig") or {}
+    if proxy.get("enabled") is not False and (proxy.get("httpProxy") or proxy.get("httpsProxy")):
+        for endpoint in (proxy.get("httpProxy"), proxy.get("httpsProxy")):
+            if endpoint:
+                try:
+                    parsed = urlsplit(endpoint)
+                    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                            or parsed.username is not None or parsed.password is not None
+                            or parsed.query or parsed.fragment or parsed.path not in {"", "/"}):
+                        raise ValueError
+                except ValueError:
+                    raise ValueError("Inline TestKube defaults require credential-free HTTP(S) proxy endpoints") from None
+        bypass = proxy.get("effectiveNoProxy")
+        if bypass is None:
+            raise ValueError("AKS effectiveNoProxy is required to preserve injected bypass defaults")
+        # AKS admission can omit clone init containers; workflow defaults reach them.
+        environment = [
+            {"name": name, "value": value}
+            for key, value in (
+                ("HTTP_PROXY", proxy.get("httpProxy")),
+                ("HTTPS_PROXY", proxy.get("httpsProxy") or proxy.get("httpProxy")),
+                ("NO_PROXY", ",".join(bypass)),
+            ) if value is not None
+            for name in (key, key.lower())
+        ]
+        workflow_values = yaml.safe_dump({"global": {"testWorkflows": {"globalTemplate": {
+            "enabled": True, "inline": True, "spec": {"container": {"env": environment}},
+        }}}})
     host.commands.run(["helm", "upgrade", "--install", "testkube", str(package),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "testkube",
                       "--create-namespace", "--values", str(TEST_SOURCE / "otelcollector/test/testkube/values.yaml"),
+                      *(["--values", "-"] if workflow_values is not None else []),
                       # Match the cluster's .svc/.cluster.local bypasses without replacing proxy environment.
                       "--set-string", "testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
                       "--set", "testkube-api.minio.podSecurityContext.fsGroup=1001",
@@ -1638,7 +1669,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                       "--set-string", "mongodb.nodeAffinityPreset.values[0]=system",
                       "--set", "mongodb.updateStrategy.type=Recreate",
                       "--set-string", "global.testWorkflows.builtinTemplatesInstaller.nodeSelector.kubernetes\\.io/os=linux",
-                      "--wait", "--timeout", "20m"], private=True)
+                      "--wait", "--timeout", "20m"], data=workflow_values, private=True)
     host.kube("annotate", "serviceaccount", "testkube-api-server-tests-job", "-n", "testkube",
               f"azure.workload.identity/client-id={identity['clientId']}", "--overwrite")
     host.kube("apply", "-f", str(TEST_SOURCE / "otelcollector/test/testkube/api-server-permissions.yaml"))
