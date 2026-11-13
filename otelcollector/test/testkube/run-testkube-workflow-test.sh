@@ -19,9 +19,7 @@ kubectl() {
                 [[ "$MOCK_CASE" != permissions-failure ]]
             else
                 [[ "$MOCK_CASE" != apply-failure ]] || return 1
-                if [[ "$MOCK_CASE" == customer-settings-v1 || "$MOCK_CASE" == customer-settings-v2 || "$MOCK_CASE" == all-targets-enabled || "$MOCK_CASE" == default-targets-on || "$MOCK_CASE" == template-failure ]]; then
-                    [[ -f "$MOCK_DIR/shared-template.yaml" ]] || return 1
-                fi
+                [[ -f "$MOCK_DIR/shared-template.yaml" ]] || return 1
                 if [[ "$MOCK_CASE" != new-workflows ]]; then
                     case "$MOCK_CASE" in
                         customer-settings-v1) reset_files=(customersettingsv1-reset) ;;
@@ -167,14 +165,12 @@ for scenario in existing-workflows new-workflows permissions-failure list-failur
                 fi
                 ;;
         esac
-        if [[ "$scenario" == customer-settings-v1 || "$scenario" == customer-settings-v2 || "$scenario" == all-targets-enabled || "$scenario" == default-targets-on ]]; then
-            template_apply=$(grep -n '^apply -f -$' "$MOCK_DIR/commands" | cut -d: -f1)
-            workflow_apply=$(grep -n '^apply -f ./testkube/generated.yaml$' "$MOCK_DIR/commands" | cut -d: -f1)
-            [[ -n "$template_apply" && -n "$workflow_apply" && "$template_apply" -lt "$workflow_apply" ]] || {
-                echo "FAIL: shared template was not applied before its workflows" >&2
-                exit 1
-            }
-        fi
+        template_apply=$(grep -n '^apply -f -$' "$MOCK_DIR/commands" | cut -d: -f1)
+        workflow_apply=$(grep -n '^apply -f ./testkube/generated.yaml$' "$MOCK_DIR/commands" | cut -d: -f1)
+        [[ -n "$template_apply" && -n "$workflow_apply" && "$template_apply" -lt "$workflow_apply" ]] || {
+            echo "FAIL: shared template was not applied before its workflows" >&2
+            exit 1
+        }
         if [[ "$scenario" == new-workflows ]] && grep -q '^annotate ' "$MOCK_DIR/commands"; then
             echo "FAIL: tried to annotate workflows that do not exist" >&2
             exit 1

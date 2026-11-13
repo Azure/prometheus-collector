@@ -13,6 +13,9 @@ spec:
     parallelFlag:
       type: string
       default: ""
+    verboseFlag:
+      type: string
+      default: ""
   content:
     git:
       uri: https://github.com/Azure/prometheus-collector
@@ -26,7 +29,7 @@ spec:
     - name: Run test
       shell: |
         mkdir -p /data/reports
-        ginkgo run --fail-on-empty {{ config.timeoutFlag }} --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r {{ config.parallelFlag }} --label-filter "{{ config.labelFilter }}" ./configprocessing
+        ginkgo run --fail-on-empty {{ config.timeoutFlag }} --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r {{ config.verboseFlag }} {{ config.parallelFlag }} --label-filter "{{ config.labelFilter }}" ./configprocessing
     - name: Retain Ginkgo evidence
       condition: always
       artifacts:

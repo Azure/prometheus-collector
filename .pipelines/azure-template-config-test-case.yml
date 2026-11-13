@@ -1,0 +1,58 @@
+parameters:
+  - name: workflowFile
+    type: string
+  - name: scenario
+    type: string
+  - name: displayName
+    type: string
+  - name: AMW_QUERY_ENDPOINT
+    type: string
+  - name: AZURE_CLIENT_ID
+    type: string
+  - name: branch
+    type: string
+  - name: summaryDisplayName
+    type: string
+    default: Create TestKube Results Summary
+  - name: setupScript
+    type: string
+    default: ''
+  - name: beforeSummaryScript
+    type: string
+    default: ''
+  - name: afterSummaryScript
+    type: string
+    default: ''
+
+steps:
+  - bash: |
+      ${{ parameters.setupScript }}
+      export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+      export BUILD_BUILDID="$(Build.BuildId)"
+      export SYSTEM_JOBID="$(System.JobId)"
+      export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+      chmod +x ./testkube/run-testkube-workflow.sh
+      ./testkube/run-testkube-workflow.sh \
+        "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+        "${{ parameters.AZURE_CLIENT_ID }}" \
+        "${{ parameters.workflowFile }}" \
+        "${{ parameters.workflowFile }}" \
+        "false" \
+        "480" \
+        "ConfigTests" \
+        "${{ parameters.branch }}"
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+    displayName: ${{ parameters.displayName }}
+    continueOnError: true
+
+  - bash: |
+      ${{ parameters.beforeSummaryScript }}
+      TESTKUBE_RESULTS_OTEL=$(jq -c '.environment="${{ parameters.scenario }}"' "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json" | tr -d '\n\r')
+      echo $TESTKUBE_RESULTS_OTEL
+      echo $TESTKUBE_RESULTS_OTEL > "$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-${{ parameters.scenario }}.json"
+      rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+      ${{ parameters.afterSummaryScript }}
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+    displayName: ${{ parameters.summaryDisplayName }}
+    condition: always()

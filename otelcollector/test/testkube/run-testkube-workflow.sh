@@ -104,14 +104,10 @@ kubectl apply -f ./testkube/api-server-permissions.yaml \
     || fail_setup "Failed to apply TestKube API permissions"
 
 if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
-    case "$SOURCE_TEMPLATE" in
-        testkube-config-test-customer-settings-v[12]-crs.yaml|testkube-config-test-all-targets-enabled-crs.yaml|testkube-config-test-default-targets-on-crs.yaml)
-            shared_template=$(envsubst < "./testkube/config-processing-test-crs/testkube-config-test-ginkgo-template-crs.yaml") \
-                || fail_setup "Failed to render ConfigProcessing TestWorkflowTemplate"
-            kubectl apply -f - <<< "$shared_template" \
-                || fail_setup "Failed to apply ConfigProcessing TestWorkflowTemplate"
-            ;;
-    esac
+    shared_template=$(envsubst < "./testkube/config-processing-test-crs/testkube-config-test-ginkgo-template-crs.yaml") \
+        || fail_setup "Failed to render ConfigProcessing TestWorkflowTemplate"
+    kubectl apply -f - <<< "$shared_template" \
+        || fail_setup "Failed to apply ConfigProcessing TestWorkflowTemplate"
 fi
 
 if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
