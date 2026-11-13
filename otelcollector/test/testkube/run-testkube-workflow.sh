@@ -104,6 +104,17 @@ kubectl apply -f ./testkube/api-server-permissions.yaml \
     || fail_setup "Failed to apply TestKube API permissions"
 
 if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
+    case "$SOURCE_TEMPLATE" in
+        testkube-config-test-customer-settings-v[12]-crs.yaml|testkube-config-test-all-targets-enabled-crs.yaml|testkube-config-test-default-targets-on-crs.yaml)
+            shared_template=$(envsubst < "./testkube/config-processing-test-crs/testkube-config-test-ginkgo-template-crs.yaml") \
+                || fail_setup "Failed to render ConfigProcessing TestWorkflowTemplate"
+            kubectl apply -f - <<< "$shared_template" \
+                || fail_setup "Failed to apply ConfigProcessing TestWorkflowTemplate"
+            ;;
+    esac
+fi
+
+if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
     existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
         || fail_setup "Failed to list existing ConfigTests workflows"
     # Exported last-applied metadata can make apply try to delete resourceVersion.
@@ -218,6 +229,12 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
             ;;
         testkube-config-test-deny-fs-access-crs.yaml)
             workflows=(denyfsaccess)
+            ;;
+        testkube-config-test-customer-settings-v1-crs.yaml)
+            workflows=(customersettingsv1)
+            ;;
+        testkube-config-test-customer-settings-v2-crs.yaml)
+            workflows=(customersettingsv2)
             ;;
         *)
             echo "Unknown ConfigTests source template: $SOURCE_TEMPLATE"

@@ -1,0 +1,19 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: customersettingsv1
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  use:
+    - name: configprocessingginkgo
+      config:
+        labelFilter: config-processing-customer-settings-v1
+        timeoutFlag: --timeout=3h
+        parallelFlag: ""
+  container:
+    env:
+      - name: GOTOOLCHAIN
+        value: auto

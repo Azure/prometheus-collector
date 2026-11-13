@@ -9,7 +9,7 @@ For general Ginkgo / TestKube background, see [`otelcollector/test/README.md`](.
 1. `otelcollector/test/test-cluster-yamls/configmaps/...` — add (or reuse) the configmap your scenario needs.
 2. `otelcollector/test/ginkgo-e2e/utils/constants.go` — add a label constant (`ConfigProcessingXxx = "config-processing-xxx"`). Skip this if an existing label already covers your assertions.
 3. `otelcollector/test/ginkgo-e2e/configprocessing/config_processing_test.go` — add `Entry(...)` rows tagged with `Label(utils.ConfigProcessingXxx)`.
-4. `otelcollector/test/testkube/config-processing-test-crs/testkube-config-test-<scenario>-crs.yaml` — copy a sibling CR template and change the workflow `name` and the `--label-filter` value.
+4. `otelcollector/test/testkube/config-processing-test-crs/testkube-config-test-<scenario>-crs.yaml` — copy a sibling CR template and change the workflow `name` and its label filter. The customer-settings, all-targets-enabled, and default-targets-on workflows keep their names, labels, and environment in small wrapper CRs and share Ginkgo setup in `testkube-config-test-ginkgo-template-crs.yaml`; the runner applies it before those workflows.
 5. `otelcollector/test/testkube/run-testkube-workflow.sh` — add a branch to the `case "$SOURCE_TEMPLATE"` block listing the workflow names from your CR file.
 6. `.pipelines/azure-pipeline-config-tests.yml` — add two bash steps (described below).
 
