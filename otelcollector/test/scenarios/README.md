@@ -58,7 +58,9 @@ For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
 `httpProxyConfig` into inline global workflow container defaults so Git-clone init
 containers receive it even when admission only injects regular containers.
 Both environment-variable casings retain the complete `effectiveNoProxy` list,
-including AKS-injected defaults; a missing effective list fails closed.
+including AKS-injected defaults. If core `az aks show` omits this field, bootstrap
+privately reads the same cluster through stable ARM API `2026-09-01` without
+requiring `aks-preview`; a missing effective list still fails closed.
 The cluster read and Helm stdin values are private; no proxy values enter command
 arguments or logs. Inline values are persisted in the API Deployment, so
 credential-bearing proxy URLs are rejected rather than stored there; AKS does not

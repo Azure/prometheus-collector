@@ -1922,15 +1922,24 @@ class Contracts(unittest.TestCase):
             host.scenario = {"clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
             existing_roles = []
-            cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
+            cluster = {"id": f"/subscriptions/{runner.BUILD_SUBSCRIPTION}/resourceGroups/owned/providers/"
+                             "Microsoft.ContainerService/managedClusters/owned-cluster",
+                       "oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
                        "kubernetesVersion": "1.36.5", "autoUpgradeProfile": {"upgradeChannel": "stable"},
                        "securityProfile": {"workloadIdentity": {"enabled": True}}}
+            arm_proxy = {}
 
             def az(*args, **kwargs):
                 if args[:2] == ("identity", "create"):
                     return identity
                 if args[:2] == ("aks", "show"):
                     return cluster
+                if args[:1] == ("rest",):
+                    self.assertEqual(args, ("rest", "--method", "get", "--url",
+                                           cluster["id"] + "?api-version=2026-09-01"))
+                    self.assertTrue(kwargs["private"])
+                    self.assertTrue(kwargs["json_output"])
+                    return {"properties": {"httpProxyConfig": arm_proxy}}
                 if args[:3] == ("role", "assignment", "list"):
                     self.assertIn(args[args.index("--assignee-object-id") + 1], ("identity-object", "caller-object"))
                     self.assertEqual(args[args.index("--fill-principal-name") + 1], "false")
@@ -2022,7 +2031,22 @@ class Contracts(unittest.TestCase):
                             "enabled": True, "inline": True, "spec": {"container": {"env": environment}},
                         }}},
                     })
+            self.assertFalse(any(c.args[:1] == ("rest",) for c in host.az.call_args_list))
             cluster["httpProxyConfig"] = {k: v for k, v in proxy.items() if k != "effectiveNoProxy"}
+            arm_proxy = proxy
+            host.az.reset_mock()
+            host.commands.run.reset_mock()
+            runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertEqual(sum(c.args[:1] == ("rest",) for c in host.az.call_args_list), 1)
+            helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            template = runner.yaml.safe_load(helm_call.kwargs["data"])["global"]["testWorkflows"]["globalTemplate"]
+            environment = {entry["name"]: entry["value"] for entry in template["spec"]["container"]["env"]}
+            self.assertEqual(environment["NO_PROXY"], ",".join(proxy["effectiveNoProxy"]))
+            self.assertEqual(environment["no_proxy"], environment["NO_PROXY"])
+            self.assertNotEqual(environment["NO_PROXY"], ",".join(proxy["noProxy"]))
+            self.assertTrue(helm_call.kwargs["private"])
+            self.assertNotIn(proxy["httpProxy"], str(helm_call.args))
+            arm_proxy = {}
             host.commands.run.reset_mock()
             with self.assertRaisesRegex(ValueError, "effectiveNoProxy"):
                 runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
@@ -2290,6 +2314,9 @@ def mutations():
         "workflow-proxy-complete-bypass": (
             'bypass = proxy.get("effectiveNoProxy")',
             'bypass = proxy.get("noProxy")'),
+        "workflow-proxy-raw-arm": (
+            'if bypass is None:\n            # Core CLI can omit read-only fields; use the raw ARM response.',
+            'if False:\n            # Core CLI can omit read-only fields; use the raw ARM response.'),
         "workflow-proxy-credential-rejection": (
             'or parsed.username is not None or parsed.password is not None',
             'or False'),
