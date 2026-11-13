@@ -46,8 +46,7 @@
       "settingsVariants": ["default"],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires an authorized VNet-connected orchestrator and verified private-API access."
+      "tier": "weekly"
     },
     {
       "id": "ampls",

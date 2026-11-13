@@ -1345,6 +1345,7 @@ def verify_ingestion(host, outputs, started):
                         "probeStarted": started, "query": query, "attempts": attempt + 1,
                         "queryOrigin": "candidate Linux collector pod", "endpoint": outputs["queryEndpoint"]}
             save(host.args.evidence / "ingestion.json", evidence)
+            print("Collector ingestion proof: " + json.dumps(evidence), flush=True)
             return evidence
         except RuntimeError as failure:
             last_error = str(failure)

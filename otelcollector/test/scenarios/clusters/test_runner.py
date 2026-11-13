@@ -1825,11 +1825,14 @@ class Contracts(unittest.TestCase):
             host.kube.return_value = {"status": "success", "data": {"resultType": "vector", "result": [
                 {"value": [105, "105"]},
             ]}}
-            with patch.object(runner.time, "time", return_value=110):
+            with patch.object(runner.time, "time", return_value=110), patch(
+                    "sys.stdout", new_callable=io.StringIO) as stdout:
                 result = runner.verify_ingestion(host, {"queryEndpoint": "https://amw.example"}, 100)
             self.assertEqual(result["sampleTimestamp"], 105)
             self.assertIn('scenario_run="fresh-run-marker"', result["query"])
             self.assertNotIn("test-token", (Path(temporary) / "ingestion.json").read_text())
+            self.assertEqual(runner.json.loads(stdout.getvalue().removeprefix("Collector ingestion proof: ")), result)
+            self.assertNotIn("test-token", stdout.getvalue())
             call = host.kube.call_args
             self.assertNotIn("test-token", call.args)
             self.assertIn("Bearer $token", call.args[call.args.index("sh") + 2])
