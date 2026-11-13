@@ -467,6 +467,15 @@ class Host:
             if any(row.get("properties", {}).get("provisioningState") not in ("Succeeded", "Failed", "Canceled")
                    for row in deployments):
                 raise ValueError("A deployment is still active; refusing concurrent provisioning")
+            if "private-api" in self.scenario["clusterFeatures"]:
+                # VM creation keys are immutable; tunnel authentication still uses a fresh per-run key.
+                vms = self.az("vm", "list", "--resource-group", name, json_output=True)
+                if vms:
+                    keys = {key["keyData"] for vm in vms
+                            for key in vm["osProfile"]["linuxConfiguration"]["ssh"]["publicKeys"]}
+                    if len(keys) != 1:
+                        raise ValueError("Retained private VMs must have one matching initial public key")
+                    env = dict(env, SCENARIO_PROXY_SSH_PUBLIC_KEY=keys.pop())
         if principal_type == "ServicePrincipal":
             self.wait_for_rbac(principal)
         env = dict(env, SCENARIO_RUN_NAME=owner)

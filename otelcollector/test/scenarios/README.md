@@ -204,6 +204,8 @@ to their own resource group; `scenario-retain` is a read-back-verified
 `CanNotDelete` lock, not a retention tag.
 Retained retries check the actual addon token and managed-addon state, so an
 interrupted first initialization is resumed rather than mistaken for completion.
+Partial deployment retries preserve immutable VM creation public keys; these are
+separate from the forwarding-only authentication key minted and removed each run.
 
 The proxy adapter explicitly sets both cases of HTTP(S)_PROXY and NO_PROXY on
 candidate collectors and mounts the owned public CA at `/anchors/proxy`.
