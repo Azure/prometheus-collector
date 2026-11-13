@@ -253,7 +253,9 @@ removed. Independent vulnerability-scan and global coverage gates still failed.
 The custom-CA lane removes all collector trust-anchor mounts and restarts the
 collectors. It requires fresh successful scraping, certificate-validation errors,
 and independent authenticated AMW queries with no samples for a new negative-phase
-marker. It restores and reads back the original mounts even after failure, then
+marker. Certificate errors are read privately from `/MetricsExtensionConsoleDebugLog.log`;
+MetricsExtension uses file logging rather than container stdout. It restores and
+reads back the original mounts even after failure, then
 requires fresh ingestion after recovery.
 TLS interception is limited to AMW ingestion; public registry and test-source
 connections retain their public certificates so the harness can initialize.

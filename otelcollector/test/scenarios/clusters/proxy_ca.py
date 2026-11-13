@@ -82,8 +82,8 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion):
                 if "scenario-network-probe" in target.get("scrapePool", ""):
                     scrapes.append({"health": target["health"],
                                     "timestamp": datetime.fromisoformat(target["lastScrape"].replace("Z", "+00:00")).timestamp()})
-            log = host.kube("logs", name, "-n", "kube-system", "-c", "prometheus-collector",
-                            "--since=5m", private=True)
+            log = host.kube("exec", name, "-n", "kube-system", "-c", "prometheus-collector",
+                            "--", "cat", "/MetricsExtensionConsoleDebugLog.log", private=True)
             errors += len(CERTIFICATE_ERROR.findall(log))
         proof = failure_proof(scrapes, errors, observations, started)
         print("Collector CA distrust proof: " + json.dumps(proof), flush=True)

@@ -130,6 +130,47 @@ class Contracts(unittest.TestCase):
             with self.subTest(values=values), self.assertRaises(RuntimeError):
                 proof(*values, 100)
 
+    def test_ca_negative_phase_reads_the_metrics_extension_file_not_container_stdout(self):
+        adapter = sys.modules["clusters.proxy_ca"]
+        with tempfile.TemporaryDirectory() as directory:
+            host = Mock()
+            host.args.evidence = Path(directory)
+            host.args.run_id = "ca-run"
+            host.commands.run.return_value = "test-token"
+            document = {"spec": {"template": {"spec": {"containers": [{
+                "name": "prometheus-collector", "volumeMounts": [
+                    {"name": "proxy", "mountPath": "/anchors/proxy"},
+                    {"name": "runtime", "mountPath": "/runtime"}],
+            }]}}}}
+            def kube(*args, **kwargs):
+                if args[:2] == ("get", "pods"):
+                    return {"items": [{"metadata": {"name": "collector"},
+                                       "spec": {"containers": [{"name": "prometheus-collector"}]}}]}
+                if args[0] == "get":
+                    return copy.deepcopy(document)
+                if args[0] in ("patch", "rollout"):
+                    return ""
+                if args[0] == "logs":
+                    return "collector started"
+                if args[-2:] == ("cat", "/MetricsExtensionConsoleDebugLog.log"):
+                    return "SSL peer certificate cannot be authenticated with given CA certificates"
+                if args[-1] == "http://localhost:9090/api/v1/targets":
+                    return {"data": {"activeTargets": [{"scrapePool": "scenario-network-probe",
+                             "health": "up", "lastScrape": "1970-01-01T00:01:50Z"}]}}
+                raise AssertionError(f"Unexpected Kubernetes command: {args}")
+            host.kube.side_effect = kube
+            response = lambda *args, **kwargs: io.StringIO(
+                '{"status":"success","data":{"resultType":"vector","result":[]}}')
+            recovered = Mock(return_value={"status": "fresh"})
+            with patch.object(adapter, "urlopen", side_effect=response), patch.object(
+                    adapter.time, "sleep"), patch.object(
+                    adapter.time, "time", side_effect=[100, 100, 120, 155, 190, 200]):
+                proof = adapter.verify_ca_recovery(
+                    host, {"queryEndpoint": "https://amw.example"}, Mock(), recovered)
+            self.assertEqual(proof["status"], "PASS")
+            self.assertEqual(proof["certificateErrors"], 1)
+            recovered.assert_called_once_with(host, {"queryEndpoint": "https://amw.example"}, 200)
+
     def test_private_api_uses_single_ip_pinned_host_and_cleans_up_on_failure(self):
         adapter = sys.modules["clusters.private_api"]
         self.assertEqual(adapter.agent_prefix("8.8.8.8\n"), "8.8.8.8/32")
