@@ -435,15 +435,22 @@ class CandidateEvidenceTest(unittest.TestCase):
         rows = {row["id"]: row for row in matrix["scenarios"]}
         self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
         self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
+        retired = {"ampls-acns", "private-ampls"}
+        self.assertFalse(retired & rows.keys())
         self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp", "acns-cilium", "operator-secret-watch"))
         pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
         pipeline = yaml.safe_load(pipeline_path.read_text())
+        template_path = Path(__file__).with_name("azure-template-candidate-config-tests.yml")
+        for scenario in retired:
+            self.assertFalse((root / "clusters" / f"{scenario}.bicepparam").exists())
+            self.assertNotIn(scenario, pipeline_path.read_text())
+            self.assertNotIn(scenario, template_path.read_text())
+            self.assertNotIn(scenario, (root / "README.md").read_text())
         pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
                                   if p.get("name") == "candidateScenario")
         self.assertEqual(pipeline_scenarios, ["all", "four-lane", *SCENARIOS])
         self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", pipeline_path.read_text())
-        template = yaml.safe_load(Path(__file__).with_name(
-            "azure-template-candidate-config-tests.yml").read_text())
+        template = yaml.safe_load(template_path.read_text())
         self.assertEqual(next(p["values"] for p in template["parameters"]
                               if p.get("name") == "scenario"), list(SCENARIOS))
         self.assertNotIn("settings", rows)

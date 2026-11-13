@@ -60,16 +60,6 @@
       "blockedReason": "Independent DCE/DCRA, private-DNS, approved endpoint and public-bypass denial proofs are not implemented."
     },
     {
-      "id": "private-ampls",
-      "cluster": "clusters/private-ampls.bicepparam",
-      "clusterFeatures": ["aks", "windows", "private-api", "ampls", "private-query", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires private orchestrator access plus independent AMPLS/private-query proofs."
-    },
-    {
       "id": "proxy",
       "cluster": "clusters/proxy.bicepparam",
       "clusterFeatures": ["aks", "private-api", "http-proxy", "workload-identity", "operator"],
@@ -116,16 +106,6 @@
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns-cilium"],
       "tier": "weekly"
-    },
-    {
-      "id": "ampls-acns",
-      "cluster": "clusters/ampls-acns.bicepparam",
-      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "managed-acns", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Requires independent AMPLS and non-Cilium managed ACNS proofs."
     },
     {
       "id": "customer-helm",
