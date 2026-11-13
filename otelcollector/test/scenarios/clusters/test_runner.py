@@ -1238,6 +1238,42 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
+    def test_retained_cluster_resumes_interrupted_addon_token_initialization(self):
+        for token, enabled, enable, disable in (
+                ("", False, 1, 1), ("", True, 0, 1), ("secret/aad-msi-auth-token", True, 0, 1),
+                ("secret/aad-msi-auth-token", False, 0, 0)):
+            with self.subTest(token=token, enabled=enabled), tempfile.TemporaryDirectory() as temporary:
+                evidence = Path(temporary)
+                args = types.SimpleNamespace(
+                    evidence=evidence, build_id=1, max_run_seconds=60, run_id="test",
+                    subscription=runner.BUILD_SUBSCRIPTION, location="westcentralus",
+                    test_source_sha="b" * 40, admitted_existing=False)
+                row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=[])
+                host = Mock(spec=runner.Host, reused=True, receipt={"resourceGroup": "owned"},
+                            scenario=row, kubeconfig=evidence / "kubeconfig")
+                host.provision.return_value = {"clusterName": "owned", "workspaceId": "workspace"}
+                states = iter([{"azureMonitorProfile": {"metrics": {"enabled": enabled}}},
+                               {"kubernetesVersion": "1.36.5"}])
+                host.az.side_effect = lambda *a, **k: next(states) if a[:2] == ("aks", "show") else ""
+                host.kube.side_effect = lambda *a, **k: (
+                    token if a[:2] == ("get", "secret/aad-msi-auth-token") else {"items": []})
+                host.retain.return_value = {"retained": True}
+                with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
+                        patch.object(runner, "label_filter"), \
+                        patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.36.5", "existing": True}), \
+                        patch.object(runner, "candidate_receipt", return_value=([], {})), \
+                        patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
+                        patch.object(runner, "deployment_env", return_value={}), \
+                        patch.object(runner, "bootstrap_testkube", return_value={"agentPoolProfiles": []}), \
+                        patch.object(runner, "verify_pool_inventory", return_value={}), \
+                        patch.object(runner, "Host", return_value=host), \
+                        patch.object(runner, "render_chart", side_effect=RuntimeError("bootstrap reached")):
+                    with self.assertRaisesRegex(RuntimeError, "bootstrap reached"):
+                        runner.execute(args, row, {}, runner.Commands(evidence))
+                calls = [call.args for call in host.az.call_args_list]
+                self.assertEqual(sum("--enable-azure-monitor-metrics" in call for call in calls), enable)
+                self.assertEqual(sum("--disable-azure-monitor-metrics" in call for call in calls), disable)
+
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)

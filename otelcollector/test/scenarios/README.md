@@ -202,6 +202,8 @@ The interface consumes `orchestratorVmName`, `orchestratorNsgName` and
 New private hosts require a persistent **Locks Contributor** grant scoped only
 to their own resource group; `scenario-retain` is a read-back-verified
 `CanNotDelete` lock, not a retention tag.
+Retained retries check the actual addon token and managed-addon state, so an
+interrupted first initialization is resumed rather than mistaken for completion.
 
 The proxy adapter explicitly sets both cases of HTTP(S)_PROXY and NO_PROXY on
 candidate collectors and mounts the owned public CA at `/anchors/proxy`.

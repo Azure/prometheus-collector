@@ -1702,19 +1702,23 @@ def execute(args, scenario, variants, commands):
         nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
         save(args.evidence / "pool-inventory.json",
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
-        if not resolved["existing"]:
+        state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
+        managed_enabled = bool(((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"))
+        needs_token = not host.kube("get", "secret/aad-msi-auth-token", "-n", "kube-system",
+                                   "--ignore-not-found", "-o", "name", private=True).strip()
+        if needs_token and not managed_enabled:
             host.az("aks", "update", "--resource-group", group, "--name", cluster,
                     "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
         host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
                   "-n", "kube-system", "--timeout=15m", private=True)
-        if not resolved["existing"]:
+        if needs_token or managed_enabled:
             host.az("aks", "update", "--resource-group", group, "--name", cluster,
                     "--disable-azure-monitor-metrics")
         state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
         outputs["kubernetesVersion"] = state["kubernetesVersion"]
         if ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"):
             raise RuntimeError("Managed addon is still enabled; refusing competing Helm ownership")
-        if not resolved["existing"]:
+        if needs_token or managed_enabled:
             deadline = time.monotonic() + 600
             managed = {"ama-metrics", "ama-metrics-node", "ama-metrics-win-node",
                        "ama-metrics-operator-targets", "ama-metrics-ksm"}
