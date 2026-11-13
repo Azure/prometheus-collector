@@ -1,5 +1,6 @@
 """Offline AMPLS proof checks; --mutations demonstrates that each guard can fail."""
 
+import base64
 import copy
 import importlib.util
 import io
@@ -191,16 +192,21 @@ class Proofs(unittest.TestCase):
     def test_public_bypass_requires_authenticated_network_denial_on_both_paths(self):
         proof = proofs.verify_control_plane(self.host, self.outputs)
         for case in ("valid", "public-query", "public-ingest", "auth-403", "401", "network-200", "timeout",
-                     "empty-token", "private-dns"):
+                     "empty-token", "empty-ingestion-token", "private-dns"):
             self.host.commands.run.reset_mock()
+            self.host.kube.return_value = {"data": {"token": base64.b64encode(json.dumps({
+                "access_token": "" if case == "empty-ingestion-token" else "collector-secret",
+            }).encode()).decode()}}
             def run(args, **kwargs):
                 if args[0] == "az":
+                    self.assertIn("https://prometheus.monitor.azure.com", args)
                     return "" if case == "empty-token" else "test-secret"
-                self.assertEqual(kwargs["data"], "test-secret\n")
+                ingestion = "api/v1/write" in args[-1]
+                self.assertEqual(kwargs["data"], ("collector-secret" if ingestion else "test-secret") + "\n")
                 self.assertNotIn("test-secret", " ".join(args))
+                self.assertNotIn("collector-secret", " ".join(args))
                 self.assertIn('--noproxy "*"', args[2])
                 self.assertIn("--resolve", args[2])
-                ingestion = "api/v1/write" in args[-1]
                 if case == "timeout":
                     raise RuntimeError("timeout")
                 if case == "public-query" and not ingestion or case == "public-ingest" and ingestion:

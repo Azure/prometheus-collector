@@ -1,5 +1,6 @@
 """Independent AMPLS control-plane, DNS and public-bypass checks."""
 
+import base64
 import ipaddress
 import json
 import re
@@ -145,8 +146,14 @@ def verify_public_denial(host, outputs, proof):
         addresses = sorted({row[4][0] for row in socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)})
         if not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses):
             raise RuntimeError("AMPLS public-bypass proof requires a public-DNS orchestrator")
-        token = host.commands.run(["az", "account", "get-access-token", "--resource", audience,
-                                   "--query", "accessToken", "-o", "tsv"], private=True).strip()
+        if kind == "ingestion":
+            # The runner has query-only RBAC; use the collector's existing ingestion identity.
+            secret = host.kube("get", "secret/aad-msi-auth-token", "-n", "kube-system",
+                               "-o", "json", private=True, json_output=True)
+            token = json.loads(base64.b64decode(secret["data"]["token"]))["access_token"].strip()
+        else:
+            token = host.commands.run(["az", "account", "get-access-token", "--resource", audience,
+                                       "--query", "accessToken", "-o", "tsv"], private=True).strip()
         if not token:
             raise RuntimeError("AMPLS public-bypass probe requires an authenticated token")
         script = (

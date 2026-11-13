@@ -37,6 +37,8 @@ Both Linux and Windows collectors must resolve configuration, ingestion and quer
 hosts exclusively to their corresponding private endpoint addresses. Authenticated
 public query and remote-write probes must receive an explicit network-denial 403;
 authentication failures, timeouts and generic 403s are not proof.
+The ingestion probe reuses the collector's existing token; the runner's identity
+has query-only access and is not granted ingestion permissions for this check.
 The existing run-marked fresh-ingestion check then queries from the collector pod.
 Transient addon initialization uses the AKS resource update for disable, rather
 than the CLI's DCR-deleting cleanup, and restores the owned DCE ACL and DCRAs.
