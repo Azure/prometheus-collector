@@ -688,6 +688,13 @@ scrape_configs:
 	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, []string{"podMonitor/test/missing/0"}, "old", false); err == nil {
 		t.Fatal("missing secret-backed job must fail")
 	}
+	watchConfig.ScrapeConfigs[0].HTTPClientConfig.BasicAuth.Username = "new"
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "new", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "old", false); err == nil {
+		t.Fatal("unexpected secret update must fail")
+	}
 	for _, test := range []struct{ cluster, mac, want string }{
 		{"/subscriptions/s/resourcegroups/g/providers/p/clusters/real", "true", "real"},
 		{"Arc-Cluster.Unmodified", "false", "Arc-Cluster.Unmodified"},
