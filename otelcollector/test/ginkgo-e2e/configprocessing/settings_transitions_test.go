@@ -169,21 +169,28 @@ func monitorTransitionState(jobs []string, username string, absent bool) error {
 		if err != nil {
 			return err
 		}
-		for _, expected := range jobs {
-			found := false
-			for _, job := range cfg.ScrapeConfigs {
-				if job.JobName != expected {
-					continue
-				}
-				found = true
-				if !absent && (job.HTTPClientConfig.BasicAuth == nil ||
-					job.HTTPClientConfig.BasicAuth.Username != username) {
-					return fmt.Errorf("pod %s has not reloaded the expected dummy username for %s", response.PodName, expected)
-				}
+		if err := validateMonitorTransitionState(cfg.ScrapeConfigs, jobs, username, absent); err != nil {
+			return fmt.Errorf("pod %s: %w", response.PodName, err)
+		}
+	}
+	return nil
+}
+
+func validateMonitorTransitionState(configs []*config.ScrapeConfig, jobs []string, username string, absent bool) error {
+	for _, expected := range jobs {
+		found := false
+		for _, job := range configs {
+			if job.JobName != expected {
+				continue
 			}
-			if found == absent {
-				return fmt.Errorf("pod %s: %s presence=%t, expected absence=%t", response.PodName, expected, found, absent)
+			found = true
+			if !absent && (job.HTTPClientConfig.BasicAuth == nil ||
+				job.HTTPClientConfig.BasicAuth.Username != username) {
+				return fmt.Errorf("unexpected dummy username for %s", expected)
 			}
+		}
+		if found == absent {
+			return fmt.Errorf("%s presence=%t, expected absence=%t", expected, found, absent)
 		}
 	}
 	return nil
@@ -578,7 +585,7 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 				recovered(recoverAuthSecret())
 				Expect(collectorRestarts()).To(Equal(restarts), "Secret reload must not restart collectors, allocator or endpoint")
 			})
-			It("revokes cached Secret access for empty and omitted allowlists, then restores it on the supported scoped path", func() {
+			It("stops watching Secret updates for empty and omitted allowlists, then resumes watching", func() {
 				version, err := K8sClient.Discovery().ServerVersion()
 				Expect(err).NotTo(HaveOccurred())
 				parsed, err := utilversion.ParseSemantic(version.GitVersion)
@@ -587,27 +594,48 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 					Skip("unsupported below Kubernetes1.37; auth recovery passed separately, scoped enforcement is not covered")
 				}
 				for _, phase := range []string{"empty.yaml", "omitted.yaml"} {
-					started := settingsPhase("secret-transitions-"+schema, phase)
-					replaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
-					check := func() error {
-						if err := monitorTransitionState(jobs, "", true); err != nil {
+					instance, err := allocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					settingsPhase("secret-transitions-"+schema, phase)
+					Eventually(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
 							return err
 						}
-						for _, job := range metrics {
-							samples, err := freshTransitionSamples(api,
-								fmt.Sprintf("my_metric{job=%q,cluster=%q}", job, cluster), started)
-							if err != nil {
-								return err
-							}
-							if len(samples) != 0 {
-								return fmt.Errorf("revoked monitor %s continues authenticated ingestion", job)
-							}
+						if current == instance {
+							return fmt.Errorf("target allocator has not reloaded the settings")
 						}
-						return nil
+						return monitorTransitionState(jobs, "admin", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					instance, err = allocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					replaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
+					started := time.Now()
+					Consistently(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current != instance {
+							return fmt.Errorf("target allocator restarted during watch observation")
+						}
+						return monitorTransitionState(jobs, "admin", false)
+					}, 5*time.Minute, 15*time.Second).Should(Succeed())
+					for _, job := range metrics {
+						expectTransitionMetric(api, "my_metric", job, cluster, "", started)
 					}
-					Eventually(check, 8*time.Minute, 15*time.Second).Should(Succeed())
-					Consistently(check, time.Minute, 15*time.Second).Should(Succeed())
 					settingsPhase("secret-transitions-"+schema, "allowed.yaml")
+					Eventually(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current == instance {
+							return fmt.Errorf("target allocator has not restored the allowlist")
+						}
+						return monitorTransitionState(jobs, "deliberately-invalid-test-user", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					Eventually(allocatorSecretWatchReady, 5*time.Minute, 15*time.Second).Should(Succeed())
 					recovered(recoverAuthSecret())
 				}
 			})
@@ -639,6 +667,26 @@ func TestSettingsTransitionGuards(t *testing.T) {
 	}
 	if err := validateTransitionTargets(nil, []string{"expected/0"}, "up", now); err == nil {
 		t.Fatal("empty targets must fail")
+	}
+	watchConfig, err := config.Load(`
+scrape_configs:
+  - job_name: serviceMonitor/test/secret/0
+    basic_auth:
+      username: old
+      password: synthetic
+`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	watchJobs := []string{"serviceMonitor/test/secret/0"}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "old", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "new", false); err == nil {
+		t.Fatal("stale or unexpected secret update must fail")
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, []string{"podMonitor/test/missing/0"}, "old", false); err == nil {
+		t.Fatal("missing secret-backed job must fail")
 	}
 	for _, test := range []struct{ cluster, mac, want string }{
 		{"/subscriptions/s/resourcegroups/g/providers/p/clusters/real", "true", "real"},

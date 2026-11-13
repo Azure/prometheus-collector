@@ -52,10 +52,10 @@ The empty/omitted-secret variants require the operator and the
 They run on the current cluster; a version-gated skip is not enforcement proof.
 The dedicated `operator-secret-watch` lane selects an explicitly supported regional
 stable official Kubernetes >=1.37 without changing ordinary/default clusters.
-Its owned `ama-secret-watch-test` namespace grants the collector secret get/list/watch;
-the spec verifies effective permissions before requiring secret-backed jobs to be
-absent alongside reconciled file-free controls. All four v1/v2 inputs share this
-fixture, and each slot restores/deletes only its owned resources.
+Its owned `ama-secret-watch-test` namespace grants the collector secret get/list/watch.
+The spec verifies the permissions, observes unchanged credentials after a secret update
+with no watch, then verifies a subsequent update with the namespace allowlisted. The
+allowlist does not deny direct GETs. Each slot restores/deletes only its owned resources.
 
 The candidate `collector-controls` slot also runs the `ksm-allowlist`
 querymetrics spec. It verifies fresh ingestion of allowlisted pod labels and
