@@ -139,7 +139,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"volume_manager_total_volumes",
 			// "kubelet_node_config_error",
 			"kubelet_runtime_operations_total",
-			"kubelet_runtime_operations_errors_total",
+			// Runtime error counters are created lazily and absent on error-free nodes.
 			// "kubelet_runtime_operations_duration_seconds",
 			"kubelet_runtime_operations_duration_seconds_bucket",
 			"kubelet_runtime_operations_duration_seconds_sum",

@@ -227,7 +227,8 @@ also deploy and await the existing `internal/windowsExporterInstaller` DaemonSet
 before checking the default Windows exporter target. Retained runs remove only
 the exact health `referenceapp` monitors and `scenario-network-probe` before
 settings tests; health setup reapplies them. AMPLS runs use the run-marked network
-probe for the final fresh `myapp_temperature` ingestion check. JUnit
+probe for the final fresh `myapp_temperature` ingestion check. Kubelet checks
+do not require lazily created runtime-error counters from error-free nodes. JUnit
 records executed/failed/skipped counts; skipped tests are not claimed as executed.
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
