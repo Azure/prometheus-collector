@@ -1650,7 +1650,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             for key, value in (
                 ("HTTP_PROXY", proxy.get("httpProxy")),
                 ("HTTPS_PROXY", proxy.get("httpsProxy") or proxy.get("httpProxy")),
-                ("NO_PROXY", ",".join(bypass)),
+                ("NO_PROXY", ",".join([*bypass, "testkube-api-server:8089"])),
             ) if value is not None
             for name in (key, key.lower())
         ]
