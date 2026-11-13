@@ -65,6 +65,8 @@ Initial resource inventory from `annotation-targets.yaml` + `monitor-targets.yam
 Namespaces `ama-settings-included` and `ama-settings-excluded`; Pod
 `annotation-target` in each; Service `settings-monitor-target`, PodMonitor
 `settings-alias`, ServiceMonitor `settings-alias` in `ama-settings-included`.
+The annotation fixture serves `weather_temperature` on port 2112 from a pinned
+Python image; the edge-control pods use the same endpoint.
 Only `kube-system/ama-metrics-settings-configmap` changes in later phases.
 
 ## Credential reload and allowlist transitions

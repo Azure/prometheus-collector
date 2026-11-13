@@ -20,7 +20,18 @@ spec:
     kubernetes.io/arch: amd64
   containers:
     - name: reference-app
-      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
+      image: mcr.microsoft.com/azurelinux/base/python@sha256:379135d4dbe66b12825a54d4ed7aef21aa61227533ff1b9151d70f95f9266746
+      command: ["python3", "-c"]
+      args:
+        - |
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  self.send_response(200)
+                  self.send_header("Content-Type", "text/plain; version=0.0.4")
+                  self.end_headers()
+                  self.wfile.write(b"weather_temperature 1\n")
+          HTTPServer(("", 2112), Handler).serve_forever()
       ports:
         - name: metrics
           containerPort: 2112
@@ -45,7 +56,18 @@ spec:
     kubernetes.io/arch: amd64
   containers:
     - name: reference-app
-      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.27.0-main-04-23-2026-1bb78d89-ref-app-golang
+      image: mcr.microsoft.com/azurelinux/base/python@sha256:379135d4dbe66b12825a54d4ed7aef21aa61227533ff1b9151d70f95f9266746
+      command: ["python3", "-c"]
+      args:
+        - |
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  self.send_response(200)
+                  self.send_header("Content-Type", "text/plain; version=0.0.4")
+                  self.end_headers()
+                  self.wfile.write(b"weather_temperature 1\n")
+          HTTPServer(("", 2112), Handler).serve_forever()
       ports:
         - name: metrics
           containerPort: 2112
