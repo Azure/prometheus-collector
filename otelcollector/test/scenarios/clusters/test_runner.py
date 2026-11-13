@@ -365,6 +365,68 @@ class Contracts(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 verify(log)
 
+    def test_command_failure_surfaces_only_fixed_stdout_markers_and_log_location(self):
+        with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
+            commands = runner.Commands(Path(temporary))
+            for stdout, stderr, marker in (
+                ("credentials=never-print-this\nartifact-list: Internal Access Denied", "", "Internal Access Denied"),
+                ("secret=never-print-this\nNoSuchBucket", "stderr diagnostic", "NoSuchBucket"),
+                ("unrecognized never-print-this", "", "no recognized error markers"),
+            ):
+                completed = types.SimpleNamespace(returncode=1, stdout=stdout, stderr=stderr)
+                with self.subTest(marker=marker), patch.object(runner.shutil, "which", return_value="bash"), \
+                        patch.object(runner.subprocess, "run", return_value=completed):
+                    with self.assertRaises(RuntimeError) as failure:
+                        commands.run(["bash", "workflow"])
+                    message = str(failure.exception)
+                    self.assertIn(marker, message)
+                    self.assertIn(str(Path(temporary) / "commands.log"), message)
+                    self.assertNotIn("never-print-this", message)
+                    self.assertIn(stderr, message)
+            self.assertIn("artifact-list: Internal Access Denied",
+                          (Path(temporary) / "commands.log").read_text())
+            completed = types.SimpleNamespace(returncode=1, stdout="Internal Access Denied never-print-this",
+                                              stderr="private-stderr-never-print-this")
+            with patch.object(runner.shutil, "which", return_value="bash"), \
+                    patch.object(runner.subprocess, "run", return_value=completed):
+                with self.assertRaises(RuntimeError) as failure:
+                    commands.run(["bash", "private-workflow"], private=True)
+            self.assertIn("output redacted", str(failure.exception))
+            self.assertNotIn("Internal Access Denied", str(failure.exception))
+            self.assertNotIn("never-print-this", str(failure.exception))
+            log = (Path(temporary) / "commands.log").read_text()
+            self.assertNotIn(completed.stdout, log)
+            self.assertNotIn(completed.stderr, log)
+            self.assertEqual(len(runner.load(Path(temporary) / "commands.json")), 4)
+
+    def test_suite_failure_preserves_cause_context_and_generated_file_cleanup(self):
+        with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
+            host = Mock()
+            host.args.kubectl = "kubectl"
+            host.args.tools_bin = None
+            host.args.test_source_sha = "b" * 40
+            host.kubeconfig = Path(temporary) / "kubeconfig"
+            host.scenario = scenario()
+            host.runner_receipt = {"imageRef": "example.invalid/runner@sha256:" + "1" * 64}
+            generated = []
+            cause = RuntimeError("artifact-list: Internal Access Denied")
+
+            def submit(command, **kwargs):
+                generated.append(runner.TEST_SOURCE / "otelcollector/test/testkube" / command[5])
+                generated[-1].write_text("generated")
+                raise cause
+
+            host.commands.run.side_effect = submit
+            destination = Path(temporary) / "slot"
+            with patch.object(runner, "workflow_result") as result, self.assertRaises(RuntimeError) as failure:
+                runner.run_suite(host, "configprocessing", destination, "case-label", workflow="customersettingsv1")
+            self.assertIn("suite=configprocessing, workflow=customersettingsv1", str(failure.exception))
+            self.assertIn(str(destination), str(failure.exception))
+            self.assertIn("Internal Access Denied", str(failure.exception))
+            self.assertIs(failure.exception.__cause__, cause)
+            result.assert_not_called()
+            self.assertFalse(generated[0].exists())
+
     def test_runner_must_come_from_expected_test_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             repo, test_source = runner.REPO, runner.TEST_SOURCE
@@ -1856,7 +1918,8 @@ class Contracts(unittest.TestCase):
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
             self.assertEqual(host.az_with_rbac_retry.call_count, 1)
             helm = next(c.args[0] for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
-            for setting in ("testkube-api.minio.podSecurityContext.fsGroup=1001",
+            for setting in ("testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
+                            "testkube-api.minio.podSecurityContext.fsGroup=1001",
                             "mongodb.nodeAffinityPreset.type=hard",
                             "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
                             "mongodb.nodeAffinityPreset.values[0]=system",
