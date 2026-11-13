@@ -96,11 +96,21 @@ def private_api(host, outputs):
     for tool in ("ssh", "ssh-keygen"):
         if not shutil.which(tool):
             raise RuntimeError(f"Private API adapter requires {tool}")
-    with build_opener(ProxyHandler({})).open("https://api.ipify.org", timeout=30) as response:
-        prefix = agent_prefix(response.read(128).decode("ascii"))
     group = host.receipt["resourceGroup"]
     vm, nsg = outputs["orchestratorVmName"], outputs["orchestratorNsgName"]
     public_ip = str(ipaddress.IPv4Address(outputs["orchestratorPublicIp"]))
+
+    def admit_agent():
+        with build_opener(ProxyHandler({})).open("https://api.ipify.org", timeout=30) as response:
+            prefix = agent_prefix(response.read(128).decode("ascii"))
+        host.az("network", "nsg", "rule", "create", "--resource-group", group,
+                "--nsg-name", nsg, "--name", "ActivePipelineTunnel", "--priority", "100",
+                "--access", "Allow", "--direction", "Inbound", "--protocol", "Tcp",
+                "--source-address-prefixes", prefix, "--source-port-ranges", "*",
+                "--destination-address-prefixes", "*", "--destination-port-ranges", "22")
+        print(f"Private API ingress: {prefix} -> {public_ip}:22 (direct IPv4 discovery)", flush=True)
+        return prefix
+
     process = None
     key_attempted = False
     with tempfile.TemporaryDirectory(prefix="ama-private-api-") as directory:
@@ -130,12 +140,7 @@ printf 'SCENARIO_RESULT={{"privateIp":"%s","hostKey":"%s"}}\\n' "$IP" "$KEY"
                 raise RuntimeError("Orchestrator did not resolve a private API address or supply an SSH host key")
             known_hosts = Path(directory) / "known_hosts"
             known_hosts.write_text(public_ip + " " + proof["hostKey"] + "\n")
-            host.az("network", "nsg", "rule", "create", "--resource-group", group,
-                    "--nsg-name", nsg, "--name", "ActivePipelineTunnel", "--priority", "100",
-                    "--access", "Allow", "--direction", "Inbound", "--protocol", "Tcp",
-                    "--source-address-prefixes", prefix, "--source-port-ranges", "*",
-                    "--destination-address-prefixes", "*", "--destination-port-ranges", "22")
-            print(f"Private API ingress: {prefix} -> {public_ip}:22 (direct IPv4 discovery)", flush=True)
+            prefix = admit_agent()
             with socket.socket() as listener:
                 listener.bind(("127.0.0.1", 0))
                 port = listener.getsockname()[1]
@@ -152,11 +157,19 @@ printf 'SCENARIO_RESULT={{"privateIp":"%s","hostKey":"%s"}}\\n' "$IP" "$KEY"
                 config["clusters"][0]["cluster"].update(
                     server=f"https://127.0.0.1:{port}", **{"tls-server-name": fqdn})
                 host.kubeconfig.write_text(yaml.safe_dump(config))
-                deadline = time.monotonic() + 120
+                deadline = time.monotonic() + 600
                 while True:
                     if process.poll() is not None:
                         log.seek(0)
-                        raise RuntimeError("Private API tunnel exited: " + log.read())
+                        error = log.read()
+                        if "Connection timed out" not in error or time.monotonic() >= deadline:
+                            raise RuntimeError("Private API tunnel exited: " + error)
+                        print("Private API connect timed out; refreshing the single agent /32 before retry", flush=True)
+                        prefix = admit_agent()
+                        log.seek(0)
+                        log.truncate()
+                        process = subprocess.Popen(command, stdout=log, stderr=log)
+                        continue
                     try:
                         if host.kube("get", "--raw=/readyz", "--request-timeout=10s").strip() != "ok":
                             raise RuntimeError("Private API is not ready")

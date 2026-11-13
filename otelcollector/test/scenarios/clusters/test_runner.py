@@ -135,8 +135,12 @@ class Contracts(unittest.TestCase):
         for value in ("0.0.0.0/0", "8.8.8.8/24", "10.0.0.1", "::1", "invalid"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 adapter.agent_prefix(value)
-        for fail in (False, True):
-            with self.subTest(fail=fail), tempfile.TemporaryDirectory() as directory:
+        for fail, transport_error, expired in (
+                (False, "", False), (True, "", False), (False, "Connection timed out", False),
+                (False, "Permission denied (publickey)", False), (False, "Connection timed out", True)):
+            retry = transport_error == "Connection timed out" and not expired
+            fatal = bool(transport_error) and not retry
+            with self.subTest(fail=fail, error=transport_error, expired=expired), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 fqdn = "sc.privatelink.westcentralus.azmk8s.io"
                 kubeconfig = root / "kubeconfig"
@@ -151,7 +155,7 @@ class Contracts(unittest.TestCase):
                 host.az.side_effect = [
                     {"privateFqdn": fqdn, "apiServerAccessProfile": {
                         "enablePrivateCluster": True, "enablePrivateClusterPublicFqdn": False}},
-                    {}, {}, {"access": "Deny"},
+                    *([{}] * (1 + retry)), {}, {"access": "Deny"},
                 ]
                 host.kube.return_value = "ok"
                 def keygen(args, **kwargs):
@@ -159,17 +163,27 @@ class Contracts(unittest.TestCase):
                 host.commands.run.side_effect = keygen
                 process = Mock()
                 process.poll.return_value = None
+                timed_out = Mock()
+                timed_out.poll.return_value = 255
+                def spawn(*args, **kwargs):
+                    if transport_error and not timed_out.poll.called:
+                        kwargs["stderr"].write("ssh: " + transport_error + "\n")
+                        kwargs["stderr"].flush()
+                        return timed_out
+                    return process
                 outputs = {"clusterName": "sc", "orchestratorVmName": "runner",
                            "orchestratorNsgName": "runner-nsg", "orchestratorPublicIp": "9.9.9.9"}
                 response = Mock()
-                response.__enter__ = Mock(return_value=io.BytesIO(b"8.8.8.8"))
+                response.__enter__ = Mock(side_effect=[io.BytesIO(b"8.8.8.8"), io.BytesIO(b"8.8.4.4")])
                 response.__exit__ = Mock(return_value=False)
-                with patch.object(adapter, "build_opener") as opener, \
+                clock = Mock(side_effect=[0, 601]) if expired else adapter.time.monotonic
+                with patch.object(adapter.time, "monotonic", side_effect=clock), \
+                        patch.object(adapter, "build_opener") as opener, \
                         patch.object(adapter.shutil, "which", side_effect=lambda name: name), \
                         patch.object(adapter, "vm_script", side_effect=[
                             {"privateIp": "10.224.0.9", "hostKey": "ssh-ed25519 AAAA root"},
                             {"keyRemoved": True},
-                        ]) as remote, patch.object(adapter.subprocess, "Popen", return_value=process) as ssh:
+                        ]) as remote, patch.object(adapter.subprocess, "Popen", side_effect=spawn) as ssh:
                     opener.return_value.open.return_value = response
                     try:
                         with adapter.private_api(host, outputs):
@@ -179,8 +193,12 @@ class Contracts(unittest.TestCase):
                             if fail:
                                 raise RuntimeError("suite failed")
                     except RuntimeError as error:
-                        if not fail or str(error) != "suite failed":
+                        if fatal:
+                            self.assertIn(transport_error, str(error))
+                        elif not fail or str(error) != "suite failed":
                             raise
+                    else:
+                        self.assertFalse(fatal, "Transport failure did not fail the lane")
                     arguments = ssh.call_args.args[0]
                     self.assertIn("StrictHostKeyChecking=yes", arguments)
                     self.assertIn("BatchMode=yes", arguments)
@@ -192,10 +210,14 @@ class Contracts(unittest.TestCase):
                     self.assertNotIn('permitlisten="none"', bootstrap)
                     create = host.az.call_args_list[1].args
                     self.assertEqual(create[create.index("--source-address-prefixes") + 1], "8.8.8.8/32")
-                    cleanup = host.az.call_args_list[2].args
+                    if retry:
+                        second = host.az.call_args_list[2].args
+                        self.assertEqual(second[second.index("--source-address-prefixes") + 1], "8.8.4.4/32")
+                    self.assertEqual(ssh.call_count, 1 + retry)
+                    cleanup = host.az.call_args_list[2 + retry].args
                     self.assertEqual(cleanup[cleanup.index("--access") + 1], "Deny")
                     self.assertIn("rm -f /home/scenario-tunnel/.ssh/authorized_keys", remote.call_args.args[2])
-                    process.terminate.assert_called_once()
+                    (timed_out if fatal else process).terminate.assert_called_once()
                     self.assertEqual(host.commands.deadline, 123)
 
     def test_private_api_rejects_public_profile_before_opening_a_tunnel(self):
