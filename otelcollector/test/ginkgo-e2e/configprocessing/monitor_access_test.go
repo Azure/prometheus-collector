@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,6 +111,41 @@ func expectMonitorJobs(allowed, denied []string) {
 	Consistently(check, time.Minute, 15*time.Second).Should(Succeed())
 }
 
+func allocatorInstance() (string, error) {
+	pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics-operator-targets")
+	if err != nil {
+		return "", err
+	}
+	if len(pods) != 1 {
+		return "", fmt.Errorf("expected one target allocator pod, got %d", len(pods))
+	}
+	for _, status := range pods[0].Status.ContainerStatuses {
+		if status.Name == "targetallocator" && status.Ready && status.ContainerID != "" {
+			return string(pods[0].UID) + "/" + status.ContainerID, nil
+		}
+	}
+	return "", fmt.Errorf("target allocator is not ready")
+}
+
+func allocatorSecretWatchReady() error {
+	pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics-operator-targets")
+	if err != nil {
+		return err
+	}
+	if len(pods) != 1 {
+		return fmt.Errorf("expected one target allocator pod, got %d", len(pods))
+	}
+	logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pods[0].Name,
+		&corev1.PodLogOptions{Container: "targetallocator"}).DoRaw(context.Background())
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(string(logs), "Using custom event handler for secrets informer") {
+		return fmt.Errorf("target allocator secret watcher has not started")
+	}
+	return nil
+}
+
 var _ = Describe("Monitor filesystem access enforcement", Label(utils.ConfigProcessingDenyFSAccess), func() {
 	It("drops ServiceMonitor file references while retaining a file-free control", func() {
 		denied := []string{}
@@ -150,6 +186,28 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 		if !parsed.AtLeast(utilversion.MustParseSemantic("v1.37.0")) {
 			Skip("scoped secret watching is supported on Kubernetes 1.37+; use the current auto-upgrading lane")
 		}
+		namespace := "default"
+		secretName := "ama-e2e-denied-secret"
+		if empty {
+			namespace = "ama-secret-watch-test"
+			secretName = "settings-auth-creds"
+		}
+		verbs := []string{"get"}
+		if empty {
+			verbs = []string{"get", "list", "watch"}
+		}
+		for _, verb := range verbs {
+			review, err := K8sClient.AuthorizationV1().SubjectAccessReviews().Create(context.Background(),
+				&authv1.SubjectAccessReview{Spec: authv1.SubjectAccessReviewSpec{
+					User:   "system:serviceaccount:kube-system:ama-metrics-serviceaccount",
+					Groups: []string{"system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"},
+					ResourceAttributes: &authv1.ResourceAttributes{
+						Namespace: namespace, Verb: verb, Resource: "secrets", Name: secretName,
+					},
+				}}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(review.Status.Allowed).To(Equal(empty), "unexpected %s secret RBAC in %s", verb, namespace)
+		}
 		cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
 			"ama-metrics-settings-configmap", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -164,15 +222,19 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 		} else {
 			Expect(namespaces).To(Equal("basic-auth-test"), "restricted-allowlist fixture required")
 		}
-		secret, err := K8sClient.CoreV1().Secrets("default").Create(context.Background(), &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "ama-e2e-denied-secret"},
+		secret, err := K8sClient.CoreV1().Secrets(namespace).Create(context.Background(), &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: secretName},
 			StringData: map[string]string{"username": "synthetic-user", "password": "synthetic-not-a-credential"},
 		}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(func() {
-			Expect(K8sClient.CoreV1().Secrets("default").Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
-		})
+		if !empty {
+			DeferCleanup(func() {
+				Expect(K8sClient.CoreV1().Secrets(namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})).To(Succeed())
+			})
+		}
+		// The empty-case secret is removed with its owned fixture namespace.
 		allowed, denied := []string{}, []string{}
+		secretJobs := []string{}
 		for _, resource := range []string{"servicemonitors", "podmonitors"} {
 			basic := func(name string) map[string]interface{} {
 				return map[string]interface{}{"port": "ba-metrics", "path": "/httpsmetrics", "basicAuth": map[string]interface{}{
@@ -180,17 +242,78 @@ var _ = Describe("Monitor secret namespace enforcement", func() {
 					"password": map[string]interface{}{"name": name, "key": "password"},
 				}}
 			}
-			denied = append(denied, createMonitor(resource, "default", basic(secret.Name)))
-			allowed = append(allowed, createMonitor(resource, "default", map[string]interface{}{"port": "ba-metrics"}))
+			secretJob := createMonitor(resource, namespace, basic(secret.Name))
+			if empty {
+				allowed = append(allowed, secretJob)
+				secretJobs = append(secretJobs, secretJob+"/0")
+			} else {
+				denied = append(denied, secretJob)
+			}
+			allowed = append(allowed, createMonitor(resource, namespace, map[string]interface{}{"port": "ba-metrics"}))
 			if !empty {
 				allowed = append(allowed, createMonitor(resource, "basic-auth-test", basic("basic-auth-creds")))
 			}
 		}
 		expectMonitorJobs(allowed, denied)
+		if !empty {
+			return
+		}
+		Eventually(func() error { return monitorTransitionState(secretJobs, "synthetic-user", false) },
+			5*time.Minute, 15*time.Second).Should(Succeed())
+		instance, err := allocatorInstance()
+		Expect(err).NotTo(HaveOccurred())
+		secret.StringData = nil
+		secret.Data = map[string][]byte{"username": []byte("synthetic-rotated"), "password": []byte("synthetic-not-a-credential")}
+		_, err = K8sClient.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Consistently(func() error {
+			current, err := allocatorInstance()
+			if err != nil {
+				return err
+			}
+			if current != instance {
+				return fmt.Errorf("target allocator restarted during watch observation")
+			}
+			return monitorTransitionState(secretJobs, "synthetic-user", false)
+		}, 5*time.Minute, 15*time.Second).Should(Succeed())
+
+		restoreSettingsAfterTransition()
+		cm.Data["prometheus-collector-settings"] = regexp.MustCompile(`(?m)^\s*secrets_access_namespaces\s*=.*\n?`).
+			ReplaceAllString(cm.Data["prometheus-collector-settings"], "")
+		cm.Data["prometheus-collector-settings"] += "\nsecrets_access_namespaces = \"" + namespace + "\"\n"
+		replaceSettings(cm.Data)
+		Eventually(func() error {
+			current, err := allocatorInstance()
+			if err != nil {
+				return err
+			}
+			if current == instance {
+				return fmt.Errorf("target allocator has not reloaded the allowlist")
+			}
+			return monitorTransitionState(secretJobs, "synthetic-rotated", false)
+		}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		instance, err = allocatorInstance()
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(allocatorSecretWatchReady, 5*time.Minute, 15*time.Second).Should(Succeed())
+		secret, err = K8sClient.CoreV1().Secrets(namespace).Get(context.Background(), secret.Name, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		secret.Data["username"] = []byte("synthetic-allowed")
+		_, err = K8sClient.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() error {
+			current, err := allocatorInstance()
+			if err != nil {
+				return err
+			}
+			if current != instance {
+				return fmt.Errorf("target allocator restarted during positive watch control")
+			}
+			return monitorTransitionState(secretJobs, "synthetic-allowed", false)
+		}, 5*time.Minute, 15*time.Second).Should(Succeed())
 	}
 	It("resolves allowlisted ServiceMonitor and PodMonitor secrets but rejects a nonallowlisted namespace",
 		Label(utils.ConfigProcessingBasicAuthSmon, utils.ConfigProcessingBasicAuthSmonV2), func() { check(false) })
-	It("watches no secrets with an empty namespace allowlist",
+	It("does not watch secret updates with an empty namespace allowlist, but watches an allowlisted namespace",
 		Label("config-processing-empty-secret-namespaces"), func() { check(true) })
 })
 

@@ -199,6 +199,71 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(workflow.call_args.kwargs["expected_cluster"], "Customer_Config_POC")
                 self.assertEqual(result["aliasIngestion"]["executed"], 1)
 
+    def test_command_failure_surfaces_only_fixed_stdout_markers_and_log_location(self):
+        with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
+            commands = runner.Commands(Path(temporary))
+            for stdout, stderr, marker in (
+                ("credentials=never-print-this\nartifact-list: Internal Access Denied", "", "Internal Access Denied"),
+                ("secret=never-print-this\nNoSuchBucket", "stderr diagnostic", "NoSuchBucket"),
+                ("unrecognized never-print-this", "", "no recognized error markers"),
+            ):
+                completed = types.SimpleNamespace(returncode=1, stdout=stdout, stderr=stderr)
+                with self.subTest(marker=marker), patch.object(runner.shutil, "which", return_value="bash"), \
+                        patch.object(runner.subprocess, "run", return_value=completed):
+                    with self.assertRaises(RuntimeError) as failure:
+                        commands.run(["bash", "workflow"])
+                    message = str(failure.exception)
+                    self.assertIn(marker, message)
+                    self.assertIn(str(Path(temporary) / "commands.log"), message)
+                    self.assertNotIn("never-print-this", message)
+                    self.assertIn(stderr, message)
+            self.assertIn("artifact-list: Internal Access Denied",
+                          (Path(temporary) / "commands.log").read_text())
+            completed = types.SimpleNamespace(returncode=1, stdout="Internal Access Denied never-print-this",
+                                              stderr="private-stderr-never-print-this")
+            with patch.object(runner.shutil, "which", return_value="bash"), \
+                    patch.object(runner.subprocess, "run", return_value=completed) as command:
+                with self.assertRaises(RuntimeError) as failure:
+                    commands.run(["bash", "private-workflow"], data="private-stdin-never-print-this", private=True)
+                self.assertEqual(command.call_args.kwargs["input"], "private-stdin-never-print-this")
+            self.assertIn("output redacted", str(failure.exception))
+            self.assertNotIn("Internal Access Denied", str(failure.exception))
+            self.assertNotIn("never-print-this", str(failure.exception))
+            log = (Path(temporary) / "commands.log").read_text()
+            self.assertNotIn(completed.stdout, log)
+            self.assertNotIn(completed.stderr, log)
+            self.assertNotIn("private-stdin-never-print-this", log)
+            self.assertNotIn("private-stdin-never-print-this", (Path(temporary) / "commands.json").read_text())
+            self.assertEqual(len(runner.load(Path(temporary) / "commands.json")), 4)
+
+    def test_suite_failure_preserves_cause_context_and_generated_file_cleanup(self):
+        with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
+            host = Mock()
+            host.args.kubectl = "kubectl"
+            host.args.tools_bin = None
+            host.args.test_source_sha = "b" * 40
+            host.kubeconfig = Path(temporary) / "kubeconfig"
+            host.scenario = scenario()
+            host.runner_receipt = {"imageRef": "example.invalid/runner@sha256:" + "1" * 64}
+            generated = []
+            cause = RuntimeError("artifact-list: Internal Access Denied")
+
+            def submit(command, **kwargs):
+                generated.append(runner.TEST_SOURCE / "otelcollector/test/testkube" / command[5])
+                generated[-1].write_text("generated")
+                raise cause
+
+            host.commands.run.side_effect = submit
+            destination = Path(temporary) / "slot"
+            with patch.object(runner, "workflow_result") as result, self.assertRaises(RuntimeError) as failure:
+                runner.run_suite(host, "configprocessing", destination, "case-label", workflow="customersettingsv1")
+            self.assertIn("suite=configprocessing, workflow=customersettingsv1", str(failure.exception))
+            self.assertIn(str(destination), str(failure.exception))
+            self.assertIn("Internal Access Denied", str(failure.exception))
+            self.assertIs(failure.exception.__cause__, cause)
+            result.assert_not_called()
+            self.assertFalse(generated[0].exists())
+
     def test_runner_must_come_from_expected_test_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             repo, test_source = runner.REPO, runner.TEST_SOURCE
@@ -231,10 +296,16 @@ class Contracts(unittest.TestCase):
         stage = next(iter(next(iter(loop.values()))[0].values()))[0]
         self.assertEqual(stage["lockBehavior"], "sequential")
         for case in ("valid", "new", "appeared", "active-deployment", "run", "expiry", "deployment-state",
-                     "deployment-output", "cluster", "cluster-pools", "missing-admitted"):
+                     "deployment-output", "cluster", "cluster-pools", "missing-admitted",
+                     "secret-watch", "secret-watch-tag", "secret-watch-version", "other-linux-tag"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                row = scenario()
+                if case.startswith("secret-watch"):
+                    row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                               if row["id"] == "operator-secret-watch")
+                name, owner = runner.persistent_identity(row["id"])
                 tags = {
-                    "scenario-token": owner, "scenario-run": owner, "scenario": "mixed",
+                    "scenario-token": owner, "scenario-run": owner, "scenario": row["id"],
                     "owner": "ama-metrics-e2e",
                 }
                 if case == "run":
@@ -242,6 +313,11 @@ class Contracts(unittest.TestCase):
                 if case == "expiry":
                     tags["expiresAt"] = "2099-01-01T00:00:00Z"
                 deployment_outputs = copy.deepcopy(outputs)
+                deployment_outputs["resourceTags"]["run"] = owner
+                if case.startswith("secret-watch") or case == "other-linux-tag":
+                    deployment_outputs["resourceTags"]["scenario"] = "linux"
+                if case == "secret-watch-tag":
+                    deployment_outputs["resourceTags"]["scenario"] = "wrong"
                 if case == "deployment-output":
                     deployment_outputs["expectedPools"] = []
                 deployment = {"properties": {
@@ -263,10 +339,12 @@ class Contracts(unittest.TestCase):
                 }
                 if case == "cluster-pools":
                     cluster["agentPoolProfiles"] = []
+                if case.startswith("secret-watch"):
+                    cluster["kubernetesVersion"] = "1.36.5" if case == "secret-watch-version" else "1.37.1"
                 host = runner.Host(types.SimpleNamespace(
                     evidence=Path(directory), subscription="sub", run_id="run", location="eastus2",
                     admitted_existing=case == "missing-admitted",
-                ), scenario(), Mock())
+                ), row, Mock())
                 group = {"location": "eastus2", "tags": tags}
                 if case == "new":
                     calls = ["false", "false", {}, deployment]
@@ -279,14 +357,15 @@ class Contracts(unittest.TestCase):
                     calls = ["false" if case == "missing-admitted" else "true",
                              group, [{"id": cluster_id}], deployment, cluster]
                 host.az = Mock(side_effect=calls)
-                env = {"SCENARIO_KUBERNETES_VERSION": "1.36.5"}
-                if case in ("valid", "new"):
+                env = {"SCENARIO_KUBERNETES_VERSION": cluster["kubernetesVersion"]}
+                if case in ("valid", "new", "secret-watch"):
                     result = host.provision(env, "principal", "User", pools)
                     self.assertEqual(result["clusterName"], "sc")
-                    self.assertEqual(host.reused, case == "valid")
+                    self.assertEqual(host.reused, case in ("valid", "secret-watch"))
                     self.assertEqual(host.receipt["resourceGroup"], name)
                     self.assertEqual(host.receipt["runId"], owner)
-                    self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(), case == "valid")
+                    self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(),
+                                     case in ("valid", "secret-watch"))
                 else:
                     with self.assertRaises((ValueError, RuntimeError)):
                         host.provision(env, "principal", "User", pools)
@@ -302,6 +381,22 @@ class Contracts(unittest.TestCase):
                    for clause in guard.split("]]", 1)[0].split("||") if "==" in clause}
         self.assertEqual(allowed, {"centralus", "eastus2", "westcentralus"})
         self.assertLessEqual(set(runner.CAMPAIGN_LOCATIONS.values()), allowed)
+
+    def test_secret_watch_requires_linux_compiled_profile(self):
+        row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                   if row["id"] == "operator-secret-watch")
+        args = types.SimpleNamespace(run_id="run", location="eastus2")
+        for profile in ("linux", "operator-secret-watch", "other"):
+            commands = Mock()
+            commands.run.return_value = {
+                "templateJson": runner.json.dumps({"parameters": {}}),
+                "parametersJson": runner.json.dumps({"parameters": {"scenarioId": {"value": profile}}}),
+            }
+            if profile == "linux":
+                self.assertEqual(runner.compiled_parameters(args, row, commands, "1.37.1")["scenarioId"], profile)
+            else:
+                with self.assertRaisesRegex(ValueError, "scenarioId"):
+                    runner.compiled_parameters(args, row, commands, "1.37.1")
 
     def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
@@ -335,7 +430,11 @@ class Contracts(unittest.TestCase):
             if args[:3] == ["az", "group", "exists"]:
                 return "false"
             if args[:3] == ["az", "aks", "get-versions"]:
-                return {"values": [{"isDefault": True, "patchVersions": {"1.36.5": {}}}]}
+                return {"values": [
+                    {"isDefault": True, "patchVersions": {"1.36.5": {}}},
+                    {"isPreview": None, "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+                     "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
+                ]}
             if args[:3] == ["az", "vm", "list-skus"]:
                 return copy.deepcopy(skus)
             if args[:3] == ["az", "vm", "list-usage"]:
@@ -362,18 +461,21 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 5)
+                self.assertEqual(len(result["placements"]), 6)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
                 self.assertEqual(result["placements"]["classic-azure-cni"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(result["placements"]["otlp"], "centralus")
                 self.assertEqual(result["placements"]["acns-cilium"], "eastus2")
+                self.assertEqual(result["placements"]["operator-secret-watch"], "eastus2")
+                self.assertEqual(result["regions"]["eastus2"]["kubernetesVersions"],
+                                 {"acns": "1.36.5", "acns-cilium": "1.36.5", "operator-secret-watch": "1.37.1"})
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (80, 104), "eastus2": (24, 24)}
+                expected = {"centralus": (80, 104), "eastus2": (32, 32)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
@@ -382,6 +484,13 @@ class Contracts(unittest.TestCase):
                     {row["name"]: row["additional"]
                      for row in result["regions"]["centralus"]["quota"]}
                     ["standarddpsv5family"], 24)
+                args.evidence = Path(temporary) / "four-lane"
+                args.scenario = "four-lane"
+                four = runner.campaign_preflight(args, matrix, commands)
+                self.assertEqual(set(four["placements"]), {"default", "classic-azure-cni", "acns", "otlp"})
+                self.assertEqual(set(four["existing"]), set(four["placements"]))
+                self.assertEqual(four["regions"]["eastus2"]["kubernetesVersions"], {"acns": "1.36.5"})
+                args.scenario = "all"
                 args.evidence = Path(temporary) / "existing"
                 with patch.object(runner.Host, "persistent_state", autospec=True,
                                   side_effect=lambda host, env, pools: {"clusterName": "existing"}
@@ -510,6 +619,49 @@ class Contracts(unittest.TestCase):
         versions["values"] = [versions["values"][0]]
         with self.assertRaisesRegex(ValueError, "no stable official default"):
             runner.select_version(versions)
+
+    def test_secret_watch_selects_supported_nondefault_without_changing_other_scenarios(self):
+        versions = {"values": [
+            {"version": "1.36", "isDefault": True, "patchVersions": {"1.36.5": {}}},
+            {"version": "1.37", "isPreview": None,
+             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
+            {"version": "1.38", "isPreview": True,
+             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.38.0": {}}},
+            {"version": "1.38", "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+             "patchVersions": {"1.38.1": {}}},
+            {"version": "1.39", "capabilities": {"supportPlan": ["AKSLongTermSupport"]},
+             "patchVersions": {"1.39.0": {}}},
+            {"version": "1.40", "patchVersions": {"1.40.0": {}}},
+        ]}
+        rows = runner.load(runner.ROOT / "matrix.json")["scenarios"]
+        row = next(row for row in rows if row["id"] == "operator-secret-watch")
+        for selected, expected in ((scenario(), "1.36.5"), (row, "1.37.1")):
+            with self.subTest(scenario=selected["id"]), tempfile.TemporaryDirectory() as directory:
+                args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
+                                             location="eastus2", evidence=Path(directory))
+                commands = Mock()
+                commands.run.return_value = versions
+                parameters = pool_parameters()
+                if selected["platforms"] == ["linux"]:
+                    parameters["nodePools"] = parameters["nodePools"][:1]
+                with patch.object(runner, "compiled_parameters", return_value=parameters) as compiled, \
+                        patch.object(runner.Host, "persistent_state", return_value=None), \
+                        patch.object(runner, "regional_capacity", return_value={}):
+                    result = runner.preflight(args, selected, commands)
+                self.assertEqual(result["kubernetesVersion"], expected)
+                self.assertEqual(compiled.call_args.args[-1], expected)
+        for invalid in (
+                [versions["values"][0]],
+                [versions["values"][0], *versions["values"][2:]],
+                [{"orchestratorVersion": "1.37.1", "isPreview": True,
+                  "capabilities": {"supportPlan": ["KubernetesOfficial"]}}]):
+            with self.subTest(versions=invalid), patch.object(
+                    runner, "compiled_parameters", side_effect=AssertionError("Unsupported profile compiled")):
+                commands.run.return_value = {"values": invalid}
+                with self.assertRaisesRegex(ValueError, "Unsupported scenario"):
+                    runner.preflight(args, row, commands)
 
     def test_capacity_includes_autoscaler_surge_and_explicit_proxy_count(self):
         parameters = pool_parameters()
@@ -1203,6 +1355,62 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
+    def test_secret_watch_requires_effective_locks_before_cluster_access(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(
+                evidence=Path(temporary), build_id=1, max_run_seconds=60, run_id="run",
+                subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0,
+                test_source_sha="b" * 40, admitted_existing=False,
+            )
+            group = f"/subscriptions/{args.subscription}/resourceGroups/owned"
+            outputs = {"clusterName": "aks",
+                       "clusterId": group + "/providers/Microsoft.ContainerService/managedClusters/aks",
+                       "workspaceId": group + "/providers/Microsoft.Monitor/accounts/amw"}
+
+            def lock(scope, level="CanNotDelete"):
+                return {"name": "retained", "level": level,
+                        "id": scope + "/providers/Microsoft.Authorization/locks/retained"}
+
+            row = dict(scenario(), id="operator-secret-watch", settingsVariants=[], clusterFeatures=[], platforms=[])
+            for cluster_locks, workspace_locks, expected in (
+                ([lock(outputs["clusterId"])], [lock(group, "ReadOnly")], "credentials reached"),
+                ([], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                ([lock(outputs["clusterId"])], [], "workspaceId has no effective"),
+                ([lock(group + "-other")], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                ([lock(outputs["clusterId"], "None")], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                (RuntimeError("lock access denied"), [], "lock access denied"),
+            ):
+                with self.subTest(expected=expected):
+                    host = Mock(spec=runner.Host)
+                    host.receipt = {"resourceGroup": "owned"}
+                    host.kubeconfig = args.evidence / "kubeconfig"
+                    host.reused = True
+                    host.provision.return_value = outputs
+                    host.retain.return_value = {"retained": True}
+                    responses = iter((cluster_locks, workspace_locks))
+
+                    def az(*command, **kwargs):
+                        if command[:2] == ("lock", "list"):
+                            self.assertTrue(kwargs["private"])
+                            self.assertTrue(kwargs["json_output"])
+                            value = next(responses)
+                            if isinstance(value, Exception):
+                                raise value
+                            return value
+                        raise RuntimeError("credentials reached")
+                    host.az.side_effect = az
+                    with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
+                            patch.object(runner, "label_filter", return_value=""), \
+                            patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.37.1", "existing": True}), \
+                            patch.object(runner, "candidate_receipt", return_value=([], {})), \
+                            patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
+                            patch.object(runner, "deployment_env", return_value={}), \
+                            patch.object(runner, "Host", return_value=host), \
+                            self.assertRaisesRegex(RuntimeError, expected):
+                        runner.execute(args, row, {}, runner.Commands(args.evidence))
+                    self.assertLess(host.method_calls.index(unittest.mock.call.assert_owned()),
+                                    next(i for i, call in enumerate(host.method_calls) if call[0] == "az"))
+
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)
@@ -1610,14 +1818,17 @@ class Contracts(unittest.TestCase):
             host.args.evidence = Path(temporary)
             host.kubeconfig = Path(temporary) / "kubeconfig"
             host.receipt = {"resourceGroup": "owned"}
-            host.scenario = {"clusterFeatures": []}
+            host.scenario = {"id": "default", "clusterFeatures": []}
             identity = {"name": "ama-e2e-tests", "principalId": "identity-object", "clientId": "identity-client"}
             existing_roles = []
             dns_policies = []
             valid_dns_policy = True
-            cluster = {"oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
+            cluster = {"id": f"/subscriptions/{runner.BUILD_SUBSCRIPTION}/resourceGroups/owned/providers/"
+                             "Microsoft.ContainerService/managedClusters/owned-cluster",
+                       "oidcIssuerProfile": {"issuerUrl": "https://issuer.example/"},
                        "kubernetesVersion": "1.36.5", "autoUpgradeProfile": {"upgradeChannel": "stable"},
                        "securityProfile": {"workloadIdentity": {"enabled": True}}}
+            arm_proxy = {}
 
             def az(*args, **kwargs):
                 if args[:2] == ("identity", "create"):
@@ -1626,6 +1837,12 @@ class Contracts(unittest.TestCase):
                     return cluster
                 if args[:2] == ("lock", "show"):
                     return {"level": "CanNotDelete", "id": "/owned/lock"}
+                if args[:1] == ("rest",):
+                    self.assertEqual(args, ("rest", "--method", "get", "--url",
+                                           cluster["id"] + "?api-version=2026-09-01"))
+                    self.assertTrue(kwargs["private"])
+                    self.assertTrue(kwargs["json_output"])
+                    return {"properties": {"httpProxyConfig": arm_proxy}}
                 if args[:3] == ("role", "assignment", "list"):
                     self.assertIn(args[args.index("--assignee-object-id") + 1], ("identity-object", "caller-object"))
                     self.assertEqual(args[args.index("--fill-principal-name") + 1], "false")
@@ -1638,7 +1855,8 @@ class Contracts(unittest.TestCase):
                 if args[:2] == ("get", "ciliumnetworkpolicy"):
                     return dns_policies[-1] if valid_dns_policy else {}
                 if args[:2] == ("get", "deployments"):
-                    return {"items": [{"metadata": {"name": "testkube-api-server"}}]}
+                    return {"items": [{"metadata": {"name": name}} for name in
+                                      ("testkube-api-server", "testkube-minio-testkube", "testkube-mongodb")]}
                 return "testworkflows <none> testworkflows.testkube.io/v1 true TestWorkflow"
 
             host.az.side_effect = az
@@ -1651,9 +1869,22 @@ class Contracts(unittest.TestCase):
             outputs = {"clusterName": "owned-cluster", "workspaceId": "/owned/workspace",
                        "queryEndpoint": "https://amw.example"}
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            calls = [call.args for call in host.kube.call_args_list]
+            restart = ("rollout", "restart", "deployment/testkube-api-server", "-n", "testkube")
+            self.assertIn(restart, calls)
+            for name in ("testkube-api-server", "testkube-minio-testkube", "testkube-mongodb"):
+                self.assertLess(calls.index(("rollout", "status", "deployment/" + name,
+                                             "-n", "testkube", "--timeout=15m")), calls.index(restart))
+            self.assertEqual(calls[calls.index(restart) + 1],
+                             ("rollout", "status", "deployment/testkube-api-server",
+                              "-n", "testkube", "--timeout=15m"))
             self.assertEqual(host.az_with_rbac_retry.call_count, 1)
-            helm = next(c.args[0] for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
-            for setting in ("testkube-api.minio.podSecurityContext.fsGroup=1001",
+            helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            helm = helm_call.args[0]
+            self.assertIsNone(helm_call.kwargs["data"])
+            self.assertNotIn("-", helm)
+            for setting in ("testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
+                            "testkube-api.minio.podSecurityContext.fsGroup=1001",
                             "mongodb.nodeAffinityPreset.type=hard",
                             "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
                             "mongodb.nodeAffinityPreset.values[0]=system",
@@ -1679,7 +1910,82 @@ class Contracts(unittest.TestCase):
             self.assertEqual(federation[federation.index("--issuer") + 1], "https://issuer.example/")
             proof = runner.load(Path(temporary) / "testkube-bootstrap.json")
             self.assertIn("not submitted", proof["workloadIdentityExecution"])
-            host.scenario = {"clusterFeatures": ["managed-acns"]}
+            proxy = {
+                "httpProxy": "http://proxy.example:3128",
+                "httpsProxy": "http://secure-proxy.example:3128",
+                "noProxy": ["localhost", "127.0.0.1", "169.254.169.254", "10.0.0.0/16",
+                            ".svc", ".cluster.local", ".azmk8s.io", "customer.internal"],
+            }
+            proxy["effectiveNoProxy"] = [*proxy["noProxy"], "aks-injected.internal",
+                                        "private-api.private.eastus2.azmk8s.io"]
+            for profile in (proxy, {k: v for k, v in proxy.items() if k != "httpsProxy"},
+                            dict(proxy, enabled=False)):
+                with self.subTest(proxy_enabled=profile.get("enabled"), https="httpsProxy" in profile):
+                    cluster["httpProxyConfig"] = profile
+                    host.commands.run.reset_mock()
+                    runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+                    helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+                    self.assertTrue(helm_call.kwargs["private"])
+                    self.assertNotIn(proxy["httpProxy"], str(helm_call.args))
+                    self.assertNotIn(proxy["httpsProxy"], str(helm_call.args))
+                    cluster_call = next(c for c in host.az.call_args_list if c.args[:2] == ("aks", "show"))
+                    self.assertTrue(cluster_call.kwargs["private"])
+                    if profile.get("enabled") is False:
+                        self.assertIsNone(helm_call.kwargs["data"])
+                        self.assertNotIn("-", helm_call.args[0])
+                        continue
+                    self.assertEqual(helm_call.args[0].count("--values"), 2)
+                    self.assertIn("-", helm_call.args[0])
+                    environment = [
+                        {"name": name, "value": value}
+                        for key, value in (("HTTP_PROXY", proxy["httpProxy"]),
+                                           ("HTTPS_PROXY", profile.get("httpsProxy", proxy["httpProxy"])),
+                                           ("NO_PROXY", ",".join([*proxy["effectiveNoProxy"],
+                                                                  "testkube-api-server:8089"])))
+                        for name in (key, key.lower())
+                    ]
+                    self.assertEqual(runner.yaml.safe_load(helm_call.kwargs["data"]), {
+                        "global": {"testWorkflows": {"globalTemplate": {
+                            "enabled": True, "inline": True, "spec": {"container": {"env": environment}},
+                        }}},
+                    })
+            self.assertFalse(any(c.args[:1] == ("rest",) for c in host.az.call_args_list))
+            cluster["httpProxyConfig"] = {k: v for k, v in proxy.items() if k != "effectiveNoProxy"}
+            arm_proxy = proxy
+            host.az.reset_mock()
+            host.commands.run.reset_mock()
+            runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            self.assertEqual(sum(c.args[:1] == ("rest",) for c in host.az.call_args_list), 1)
+            helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            template = runner.yaml.safe_load(helm_call.kwargs["data"])["global"]["testWorkflows"]["globalTemplate"]
+            environment = {entry["name"]: entry["value"] for entry in template["spec"]["container"]["env"]}
+            self.assertEqual(environment["NO_PROXY"], ",".join([*proxy["effectiveNoProxy"],
+                                                                 "testkube-api-server:8089"]))
+            self.assertEqual(environment["no_proxy"], environment["NO_PROXY"])
+            self.assertNotEqual(environment["NO_PROXY"], ",".join(proxy["noProxy"]))
+            self.assertTrue(helm_call.kwargs["private"])
+            self.assertNotIn(proxy["httpProxy"], str(helm_call.args))
+            arm_proxy = {}
+            host.commands.run.reset_mock()
+            with self.assertRaisesRegex(ValueError, "effectiveNoProxy"):
+                runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            host.commands.run.assert_not_called()
+            for key, endpoint in (
+                ("httpProxy", "http://user:do-not-persist@proxy.example:3128"),
+                ("httpsProxy", "http://user:do-not-persist@proxy.example:3128"),
+                ("httpsProxy", "http://proxy.example:3128?token=do-not-persist"),
+                ("httpProxy", "http://proxy.example:3128#do-not-persist"),
+                ("httpProxy", "http://user:do-not-persist@proxy.example\uff1a3128"),
+            ):
+                with self.subTest(proxy_endpoint=key):
+                    cluster["httpProxyConfig"] = dict(proxy, **{key: endpoint})
+                    host.commands.run.reset_mock()
+                    with self.assertRaisesRegex(ValueError, "credential-free") as failure:
+                        runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+                    self.assertNotIn("do-not-persist", str(failure.exception))
+                    host.commands.run.assert_not_called()
+            cluster.pop("httpProxyConfig")
+            host.scenario = {"id": "acns", "clusterFeatures": ["managed-acns"]}
             cluster["networkProfile"] = {"advancedNetworking": {
                 "enabled": True, "observability": {"enabled": True},
             }}
@@ -1944,6 +2250,18 @@ def mutations():
         "explicit-labels": ("if not labels:", "if False:"),
         "time-budget": ("if timeout <= 0:", "if False:"),
         "auto-upgrade": ('if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":', "if False:"),
+        "workflow-clone-proxy-defaults": (
+            'if proxy.get("enabled") is not False and (proxy.get("httpProxy") or proxy.get("httpsProxy")):',
+            "if False:"),
+        "workflow-proxy-complete-bypass": (
+            'bypass = proxy.get("effectiveNoProxy")',
+            'bypass = proxy.get("noProxy")'),
+        "workflow-proxy-raw-arm": (
+            'if bypass is None:\n            # Core CLI can omit read-only fields; use the raw ARM response.',
+            'if False:\n            # Core CLI can omit read-only fields; use the raw ARM response.'),
+        "workflow-proxy-credential-rejection": (
+            'or parsed.username is not None or parsed.password is not None',
+            'or False'),
         "workflow-status": ('result.get("status") != "passed"', "False"),
         "workflow-provenance": ('result.get("test_source_sha") != source_sha', "False"),
         "workflow-selection": ('row.get("workflow") != workflow', "False"),

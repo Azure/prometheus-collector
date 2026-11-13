@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import urlsplit
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -32,6 +33,7 @@ SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livene
 CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus", "acns-cilium": "eastus2",
+    "operator-secret-watch": "eastus2",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
@@ -125,13 +127,15 @@ def validate_matrix(document, variants, check_paths=True):
     return document
 
 
-def select_version(document):
+def select_version(document, scenario=None):
+    scoped_secrets = scenario is not None and "secrets-watch-enforcement" in scenario["clusterFeatures"]
     rows = [r for r in document.get("values", document.get("orchestrators", []))
             if not r.get("isPreview") and
-            ("KubernetesOfficial" in r.get("capabilities", {}).get("supportPlan", ["KubernetesOfficial"]))]
-    defaults = []
+            ("KubernetesOfficial" in r.get("capabilities", {}).get(
+                "supportPlan", [] if scoped_secrets else ["KubernetesOfficial"]))]
+    eligible = []
     for row in rows:
-        if not (row.get("isDefault") or row.get("default")):
+        if not scoped_secrets and not (row.get("isDefault") or row.get("default")):
             continue
         versions = row.get("patchVersions", {})
         if not versions and row.get("orchestratorVersion"):
@@ -139,10 +143,17 @@ def select_version(document):
         for version in versions:
             if re.fullmatch(r"\d+\.\d+\.\d+", version):
                 key = tuple(map(int, version.split(".")))
-                defaults.append(key)
-    if not defaults:
+                if (not scoped_secrets or
+                        (key >= (1, 37, 0) and
+                         (scenario["id"] != "operator-secret-watch" or key[:2] == (1, 37)))):
+                    eligible.append(key)
+    if not eligible:
+        if scoped_secrets:
+            requirement = "1.37" if scenario["id"] == "operator-secret-watch" else ">=1.37"
+            raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
+                             f"stable official regional Kubernetes {requirement} version")
         raise ValueError("Region returned no stable official default Kubernetes version")
-    return ".".join(map(str, max(defaults)))
+    return ".".join(map(str, max(eligible)))
 
 
 def windows_image_compatible(host, image):
@@ -294,6 +305,15 @@ class Commands:
                 log.write(json.dumps(record) + "\n" + completed.stdout + completed.stderr + "\n")
         if completed.returncode:
             detail = "(private command; output redacted)" if private else completed.stderr[-6000:]
+            if not private:
+                # Workflow CLI failures can be stdout-only; never echo arbitrary workflow output.
+                markers = [message for message in (
+                    "Internal Access Denied", "AccessDenied", "NoSuchBucket",
+                    "InvalidAccessKeyId", "SignatureDoesNotMatch", "connection refused",
+                    "i/o timeout", "TestWorkflow did not pass",
+                ) if message.casefold() in completed.stdout.casefold()]
+                detail += ("\nstdout diagnostics: " + (", ".join(markers) or "no recognized error markers")
+                           + f"; full output retained in {self.evidence / 'commands.log'}")
             if private and list(args[:4]) == ["az", "deployment", "group", "create"]:
                 diagnostic = completed.stderr
                 for name, value in (env or os.environ).items():
@@ -501,6 +521,7 @@ class Host:
         outputs = {key: value["value"] for key, value in deployment["properties"]["outputs"].items()}
         cluster = self.az("aks", "show", "--resource-group", name, "--name", outputs["clusterName"],
                           json_output=True)
+        verify_secret_watch_version(self.scenario, cluster)
         network = cluster.get("networkProfile") or {}
         expected_mode = "classic" if self.scenario["id"] == "classic-azure-cni" else "overlay"
         advanced = network.get("advancedNetworking") or {}
@@ -534,8 +555,9 @@ class Host:
             raise ValueError("Retained candidate deployment is not successful")
         outputs = {key: value["value"] for key, value in properties.get("outputs", {}).items()}
         resource_tags = outputs.get("resourceTags") or {}
+        expected_scenario = "linux" if self.scenario["id"] == "operator-secret-watch" else self.scenario["id"]
         if (resource_tags.get("owner") != "ama-metrics-e2e"
-                or resource_tags.get("scenario") != self.scenario["id"]
+                or resource_tags.get("scenario") != expected_scenario
                 or resource_tags.get("run") != self.receipt["runId"]
                 or outputs.get("location") != self.args.location
                 or (expected_pools is not None and outputs.get("expectedPools") != expected_pools)
@@ -913,6 +935,10 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
                     if line.startswith("Managed ACNS evidence:"):
                         print(line, flush=True)
         return result
+    except (RuntimeError, ValueError) as failure:
+        raise RuntimeError(
+            f"TestKube suite failed: suite={suite}, workflow={workflow}, evidence={destination}: {failure}"
+        ) from failure
     finally:
         if generated.exists():
             generated.unlink()
@@ -1196,7 +1222,15 @@ def compiled_parameters(args, scenario, commands, version):
               if "defaultValue" in definition}
     values.update({name: definition["value"]
                    for name, definition in json.loads(envelope["parametersJson"])["parameters"].items()})
+    if scenario["id"] == "operator-secret-watch" and values.get("scenarioId") != "linux":
+        raise ValueError("Secret-watch compiled scenarioId must be linux")
     return values
+
+
+def verify_secret_watch_version(scenario, cluster):
+    if (scenario["id"] == "operator-secret-watch"
+            and not re.fullmatch(r"1\.37\.\d+", cluster.get("kubernetesVersion") or "")):
+        raise ValueError("Secret-watch cluster must run Kubernetes 1.37")
 
 
 def capacity_plan(parameters, scenario, version):
@@ -1284,9 +1318,7 @@ def preflight(args, scenario, commands):
     versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
                              "--location", args.location, "--only-show-errors", "-o", "json"],
                             json_output=True)
-    version = select_version(versions)
-    if "secrets-watch-enforcement" in scenario["clusterFeatures"] and tuple(map(int, version.split(".")[:2])) < (1, 37):
-        raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
+    version = select_version(versions, scenario)
     parameters = compiled_parameters(args, scenario, commands, version)
     capacity = capacity_plan(parameters, scenario, version)
     existing = bool(Host(args, scenario, commands).persistent_state(
@@ -1309,7 +1341,9 @@ def campaign_preflight(args, matrix, commands):
         raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
-    selected = list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else [args.scenario]
+    selected = (list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else
+                ["default", "classic-azure-cni", "acns", "otlp"]
+                if args.scenario == "four-lane" else [args.scenario])
     if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")
     source = source_commit(commands, REPO, ["otelcollector/test/scenarios"])
@@ -1327,20 +1361,22 @@ def campaign_preflight(args, matrix, commands):
         versions = commands.run(["az", "aks", "get-versions", "--subscription", args.subscription,
                                  "--location", location, "--only-show-errors", "-o", "json"],
                                 json_output=True)
-        version = select_version(versions)
         capacity = []
+        selected_versions = {}
         for name in selected:
             if placements[name] != location:
                 continue
             row = next((row for row in matrix["scenarios"] if row["id"] == name), None)
             if not row or row.get("blockedReason"):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
+            version = select_version(versions, row)
+            selected_versions[name] = version
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
                 {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
             capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
                             for pool in capacity_plan(parameters, row, version))
-        regions[location] = {"kubernetesVersion": version,
+        regions[location] = {"kubernetesVersions": selected_versions,
                              **regional_capacity(regional, capacity, commands)}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
               "subscription": args.subscription, "placements": placements, "existing": existing,
@@ -1448,7 +1484,8 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             assign("role", "assignment", "create", "--assignee-object-id", object_id,
                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
-                      json_output=True)
+                      json_output=True, private=True)
+    verify_secret_watch_version(host.scenario, cluster)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
         raise RuntimeError("The effective AKS auto-upgrade channel must be stable")
     if "managed-acns" in host.scenario["clusterFeatures"]:
@@ -1476,16 +1513,54 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
             "--identity-name", identity["name"], "--name", "testkube",
             "--issuer", issuer, "--subject", "system:serviceaccount:testkube:testkube-api-server-tests-job",
             "--audience", "api://AzureADTokenExchange")
+    workflow_values = None
+    proxy = cluster.get("httpProxyConfig") or {}
+    if proxy.get("enabled") is not False and (proxy.get("httpProxy") or proxy.get("httpsProxy")):
+        for endpoint in (proxy.get("httpProxy"), proxy.get("httpsProxy")):
+            if endpoint:
+                try:
+                    parsed = urlsplit(endpoint)
+                    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                            or parsed.username is not None or parsed.password is not None
+                            or parsed.query or parsed.fragment or parsed.path not in {"", "/"}):
+                        raise ValueError
+                except ValueError:
+                    raise ValueError("Inline TestKube defaults require credential-free HTTP(S) proxy endpoints") from None
+        bypass = proxy.get("effectiveNoProxy")
+        if bypass is None:
+            # Core CLI can omit read-only fields; use the raw ARM response.
+            raw_cluster = host.az("rest", "--method", "get", "--url",
+                                  cluster["id"] + "?api-version=2026-09-01",
+                                  json_output=True, private=True)
+            bypass = ((raw_cluster.get("properties") or {}).get("httpProxyConfig") or {}).get("effectiveNoProxy")
+        if bypass is None:
+            raise ValueError("AKS effectiveNoProxy is required to preserve injected bypass defaults")
+        # AKS admission can omit clone init containers; workflow defaults reach them.
+        environment = [
+            {"name": name, "value": value}
+            for key, value in (
+                ("HTTP_PROXY", proxy.get("httpProxy")),
+                ("HTTPS_PROXY", proxy.get("httpsProxy") or proxy.get("httpProxy")),
+                ("NO_PROXY", ",".join([*bypass, "testkube-api-server:8089"])),
+            ) if value is not None
+            for name in (key, key.lower())
+        ]
+        workflow_values = yaml.safe_dump({"global": {"testWorkflows": {"globalTemplate": {
+            "enabled": True, "inline": True, "spec": {"container": {"env": environment}},
+        }}}})
     host.commands.run(["helm", "upgrade", "--install", "testkube", str(package),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "testkube",
                       "--create-namespace", "--values", str(TEST_SOURCE / "otelcollector/test/testkube/values.yaml"),
+                      *(["--values", "-"] if workflow_values is not None else []),
+                      # Match the cluster's .svc/.cluster.local bypasses without replacing proxy environment.
+                      "--set-string", "testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
                       "--set", "testkube-api.minio.podSecurityContext.fsGroup=1001",
                       "--set", "mongodb.nodeAffinityPreset.type=hard",
                       "--set-string", "mongodb.nodeAffinityPreset.key=kubernetes.azure.com/agentpool",
                       "--set-string", "mongodb.nodeAffinityPreset.values[0]=system",
                       "--set", "mongodb.updateStrategy.type=Recreate",
                       "--set-string", "global.testWorkflows.builtinTemplatesInstaller.nodeSelector.kubernetes\\.io/os=linux",
-                      "--wait", "--timeout", "20m"], private=True)
+                      "--wait", "--timeout", "20m"], data=workflow_values, private=True)
     host.kube("annotate", "serviceaccount", "testkube-api-server-tests-job", "-n", "testkube",
               f"azure.workload.identity/client-id={identity['clientId']}", "--overwrite")
     host.kube("apply", "-f", str(TEST_SOURCE / "otelcollector/test/testkube/api-server-permissions.yaml"))
@@ -1495,6 +1570,10 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     for deployment in deployments:
         host.kube("rollout", "status", "deployment/" + deployment["metadata"]["name"],
                   "-n", "testkube", "--timeout=15m")
+    # API readiness stays green after bucket initialization exhausts its retries.
+    # Replay startup only after MinIO is ready, including on retained clusters.
+    host.kube("rollout", "restart", "deployment/testkube-api-server", "-n", "testkube")
+    host.kube("rollout", "status", "deployment/testkube-api-server", "-n", "testkube", "--timeout=15m")
     workflows = host.kube("api-resources", "--api-group=testworkflows.testkube.io", "--no-headers")
     if not re.search(r"^testworkflows\s", workflows, re.MULTILINE):
         raise RuntimeError("TestKube workflow API was not installed")
@@ -1609,6 +1688,28 @@ def execute(args, scenario, variants, commands):
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
         resolved["existing"] = host.reused
         host.assert_owned()
+        if scenario["id"] == "operator-secret-watch":
+            group_scope = f"/subscriptions/{args.subscription}/resourceGroups/{host.receipt['resourceGroup']}"
+            for key, resource_type in (("clusterId", "Microsoft.ContainerService/managedClusters"),
+                                       ("workspaceId", "Microsoft.Monitor/accounts")):
+                resource_id = outputs[key].rstrip("/")
+                if not re.fullmatch(re.escape(f"{group_scope}/providers/{resource_type}/") + r"[^/]+",
+                                    resource_id, re.IGNORECASE):
+                    raise ValueError(f"Retained {key} is outside the owned resource group or has the wrong type")
+                if key == "clusterId" and resource_id.rsplit("/", 1)[-1].casefold() != outputs["clusterName"].casefold():
+                    raise ValueError("Retained clusterId does not match the cluster name")
+                scopes = (f"/subscriptions/{args.subscription}", group_scope, resource_id)
+                locks = host.az("lock", "list", "--resource", resource_id, json_output=True, private=True)
+                if not isinstance(locks, list) or not any(
+                    isinstance(lock, dict) and isinstance(lock.get("id"), str)
+                    and isinstance(lock.get("name"), str) and lock["name"]
+                    and lock.get("level") in ("CanNotDelete", "ReadOnly")
+                    and any(lock.get("id", "").casefold() == (
+                        scope + "/providers/Microsoft.Authorization/locks/" + lock["name"]
+                    ).casefold() for scope in scopes)
+                    for lock in locks
+                ):
+                    raise RuntimeError(f"Retained {key} has no effective deletion-protection lock")
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
                 "--file", str(host.kubeconfig), "--admin", private=True)

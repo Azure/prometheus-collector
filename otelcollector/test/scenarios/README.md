@@ -30,6 +30,20 @@ defaults are not candidate provenance.
 The run-specific health monitors keep `myapp_temperature` as well as `up`, so
 the fresh-ingestion query can verify a marked sample from this run.
 
+For proxy-enabled AKS clusters, TestKube bootstrap copies the existing
+`httpProxyConfig` into inline global workflow container defaults so Git-clone init
+containers receive it even when admission only injects regular containers.
+Both environment-variable casings retain the complete `effectiveNoProxy` list,
+including AKS-injected defaults, and bypass the internal TestKube gRPC endpoint
+`testkube-api-server:8089` for artifact uploads. If core `az aks show` omits this
+field, bootstrap privately reads the same cluster through stable ARM API `2026-09-01` without
+requiring `aks-preview`; a missing effective list still fails closed.
+The cluster read and Helm stdin values are private; no proxy values enter command
+arguments or logs. Inline values are persisted in the API Deployment, so
+credential-bearing proxy URLs are rejected rather than stored there; AKS does not
+support proxy username/password authentication. Absent or explicitly disabled
+proxy configurations add no defaults.
+
 ## Prerequisites
 
 Use Python 3.10+ and the packages pinned in `clusters/requirements.txt`, Azure CLI
@@ -70,6 +84,14 @@ Pipeline 979 uses a sequential stage-level exclusive lock per profile. Direct
 execution outside the corresponding locked 979 stage is refused; each attempt has
 a separate execution ID and ingestion marker.
 
+The retained `operator-secret-watch` AKS cluster and Azure Monitor workspace
+have resource-scoped `scenario-retain` `CanNotDelete` locks. After verifying
+ownership, the runner requires an effective `CanNotDelete` or `ReadOnly` lock on
+each resource before using the cluster. It does not create locks; if protection
+is missing, an authorized operator must add a resource-scoped lock before reuse.
+These management locks are separate from the pipeline execution lock and can
+block deletion of child resources. They do not survive resource recreation.
+
 Before provisioning any host in a full campaign, run the read-only aggregate
 admission once against its clean, exact-source checkout:
 
@@ -77,7 +99,9 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario` also accepts one of the five runnable campaign rows. The
+`--scenario four-lane` selects default, classic Azure CNI, ACNS and OTLP without
+the isolated secret-watch and Cilium rows; it still checks their combined regional peak.
+`--scenario` also accepts one of the six runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
@@ -160,8 +184,10 @@ The runner never silently chooses another executable.
 The owned host also installs an explicitly versioned TestKube chart, records its
 package hash, sets MinIO's volume group to 1001, and places MongoDB on the system
 pool with a Recreate rollout for its single-writer volume, and schedules the
-Linux-only built-in templates hook on Linux nodes. It creates a query-only
-managed identity/federation for the tests-job
+Linux-only built-in templates hook on Linux nodes. After dependency rollouts it
+restarts and waits for the API, replaying bucket initialization if MinIO's earlier
+unavailability exhausted its retries; API readiness alone does not ensure buckets.
+It creates a query-only managed identity/federation for the tests-job
 service account, scoped to the **new AMW only**. The calling identity receives the
 same read-only role because the fresh-query probe forwards its token over stdin
 into the collector pod. This requires role-assignment permission and directory
@@ -296,7 +322,7 @@ coverage gaps until their real adapter and live evidence exist.
 
 ## Auto-upgrade and combination semantics
 
-There is no Kubernetes-version-history matrix. Every run resolves the currently
+There is no Kubernetes-version-history matrix. Ordinary runs resolve the currently
 supported stable **KubernetesOfficial** regional default and every provisioned AKS
 host must report effective `autoUpgradeProfile.upgradeChannel=stable` from Azure.
 The observation is retained in `effective-upgrade.json`; template intent alone is
@@ -312,7 +338,7 @@ Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
-The runnable candidate matrix has four rows. Each row uses `settingsVariants: ["*"]` to
+The runnable candidate matrix has five rows. Four rows use `settingsVariants: ["*"]` to
 select every catalog variant compatible with its declared cluster features and
 platforms. The mixed `default` profile runs all 36 supported variants and the
 FIPS/ARM64 scheduling assertions; the duplicate settings-only cluster is removed.
@@ -320,9 +346,14 @@ Classic CNI and managed non-Cilium ACNS also run all 36 compatible variants.
 The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
 shared metric assertions remain, but the autoscaler scale-up spec is no longer
 selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
-`operator-secret-watch` lane: the current regional default must be at least 1.37,
-otherwise preflight reports unsupported without provisioning. No historical
-version is selected. Customer Helm is separately blocked, giving 41 catalog inputs
+`operator-secret-watch` lane in eastus2: only this row selects the highest explicitly
+advertised stable **KubernetesOfficial** Kubernetes 1.37 patch, even when it is
+not the regional default. `isPreview: null` is not a preview opt-in; explicit preview
+and LTS-only versions are excluded. If no eligible version exists, preflight fails
+before provisioning. The retained cluster must actually run 1.37, and its deployment
+uses the `linux` profile tag while its resource group retains the scenario's own
+ownership tags. Other rows retain the regional default; aggregate admission
+records each row's version separately. Customer Helm is separately blocked, giving 41 catalog inputs
 (40 runnable) without claiming live passes. Deferred true password rotation is
 metadata, not an executable settings assignment.
 
@@ -340,6 +371,7 @@ rendered KSM arguments alone are not coverage.
 | `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
 | `acns-cilium` | Customer-settings v1/v2; independently verified managed ACNS/Cilium, fresh per-node `cilium_forward_bytes_total` and pod-level `hubble_dns_queries_total`, and positive traffic increases after controlled DNS/HTTP requests in both slots. | Retained Linux-only Cilium cluster; the real deletion lock and owned DCR association remain intact. |
 | `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |
+| `operator-secret-watch` | Four empty/omitted v1/v2 inputs keep secret-backed ServiceMonitor and PodMonitor credentials unchanged after a secret update, then verify updates when the namespace is allowlisted. SubjectAccessReview confirms the fixture grants secret get/list/watch. | The allowlist scopes watches, not direct secret GETs. Requires Kubernetes 1.37 and real passing TestKube cases; unsupported/skipped is not coverage. No live candidate result is recorded. |
 
 ### PR and scenario-source audit
 
@@ -350,7 +382,7 @@ local test or a prior release-image run is not a candidate-image pass.
 |---|---|
 | #930 and the user-supplied #1097 OneNote list | The catalog selects ConfigTests workflows for absent/default/partial settings, disabled and enabled targets, RS-only, DS-only, all targets, custom/all-actions, global, invalid settings/custom/global and custom-node cases. The `windows` manifest recreates the explicit combined row: default targets, the RS all-actions ConfigMap, and Linux/Windows node ConfigMaps. Its configprocessing assertions inspect the live Prometheus config and node external labels; its candidate slot now also checks fresh Linux/Windows node-configmap ingestion. The pasted table's remaining blank-cell pairings cannot be recovered, so no additional combinations are inferred. |
 | #1305 MIP follow-up promise | Configprocessing checks the MIP log value. Querymetrics now also requires `node_filefd_allocated` to be absent while the `node` target remains up with MIP enabled, and present with MIP disabled. This is an executable candidate check; it still needs a compliant live run. |
-| #1536 and #1493 secret-access follow-up | The v1/v2 secret-transition specs prove invalid-to-valid reload, fresh scrape recovery and watch denial for empty/omitted allowlists where Kubernetes supports enforcement. Fixtures alone are not coverage; no live candidate result is recorded. |
+| #1536 and #1493 secret-access follow-up | The v1/v2 secret-transition specs test invalid-to-valid reload, fresh scrape recovery and scoped watches for empty/omitted allowlists where supported. Fixtures alone are not coverage; no live candidate result is recorded. |
 | #875, #1788 and #1590 | ARM64/FIPS placement is asserted by node labels and collector-pod scheduling. Windows/Linux metrics are queried per node. The managed `acns` row creates traffic and checks fresh node-level Retina plus pod-level Hubble metrics; it does not install standalone Retina. |
 | #1391/#1417, #1232/#1239 and #1393 | DCGM has config/job/interval/regex assertions but no GPU pool or GPU-metric ingestion proof. OTLP has a candidate HTTP ingestion scenario awaiting live execution. `controlplane-istio` validates config generation with a fake member FQDN, not real target discovery or scraping. |
 | #1687 | Operator HTTPS code checks cover loopback plaintext refusal, liveness and mTLS behavior. The PR's enabled/disabled deployment checks remain unverified in a live candidate run. |

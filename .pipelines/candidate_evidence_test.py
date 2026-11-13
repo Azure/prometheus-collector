@@ -95,7 +95,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         run = next(step["inputs"]["inlineScript"] for step in template["steps"]
                    if step.get("displayName", "").startswith("Run authenticated"))
         duration = run[run.index('case "$CANDIDATE_SCENARIO"'):run.index("CANDIDATE_RUN_ID=")]
-        for scenario in (*SCENARIOS, "customer-helm", "operator-secret-watch", "all", "unknown"):
+        for scenario in (*SCENARIOS, "customer-helm", "all", "unknown"):
             for script in (gate, "set -euo pipefail\n" + duration):
                 with self.subTest(scenario=scenario, script=script):
                     result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
@@ -300,7 +300,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(jobs[1]["timeoutInMinutes"], 900)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
-        self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS})
+        self.assertEqual(set(scenario["values"]), {"all", "four-lane", *SCENARIOS})
         cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
         self.assertEqual(cve["default"], "")
         campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
@@ -379,9 +379,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
-        self.assertIn('default|classic-azure-cni|acns|acns-cilium|otlp) max_run_seconds=28800', run_script)
+        self.assertIn('default|classic-azure-cni|acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|acns-cilium|otlp)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|acns-cilium|otlp|operator-secret-watch)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -435,13 +435,13 @@ class CandidateEvidenceTest(unittest.TestCase):
         rows = {row["id"]: row for row in matrix["scenarios"]}
         self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
         self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
-        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp", "acns-cilium"))
+        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp", "acns-cilium", "operator-secret-watch"))
         pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
         pipeline = yaml.safe_load(pipeline_path.read_text())
         pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
                                   if p.get("name") == "candidateScenario")
-        self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS])
-        self.assertIn("split('default,classic-azure-cni,acns,otlp,acns-cilium', ',')", pipeline_path.read_text())
+        self.assertEqual(pipeline_scenarios, ["all", "four-lane", *SCENARIOS])
+        self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", pipeline_path.read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
         self.assertEqual(next(p["values"] for p in template["parameters"]
@@ -456,6 +456,12 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(rows["acns"]["settingsVariants"], ["*"])
         self.assertEqual(rows["otlp"]["settingsVariants"], ["*"])
         self.assertEqual(rows["otlp"]["platforms"], ["linux"])
+        self.assertEqual(set(rows["operator-secret-watch"]["settingsVariants"]), {
+            "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
+            "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
+        })
+        self.assertEqual(rows["operator-secret-watch"]["platforms"], ["linux"])
+        self.assertIn("secrets-watch-enforcement", rows["operator-secret-watch"]["clusterFeatures"])
         self.assertIn("acns-cilium", rows)
         self.assertNotIn("blockedReason", rows["acns-cilium"])
         proof = plan(root, "acns-cilium")
@@ -473,11 +479,8 @@ class CandidateEvidenceTest(unittest.TestCase):
             blocked = {item["id"] for item in result["blockedScenarios"]}
             self.assertEqual(len(blocked) + len(SCENARIOS), len(rows))
             self.assertIn("customer-helm", blocked)
-            self.assertIn("operator-secret-watch", blocked)
-            self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
-                "helm-customer-values", "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
-                "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
-            })
+            self.assertNotIn("operator-secret-watch", blocked)
+            self.assertEqual({item["id"] for item in result["blockedVariants"]}, {"helm-customer-values"})
         with patch("candidate_coverage.SCENARIOS", SCENARIOS[:-1]):
             with self.assertRaisesRegex(ValueError, "every runnable matrix row"):
                 plan(root, "default")
@@ -513,8 +516,8 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 10)
-            self.assertEqual(len(report["blockedVariants"]), 5)
+            self.assertEqual(len(report["blockedScenarios"]), 9)
+            self.assertEqual(len(report["blockedVariants"]), 1)
             self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
                              ["arc-conformance", "ccp-health", "regionTests"])
 
@@ -541,6 +544,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         conditional = loop[0]
         stage = conditional[next(key for key in conditional if key.startswith("${{ if or("))][0]
         self.assertEqual(stage["dependsOn"], ["CandidateCapacity"])
+        self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'classic-azure-cni', 'acns', 'otlp'))",
+                      next(iter(conditional)))
 
     def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
@@ -556,7 +561,7 @@ class CandidateEvidenceTest(unittest.TestCase):
             "status": "PASS", "sourceSha": self.sha, "testSourceSha": "c" * 40,
             "buildId": 4401, "capacityReserved": False,
             "placements": {
-                name: ("eastus2" if name in {"autoscaler", "acns"} else "centralus")
+                name: ("eastus2" if name in {"acns", "acns-cilium", "operator-secret-watch"} else "centralus")
                 for name in SCENARIOS
             },
             "existing": {name: False for name in SCENARIOS},
@@ -586,6 +591,19 @@ class CandidateEvidenceTest(unittest.TestCase):
                     self.assertIn("variable=validationBuildId;isOutput=true]9791", result.stdout)
                 else:
                     self.assertNotIn("isOutput=true", result.stdout)
+        four_scenarios = ("default", "classic-azure-cni", "acns", "otlp")
+        four = {**proof, "placements": {name: proof["placements"][name] for name in four_scenarios},
+                "existing": {name: False for name in four_scenarios}}
+        for value, passes in ((four, True), (proof, False)):
+            path = self.root / ("four-valid.json" if passes else "four-extra.json")
+            path.write_text(json.dumps(value))
+            result = subprocess.run([sys.executable, "-c", parser, str(path)], capture_output=True, text=True,
+                                    env={**os.environ, "CANDIDATE_SCENARIO": "four-lane",
+                                         "CANDIDATE_SOURCE_SHA": self.sha, "TEST_SOURCE_SHA": "c" * 40,
+                                         "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
+            self.assertEqual(result.returncode == 0, passes, result.stderr)
+            self.assertEqual("variable=location_operator_secret_watch" in result.stdout, False)
+            self.assertNotIn("variable=location_acns_cilium", result.stdout)
 
     def test_failed_aggregate_check_cannot_emit_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
