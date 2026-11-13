@@ -1601,28 +1601,32 @@ def execute(args, scenario, variants, commands):
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
         handoff = not resolved["existing"] or (scenario["id"] == "acns-cilium"
             and ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled") is True)
-        maintenance = scenario["id"] == "acns-cilium" and handoff
-        try:
-            if maintenance:
-                # AKS must delete its DCRA during addon handoff; restore protection even if that fails.
-                host.az("lock", "delete", "--resource-group", group, "--name", "retain-acns-cilium")
-                print("ACNS Cilium lock maintenance: managed-addon handoff only", flush=True)
-            if not resolved["existing"]:
-                host.az("aks", "update", "--resource-group", group, "--name", cluster,
-                        "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
-            host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
-                      "-n", "kube-system", "--timeout=15m", private=True)
-            if handoff:
+        if not resolved["existing"]:
+            host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                    "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
+        host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
+                  "-n", "kube-system", "--timeout=15m", private=True)
+        if handoff:
+            if scenario["id"] == "acns-cilium":
+                # CLI addon disable deletes the DCR/DCRAs still owned by this fixture.
+                host.az("resource", "update", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",
+                        "--set", "properties.azureMonitorProfile.metrics.enabled=false")
+            else:
                 host.az("aks", "update", "--resource-group", group, "--name", cluster,
                         "--disable-azure-monitor-metrics")
-        finally:
-            if maintenance:
-                host.az("lock", "create", "--resource-group", group, "--name", "retain-acns-cilium",
-                        "--lock-type", "CanNotDelete",
-                        "--notes", "Persistent managed ACNS Cilium scenario; retain for future candidate runs.")
-                verify_cilium_lock(host)
+        if scenario["id"] == "acns-cilium":
+            association_url = f"https://management.azure.com{outputs['ruleAssociationId']}?api-version=2023-03-11"
+            host.az("rest", "--method", "put", "--url", association_url,
+                    "--body", json.dumps({"properties": {"dataCollectionRuleId": outputs["dcrId"]}}))
+            observed = host.az("rest", "--method", "get", "--url", association_url, json_output=True)
+            if observed.get("properties", {}).get("dataCollectionRuleId", "").casefold() != outputs["dcrId"].casefold():
+                raise RuntimeError("Cilium handoff requires the owned DCR association")
+            verify_cilium_lock(host)
+            print("Managed ACNS monitoring fixture: owned DCR association and deletion protection verified", flush=True)
         state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
         outputs["kubernetesVersion"] = state["kubernetesVersion"]
+        if scenario["id"] == "acns-cilium":
+            verify_cilium_profile(state)
         if ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"):
             raise RuntimeError("Managed addon is still enabled; refusing competing Helm ownership")
         if handoff:

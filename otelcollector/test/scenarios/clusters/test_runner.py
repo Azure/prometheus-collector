@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import io
+import json
 from pathlib import Path
 import re
 import shutil
@@ -62,11 +63,12 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
-    def test_cilium_handoff_restores_lock_on_failures_and_resumes_existing_addon(self):
+    def test_cilium_handoff_preserves_monitoring_resources_and_resumes_existing_addon(self):
         for scenario_id, reused, enabled, failure in (
                 ("acns-cilium", False, False, "enable"), ("acns-cilium", True, True, "secret"),
                 ("acns-cilium", True, True, "disable"), ("acns-cilium", True, True, "after"),
-                ("acns-cilium", True, False, "after"), ("default", False, False, "enable")):
+                ("acns-cilium", True, True, "association"),
+                ("acns-cilium", True, False, "after"), ("default", False, False, "after")):
             with self.subTest(reused=reused, enabled=enabled, failure=failure), tempfile.TemporaryDirectory() as directory:
                 args = types.SimpleNamespace(
                     evidence=Path(directory), run_id=str(uuid.uuid4()), max_run_seconds=60,
@@ -76,13 +78,20 @@ class Contracts(unittest.TestCase):
                 host = Mock(spec=runner.Host, args=args, reused=reused)
                 host.kubeconfig = Path(directory) / "kubeconfig"
                 host.receipt = {"resourceGroup": "owned"}
-                host.provision.return_value = {"clusterName": "cluster", "workspaceId": "/owned/amw"}
+                host.provision.return_value = {
+                    "clusterName": "cluster", "clusterId": "/owned/cluster", "workspaceId": "/owned/amw",
+                    "dcrId": "/owned/dcr", "ruleAssociationId": "/owned/association",
+                }
                 host.retain.return_value = {"retained": True}
                 events = []
 
                 def az(*a, **kw):
                     if a[:2] == ("aks", "update"):
                         action = "enable" if "--enable-azure-monitor-metrics" in a else "disable"
+                    elif a[:2] == ("resource", "update"):
+                        action = "disable"
+                    elif a[:1] == ("rest",):
+                        action = "association-" + a[a.index("--method") + 1]
                     elif a[:1] == ("lock",):
                         action = a[1]
                     else:
@@ -90,7 +99,16 @@ class Contracts(unittest.TestCase):
                     events.append(action)
                     if action == failure:
                         raise RuntimeError("probe-failure")
-                    return {"level": "CanNotDelete", "id": "/owned/lock", "kubernetesVersion": "1.36.5"}
+                    if action == "association-get":
+                        return {"properties": {"dataCollectionRuleId": "/other" if failure == "association" else "/owned/dcr"}}
+                    return {
+                        "level": "CanNotDelete", "id": "/owned/lock", "kubernetesVersion": "1.36.5",
+                        "networkProfile": {
+                            "networkPlugin": "azure", "networkDataplane": "cilium",
+                            "advancedNetworking": {
+                                "enabled": True, "observability": {"enabled": True}, "security": {"enabled": True}},
+                        },
+                    }
 
                 def kube(*a, **kw):
                     if "secret/aad-msi-auth-token" in a and failure == "secret":
@@ -111,14 +129,22 @@ class Contracts(unittest.TestCase):
                             "agentPoolProfiles": [], "azureMonitorProfile": {"metrics": {"enabled": enabled}}}), \
                         patch.object(runner, "verify_pool_inventory", return_value={}), \
                         patch.object(runner, "render_chart", side_effect=RuntimeError("probe-failure")):
-                    with self.assertRaisesRegex(RuntimeError, "probe-failure"):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "owned DCR association" if failure == "association" else "probe-failure"):
                         runner.execute(args, row, {}, Mock())
-                maintenance = scenario_id == "acns-cilium" and (not reused or enabled)
-                self.assertEqual(events.count("delete"), int(maintenance))
-                self.assertEqual(events.count("create"), int(maintenance))
-                if maintenance:
-                    self.assertLess(events.index("delete"), events.index("create"))
-                    self.assertIn("show", events[events.index("create") + 1:])
+                self.assertNotIn("delete", events)
+                self.assertNotIn("create", events)
+                if scenario_id == "acns-cilium" and "disable" in events:
+                    host.az.assert_any_call("resource", "update", "--ids", "/owned/cluster",
+                                            "--api-version", "2024-10-01", "--set",
+                                            "properties.azureMonitorProfile.metrics.enabled=false")
+                if scenario_id == "acns-cilium" and failure == "after":
+                    self.assertLess(events.index("association-put"), events.index("association-get"))
+                    host.az.assert_any_call("lock", "show", "--resource-group", "owned",
+                                            "--name", "retain-acns-cilium", json_output=True)
+                    body = next(call.args[-1] for call in host.az.call_args_list
+                                if call.args[:3] == ("rest", "--method", "put"))
+                    self.assertEqual(json.loads(body), {"properties": {"dataCollectionRuleId": "/owned/dcr"}})
                 if reused and enabled and failure != "secret":
                     self.assertIn("disable", events)
                 if reused:
@@ -1816,11 +1842,15 @@ def mutations():
     source = SOURCE.read_text()
     changes = {
         "cilium-dns-policy": ('if observed.get("spec") != policy["spec"]:', "if False:"),
-        "cilium-maintenance-scope": (
-            'maintenance = scenario["id"] == "acns-cilium" and handoff', 'maintenance = handoff'),
-        "cilium-lock-restoration": (
-            'host.az("lock", "create", "--resource-group", group, "--name", "retain-acns-cilium",',
-            'host.az("lock", "show", "--resource-group", group, "--name", "retain-acns-cilium",'),
+        "cilium-resource-handoff": (
+            'host.az("resource", "update", "--ids", outputs["clusterId"],',
+            'host.az("aks", "update", "--ids", outputs["clusterId"],'),
+        "cilium-dcr-binding": (
+            'if observed.get("properties", {}).get("dataCollectionRuleId", "").casefold() != outputs["dcrId"].casefold():',
+            'if False:'),
+        "cilium-dcr-restoration": (
+            'json.dumps({"properties": {"dataCollectionRuleId": outputs["dcrId"]}})',
+            'json.dumps({"properties": {"dataCollectionRuleId": "/other"}})'),
         "cilium-reused-handoff": (
             'and ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled") is True)',
             'and False)'),

@@ -85,10 +85,10 @@ verifier remains mandatory before deployment. `acns` runs in `eastus2`;
 from `all` until its live proof passes. The pipeline supplies `--prove-acns-cilium`;
 ordinary runner invocations still honor its `blockedReason`. Its resource group
 has a `CanNotDelete` lock and retains the same narrow bootstrap grants for reuse.
-During the one-time managed-addon handoff only, the runner temporarily removes
-that lane's lock so AKS can delete its DCR association, and restores and verifies
-the lock in `finally` before any candidate tests. A partial handoff is resumed on
-the same retained cluster, never by recreating it.
+The managed-addon handoff uses the AKS resource API, not the CLI disable path
+that deletes the fixture's DCR/DCRAs. It restores and verifies the owned DCR
+association while leaving the lock intact. A partial handoff is resumed on the
+same retained cluster, never by recreating it.
 The Cilium proof also installs and reads back a DNS inspection policy limited to
 the TestKube namespace's workload-identity pods. DNS requests are inspected with
 a wildcard allow rule; all non-DNS ports remain allowed. Cilium requires this
