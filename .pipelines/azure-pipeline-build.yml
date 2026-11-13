@@ -1833,7 +1833,8 @@ extends:
         displayName: "Build: windows 2019 prometheus-collector image"
         pool:
           name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-windows-2022
+          # diagnostic: stable image (runner 20260105) shows a 30m elevated-launch stall; test vNext host build
+          image: ci-1es-managed-windows-2022-vNext
           os: windows
         timeoutInMinutes: 120
         dependsOn:
