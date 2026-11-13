@@ -195,7 +195,8 @@ alias/annotation-namespace ingestion; configprocessing alone does not.
 Catalog `overrideWorkflowLabels: true` declares intentional source-filter
 replacement and is retained in `selection.json`; filters are replaced, not appended.
 
-Health suites use existing reference workloads and scrape fixtures. JUnit
+Health suites use existing reference workloads and scrape fixtures. Kubelet checks
+do not require lazily created runtime-error counters from error-free nodes. JUnit
 records executed/failed/skipped counts; skipped tests are not claimed as executed.
 Pool-specific runtime image evidence is separate from the suite verdict.
 One passing Windows spec does not imply every Windows OS/pool was checked.
