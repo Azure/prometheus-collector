@@ -2250,7 +2250,8 @@ extends:
             for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)"; do
               acr_image="$(WINDOWS_FULL_IMAGE_NAME)-$base_version"
               mcr_image="$(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$base_version"
-              if docker pull "$acr_image"; then
+              # Registry check only: manifest create/sign/oras read the registry, not local images.
+              if docker manifest inspect "$acr_image" > /dev/null; then
                 continue
               fi
 
