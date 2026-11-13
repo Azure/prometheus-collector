@@ -1052,7 +1052,17 @@ def settings_slot(host, variant):
         try:
             for (kind, name, namespace), original in reversed(list(originals.items())):
                 if original is None:
-                    host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
+                    for attempt in range(4):
+                        try:
+                            host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
+                            break
+                        except RuntimeError as failure:
+                            if "ServiceUnavailable" not in str(failure) or attempt == 3:
+                                raise
+                            delay = 2 ** (attempt + 1)
+                            print(f"Retrying settings-slot cleanup after Kubernetes ServiceUnavailable in {delay}s",
+                                  flush=True)
+                            time.sleep(delay)
                 else:
                     host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
                 readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",

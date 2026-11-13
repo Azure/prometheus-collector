@@ -1783,6 +1783,47 @@ class Contracts(unittest.TestCase):
                 host.args.evidence = Path(temporary)
                 runner.settings_slot(host, manifest)
 
+    def test_settings_slot_retries_service_unavailable_deleting_fixture(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = Path(temporary) / "annotation-targets.yaml"
+            fixture.write_text(
+                "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ama-settings-included\n"
+                "---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: annotation-target\n"
+                "  namespace: ama-settings-included\n")
+            host = Mock()
+            host.scenario = scenario()
+            host.args.evidence = Path(temporary)
+            host.args.settle_seconds = 0
+            deletes = 0
+            always_fail = False
+
+            def kube(*args, **kwargs):
+                nonlocal deletes
+                if args[0] == "get":
+                    return ""
+                if args[:3] == ("delete", "Pod", "annotation-target"):
+                    deletes += 1
+                    if deletes == 1 or always_fail:
+                        raise RuntimeError("Error from server (ServiceUnavailable)")
+                return ""
+
+            host.kube.side_effect = kube
+            manifest = dict(variant(), customResources=[fixture])
+            with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                    runner, "label_filter", return_value="case-label"), patch.object(
+                    runner, "run_suite", return_value={"executed": 1}), patch.object(runner.time, "sleep"):
+                runner.settings_slot(host, manifest)
+            self.assertEqual(deletes, 2)
+            always_fail = True
+            deletes = 0
+            host.args.evidence = Path(temporary) / "exhausted"
+            with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                    runner, "label_filter", return_value="case-label"), patch.object(
+                    runner, "run_suite", return_value={"executed": 1}), patch.object(runner.time, "sleep"):
+                with self.assertRaisesRegex(RuntimeError, "Restoration failed"):
+                    runner.settings_slot(host, manifest)
+            self.assertEqual(deletes, 4)
+
     def test_existing_fixture_namespace_is_refused_before_any_mutation(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "namespace.yaml"
