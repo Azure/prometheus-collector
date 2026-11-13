@@ -73,7 +73,7 @@ class Contracts(unittest.TestCase):
         unrelated = {"apiVersion": "v1", "kind": "ConfigMap",
                      "metadata": {"name": "unrelated", "namespace": "kube-system"},
                      "data": {"preserved": "true"}}
-        for lane in ("ampls-proxy", "private-ampls"):
+        for lane in ("ampls-proxy", "ampls"):
             with self.subTest(lane=lane), tempfile.TemporaryDirectory() as temporary:
                 path = Path(temporary) / "settings.yaml"
                 path.write_text(runner.yaml.safe_dump_all([original, unrelated]))
@@ -204,7 +204,7 @@ class Contracts(unittest.TestCase):
                             runner.verify_proxy(host, outputs, 100, private)
 
     def test_private_api_recovery_rejects_nonprivate_scenarios(self):
-        for scenario_id in ("private-ampls", "ampls", "default", "unknown"):
+        for scenario_id in ("ampls-proxy", "ampls", "default", "unknown"):
             with self.subTest(scenario=scenario_id), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 runner.save(root / "ownership.json", {"scenario": scenario_id})
@@ -213,7 +213,7 @@ class Contracts(unittest.TestCase):
                     host.return_value.receipt = {"scenario": scenario_id}
                     host.return_value.assert_owned = Mock()
                     args = ["close-private-api", "--scenario", scenario_id, "--evidence", directory]
-                    if scenario_id == "private-ampls":
+                    if scenario_id == "ampls-proxy":
                         self.assertEqual(runner.main(args), 0)
                         close.assert_called_once()
                     else:
@@ -222,7 +222,7 @@ class Contracts(unittest.TestCase):
                         host.assert_not_called()
 
     def test_ampls_opt_in_preserves_unverified_blockers(self):
-        for scenario_id in ("ampls", "ampls-acns", "private-ampls", "ampls-proxy", "default", "all"):
+        for scenario_id in ("ampls", "ampls-proxy", "default", "all"):
             for opt_in in (False, True):
                 with self.subTest(scenario=scenario_id, opt_in=opt_in), tempfile.TemporaryDirectory() as directory:
                     args = ["plan", "--scenario", scenario_id, "--evidence", directory]
@@ -233,7 +233,7 @@ class Contracts(unittest.TestCase):
                         self.assertEqual(
                             "blockedReason" in runner.load(Path(directory) / "plan.json")["scenario"],
                             scenario_id == "ampls-proxy")
-                    elif scenario_id in ("default", "ampls", "ampls-acns", "private-ampls") and not opt_in:
+                    elif scenario_id in ("default", "ampls") and not opt_in:
                         self.assertEqual(runner.main(args), 0)
                     else:
                         with self.assertRaises(ValueError):

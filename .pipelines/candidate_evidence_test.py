@@ -443,9 +443,9 @@ class CandidateEvidenceTest(unittest.TestCase):
                                   if p.get("name") == "candidateScenario")
         self.assertEqual(pipeline_scenarios, ["all", *SCENARIOS, *VALIDATION_SCENARIOS])
         self.assertIn("split('" + ",".join((*SCENARIOS, *VALIDATION_SCENARIOS)) + "', ',')", pipeline_path.read_text())
-        self.assertIn("notIn(scenario, 'private', 'proxy', 'proxy-custom-ca', 'ampls', 'ampls-acns', 'private-ampls', 'ampls-proxy')",
+        self.assertIn("notIn(scenario, 'private', 'proxy', 'proxy-custom-ca', 'ampls', 'ampls-proxy')",
                       pipeline_path.read_text())
-        self.assertIn("in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'private-ampls', 'ampls-proxy')",
+        self.assertIn("in('${{ parameters.scenario }}', 'private', 'proxy', 'proxy-custom-ca', 'ampls-proxy')",
                       Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         template = yaml.safe_load(Path(__file__).with_name(
             "azure-template-candidate-config-tests.yml").read_text())
@@ -462,14 +462,16 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(rows["otlp"]["settingsVariants"], ["*"])
         self.assertEqual(rows["otlp"]["platforms"], ["linux"])
         self.assertIn("acns-cilium", rows)
+        for retired in ("ampls-acns", "private-ampls"):
+            self.assertNotIn(retired, rows)
+            self.assertFalse((root / "clusters" / f"{retired}.bicepparam").exists())
         self.assertIn("blockedReason", rows["acns-cilium"])
-        verified = {"ampls", "ampls-acns", "private-ampls"}
+        verified = {"ampls"}
         for scenario in VALIDATION_SCENARIOS:
             result = plan(root, scenario)
             self.assertEqual(scenario in {row["id"] for row in result["blockedScenarios"]},
                              scenario not in verified)
             self.assertEqual(scenario in result["applicableScenarios"], scenario in verified)
-        self.assertIn("managed-acns", rows["ampls-acns"]["ginkgoLabels"])
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])

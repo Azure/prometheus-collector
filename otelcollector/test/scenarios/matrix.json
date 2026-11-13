@@ -59,15 +59,6 @@
       "tier": "weekly"
     },
     {
-      "id": "private-ampls",
-      "cluster": "clusters/private-ampls.bicepparam",
-      "clusterFeatures": ["aks", "windows", "private-api", "ampls", "private-query", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
-      "tier": "weekly"
-    },
-    {
       "id": "proxy",
       "cluster": "clusters/proxy.bicepparam",
       "clusterFeatures": ["aks", "private-api", "http-proxy", "workload-identity", "operator"],
@@ -115,15 +106,6 @@
       "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns"],
       "tier": "weekly",
       "blockedReason": "Requires independently verified managed ACNS plus controlled DNS/forward traffic before the managed-acns selector."
-    },
-    {
-      "id": "ampls-acns",
-      "cluster": "clusters/ampls-acns.bicepparam",
-      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "managed-acns", "workload-identity", "operator"],
-      "settingsVariants": ["default"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns"],
-      "tier": "weekly"
     },
     {
       "id": "customer-helm",

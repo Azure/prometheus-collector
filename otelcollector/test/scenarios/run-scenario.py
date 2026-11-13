@@ -42,10 +42,10 @@ CAMPAIGN_LOCATIONS = {
     "default": "centralus", "classic-azure-cni": "centralus",
     "acns": "eastus2", "otlp": "centralus",
     "private": "westcentralus", "proxy": "westcentralus", "proxy-custom-ca": "westcentralus",
-    "ampls": "centralus", "ampls-acns": "eastus2", "private-ampls": "westcentralus",
+    "ampls": "centralus",
     "ampls-proxy": "westcentralus",
 }
-VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca", "ampls", "ampls-acns", "private-ampls", "ampls-proxy"}
+VALIDATION_LANES = {"private", "proxy", "proxy-custom-ca", "ampls", "ampls-proxy"}
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
          "ama-metrics-prometheus-config-node", "ama-metrics-prometheus-config-node-windows")
 COMPONENTS = {"prometheus-collector": "collector", "targetallocator": "targetallocator",
