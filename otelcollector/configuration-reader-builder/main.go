@@ -322,11 +322,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		duration := time.Since(cfgReaderContainerStartTime)
-		// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
-		if duration.Hours() > (5 * 30 * 24) {
+		duration := time.Since(tlsRotationReference())
+		// Server certificate validity is for 8 months, so if the container or the TLS material in use is
+		// older than 5 months, restart the container so that new material is generated
+		if duration > tlsRotationAge {
 			status = http.StatusServiceUnavailable
-			message = "\nconfig-reader container is running for more than 5 months, restart the container"
+			message = "\nconfig-reader container or TLS certificates are older than 5 months, restart the container"
 		}
 	}
 
@@ -526,6 +527,19 @@ func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string
 }
 
 func createTLSCertificatesAndSecret() (error, error, error, error, error) {
+	// Reuse valid existing material so that a config-reader restart (for example a settings
+	// hot-reload) does not rotate the client/server secrets. A rotation restarts every replicaset
+	// collector a second time through its client-cert watch. tlsRotationAge still bounds the age of
+	// the material in use through healthHandler.
+	generationTime := time.Now()
+	issuedAt, reuseErr := reuseExistingOperatorTargetsTLS(generationTime)
+	if reuseErr == nil {
+		activeTLSIssuedAt = issuedAt
+		log.Printf("Reusing existing operator-targets TLS certificates issued at %s; secrets not updated", issuedAt.UTC().Format(time.RFC3339))
+		return nil, nil, nil, nil, nil
+	}
+	log.Printf("Existing operator-targets TLS certificates not reused: %v", reuseErr)
+
 	log.Println("Generating TLS certificates and secret")
 	certCreator := certCreator.NewCertCreator()
 	certGenerator := certGenerator.NewCertGenerator(certCreator)
@@ -564,6 +578,9 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 		if clientSecretErr != nil {
 			log.Println("Error generating secret for replciaset: %v\n", clientSecretErr)
 		}
+	}
+	if caErr == nil && serErr == nil && cliErr == nil && serverSecretErr == nil && clientSecretErr == nil {
+		activeTLSIssuedAt = generationTime
 	}
 	log.Println("TLS certificates and secret generated successfully")
 	return caErr, serErr, cliErr, serverSecretErr, clientSecretErr
