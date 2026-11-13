@@ -86,15 +86,18 @@ class Contracts(unittest.TestCase):
             completed = types.SimpleNamespace(returncode=1, stdout="Internal Access Denied never-print-this",
                                               stderr="private-stderr-never-print-this")
             with patch.object(runner.shutil, "which", return_value="bash"), \
-                    patch.object(runner.subprocess, "run", return_value=completed):
+                    patch.object(runner.subprocess, "run", return_value=completed) as command:
                 with self.assertRaises(RuntimeError) as failure:
-                    commands.run(["bash", "private-workflow"], private=True)
+                    commands.run(["bash", "private-workflow"], data="private-stdin-never-print-this", private=True)
+                self.assertEqual(command.call_args.kwargs["input"], "private-stdin-never-print-this")
             self.assertIn("output redacted", str(failure.exception))
             self.assertNotIn("Internal Access Denied", str(failure.exception))
             self.assertNotIn("never-print-this", str(failure.exception))
             log = (Path(temporary) / "commands.log").read_text()
             self.assertNotIn(completed.stdout, log)
             self.assertNotIn(completed.stderr, log)
+            self.assertNotIn("private-stdin-never-print-this", log)
+            self.assertNotIn("private-stdin-never-print-this", (Path(temporary) / "commands.json").read_text())
             self.assertEqual(len(runner.load(Path(temporary) / "commands.json")), 4)
 
     def test_suite_failure_preserves_cause_context_and_generated_file_cleanup(self):
@@ -1648,7 +1651,10 @@ class Contracts(unittest.TestCase):
                              ("rollout", "status", "deployment/testkube-api-server",
                               "-n", "testkube", "--timeout=15m"))
             self.assertEqual(host.az_with_rbac_retry.call_count, 1)
-            helm = next(c.args[0] for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+            helm = helm_call.args[0]
+            self.assertIsNone(helm_call.kwargs["data"])
+            self.assertNotIn("-", helm)
             for setting in ("testkube-api.storage.endpoint=testkube-minio-service-testkube.testkube.svc.cluster.local:9000",
                             "testkube-api.minio.podSecurityContext.fsGroup=1001",
                             "mongodb.nodeAffinityPreset.type=hard",
@@ -1676,6 +1682,64 @@ class Contracts(unittest.TestCase):
             self.assertEqual(federation[federation.index("--issuer") + 1], "https://issuer.example/")
             proof = runner.load(Path(temporary) / "testkube-bootstrap.json")
             self.assertIn("not submitted", proof["workloadIdentityExecution"])
+            proxy = {
+                "httpProxy": "http://proxy.example:3128",
+                "httpsProxy": "http://secure-proxy.example:3128",
+                "noProxy": ["localhost", "127.0.0.1", "169.254.169.254", "10.0.0.0/16",
+                            ".svc", ".cluster.local", ".azmk8s.io", "customer.internal"],
+            }
+            proxy["effectiveNoProxy"] = [*proxy["noProxy"], "aks-injected.internal",
+                                        "private-api.private.eastus2.azmk8s.io"]
+            for profile in (proxy, {k: v for k, v in proxy.items() if k != "httpsProxy"},
+                            dict(proxy, enabled=False)):
+                with self.subTest(proxy_enabled=profile.get("enabled"), https="httpsProxy" in profile):
+                    cluster["httpProxyConfig"] = profile
+                    host.commands.run.reset_mock()
+                    runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+                    helm_call = next(c for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
+                    self.assertTrue(helm_call.kwargs["private"])
+                    self.assertNotIn(proxy["httpProxy"], str(helm_call.args))
+                    self.assertNotIn(proxy["httpsProxy"], str(helm_call.args))
+                    cluster_call = next(c for c in host.az.call_args_list if c.args[:2] == ("aks", "show"))
+                    self.assertTrue(cluster_call.kwargs["private"])
+                    if profile.get("enabled") is False:
+                        self.assertIsNone(helm_call.kwargs["data"])
+                        self.assertNotIn("-", helm_call.args[0])
+                        continue
+                    self.assertEqual(helm_call.args[0].count("--values"), 2)
+                    self.assertIn("-", helm_call.args[0])
+                    environment = [
+                        {"name": name, "value": value}
+                        for key, value in (("HTTP_PROXY", proxy["httpProxy"]),
+                                           ("HTTPS_PROXY", profile.get("httpsProxy", proxy["httpProxy"])),
+                                           ("NO_PROXY", ",".join(proxy["effectiveNoProxy"])))
+                        for name in (key, key.lower())
+                    ]
+                    self.assertEqual(runner.yaml.safe_load(helm_call.kwargs["data"]), {
+                        "global": {"testWorkflows": {"globalTemplate": {
+                            "enabled": True, "inline": True, "spec": {"container": {"env": environment}},
+                        }}},
+                    })
+            cluster["httpProxyConfig"] = {k: v for k, v in proxy.items() if k != "effectiveNoProxy"}
+            host.commands.run.reset_mock()
+            with self.assertRaisesRegex(ValueError, "effectiveNoProxy"):
+                runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            host.commands.run.assert_not_called()
+            for key, endpoint in (
+                ("httpProxy", "http://user:do-not-persist@proxy.example:3128"),
+                ("httpsProxy", "http://user:do-not-persist@proxy.example:3128"),
+                ("httpsProxy", "http://proxy.example:3128?token=do-not-persist"),
+                ("httpProxy", "http://proxy.example:3128#do-not-persist"),
+                ("httpProxy", "http://user:do-not-persist@proxy.example\uff1a3128"),
+            ):
+                with self.subTest(proxy_endpoint=key):
+                    cluster["httpProxyConfig"] = dict(proxy, **{key: endpoint})
+                    host.commands.run.reset_mock()
+                    with self.assertRaisesRegex(ValueError, "credential-free") as failure:
+                        runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+                    self.assertNotIn("do-not-persist", str(failure.exception))
+                    host.commands.run.assert_not_called()
+            cluster.pop("httpProxyConfig")
             host.scenario = {"id": "acns", "clusterFeatures": ["managed-acns"]}
             cluster["networkProfile"] = {"advancedNetworking": {
                 "enabled": True, "observability": {"enabled": True},
@@ -1896,6 +1960,15 @@ def mutations():
         "explicit-labels": ("if not labels:", "if False:"),
         "time-budget": ("if timeout <= 0:", "if False:"),
         "auto-upgrade": ('if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":', "if False:"),
+        "workflow-clone-proxy-defaults": (
+            'if proxy.get("enabled") is not False and (proxy.get("httpProxy") or proxy.get("httpsProxy")):',
+            "if False:"),
+        "workflow-proxy-complete-bypass": (
+            'bypass = proxy.get("effectiveNoProxy")',
+            'bypass = proxy.get("noProxy")'),
+        "workflow-proxy-credential-rejection": (
+            'or parsed.username is not None or parsed.password is not None',
+            'or False'),
         "workflow-status": ('result.get("status") != "passed"', "False"),
         "workflow-provenance": ('result.get("test_source_sha") != source_sha', "False"),
         "workflow-selection": ('row.get("workflow") != workflow', "False"),
