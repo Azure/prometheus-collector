@@ -283,6 +283,21 @@ func validateAnnotationTargets(targets []transitionTarget, allowed []string, aft
 	return nil
 }
 
+func validateAnnotationReload(pod corev1.Pod, logs string, version string, after time.Time) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name == "prometheus-collector" && status.Ready && status.State.Running != nil &&
+			(after.IsZero() || !status.State.Running.StartedAt.Time.Before(after.Truncate(time.Second))) {
+			for _, line := range strings.Split(logs, "\n") {
+				line = strings.ReplaceAll(strings.ReplaceAll(line, "\x1b[0;36m", ""), "\x1b[0m", "")
+				if strings.TrimSpace(line) == "AZMON_AGENT_CFG_FILE_VERSION="+version {
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("%s has not started with settings version %s", pod.Name, version)
+}
+
 func expectAnnotationNamespaces(api promv1.API, cluster string, expected annotationExpectation, after time.Time) {
 	checkTargets := func() error {
 		responses, err := utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", "rsName", "ama-metrics",
@@ -458,7 +473,32 @@ var _ = Describe("Annotation namespace regex edges", Serial, func() {
 					}},
 					{"invalid.yaml", annotationExpectation{}},
 				} {
+					var desired corev1.ConfigMap
+					Expect(yaml.Unmarshal(transitionFixture("annotation-regex-edges-"+schema, phase.file), &desired)).To(Succeed())
+					current, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+						"ama-metrics-settings-configmap", metav1.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					changed := !maps.Equal(current.Data, desired.Data)
 					started := settingsPhase("annotation-regex-edges-"+schema, phase.file)
+					version := desired.Data["config-version"]
+					if len(version) > 10 {
+						version = version[:10]
+					}
+					after := time.Time{}
+					if changed {
+						after = started
+					}
+					Eventually(func(g Gomega) {
+						pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics")
+						g.Expect(err).NotTo(HaveOccurred())
+						for _, pod := range pods {
+							logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pod.Name, &corev1.PodLogOptions{
+								Container: "prometheus-collector",
+							}).DoRaw(context.Background())
+							g.Expect(err).NotTo(HaveOccurred())
+							g.Expect(validateAnnotationReload(pod, string(logs), version, after)).To(Succeed())
+						}
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
 					if phase.file == "invalid.yaml" {
 						Eventually(func(g Gomega) {
 							for _, source := range []struct{ label, container string }{
@@ -651,6 +691,23 @@ var _ = Describe("Dedicated Windows kube-proxy ingestion", Label(utils.ConfigPro
 
 func TestSettingsTransitionGuards(t *testing.T) {
 	now := time.Now()
+	pod := corev1.Pod{Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{
+		Name: "prometheus-collector", Ready: true,
+		State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(now.Add(time.Second))}},
+	}}}}
+	if err := validateAnnotationReload(pod, "\x1b[0;36mAZMON_AGENT_CFG_FILE_VERSION\x1b[0m=regex-empt\n", "regex-empt", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-defa\n", "regex-empt", now); err == nil {
+		t.Fatal("the previous equivalent settings must not prove the new phase reloaded")
+	}
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-empt\n", "regex-empt", now.Add(2*time.Second)); err == nil {
+		t.Fatal("a collector started before the settings change must not prove reload")
+	}
+	pod.Status.ContainerStatuses[0].Ready = false
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-empt\n", "regex-empt", now); err == nil {
+		t.Fatal("an unready collector must not prove reload")
+	}
 	valid := transitionTarget{ScrapePool: "expected/0", Health: "down", LastError: "HTTP401", LastScrape: now}
 	if err := validateTransitionTargets([]transitionTarget{valid}, []string{"expected/0"}, "down", now); err != nil {
 		t.Fatal(err)
