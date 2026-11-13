@@ -23,7 +23,7 @@ spec:
             value: auto
       shell: |
         mkdir -p /data/reports
-        ginkgo run --fail-on-empty --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r --label-filter "config-processing-customer-settings-v1" ./configprocessing
+        ginkgo run --fail-on-empty --timeout=3h --junit-report=/data/reports/junit.xml --json-report=/data/reports/ginkgo.json -r --label-filter "config-processing-customer-settings-v1" ./configprocessing
     - name: Retain Ginkgo evidence
       condition: always
       artifacts:

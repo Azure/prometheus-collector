@@ -64,6 +64,81 @@ func settingsPhase(variant, file string) time.Time {
 	return started
 }
 
+// settingsChanged reports whether applying the fixture would change the live settings ConfigMap,
+// that is, whether the phase triggers a collector and config-reader reload.
+func settingsChanged(variant, file string) bool {
+	var desired corev1.ConfigMap
+	Expect(yaml.Unmarshal(transitionFixture(variant, file), &desired)).To(Succeed())
+	current, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+		"ama-metrics-settings-configmap", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	return !maps.Equal(current.Data, desired.Data)
+}
+
+// collectorSettleQuietPeriod is how long the ama-metrics replicaset collectors, the config-reader
+// and the target allocator must run without restarting before a phase is observed. Every
+// config-reader start regenerates the operator-targets TLS secrets. When that projection reaches a
+// collector whose client-cert watch is already running, the liveness probe (120 s initial delay,
+// 15 s period, 3 failures) restarts the collector once more. In 979 run 132116 that happened
+// 60-90 s after the reader restart. Three quiet minutes after the latest restart covers it.
+const collectorSettleQuietPeriod = 3 * time.Minute
+
+var settledContainers = []struct {
+	label, container string
+	reloads          bool // restarts on every settings change
+}{
+	{"ama-metrics", "prometheus-collector", true},
+	{"ama-metrics-operator-targets", "config-reader", true},
+	{"ama-metrics-operator-targets", "targetallocator", false},
+}
+
+// validateContainerSettled requires the container to be ready and running, to have started at or
+// after since when since is set, and to have run for at least quiet.
+func validateContainerSettled(pod corev1.Pod, container string, since, now time.Time, quiet time.Duration) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name != container {
+			continue
+		}
+		if !status.Ready || status.State.Running == nil {
+			return fmt.Errorf("%s/%s is not ready and running", pod.Name, container)
+		}
+		startedAt := status.State.Running.StartedAt.Time
+		if !since.IsZero() && startedAt.Before(since.Truncate(time.Second)) {
+			return fmt.Errorf("%s/%s has not reloaded since the settings change at %s", pod.Name, container,
+				since.UTC().Format(time.RFC3339))
+		}
+		if running := now.Sub(startedAt); running < quiet {
+			return fmt.Errorf("%s/%s restarted %s ago; waiting for %s without a restart", pod.Name, container,
+				running.Round(time.Second), quiet)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s has no %s container status", pod.Name, container)
+}
+
+// waitForCollectorsSettled waits until the collectors, config-reader and target allocator have
+// reloaded after since (when set) and then run for collectorSettleQuietPeriod without a restart,
+// so that follow-on liveness restarts finish before any phase observation starts. It only delays
+// observation; every phase assertion still runs unchanged afterwards.
+func waitForCollectorsSettled(since time.Time) {
+	Eventually(func(g Gomega) {
+		now := time.Now()
+		for _, source := range settledContainers {
+			pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", source.label)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(pods).NotTo(BeEmpty(), "no %s pods", source.label)
+			reloadSince := time.Time{}
+			if source.reloads {
+				reloadSince = since
+			}
+			for _, pod := range pods {
+				g.Expect(validateContainerSettled(pod, source.container, reloadSince, now, collectorSettleQuietPeriod)).To(Succeed())
+			}
+		}
+	}, collectorSettleQuietPeriod+10*time.Minute, 15*time.Second).Should(Succeed())
+	AddReportEntry("collectors-settled", time.Now().UTC().Format(time.RFC3339Nano))
+}
+
 func restoreSettingsAfterTransition() {
 	cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
 		"ama-metrics-settings-configmap", metav1.GetOptions{})
@@ -401,7 +476,13 @@ var _ = Describe("Customer alias and annotation transitions", Serial, func() {
 					{"namespace-updated.yaml", fallback, "ama-settings-excluded"},
 					{"namespace-removed.yaml", fallback, ""},
 				} {
+					changed := settingsChanged("customer-transitions-"+schema, phase.file)
 					started := settingsPhase("customer-transitions-"+schema, phase.file)
+					since := time.Time{}
+					if changed {
+						since = started
+					}
+					waitForCollectorsSettled(since)
 					Eventually(func() error {
 						targets, err := transitionTargets()
 						if err != nil {
@@ -526,6 +607,7 @@ var _ = Describe("Annotation namespace regex edges", Serial, func() {
 						}, 8*time.Minute, 15*time.Second).Should(Succeed())
 						AddReportEntry("invalid-annotation-regex", "diagnostic verified after normal collector/reader reload")
 					}
+					waitForCollectorsSettled(after)
 					expectAnnotationNamespaces(api, cluster, phase.expected, started)
 					expectTransitionMetric(api, "up", "kubelet", cluster, "", started)
 				}
@@ -612,6 +694,7 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 				}
 			}
 			It("reloads the dummy Secret from rejected credentials to authenticated fresh ingestion without a restart", func() {
+				waitForCollectorsSettled(time.Time{})
 				started, restarts := time.Now(), collectorRestarts()
 				Eventually(func() error { return monitorTransitionState(jobs, "deliberately-invalid-test-user", false) },
 					8*time.Minute, 15*time.Second).Should(Succeed())
@@ -647,6 +730,7 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 						}
 						return monitorTransitionState(jobs, "admin", false)
 					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					waitForCollectorsSettled(time.Time{})
 					instance, err = allocatorInstance()
 					Expect(err).NotTo(HaveOccurred())
 					replaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
@@ -688,6 +772,39 @@ var _ = Describe("Dedicated Windows kube-proxy ingestion", Label(utils.ConfigPro
 		expectWindowsKubeProxy(transitionAPI(), transitionCluster(), time.Now())
 	})
 })
+
+func TestCollectorSettleGuard(t *testing.T) {
+	now := time.Now()
+	since := now.Add(-5 * time.Minute)
+	podStartedAt := func(startedAt time.Time, ready bool) corev1.Pod {
+		return corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "ama-metrics-test"},
+			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{
+				Name: "prometheus-collector", Ready: ready,
+				State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(startedAt)}},
+			}}},
+		}
+	}
+	quiet := collectorSettleQuietPeriod
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), true), "prometheus-collector", since, now, quiet); err != nil {
+		t.Fatalf("a collector reloaded after the change and quiet for 4m must be settled: %v", err)
+	}
+	if err := validateContainerSettled(podStartedAt(now.Add(-time.Minute), true), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("a collector that restarted within the quiet period (follow-on liveness restart) must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(-time.Minute), true), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("a collector that has not reloaded since the settings change must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(-time.Minute), true), "prometheus-collector", time.Time{}, now, quiet); err != nil {
+		t.Fatalf("without a settings change only the quiet period applies: %v", err)
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), false), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("an unready collector must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), true), "config-reader", since, now, quiet); err == nil {
+		t.Fatal("a missing container status must not be settled")
+	}
+}
 
 func TestSettingsTransitionGuards(t *testing.T) {
 	now := time.Now()
