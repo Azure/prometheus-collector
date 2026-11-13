@@ -13,6 +13,7 @@ param location string
 param kubernetesVersion string
 @minLength(1)
 param owner string
+param sreWorkspaceAssignmentId string = ''
 @secure()
 param windowsAdminPassword string = ''
 param windowsAdminUsername string = 'scenarioadmin'
@@ -49,6 +50,11 @@ var tags = {
   run: runName
 }
 var networkContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
+var srePrincipalId = 'e2bd6e9c-e75e-438b-8f57-2bb62327f346'
+var monitoringDataReader = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
+var sreWorkspaceScope = resourceId('Microsoft.Monitor/accounts', '${clusterName}-amw')
+// An owned AMW is not necessarily the AMW this deployment creates.
+var sreWorkspaceAssignmentValid = empty(sreWorkspaceAssignmentId) || startsWith(toLower(sreWorkspaceAssignmentId), '${toLower(sreWorkspaceScope)}/providers/microsoft.authorization/roleassignments/')
 var effectivePrivateApi = privateApi || proxyEnabled
 var effectiveNoProxy = union(
   ['localhost', '127.0.0.1', '169.254.169.254', '168.63.129.16', '10.224.0.0/12', '10.244.0.0/16', '10.0.0.0/16', '.svc', '.cluster.local', '.azmk8s.io'],
@@ -68,7 +74,7 @@ module guards 'guards.bicep' = {
     proxyNeedsSshKey: any(!proxyEnabled || startsWith(proxyAdminSshPublicKey, 'ssh-'))
     proxyCaNeedsProxy: any(!proxyCustomCa || proxyEnabled)
     proxyNoProxyIsScoped: any(!proxyEnabled || (!contains(join(noProxy, ','), '*') && !contains(noProxy, '0.0.0.0/0') && !contains(noProxy, '::/0')))
-    validPoolPlan: any(length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
+    validPoolPlan: any(sreWorkspaceAssignmentValid && length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
     classicNeedsAzure: any(azureCniMode != 'classic' || dataplane == 'azure')
     // Keep Windows FIPS on the declared SKU; expanding this coverage needs explicit regional image/SKU preflight.
     windowsFipsVmSupported: any(empty(filter(nodePools, pool => pool.osType == 'Windows' && pool.fips && pool.vmSize != 'Standard_D4s_v4')))
@@ -334,6 +340,17 @@ resource workspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   location: location
   tags: tags
   properties: { publicNetworkAccess: privateMonitoring ? 'Disabled' : 'Enabled' }
+  dependsOn: [guards]
+}
+
+resource sreWorkspaceReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: empty(sreWorkspaceAssignmentId) ? guid(workspace.id, srePrincipalId, monitoringDataReader) : last(split(sreWorkspaceAssignmentId, '/'))
+  scope: workspace
+  properties: {
+    principalId: srePrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: monitoringDataReader
+  }
 }
 
 resource dce 'Microsoft.Insights/dataCollectionEndpoints@2023-03-11' = {

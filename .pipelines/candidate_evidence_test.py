@@ -141,7 +141,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.write("ownership.json", '{"token":"DO_NOT_UPLOAD"}')
         self.write("kubeconfig", "DO_NOT_UPLOAD")
         proof = self.evidence / "rbac-bootstrap.json"
-        for publish, status in ((True, 23), (False, 0), (False, 143)):
+        for publish, status, bootstrap_status in ((True, 23, "waiting"), (True, 23, "granted"),
+                                                  (False, 0, None), (False, 143, None)):
             proof.unlink(missing_ok=True)
             command = "kill -TERM $$" if status == 143 else f"sleep 4; exit {status}"
             output_path = self.root / "watcher-output.txt"
@@ -159,11 +160,14 @@ class CandidateEvidenceTest(unittest.TestCase):
             )
             try:
                 if publish:
+                    self.write("rbac-bootstrap.ps1", "safe administrator script")
                     self.write("rbac-bootstrap.json", '{"status":')
                     time.sleep(0.3)
                     self.assertIsNone(process.poll())
                     self.assertEqual(output_path.read_text(), "")
-                    self.write("rbac-bootstrap.json", '{"status":"waiting","scope":"/subscriptions/test/resourceGroups/new","principalId":"principal","token":"DO_NOT_UPLOAD"}')
+                    self.write("rbac-bootstrap.json", json.dumps({
+                        "status": bootstrap_status, "scope": "/subscriptions/test/resourceGroups/new",
+                        "principalId": "principal", "token": "DO_NOT_UPLOAD"}))
                     deadline = time.monotonic() + 8
                     while not output_path.read_text() and process.poll() is None and time.monotonic() < deadline:
                         time.sleep(0.1)
@@ -174,6 +178,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                     self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=candidate-rbac-bootstrap-979123-default-1-2;artifactname=candidate-rbac-bootstrap-979123-default-1-2]" + public.as_posix())
                     data = json.loads(public.read_text())
                     self.assertNotIn("DO_NOT_UPLOAD", public.read_text())
+                    self.assertEqual(data["script"], "safe administrator script")
                     self.assertEqual((data["validationBuildId"], data["candidateSourceSha"], data["producerBuildId"], data["scenario"]), ("979123", "source", "131161", "default"))
                     self.assertEqual(data["runId"], "12345678-1234-1234-1234-123456789abc")
                 _, errors = process.communicate(timeout=10)

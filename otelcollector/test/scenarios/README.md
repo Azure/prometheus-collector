@@ -236,6 +236,8 @@ Failed deployments retain `deployment-error.txt` with secret-bearing environment
 values redacted. Command history survives a separate explicit cleanup invocation.
 Private role-assignment listing failures expose only allowlisted Azure error codes
 in the raised error and `result.json`; unknown errors and all other output stay private.
+New provisioning requires a ServicePrincipal so the independently authorized
+bootstrap can cover managed groups even if the runner times out.
 Service-principal runs create their owned resource group, then wait up to 20 minutes
 for an administrator bootstrap before deploying. The runner prints the exact
 `az role assignment create` command in `rbac-bootstrap.ps1` plus
@@ -243,12 +245,19 @@ for an administrator bootstrap before deploying. The runner prints the exact
 Azure session; it retries only `AuthorizationFailed` on
 `Microsoft.Authorization/roleAssignments/write` for at most 10 minutes. No token
 or credential is transferred to the runner.
-The delegation is **Role Based Access Control Administrator**, scoped only to this
-new group, with condition version 2.0 restricting both assignment creation and
+Keep that script running while ARM creates the cluster: it discovers the sibling
+groups through the owned AKS and AMW provider associations, grants their narrow
+delegations and SRE Readers, then exits after both are confirmed. Missing groups
+at terminal deployment state fail explicitly; the script is independent of the
+runner's timeout.
+The parent-group delegation is **Role Based Access Control Administrator**,
+with condition version 2.0 restricting both assignment creation and
 deletion to Network Contributor and Monitoring Data Reader for service principals.
-Only the custom-CA profile additionally permits Reader. It cannot delegate Owner,
-User Access Administrator or itself. Only groups matching the persistent ownership
-contract can be reused.
+It additionally permits Reader creation only for the SRE managed identity;
+the custom-CA profile retains its existing Reader allowance.
+Managed-group delegations permit only Reader creation for that same SRE principal.
+None can delegate Owner, User Access Administrator or itself.
+Only groups matching the persistent ownership contract can be reused.
 The gate requires the exact principal, group, role and condition; missing or wider
 delegations do not satisfy it. Timeout fails and retains any created resources for
 inspection. Actual ARM deployment remains the permission-propagation check, not
@@ -260,6 +269,18 @@ capped at 5 minutes. Direct writes recheck the exact unconditional assignment
 after a denial; credentials are refreshed only when the error requests it.
 User writes remain single-attempt, and unrelated failures are not retried.
 Bootstrap prechecks skip existing exact workspace grants on reused hosts.
+
+Bootstrap retains Reader on the owned parent, AKS node and AMW-managed resource
+groups, plus Monitoring Data Reader on the AMW itself, for SRE principal
+`e2bd6e9c-e75e-438b-8f57-2bb62327f346`. Existing exact, unconditional
+ServicePrincipal assignments are reused, including manually assigned GUIDs.
+These read grants are never revoked and require no separate per-run SRE approval.
+Legacy pipeline delegations without the principal-bound Reader permission require
+an authorized, one-time migration through this script at their next bootstrap.
+Only the exact known legacy condition is updated in place on the same assignment,
+preserving its scope, principal and roles; the approved condition is read back.
+Unknown or wider conditions fail without deletion or replacement. Partial
+read-grant completion is a failure, not a successful run.
 
 Persistent hosts retain their conditional administrator delegation and narrower
 workload grants for future runs. The runner refuses bootstrap revocation for
@@ -347,13 +368,17 @@ The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
 shared metric assertions remain, but the autoscaler scale-up spec is no longer
 selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
 `operator-secret-watch` lane in eastus2: only this row selects the highest explicitly
-advertised stable **KubernetesOfficial** Kubernetes 1.37 patch, even when it is
-not the regional default. `isPreview: null` is not a preview opt-in; explicit preview
-and LTS-only versions are excluded. If no eligible version exists, preflight fails
-before provisioning. The retained cluster must actually run 1.37, and its deployment
-uses the `linux` profile tag while its resource group retains the scenario's own
-ownership tags. Other rows retain the regional default; aggregate admission
-records each row's version separately. Customer Helm is separately blocked, giving 41 catalog inputs
+advertised AKS Kubernetes preview patch at or above 1.37, even when it is not the
+regional default. `isPreview` must be `true`; stable, null and unmarked entries are
+not preview versions. If no eligible preview exists, preflight fails before
+provisioning rather than falling back to stable. The retained cluster is upgraded
+with `az aks upgrade` in place when it is behind the selected preview; the runner
+never recreates it, and verifies its existing deletion-protection locks before an
+upgrade. A retained version newer than the advertised target is rejected, not
+downgraded. Its deployment uses the `linux` profile tag while its resource group
+retains the scenario's own ownership tags. Other rows retain the regional default;
+aggregate admission records each row's version and any retained-cluster upgrade
+plan separately. Customer Helm is separately blocked, giving 41 catalog inputs
 (40 runnable) without claiming live passes. Deferred true password rotation is
 metadata, not an executable settings assignment.
 

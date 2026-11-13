@@ -129,9 +129,10 @@ def validate_matrix(document, variants, check_paths=True):
 
 def select_version(document, scenario=None):
     scoped_secrets = scenario is not None and "secrets-watch-enforcement" in scenario["clusterFeatures"]
+    preview_secrets = scenario is not None and scenario["id"] == "operator-secret-watch"
     rows = [r for r in document.get("values", document.get("orchestrators", []))
-            if not r.get("isPreview") and
-            ("KubernetesOfficial" in r.get("capabilities", {}).get(
+            if ((r.get("isPreview") is True) if preview_secrets else not r.get("isPreview"))
+            and (preview_secrets or "KubernetesOfficial" in r.get("capabilities", {}).get(
                 "supportPlan", [] if scoped_secrets else ["KubernetesOfficial"]))]
     eligible = []
     for row in rows:
@@ -143,17 +144,26 @@ def select_version(document, scenario=None):
         for version in versions:
             if re.fullmatch(r"\d+\.\d+\.\d+", version):
                 key = tuple(map(int, version.split(".")))
-                if (not scoped_secrets or
-                        (key >= (1, 37, 0) and
-                         (scenario["id"] != "operator-secret-watch" or key[:2] == (1, 37)))):
+                if not scoped_secrets or key >= (1, 37, 0):
                     eligible.append(key)
     if not eligible:
         if scoped_secrets:
-            requirement = "1.37" if scenario["id"] == "operator-secret-watch" else ">=1.37"
+            requirement = "preview >=1.37" if preview_secrets else "stable official >=1.37"
             raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
-                             f"stable official regional Kubernetes {requirement} version")
+                             f"regional Kubernetes {requirement} version")
         raise ValueError("Region returned no stable official default Kubernetes version")
     return ".".join(map(str, max(eligible)))
+
+
+def version_key(version):
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version or ""):
+        raise ValueError(f"Invalid Kubernetes version: {version}")
+    return tuple(map(int, version.split(".")))
+
+
+def log_resolved_version(scenario, location, version):
+    if scenario["id"] == "operator-secret-watch":
+        print(f"Resolved latest regional AKS preview for {location}: Kubernetes {version}", flush=True)
 
 
 def windows_image_compatible(host, image):
@@ -342,6 +352,7 @@ RBAC_ALLOWED_ROLES = [
     RBAC_MONITORING_DATA_READER,
 ]
 RBAC_PROXY_READER = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+SRE_PRINCIPAL = "e2bd6e9c-e75e-438b-8f57-2bb62327f346"
 
 
 def persistent_identity(scenario):
@@ -351,16 +362,32 @@ def persistent_identity(scenario):
     return "ama-e2e-persistent-" + scenario, owner
 
 
-def rbac_condition(allowed):
+def rbac_condition(allowed, sre=False):
     clauses = []
     for action, source in (("write", "Request"), ("delete", "Resource")):
+        roles = (f"@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
+                 f"ForAnyOfAnyValues:GuidEquals {{{', '.join(allowed)}}}")
+        if sre and action == "write" and RBAC_PROXY_READER not in allowed:
+            roles = (f"({roles} OR (@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
+                     f"ForAnyOfAnyValues:GuidEquals {{{RBAC_PROXY_READER}}} AND "
+                     f"@{source}[Microsoft.Authorization/roleAssignments:PrincipalId] "
+                     f"ForAnyOfAnyValues:GuidEquals {{{SRE_PRINCIPAL}}}))")
         clauses.append(
             f"((!(ActionMatches{{'Microsoft.Authorization/roleAssignments/{action}'}})) OR "
-            f"(@{source}[Microsoft.Authorization/roleAssignments:RoleDefinitionId] "
-            f"ForAnyOfAnyValues:GuidEquals {{{', '.join(allowed)}}} AND "
+            f"({roles} AND "
             f"@{source}[Microsoft.Authorization/roleAssignments:PrincipalType] "
             "ForAnyOfAnyValues:StringEqualsIgnoreCase {'ServicePrincipal'}))")
     return " AND ".join(clauses)
+
+
+def sibling_rbac_condition():
+    return (
+        "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR "
+        f"(@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {{{RBAC_PROXY_READER}}} AND "
+        f"@Request[Microsoft.Authorization/roleAssignments:PrincipalId] ForAnyOfAnyValues:GuidEquals {{{SRE_PRINCIPAL}}} AND "
+        "@Request[Microsoft.Authorization/roleAssignments:PrincipalType] ForAnyOfAnyValues:StringEqualsIgnoreCase {'ServicePrincipal'})) AND "
+        "(!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'}))"
+    )
 
 
 class Host:
@@ -370,6 +397,7 @@ class Host:
         self.receipt_path = args.evidence / "ownership.json"
         self.receipt = None
         self.reused = False
+        self.current_kubernetes_version = None
 
     def az(self, *args, **kwargs):
         return self.commands.run(["az", *args, "--subscription", self.args.subscription,
@@ -383,16 +411,28 @@ class Host:
         role_assignment = None
         if operation == ("role", "assignment", "create"):
             options = dict(zip(args[3::2], args[4::2]))
+            role = options.get("--role", "").casefold()
             role_assignment = {
                 "principalId": options.get("--assignee-object-id"),
                 "principalType": options.get("--assignee-principal-type"),
-                "roleDefinitionId": RBAC_MONITORING_DATA_READER,
+                "roleDefinitionId": role,
                 "scope": options.get("--scope"),
             }
+            group_scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}" if self.receipt else ""
+            reader_scopes = [group_scope] + [
+                f"/subscriptions/{self.args.subscription}/resourceGroups/{name}"
+                for name in (self.receipt or {}).get("managedGroups", [])
+            ]
             if (not role_assignment["principalId"] or not role_assignment["scope"]
                     or role_assignment["principalType"] != "ServicePrincipal"
-                    or options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER):
-                raise ValueError("RBAC retry is limited to Monitoring Data Reader service-principal assignments")
+                    or (role != RBAC_MONITORING_DATA_READER and not (
+                        role == RBAC_PROXY_READER and role_assignment["principalId"].casefold() == SRE_PRINCIPAL
+                        and role_assignment["scope"].casefold() in {scope.casefold() for scope in reader_scopes}))
+                    or (role_assignment["principalId"].casefold() == SRE_PRINCIPAL
+                        and role == RBAC_MONITORING_DATA_READER and not re.fullmatch(
+                            re.escape(group_scope + "/providers/Microsoft.Monitor/accounts/")
+                            + r"[A-Za-z0-9][A-Za-z0-9._-]*", role_assignment["scope"], re.IGNORECASE))):
+                raise ValueError("RBAC retry is limited to Monitoring Data Reader service-principal assignments and scoped SRE Reader")
         run_deadline = self.commands.deadline
         deadline = None
         last_failure = None
@@ -408,9 +448,10 @@ class Host:
                 except RuntimeError as failure:
                     last_failure = failure
                     message = str(failure).casefold()
-                    if ("microsoft.authorization/roleassignments/write" not in message
+                    collision = role_assignment and "roleassignmentexists" in message
+                    if (not collision and ("microsoft.authorization/roleassignments/write" not in message
                             or not any(marker in message for marker in
-                                       ("authorizationfailed", "authorization failed"))):
+                                       ("authorizationfailed", "authorization failed")))):
                         raise
                     if deadline is None:
                         deadline = time.monotonic() + RBAC_AUTH_RETRY_TIMEOUT
@@ -428,8 +469,15 @@ class Host:
                                     and assigned_role.casefold() == role_assignment["roleDefinitionId"]
                                     and assignment.get("scope", "").casefold()
                                     == role_assignment["scope"].casefold()
-                                    and not assignment.get("condition")):
+                                    and (role_assignment["principalId"].casefold() != SRE_PRINCIPAL
+                                         or assignment.get("roleDefinitionId", "").casefold() == (
+                                             f"/subscriptions/{self.args.subscription}/providers/Microsoft.Authorization/roleDefinitions/{role_assignment['roleDefinitionId']}"
+                                         ).casefold())
+                                    and assignment.get("condition") is None
+                                    and assignment.get("conditionVersion") is None):
                                 return assignment
+                    if collision:
+                        raise
                     if "if access was recently granted, please refresh your credentials" in message:
                         self.az("account", "get-access-token", "--output", "none", private=True)
                     remaining = deadline - time.monotonic()
@@ -449,12 +497,150 @@ class Host:
     def remove_kubeconfig(self):
         self.kubeconfig.unlink(missing_ok=True)
 
+    def sre_read_assignment(self, scope, role):
+        assignments = self.az("role", "assignment", "list", "--assignee-object-id", SRE_PRINCIPAL,
+                              "--fill-principal-name", "false", "--scope", scope,
+                              json_output=True, private=True)
+        if not isinstance(assignments, list) or not all(isinstance(row, dict) for row in assignments):
+            raise ValueError("SRE role assignment listing is invalid")
+        matches = [row for row in assignments if row.get("scope", "").casefold() == scope.casefold()
+               and row.get("principalId", "").casefold() == SRE_PRINCIPAL
+               and row.get("roleDefinitionId", "").casefold() == (
+                   f"/subscriptions/{self.args.subscription}/providers/Microsoft.Authorization/roleDefinitions/{role}"
+               ).casefold()]
+        if len(matches) > 1:
+            raise ValueError("Multiple exact SRE role assignments found at the same scope")
+        if matches and (matches[0].get("principalType", "").casefold() != "serviceprincipal"
+                        or matches[0].get("condition") is not None
+                        or matches[0].get("conditionVersion") is not None):
+            raise ValueError("Existing SRE role assignment is conditional or has an invalid principal type")
+        return matches[0] if matches else None
+
+    def grant_sre_read(self, workspace=None):
+        self.assert_owned()
+        group_scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
+        scope, role = group_scope, RBAC_PROXY_READER
+        if workspace is not None:
+            if not isinstance(workspace, str) or not re.fullmatch(
+                    re.escape(group_scope + "/providers/Microsoft.Monitor/accounts/") + r"[A-Za-z0-9][A-Za-z0-9._-]*",
+                    workspace, re.IGNORECASE):
+                raise ValueError("SRE workspace scope must be an AMW in the owned resource group")
+            scope, role = workspace, RBAC_MONITORING_DATA_READER
+        assignment = self.sre_read_assignment(scope, role)
+        if not assignment:
+            self.az_with_rbac_retry("role", "assignment", "create", "--assignee-object-id", SRE_PRINCIPAL,
+                                    "--assignee-principal-type", "ServicePrincipal", "--role", role, "--scope", scope)
+            assignment = self.sre_read_assignment(scope, role)
+            if not assignment:
+                raise RuntimeError(f"SRE read grant not confirmed at {scope}")
+        print(f"Verified permanent SRE read grant: principal={SRE_PRINCIPAL} role={role} scope={scope}", flush=True)
+
+    def verify_sre_managed_groups(self, outputs, principal, principal_type, retained=False):
+        self.assert_owned()
+        group_scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
+        profile = Path(self.scenario["cluster"]).stem
+        cluster_id, workspace_id = outputs["clusterId"], outputs["workspaceId"]
+        for resource_id, kind in ((cluster_id, "Microsoft.ContainerService/managedClusters"),
+                                  (workspace_id, "Microsoft.Monitor/accounts")):
+            if not isinstance(resource_id, str) or not re.fullmatch(
+                    re.escape(group_scope + "/providers/" + kind + "/")
+                    + r"[A-Za-z0-9][A-Za-z0-9._-]*", resource_id, re.IGNORECASE):
+                raise ValueError(f"Unowned {kind} resource")
+        cluster = self.az("aks", "show", "--resource-group", self.receipt["resourceGroup"],
+                          "--name", outputs["clusterName"], json_output=True, private=True)
+        workspace = self.az("resource", "show", "--ids", workspace_id, "--api-version", "2023-04-03",
+                            json_output=True, private=True)
+        for resource, expected in ((cluster, cluster_id), (workspace, workspace_id)):
+            tags = resource.get("tags") or {}
+            if (resource.get("id", "").casefold() != expected.casefold()
+                    or tags.get("owner") != "ama-metrics-e2e" or tags.get("scenario") != profile
+                    or tags.get("run") != self.receipt["runId"]):
+                raise ValueError("Managed-group parent resource ownership changed")
+        if cluster_id.rsplit("/", 1)[-1].casefold() != outputs["clusterName"].casefold():
+            raise ValueError("Managed-group AKS identity changed")
+        dce = ((workspace.get("properties") or {}).get("defaultIngestionSettings") or {}).get(
+            "dataCollectionEndpointResourceId", "")
+        dce_match = re.fullmatch(
+            re.escape(f"/subscriptions/{self.args.subscription}/resourceGroups/")
+            + r"([A-Za-z0-9][A-Za-z0-9._()-]*)/providers/Microsoft.Insights/dataCollectionEndpoints/[^/]+",
+            dce, re.IGNORECASE)
+        node = cluster.get("nodeResourceGroup", "")
+        if (not dce_match or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._()-]*", node)
+                or node.casefold() != outputs["nodeResourceGroupName"].casefold()
+                or dce_match[1].casefold() != outputs["amwManagedResourceGroupName"].casefold()
+                or node.casefold() == dce_match[1].casefold()
+                or self.receipt["resourceGroup"].casefold() in {node.casefold(), dce_match[1].casefold()}):
+            raise ValueError("Managed-group provider association is missing or ambiguous")
+        targets = ((node, cluster_id), (dce_match[1], workspace_id))
+        self.receipt["managedGroups"] = sorted(name for name, _ in targets)
+        deadline = time.monotonic() + (0 if retained else RBAC_AUTH_RETRY_TIMEOUT)
+        if self.commands.deadline is not None:
+            deadline = min(deadline, self.commands.deadline)
+        while True:
+            try:
+                complete = True
+                for name, resource_id in targets:
+                    scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{name}"
+                    group = self.az("group", "show", "--name", name, json_output=True)
+                    if (group.get("id", "").casefold() != scope.casefold()
+                            or (group.get("managedBy") and group["managedBy"].casefold() != resource_id.casefold())):
+                        raise ValueError("Managed-group ownership does not match its provider resource")
+                    if principal_type == "ServicePrincipal":
+                        assignments = self.az("role", "assignment", "list", "--scope", scope,
+                                              "--assignee-object-id", principal, "--fill-principal-name", "false",
+                                              json_output=True, private=True)
+                        matches = [row for row in assignments
+                                   if row.get("scope", "").casefold() == scope.casefold()
+                                   and row.get("principalId", "").casefold() == principal.casefold()
+                                   and row.get("roleDefinitionId", "").casefold() == (
+                                       f"/subscriptions/{self.args.subscription}/providers/Microsoft.Authorization/roleDefinitions/{RBAC_ADMIN_ROLE}"
+                                   ).casefold()]
+                        if len(matches) > 1 or any(
+                                row.get("principalType", "").casefold() != "serviceprincipal"
+                                or row.get("conditionVersion") != "2.0"
+                                or re.sub(r"\s+", "", row.get("condition") or "") !=
+                                   re.sub(r"\s+", "", sibling_rbac_condition()) for row in matches):
+                            raise ValueError("Incompatible sibling bootstrap delegation")
+                        if not matches:
+                            complete = False
+                            continue
+                    assignment = self.sre_read_assignment(scope, RBAC_PROXY_READER)
+                    if not assignment:
+                        self.az_with_rbac_retry(
+                            "role", "assignment", "create", "--assignee-object-id", SRE_PRINCIPAL,
+                            "--assignee-principal-type", "ServicePrincipal", "--role", RBAC_PROXY_READER,
+                            "--scope", scope)
+                        assignment = self.sre_read_assignment(scope, RBAC_PROXY_READER)
+                        if not assignment:
+                            raise RuntimeError(f"SRE managed-group Reader not confirmed at {scope}")
+                    print(f"Verified permanent SRE managed-group Reader: principal={SRE_PRINCIPAL} role={RBAC_PROXY_READER} scope={scope}", flush=True)
+                if complete:
+                    return True
+            except RuntimeError as failure:
+                if not any(marker in str(failure).casefold() for marker in
+                           ("authorizationfailed", "authorization failed", "authorization_requestdenied")):
+                    raise
+            if time.monotonic() >= deadline:
+                if retained:
+                    return False
+                raise RuntimeError("Managed-group SRE Reader or exact sibling delegation not confirmed; authorized administrator bootstrap is required")
+            time.sleep(min(10, max(0, deadline - time.monotonic())))
+
     def provision(self, env, principal, principal_type, expected_pools=None):
         if self.receipt_path.exists() or self.kubeconfig.exists():
             raise ValueError("An ownership receipt or kubeconfig already exists; cleanup that execution first")
         name, owner = persistent_identity(self.scenario["id"])
         existing = self.persistent_state(env, expected_pools)
         if existing:
+            if principal_type == "ServicePrincipal":
+                self.wait_for_rbac(principal, retained=True)
+            self.grant_sre_read()
+            self.grant_sre_read(existing["workspaceId"])
+            if not self.verify_sre_managed_groups(existing, principal, principal_type, retained=True):
+                if principal_type != "ServicePrincipal":
+                    raise RuntimeError("Managed-group SRE bootstrap requires an authorized administrator")
+                self.wait_for_rbac(principal)
+                self.verify_sre_managed_groups(existing, principal, principal_type)
             self.reused = True
             save(self.receipt_path, self.receipt)
             save(self.args.evidence / "deployment.json", existing)
@@ -463,8 +649,12 @@ class Host:
                 "scenario": self.scenario["id"], "location": self.args.location,
             })
             return existing
+        if self.scenario["id"] == "operator-secret-watch":
+            raise ValueError("The retained secret-watch cluster is missing; refusing to recreate it")
         if getattr(self.args, "admitted_existing", False):
             raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
+        if principal_type != "ServicePrincipal":
+            raise RuntimeError("New provisioning requires a ServicePrincipal for the independent managed-group bootstrap")
         self.receipt = {"subscription": self.args.subscription, "resourceGroup": name,
                         "runId": owner, "scenario": self.scenario["id"], "token": owner}
         save(self.receipt_path, self.receipt)
@@ -480,13 +670,36 @@ class Host:
             if any(row.get("properties", {}).get("provisioningState") not in ("Succeeded", "Failed", "Canceled")
                    for row in deployments):
                 raise ValueError("A deployment is still active; refusing concurrent provisioning")
-        if principal_type == "ServicePrincipal":
-            self.wait_for_rbac(principal)
+        self.wait_for_rbac(principal)
+        self.grant_sre_read()
+        group_scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{name}"
+        accounts = self.az("resource", "list", "--resource-group", name,
+                           "--resource-type", "Microsoft.Monitor/accounts", json_output=True, private=True)
+        if not isinstance(accounts, list) or len(accounts) > 1 or any(not isinstance(row, dict) for row in accounts):
+            raise ValueError("Invalid or multiple AMWs in the owned resource group; refusing ambiguous deployment")
+        override = []
+        if accounts:
+            account = accounts[0]
+            scope = account.get("id", "")
+            tags = account.get("tags") or {}
+            if (not re.fullmatch(re.escape(group_scope + "/providers/Microsoft.Monitor/accounts/")
+                                 + r"[A-Za-z0-9][A-Za-z0-9._-]*", scope, re.IGNORECASE)
+                    or tags.get("owner") != "ama-metrics-e2e"
+                    or tags.get("scenario") != Path(self.scenario["cluster"]).stem or tags.get("run") != owner):
+                raise ValueError("Existing AMW ownership is ambiguous; refusing deployment")
+            assignment = self.sre_read_assignment(scope, RBAC_MONITORING_DATA_READER)
+            if assignment:
+                assignment_id = assignment.get("id", "")
+                if not re.fullmatch(
+                        re.escape(scope + "/providers/Microsoft.Authorization/roleAssignments/")
+                        + r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", assignment_id, re.IGNORECASE):
+                    raise ValueError("Existing SRE AMW assignment ID is invalid or outside the owned AMW")
+                override = ["--parameters", "sreWorkspaceAssignmentId=" + assignment_id]
         env = dict(env, SCENARIO_RUN_NAME=owner)
-        deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az
-        result = deploy(
+        result = self.az_with_rbac_retry(
             "deployment", "group", "create", "--resource-group", name,
             "--name", "scenario", "--parameters", str(ROOT / self.scenario["cluster"]),
+            *override,
             env=env, json_output=True, private=True)
         if expected_pools is not None:
             self.verify_deployment(result, expected_pools)
@@ -497,6 +710,8 @@ class Host:
         self.receipt["managedGroups"] = sorted(set(managed_groups))
         save(self.receipt_path, self.receipt)
         save(self.args.evidence / "deployment.json", outputs)
+        self.grant_sre_read(outputs["workspaceId"])
+        self.verify_sre_managed_groups(outputs, principal, principal_type)
         return outputs
 
     def persistent_state(self, env, expected_pools):
@@ -522,6 +737,14 @@ class Host:
         cluster = self.az("aks", "show", "--resource-group", name, "--name", outputs["clusterName"],
                           json_output=True)
         verify_secret_watch_version(self.scenario, cluster)
+        current_version = cluster.get("kubernetesVersion")
+        requested_version = env["SCENARIO_KUBERNETES_VERSION"]
+        upgradeable_secret_watch = (
+            self.scenario["id"] == "operator-secret-watch"
+            and version_key(current_version) < version_key(requested_version))
+        if current_version != requested_version and not upgradeable_secret_watch:
+            raise ValueError("Persistent AKS cluster does not match the retained deployment contract")
+        self.current_kubernetes_version = current_version
         network = cluster.get("networkProfile") or {}
         expected_mode = "classic" if self.scenario["id"] == "classic-azure-cni" else "overlay"
         advanced = network.get("advancedNetworking") or {}
@@ -530,7 +753,6 @@ class Host:
                 or cluster.get("location", "").casefold() != self.args.location.casefold()
                 or cluster.get("provisioningState") != "Succeeded"
                 or (cluster.get("powerState") or {}).get("code") != "Running"
-                or cluster.get("kubernetesVersion") != env["SCENARIO_KUBERNETES_VERSION"]
                 or cluster.get("nodeResourceGroup") != outputs["nodeResourceGroupName"]
                 or (cluster.get("identity") or {}).get("type") != outputs["identityType"]
                 or outputs.get("azureCniMode") != expected_mode
@@ -565,38 +787,218 @@ class Host:
                 or outputs.get("installationMode") != "candidate-addon"):
             raise ValueError("Retained deployment outputs do not match the candidate contract")
 
-    def wait_for_rbac(self, principal):
+    def wait_for_rbac(self, principal, retained=False):
         uuid.UUID(principal)
+        if principal.casefold() == SRE_PRINCIPAL:
+            raise ValueError("The SRE identity cannot receive bootstrap administrator roles")
         scope = f"/subscriptions/{self.args.subscription}/resourceGroups/{self.receipt['resourceGroup']}"
         allowed = list(RBAC_ALLOWED_ROLES)
         if "custom-ca" in self.scenario["clusterFeatures"]:
             allowed.append(RBAC_PROXY_READER)
-        condition = rbac_condition(allowed)
-        command = (
-            "$deadline = [DateTimeOffset]::UtcNow.AddMinutes(10)\n"
-            "$delay = 5\n"
-            "do {\n"
-            f"  $output = & az role assignment create --subscription {self.args.subscription} "
-            f"--assignee-object-id {principal} --assignee-principal-type ServicePrincipal "
-            f"--role {RBAC_ADMIN_ROLE} --scope {scope} --condition-version 2.0 "
-            f"--condition \"{condition}\" 2>&1\n"
-            "  $exitCode = $LASTEXITCODE\n"
-            "  if ($exitCode -eq 0) { $output; break }\n"
-            "  $detail = $output | Out-String\n"
-            "  if ($detail -notmatch '(?i)authorizationfailed' -or "
-            "$detail -notmatch '(?i)microsoft.authorization/roleassignments/write' -or "
-            "[DateTimeOffset]::UtcNow -ge $deadline) { throw $detail }\n"
-            "  $remaining = [int][Math]::Floor(($deadline - [DateTimeOffset]::UtcNow).TotalSeconds)\n"
-            "  if ($remaining -le 0) { throw $detail }\n"
-            "  Start-Sleep -Seconds ([Math]::Min($delay, $remaining))\n"
-            "  $delay = [Math]::Min($delay * 2, 30)\n"
-            "} while ($true)")
+        condition = rbac_condition(allowed, sre=True)
+        if retained:
+            self.assert_owned()
+            assignments = self.az("role", "assignment", "list", "--resource-group",
+                                  self.receipt["resourceGroup"], json_output=True, private=True)
+            matches = [row for row in assignments if row.get("scope", "").casefold() == scope.casefold()
+                       and row.get("principalId", "").casefold() == principal.casefold()
+                       and row.get("principalType", "").casefold() == "serviceprincipal"
+                       and row.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() == RBAC_ADMIN_ROLE
+                       and row.get("conditionVersion") == "2.0"
+                       and re.sub(r"\s+", "", row.get("condition") or "") in {
+                           re.sub(r"\s+", "", condition),
+                           re.sub(r"\s+", "", rbac_condition(allowed))}]
+            if len(matches) != 1:
+                raise RuntimeError("Retained bootstrap delegation is missing or incompatible with the SRE read contract; authorized administrator must update it narrowly")
+            if re.sub(r"\s+", "", matches[0]["condition"]) == re.sub(r"\s+", "", condition):
+                return
+        command = f"$started = [DateTimeOffset]::FromUnixTimeMilliseconds({int(time.time() * 1000)})\n"
+        owner = persistent_identity(self.scenario["id"])[1]
+        profile = Path(self.scenario["cluster"]).stem
+        replacements = {
+            "SUBSCRIPTION": self.args.subscription, "GROUP": self.receipt["resourceGroup"],
+            "SCOPE": scope, "SCENARIO": self.scenario["id"], "PROFILE": profile, "OWNER": owner,
+            "PIPELINE": principal, "SRE": SRE_PRINCIPAL, "READER": RBAC_PROXY_READER,
+            "ADMIN": RBAC_ADMIN_ROLE, "CONDITION": sibling_rbac_condition(),
+            "PARENTCONDITION": condition, "LEGACYCONDITION": rbac_condition(allowed),
+        }
+        managed_script = r"""
+$ErrorActionPreference = 'Stop'
+$subscription = '@@SUBSCRIPTION@@'
+$parent = '@@GROUP@@'
+$parentScope = '@@SCOPE@@'
+$scenario = '@@SCENARIO@@'
+$profile = '@@PROFILE@@'
+$owner = '@@OWNER@@'
+$pipeline = '@@PIPELINE@@'
+$sre = '@@SRE@@'
+$reader = '@@READER@@'
+$admin = '@@ADMIN@@'
+$siblingCondition = '@@CONDITION@@'
+$parentCondition = '@@PARENTCONDITION@@'
+$legacyCondition = '@@LEGACYCONDITION@@'
+function Read-Az([string[]] $arguments) {
+  $json = & az @arguments --subscription $subscription --only-show-errors --output json
+  if ($LASTEXITCODE -ne 0) { throw "Azure read failed: $($arguments[0..1] -join ' ')" }
+  return (($json -join "`n") | ConvertFrom-Json)
+}
+function Has-Grant([string] $scope, [string] $identity, [string] $role, [string] $condition) {
+  $rows = @(Read-Az -arguments @('role','assignment','list','--scope',$scope,'--assignee-object-id',$identity,'--fill-principal-name','false'))
+  $roleId = "/subscriptions/$subscription/providers/Microsoft.Authorization/roleDefinitions/$role"
+  $matches = @($rows | Where-Object { $_.scope -ieq $scope -and $_.principalId -ieq $identity -and $_.roleDefinitionId -ieq $roleId })
+  if ($matches.Count -gt 1) { throw "Ambiguous assignments at $scope" }
+  if (!$matches.Count) { return $false }
+  $row = $matches[0]
+  if ($row.principalType -ine 'ServicePrincipal') { throw "Invalid principal type at $scope" }
+  if ($condition) {
+    if ($row.conditionVersion -cne '2.0' -or ($row.condition -replace '\s','') -cne ($condition -replace '\s','')) {
+      if ($scope -ieq $parentScope -and $identity -ieq $pipeline -and $role -ieq $admin -and
+          $row.conditionVersion -ceq '2.0' -and
+          ($row.condition -replace '\s','') -ceq ($legacyCondition -replace '\s','')) { return $false }
+      throw "Incompatible sibling delegation at $scope"
+    }
+  } elseif ($null -ne $row.condition -or $null -ne $row.conditionVersion) {
+    throw "Conditional SRE Reader at $scope"
+  }
+  return $true
+}
+function Ensure-Grant([string] $scope, [string] $identity, [string] $role, [string] $condition) {
+  if (Has-Grant $scope $identity $role $condition) { return }
+  $deadline = [DateTimeOffset]::UtcNow.AddMinutes(10)
+  $delay = 5
+  do {
+    $args = @('role','assignment','create','--subscription',$subscription,'--assignee-object-id',$identity,
+              '--assignee-principal-type','ServicePrincipal','--role',$role,'--scope',$scope,'--output','none')
+    if ($condition) { $args += @('--condition-version','2.0','--condition',$condition) }
+    $file = $null
+    if ($scope -ieq $parentScope -and $identity -ieq $pipeline -and $role -ieq $admin) {
+      $roleId = "/subscriptions/$subscription/providers/Microsoft.Authorization/roleDefinitions/$role"
+      $existing = @(Read-Az -arguments @('role','assignment','list','--scope',$scope,'--assignee-object-id',$identity,'--fill-principal-name','false') |
+        Where-Object { $_.scope -ieq $scope -and $_.principalId -ieq $identity -and $_.roleDefinitionId -ieq $roleId })
+      if ($existing.Count) {
+        $row = $existing[0]
+        $prefix = "$scope/providers/Microsoft.Authorization/roleAssignments/"
+        if ($existing.Count -ne 1 -or !$row.id -or
+            !$row.id.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) -or
+            $row.id.Substring($prefix.Length) -notmatch '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$' -or
+            $row.principalType -ine 'ServicePrincipal' -or $row.conditionVersion -cne '2.0' -or
+            ($row.condition -replace '\s','') -cne ($legacyCondition -replace '\s','')) {
+          throw 'Parent delegation migration would change an unapproved assignment'
+        }
+        $update = @{ id=$row.id; scope=$row.scope; principalId=$row.principalId; principalType=$row.principalType;
+                     roleDefinitionId=$row.roleDefinitionId; condition=$parentCondition; conditionVersion='2.0' }
+        $file = [IO.Path]::GetTempFileName()
+        [IO.File]::WriteAllText($file, (ConvertTo-Json -InputObject $update -Depth 10 -Compress), [Text.UTF8Encoding]::new($false))
+        $args = @('role','assignment','update','--subscription',$subscription,'--role-assignment',$file,'--output','none')
+      }
+    }
+    $preference = $ErrorActionPreference
+    try {
+      $ErrorActionPreference = 'Continue'
+      $output = & az @args 2>&1
+      $code = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $preference
+      if ($file) { Remove-Item -LiteralPath $file }
+    }
+    if (Has-Grant $scope $identity $role $condition) { return }
+    $detail = $output | Out-String
+    if ($code -ne 0 -and $detail -notmatch '(?i)RoleAssignmentExists' -and
+        ($detail -notmatch '(?i)authorizationfailed' -or $detail -notmatch '(?i)roleassignments/write')) {
+      throw "Sibling grant failed at ${scope}: $detail"
+    }
+    if ([DateTimeOffset]::UtcNow -ge $deadline) { throw "Sibling grant not confirmed at $scope" }
+    Start-Sleep -Seconds $delay
+    $delay = [Math]::Min($delay * 2, 30)
+  } while ($true)
+}
+function Owned-Resource($resource, [string] $kind) {
+  $prefix = "$parentScope/providers/$kind/"
+  if (!$resource.id -or !$resource.id.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) -or
+      $resource.id.Substring($prefix.Length) -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+      $resource.tags.owner -cne 'ama-metrics-e2e' -or $resource.tags.scenario -cne $profile -or
+      $resource.tags.run -cne $owner) { throw "Unowned or ambiguous $kind resource" }
+}
+function Managed-Scope([string] $name, [string] $resourceId) {
+  if (!$name -or $name -notmatch '^[A-Za-z0-9][A-Za-z0-9._()-]*$' -or $name -ieq $parent) {
+    throw 'Invalid managed resource group name'
+  }
+  if (!(Read-Az -arguments @('group','exists','--name',$name))) { return $null }
+  $group = Read-Az -arguments @('group','show','--name',$name)
+  $scope = "/subscriptions/$subscription/resourceGroups/$name"
+  if ($group.id -ine $scope -or ($group.managedBy -and $group.managedBy -ine $resourceId)) {
+    throw "Managed group ownership mismatch: $name"
+  }
+  return $scope
+}
+$waitingForDeploymentUntil = [DateTimeOffset]::UtcNow.AddMinutes(20)
+while ($true) {
+  $group = Read-Az -arguments @('group','show','--name',$parent)
+  if ($group.id -ine $parentScope -or $group.tags.owner -cne 'ama-metrics-e2e' -or
+      $group.tags.scenario -cne $scenario -or $group.tags.'scenario-run' -cne $owner -or
+      $group.tags.'scenario-token' -cne $owner -or $null -ne $group.tags.expiresAt) {
+    throw 'Parent resource group ownership changed'
+  }
+  Ensure-Grant $parentScope $pipeline $admin $parentCondition
+  $clusters = @(Read-Az -arguments @('aks','list','--resource-group',$parent))
+  $accounts = @(Read-Az -arguments @('resource','list','--resource-group',$parent,'--resource-type','Microsoft.Monitor/accounts'))
+  if ($clusters.Count -gt 1 -or $accounts.Count -gt 1) { throw 'Ambiguous parent AKS or AMW inventory' }
+  $nodeScope = $null
+  $amwScope = $null
+  if ($clusters.Count) {
+    $cluster = $clusters[0]
+    Owned-Resource $cluster 'Microsoft.ContainerService/managedClusters'
+    if ($cluster.nodeResourceGroup) { $nodeScope = Managed-Scope $cluster.nodeResourceGroup $cluster.id }
+  }
+  if ($accounts.Count) {
+    Owned-Resource $accounts[0] 'Microsoft.Monitor/accounts'
+    $account = Read-Az -arguments @('resource','show','--ids',$accounts[0].id,'--api-version','2023-04-03')
+    Owned-Resource $account 'Microsoft.Monitor/accounts'
+    if ($account.id -ine $accounts[0].id) { throw 'AMW identity changed' }
+    $dce = $account.properties.defaultIngestionSettings.dataCollectionEndpointResourceId
+    if ($dce) {
+      $parts = $dce -split '/'
+      if ($parts.Count -ne 9 -or $parts[1] -ine 'subscriptions' -or $parts[2] -ine $subscription -or
+          $parts[3] -ine 'resourceGroups' -or $parts[5] -ine 'providers' -or
+          $parts[6] -ine 'Microsoft.Insights' -or $parts[7] -ine 'dataCollectionEndpoints' -or !$parts[8]) {
+        throw 'Invalid AMW managed-group association'
+      }
+      $amwScope = Managed-Scope $parts[4] $account.id
+    }
+  }
+  if ($nodeScope -and $amwScope -and $nodeScope -ieq $amwScope) { throw 'Managed groups must be distinct' }
+  foreach ($target in @($nodeScope, $amwScope)) {
+    if ($target) {
+      Ensure-Grant $target $pipeline $admin $siblingCondition
+      Ensure-Grant $target $sre $reader $null
+    }
+  }
+  if ($nodeScope -and $amwScope) { break }
+  $deployments = @(Read-Az -arguments @('deployment','group','list','--resource-group',$parent))
+  $deployment = @($deployments | Where-Object { $_.name -ceq 'scenario' })
+  if ($deployment.Count -gt 1) { throw 'Ambiguous scenario deployment' }
+  if ($deployment.Count -and !$deployment[0].properties.timestamp) { throw 'Scenario deployment timestamp is missing' }
+  if ($deployment.Count -and
+      [DateTimeOffset]::Parse($deployment[0].properties.timestamp) -ge $started -and
+      $deployment[0].properties.provisioningState -in @('Succeeded','Failed','Canceled')) {
+    throw 'Scenario deployment ended before both sibling grants were confirmed'
+  }
+  if ((!$deployment.Count -or [DateTimeOffset]::Parse($deployment[0].properties.timestamp) -lt $started) -and
+      [DateTimeOffset]::UtcNow -ge $waitingForDeploymentUntil) {
+    throw 'Scenario deployment did not start after bootstrap'
+  }
+  Start-Sleep -Seconds 10
+}
+"""
+        for key, value in replacements.items():
+            managed_script = managed_script.replace(f"@@{key}@@", value.replace("'", "''"))
+        command += "\n" + managed_script
         proof = {"scope": scope, "principalId": principal, "roleDefinitionId": RBAC_ADMIN_ROLE,
                  "allowedRoleDefinitionIds": allowed, "condition": condition, "status": "waiting"}
         self.receipt["rbacBootstrapScope"] = scope
         save(self.receipt_path, self.receipt)
-        save(self.args.evidence / "rbac-bootstrap.json", proof)
         (self.args.evidence / "rbac-bootstrap.ps1").write_text(command + "\n", encoding="utf-8")
+        save(self.args.evidence / "rbac-bootstrap.json", proof)
         print("Administrator action required within 20 minutes; run in an authorized Azure session:\n"
               + command, flush=True)
         deadline = time.monotonic() + 1200
@@ -607,6 +1009,14 @@ class Host:
             for assignment in assignments:
                 if (assignment.get("scope", "").casefold() == scope.casefold()
                         and assignment.get("principalId", "").casefold() == principal.casefold()
+                        and assignment.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() == RBAC_ADMIN_ROLE
+                        and assignment.get("conditionVersion") == "2.0"
+                        and re.sub(r"\s+", "", assignment.get("condition") or "") ==
+                        re.sub(r"\s+", "", rbac_condition(allowed)) and condition != rbac_condition(allowed)):
+                    continue
+                if (assignment.get("scope", "").casefold() == scope.casefold()
+                        and assignment.get("principalId", "").casefold() == principal.casefold()
+                        and assignment.get("principalType", "").casefold() == "serviceprincipal"
                         and assignment.get("roleDefinitionId", "").split("/")[-1] == RBAC_ADMIN_ROLE
                         and assignment.get("conditionVersion") == "2.0"
                         and re.sub(r"\s+", "", assignment.get("condition") or "") == re.sub(r"\s+", "", condition)):
@@ -770,7 +1180,9 @@ class Host:
                 or retained.get("rbacBootstrap", {}).get("scope", "").casefold() != scope.casefold()
                 or retained.get("rbacBootstrap", {}).get("assignmentId", "").casefold() != assignment_id.casefold()
                 or proof.get("roleDefinitionId", "").casefold() != admin_role
-                or re.sub(r"\s+", "", condition) != re.sub(r"\s+", "", rbac_condition(allowed))):
+                or re.sub(r"\s+", "", condition) not in {
+                    re.sub(r"\s+", "", rbac_condition(allowed)),
+                    re.sub(r"\s+", "", rbac_condition(allowed, sre=True))}):
             raise ValueError("Bootstrap revocation requires the exact successful retained-run receipt")
         parent = next((row for row in retained["inventory"] if row.get("name") == group), None)
         if not parent or not parent.get("tags", {}).get("scenario-token"):
@@ -1201,6 +1613,7 @@ def verify_ingestion(host, outputs, started):
                         "probeStarted": started, "query": query, "attempts": attempt + 1,
                         "queryOrigin": "candidate Linux collector pod", "endpoint": outputs["queryEndpoint"]}
             save(host.args.evidence / "ingestion.json", evidence)
+            print("Fresh run-specific ingestion proof: " + json.dumps(evidence), flush=True)
             return evidence
         except RuntimeError as failure:
             last_error = str(failure)
@@ -1227,10 +1640,17 @@ def compiled_parameters(args, scenario, commands, version):
     return values
 
 
-def verify_secret_watch_version(scenario, cluster):
-    if (scenario["id"] == "operator-secret-watch"
-            and not re.fullmatch(r"1\.37\.\d+", cluster.get("kubernetesVersion") or "")):
-        raise ValueError("Secret-watch cluster must run Kubernetes 1.37")
+def verify_secret_watch_version(scenario, cluster, expected=None):
+    if scenario["id"] == "operator-secret-watch":
+        actual = cluster.get("kubernetesVersion")
+        try:
+            supported = version_key(actual) >= (1, 37, 0)
+        except ValueError:
+            supported = False
+        if not supported:
+            raise ValueError("Secret-watch cluster must run Kubernetes >=1.37")
+        if expected is not None and actual != expected:
+            raise ValueError(f"Secret-watch cluster must run the selected preview Kubernetes {expected}")
 
 
 def capacity_plan(parameters, scenario, version):
@@ -1319,10 +1739,19 @@ def preflight(args, scenario, commands):
                              "--location", args.location, "--only-show-errors", "-o", "json"],
                             json_output=True)
     version = select_version(versions, scenario)
+    log_resolved_version(scenario, args.location, version)
     parameters = compiled_parameters(args, scenario, commands, version)
     capacity = capacity_plan(parameters, scenario, version)
-    existing = bool(Host(args, scenario, commands).persistent_state(
+    retained = Host(args, scenario, commands)
+    existing = bool(retained.persistent_state(
         {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
+    if scenario["id"] == "operator-secret-watch" and not existing:
+        raise ValueError("The retained secret-watch cluster is missing; refusing to recreate it")
+    upgrade_plan = None
+    if (existing and scenario["id"] == "operator-secret-watch"
+            and retained.current_kubernetes_version != version):
+        upgrade_plan = {"action": "aks-upgrade-in-place", "from": retained.current_kubernetes_version,
+                        "to": version}
     if getattr(args, "admitted_existing", False) and not existing:
         raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
     if existing:
@@ -1331,6 +1760,8 @@ def preflight(args, scenario, commands):
               "kubernetesVersion": version, "upgradeChannel": "stable", "expectedPools": parameters["nodePools"],
               "existing": existing,
               **regional_capacity(args, capacity, commands)}
+    if scenario["id"] == "operator-secret-watch":
+        result["upgradePlan"] = upgrade_plan
     save(args.evidence / "preflight.json", result)
     return result
 
@@ -1353,6 +1784,7 @@ def campaign_preflight(args, matrix, commands):
     placements = {name: CAMPAIGN_LOCATIONS[name] for name in selected}
     regions = {}
     existing = {}
+    upgrade_plans = {}
     for location in sorted(set(placements.values())):
         regional = copy.copy(args)
         regional.location = location
@@ -1370,17 +1802,26 @@ def campaign_preflight(args, matrix, commands):
             if not row or row.get("blockedReason"):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             version = select_version(versions, row)
+            log_resolved_version(row, location, version)
             selected_versions[name] = version
             parameters = compiled_parameters(regional, row, commands, version)
-            existing[name] = bool(Host(regional, row, commands).persistent_state(
+            retained = Host(regional, row, commands)
+            existing[name] = bool(retained.persistent_state(
                 {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
+            if name == "operator-secret-watch" and not existing[name]:
+                raise ValueError("The retained secret-watch cluster is missing; refusing to recreate it")
+            if (existing[name] and name == "operator-secret-watch"
+                    and retained.current_kubernetes_version != version):
+                upgrade_plans[name] = {
+                    "action": "aks-upgrade-in-place", "from": retained.current_kubernetes_version, "to": version,
+                }
             capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
                             for pool in capacity_plan(parameters, row, version))
         regions[location] = {"kubernetesVersions": selected_versions,
                              **regional_capacity(regional, capacity, commands)}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
               "subscription": args.subscription, "placements": placements, "existing": existing,
-              "regions": regions, "capacityReserved": False}
+              "upgradePlans": upgrade_plans, "regions": regions, "capacityReserved": False}
     save(output, result)
     return result
 
@@ -1465,7 +1906,28 @@ def verify_cilium_lock(host):
     print("Deletion protection verified: " + lock["id"], flush=True)
 
 
-def bootstrap_testkube(host, outputs, package, principal, principal_type):
+def upgrade_retained_secret_watch(host, outputs, plan):
+    if host.scenario["id"] != "operator-secret-watch" or plan.get("action") != "aks-upgrade-in-place":
+        raise ValueError("Unsupported retained-cluster upgrade plan")
+    current = host.current_kubernetes_version
+    target = plan.get("to")
+    if current == target:
+        return
+    if (current != plan.get("from") or version_key(current) >= version_key(target)
+            or version_key(target) < (1, 37, 0)):
+        raise ValueError("Retained secret-watch cluster changed after admission; refusing upgrade")
+    print(f"Upgrading retained operator-secret-watch AKS cluster in place: {current} -> {target}", flush=True)
+    host.az("aks", "upgrade", "--resource-group", host.receipt["resourceGroup"],
+            "--name", outputs["clusterName"], "--kubernetes-version", target, "--yes", private=True)
+    cluster = host.az("aks", "show", "--resource-group", host.receipt["resourceGroup"],
+                      "--name", outputs["clusterName"], json_output=True, private=True)
+    if (cluster.get("kubernetesVersion") != target or cluster.get("provisioningState") != "Succeeded"
+            or (cluster.get("powerState") or {}).get("code") != "Running"):
+        raise RuntimeError("Retained secret-watch AKS upgrade did not reach the admitted Kubernetes version")
+    host.current_kubernetes_version = target
+
+
+def bootstrap_testkube(host, outputs, package, principal, principal_type, expected_version=None):
     group = host.receipt["resourceGroup"]
     identity = host.az("identity", "create", "--resource-group", group,
                        "--name", "ama-e2e-tests", json_output=True)
@@ -1485,7 +1947,7 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
                    "--assignee-principal-type", kind, "--role", role, "--scope", outputs["workspaceId"])
     cluster = host.az("aks", "show", "--resource-group", group, "--name", outputs["clusterName"],
                       json_output=True, private=True)
-    verify_secret_watch_version(host.scenario, cluster)
+    verify_secret_watch_version(host.scenario, cluster, expected_version)
     if (cluster.get("autoUpgradeProfile") or {}).get("upgradeChannel") != "stable":
         raise RuntimeError("The effective AKS auto-upgrade channel must be stable")
     if "managed-acns" in host.scenario["clusterFeatures"]:
@@ -1710,11 +2172,13 @@ def execute(args, scenario, variants, commands):
                     for lock in locks
                 ):
                     raise RuntimeError(f"Retained {key} has no effective deletion-protection lock")
+            if resolved.get("upgradePlan"):
+                upgrade_retained_secret_watch(host, outputs, resolved["upgradePlan"])
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
                 "--file", str(host.kubeconfig), "--admin", private=True)
         host.kube("wait", "nodes", "--all", "--for=condition=Ready", "--timeout=20m")
-        state = bootstrap_testkube(host, outputs, *testkube)
+        state = bootstrap_testkube(host, outputs, *testkube, expected_version=resolved["kubernetesVersion"])
         nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
         save(args.evidence / "pool-inventory.json",
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
@@ -1744,6 +2208,7 @@ def execute(args, scenario, variants, commands):
             print("Managed ACNS monitoring fixture: owned DCR association and deletion protection verified", flush=True)
         state = host.az("aks", "show", "--resource-group", group, "--name", cluster, json_output=True)
         outputs["kubernetesVersion"] = state["kubernetesVersion"]
+        verify_secret_watch_version(scenario, state, resolved["kubernetesVersion"])
         if scenario["id"] == "acns-cilium":
             verify_cilium_profile(state)
         if ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"):

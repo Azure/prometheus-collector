@@ -219,11 +219,12 @@ steps:
         local proof="$CANDIDATE_EVIDENCE/rbac-bootstrap.json"
         local public="$CANDIDATE_EVIDENCE/rbac-bootstrap-public.json"
         while true; do
-          if [[ -f "$proof" ]] && jq -e \
+          if [[ -f "$proof" && -f "$CANDIDATE_EVIDENCE/rbac-bootstrap.ps1" ]] && jq -e \
+            --rawfile script "$CANDIDATE_EVIDENCE/rbac-bootstrap.ps1" \
             --arg buildId "$(Build.BuildId)" --arg sourceSha "$CANDIDATE_SOURCE_SHA" \
             --arg producerBuildId "$PRODUCER_BUILD_ID" --arg scenario "$CANDIDATE_SCENARIO" --arg runId "$CANDIDATE_RUN_ID" \
-            'select(.status == "waiting" and (.scope | type == "string") and (.principalId | type == "string")) |
-             {scope, principalId, roleDefinitionId, allowedRoleDefinitionIds, condition, status,
+            'select((.status == "waiting" or .status == "granted") and (.scope | type == "string") and (.principalId | type == "string")) |
+             {scope, principalId, roleDefinitionId, allowedRoleDefinitionIds, condition, status, script: $script,
               validationBuildId: $buildId, candidateSourceSha: $sourceSha, producerBuildId: $producerBuildId, scenario: $scenario, runId: $runId}' \
             "$proof" > "$public.tmp" 2>/dev/null; then
             mv "$public.tmp" "$public"

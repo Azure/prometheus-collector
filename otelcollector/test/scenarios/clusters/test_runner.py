@@ -4,15 +4,17 @@ import copy
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import types
 import unittest
 import uuid
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "run-scenario.py"
@@ -287,6 +289,7 @@ class Contracts(unittest.TestCase):
             "nodeResourceGroupName": "node-rg", "amwManagedResourceGroupName": "amw-rg",
             "expectedPools": pools, "addonEnabled": False, "installationMode": "candidate-addon",
             "identityType": "SystemAssigned", "azureCniMode": "overlay",
+            "workspaceId": "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Monitor/accounts/amw",
             "resourceTags": {"owner": "ama-metrics-e2e", "scenario": "mixed",
                              "run": owner},
         }
@@ -297,7 +300,8 @@ class Contracts(unittest.TestCase):
         self.assertEqual(stage["lockBehavior"], "sequential")
         for case in ("valid", "new", "appeared", "active-deployment", "run", "expiry", "deployment-state",
                      "deployment-output", "cluster", "cluster-pools", "missing-admitted",
-                     "secret-watch", "secret-watch-tag", "secret-watch-version", "other-linux-tag"):
+                     "secret-watch", "secret-watch-tag", "secret-watch-version", "secret-watch-newer",
+                     "other-linux-tag"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 row = scenario()
                 if case.startswith("secret-watch"):
@@ -340,14 +344,17 @@ class Contracts(unittest.TestCase):
                 if case == "cluster-pools":
                     cluster["agentPoolProfiles"] = []
                 if case.startswith("secret-watch"):
-                    cluster["kubernetesVersion"] = "1.36.5" if case == "secret-watch-version" else "1.37.1"
+                    cluster["kubernetesVersion"] = {
+                        "secret-watch-version": "1.36.5",
+                        "secret-watch-newer": "1.40.0",
+                    }.get(case, "1.37.1")
                 host = runner.Host(types.SimpleNamespace(
                     evidence=Path(directory), subscription="sub", run_id="run", location="eastus2",
                     admitted_existing=case == "missing-admitted",
                 ), row, Mock())
                 group = {"location": "eastus2", "tags": tags}
                 if case == "new":
-                    calls = ["false", "false", {}, deployment]
+                    calls = ["false", "false", {}, [], deployment]
                 elif case == "appeared":
                     calls = ["false", "true", group, [{"id": cluster_id}], [], deployment]
                 elif case == "active-deployment":
@@ -357,11 +364,17 @@ class Contracts(unittest.TestCase):
                     calls = ["false" if case == "missing-admitted" else "true",
                              group, [{"id": cluster_id}], deployment, cluster]
                 host.az = Mock(side_effect=calls)
-                env = {"SCENARIO_KUBERNETES_VERSION": cluster["kubernetesVersion"]}
+                host.grant_sre_read = Mock()
+                host.wait_for_rbac = Mock()
+                host.verify_sre_managed_groups = Mock()
+                env = {"SCENARIO_KUBERNETES_VERSION":
+                       "1.39.0" if case.startswith("secret-watch") else cluster["kubernetesVersion"]}
                 if case in ("valid", "new", "secret-watch"):
-                    result = host.provision(env, "principal", "User", pools)
+                    result = host.provision(env, "principal", "ServicePrincipal" if case == "new" else "User", pools)
                     self.assertEqual(result["clusterName"], "sc")
                     self.assertEqual(host.reused, case in ("valid", "secret-watch"))
+                    if case == "secret-watch":
+                        self.assertEqual(host.current_kubernetes_version, "1.37.1")
                     self.assertEqual(host.receipt["resourceGroup"], name)
                     self.assertEqual(host.receipt["runId"], owner)
                     self.assertEqual((Path(directory) / "persistent-reuse.json").is_file(),
@@ -434,12 +447,19 @@ class Contracts(unittest.TestCase):
                     {"isDefault": True, "patchVersions": {"1.36.5": {}}},
                     {"isPreview": None, "capabilities": {"supportPlan": ["KubernetesOfficial"]},
                      "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
+                    {"isPreview": True, "patchVersions": {"1.37.2": {}}},
                 ]}
             if args[:3] == ["az", "vm", "list-skus"]:
                 return copy.deepcopy(skus)
             if args[:3] == ["az", "vm", "list-usage"]:
                 return copy.deepcopy(usage)
             raise AssertionError(f"Unexpected or mutating command: {args}")
+
+        def retained(host, env, pools):
+            if host.scenario["id"] == "operator-secret-watch":
+                host.current_kubernetes_version = "1.37.1"
+                return {"clusterName": "retained-secret-watch"}
+            return None
 
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
@@ -451,7 +471,8 @@ class Contracts(unittest.TestCase):
             with patch.object(runner, "TEST_SOURCE", test_source), \
                     patch.object(runner, "source_commit",
                                  side_effect=lambda commands, root, paths: "b" * 40 if root == test_source else "a" * 40), \
-                    patch.object(runner, "compiled_parameters", side_effect=compiled):
+                    patch.object(runner, "compiled_parameters", side_effect=compiled), \
+                    patch.object(runner.Host, "persistent_state", autospec=True, side_effect=retained):
                 args.test_source_sha = "c" * 40
                 with self.assertRaisesRegex(ValueError, "test source"):
                     runner.campaign_preflight(args, matrix, commands)
@@ -470,12 +491,14 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["placements"]["acns-cilium"], "eastus2")
                 self.assertEqual(result["placements"]["operator-secret-watch"], "eastus2")
                 self.assertEqual(result["regions"]["eastus2"]["kubernetesVersions"],
-                                 {"acns": "1.36.5", "acns-cilium": "1.36.5", "operator-secret-watch": "1.37.1"})
+                                 {"acns": "1.36.5", "acns-cilium": "1.36.5", "operator-secret-watch": "1.37.2"})
+                self.assertEqual(result["upgradePlans"]["operator-secret-watch"],
+                                 {"action": "aks-upgrade-in-place", "from": "1.37.1", "to": "1.37.2"})
                 self.assertEqual(
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (80, 104), "eastus2": (32, 32)}
+                expected = {"centralus": (80, 104), "eastus2": (28, 28)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
@@ -492,14 +515,18 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(four["regions"]["eastus2"]["kubernetesVersions"], {"acns": "1.36.5"})
                 args.scenario = "all"
                 args.evidence = Path(temporary) / "existing"
-                with patch.object(runner.Host, "persistent_state", autospec=True,
-                                  side_effect=lambda host, env, pools: {"clusterName": "existing"}
-                                  if host.scenario["id"] == "default" else None):
+                def retained_existing(env, pools):
+                    if len(pools) > 2 or env["SCENARIO_KUBERNETES_VERSION"] != "1.36.5":
+                        return {"clusterName": "existing"}
+                    return None
+                with patch.object(runner.Host, "persistent_state",
+                                  side_effect=retained_existing):
                     reused = runner.campaign_preflight(args, matrix, commands)
                 quota = {row["name"]: row["additional"] for row in reused["regions"]["centralus"]["quota"]}
                 self.assertEqual((quota["cores"], quota["standarddsv4family"], quota["standarddpsv5family"]),
                                  (64, 52, 12))
                 self.assertTrue(reused["existing"]["default"])
+                self.assertTrue(reused["existing"]["operator-secret-watch"])
                 args.evidence = Path(temporary)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
@@ -620,24 +647,24 @@ class Contracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no stable official default"):
             runner.select_version(versions)
 
-    def test_secret_watch_selects_supported_nondefault_without_changing_other_scenarios(self):
+    def test_secret_watch_selects_latest_preview_without_changing_other_scenarios(self):
         versions = {"values": [
             {"version": "1.36", "isDefault": True, "patchVersions": {"1.36.5": {}}},
             {"version": "1.37", "isPreview": None,
              "capabilities": {"supportPlan": ["KubernetesOfficial"]},
              "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
-            {"version": "1.38", "isPreview": True,
-             "capabilities": {"supportPlan": ["KubernetesOfficial"]},
-             "patchVersions": {"1.38.0": {}}},
+            {"version": "1.37", "isPreview": True, "patchVersions": {"1.37.2": {}}},
+            {"version": "1.38", "isPreview": True, "patchVersions": {"1.38.0": {}, "1.38.2": {}}},
             {"version": "1.38", "capabilities": {"supportPlan": ["KubernetesOfficial"]},
              "patchVersions": {"1.38.1": {}}},
+            {"version": "1.39", "isPreview": True, "patchVersions": {"1.36.9": {}}},
             {"version": "1.39", "capabilities": {"supportPlan": ["AKSLongTermSupport"]},
              "patchVersions": {"1.39.0": {}}},
             {"version": "1.40", "patchVersions": {"1.40.0": {}}},
         ]}
         rows = runner.load(runner.ROOT / "matrix.json")["scenarios"]
         row = next(row for row in rows if row["id"] == "operator-secret-watch")
-        for selected, expected in ((scenario(), "1.36.5"), (row, "1.37.1")):
+        for selected, expected in ((scenario(), "1.36.5"), (row, "1.38.2")):
             with self.subTest(scenario=selected["id"]), tempfile.TemporaryDirectory() as directory:
                 args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
                                              location="eastus2", evidence=Path(directory))
@@ -646,22 +673,128 @@ class Contracts(unittest.TestCase):
                 parameters = pool_parameters()
                 if selected["platforms"] == ["linux"]:
                     parameters["nodePools"] = parameters["nodePools"][:1]
+                def retained(host, env, pools):
+                    if host.scenario["id"] == "operator-secret-watch":
+                        host.current_kubernetes_version = "1.37.1"
+                        return {"clusterName": "retained"}
+                    return None
                 with patch.object(runner, "compiled_parameters", return_value=parameters) as compiled, \
-                        patch.object(runner.Host, "persistent_state", return_value=None), \
+                        patch.object(runner.Host, "persistent_state", autospec=True, side_effect=retained), \
                         patch.object(runner, "regional_capacity", return_value={}):
                     result = runner.preflight(args, selected, commands)
                 self.assertEqual(result["kubernetesVersion"], expected)
                 self.assertEqual(compiled.call_args.args[-1], expected)
+        other_secret_watch = dict(scenario(), id="secret-watch-other",
+                                  clusterFeatures=["secrets-watch-enforcement"])
+        self.assertEqual(runner.select_version({"values": [{
+            "version": "1.38", "isPreview": None,
+            "capabilities": {"supportPlan": ["KubernetesOfficial"]},
+            "patchVersions": {"1.38.1": {}},
+        }]}, other_secret_watch), "1.38.1")
         for invalid in (
                 [versions["values"][0]],
-                [versions["values"][0], *versions["values"][2:]],
-                [{"orchestratorVersion": "1.37.1", "isPreview": True,
-                  "capabilities": {"supportPlan": ["KubernetesOfficial"]}}]):
+                [versions["values"][0], versions["values"][1]],
+                [{"orchestratorVersion": "1.37.1", "isPreview": None,
+                  "capabilities": {"supportPlan": ["KubernetesOfficial"]}}],
+                [{"isPreview": True, "patchVersions": {"1.36.9": {}}}],
+                [{"isPreview": None, "patchVersions": {"1.40.0": {}}}]):
             with self.subTest(versions=invalid), patch.object(
                     runner, "compiled_parameters", side_effect=AssertionError("Unsupported profile compiled")):
                 commands.run.return_value = {"values": invalid}
                 with self.assertRaisesRegex(ValueError, "Unsupported scenario"):
                     runner.preflight(args, row, commands)
+
+    def test_secret_watch_preflight_plans_in_place_upgrade_for_retained_cluster(self):
+        row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                   if row["id"] == "operator-secret-watch")
+        versions = {"values": [{"isPreview": True, "patchVersions": {"1.38.2": {}}}]}
+        parameters = pool_parameters()
+        parameters["nodePools"] = parameters["nodePools"][:1]
+        commands = Mock()
+        commands.run.return_value = versions
+
+        def retained(host, env, pools):
+            host.current_kubernetes_version = "1.37.1"
+            return {"clusterName": "retained"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
+                                         location="eastus2", evidence=Path(directory))
+            with patch.object(runner, "compiled_parameters", return_value=parameters), \
+                    patch.object(runner.Host, "persistent_state", autospec=True, side_effect=retained), \
+                    patch.object(runner, "regional_capacity", return_value={}) as capacity:
+                result = runner.preflight(args, row, commands)
+        self.assertTrue(result["existing"])
+        self.assertEqual(result["upgradePlan"], {
+            "action": "aks-upgrade-in-place", "from": "1.37.1", "to": "1.38.2",
+        })
+        self.assertTrue(all(pool["nodes"] == 0 for pool in capacity.call_args.args[1]))
+
+    def test_retained_secret_watch_is_never_recreated_when_missing(self):
+        row = next(row for row in runner.load(runner.ROOT / "matrix.json")["scenarios"]
+                   if row["id"] == "operator-secret-watch")
+        with tempfile.TemporaryDirectory() as directory:
+            args = types.SimpleNamespace(evidence=Path(directory), subscription=runner.BUILD_SUBSCRIPTION,
+                                         run_id="run", location="eastus2", admitted_existing=False)
+            host = runner.Host(args, row, Mock())
+            with patch.object(runner.Host, "persistent_state", return_value=None):
+                with self.assertRaisesRegex(ValueError, "refusing to recreate"):
+                    host.provision({"SCENARIO_KUBERNETES_VERSION": "1.38.2"}, "principal", "User",
+                                   pool_parameters()["nodePools"][:1])
+            host.commands.run.assert_not_called()
+
+            versions = {"values": [{"isPreview": True, "patchVersions": {"1.38.2": {}}}]}
+            parameters = pool_parameters()
+            parameters["nodePools"] = parameters["nodePools"][:1]
+            with patch.object(runner, "compiled_parameters", return_value=parameters), \
+                    patch.object(runner.Host, "persistent_state", return_value=None), \
+                    patch.object(runner, "regional_capacity", side_effect=AssertionError("capacity admitted")):
+                args.evidence.mkdir(exist_ok=True)
+                commands = Mock()
+                commands.run.return_value = versions
+                with self.assertRaisesRegex(ValueError, "refusing to recreate"):
+                    runner.preflight(args, row, commands)
+
+    def test_retained_secret_watch_upgrade_is_in_place_and_verifies_target(self):
+        host = Mock(spec=runner.Host)
+        host.scenario = {"id": "operator-secret-watch"}
+        host.receipt = {"resourceGroup": "retained-rg"}
+        host.current_kubernetes_version = "1.37.1"
+        host.az.return_value = {
+            "kubernetesVersion": "1.38.2", "provisioningState": "Succeeded",
+            "powerState": {"code": "Running"},
+        }
+        outputs = {"clusterName": "retained-aks"}
+        plan = {"action": "aks-upgrade-in-place", "from": "1.37.1", "to": "1.38.2"}
+        runner.upgrade_retained_secret_watch(host, outputs, plan)
+        host.az.assert_has_calls([
+            unittest.mock.call("aks", "upgrade", "--resource-group", "retained-rg", "--name", "retained-aks",
+                               "--kubernetes-version", "1.38.2", "--yes", private=True),
+            unittest.mock.call("aks", "show", "--resource-group", "retained-rg", "--name", "retained-aks",
+                               json_output=True, private=True),
+        ])
+        self.assertEqual(host.current_kubernetes_version, "1.38.2")
+        self.assertFalse(any(call.args[:2] in (("group", "create"), ("deployment", "group"))
+                             for call in host.az.call_args_list))
+
+        host.reset_mock()
+        host.current_kubernetes_version = "1.37.2"
+        with self.assertRaisesRegex(ValueError, "changed after admission"):
+            runner.upgrade_retained_secret_watch(host, outputs, plan)
+        host.az.assert_not_called()
+        host.current_kubernetes_version = "1.37.1"
+        host.az.return_value = {
+            "kubernetesVersion": "1.38.1", "provisioningState": "Succeeded",
+            "powerState": {"code": "Running"},
+        }
+        with self.assertRaisesRegex(RuntimeError, "did not reach"):
+            runner.upgrade_retained_secret_watch(host, outputs, plan)
+
+    def test_secret_watch_execution_requires_exact_selected_preview(self):
+        row = {"id": "operator-secret-watch"}
+        runner.verify_secret_watch_version(row, {"kubernetesVersion": "1.38.2"}, "1.38.2")
+        with self.assertRaisesRegex(ValueError, "selected preview"):
+            runner.verify_secret_watch_version(row, {"kubernetesVersion": "1.38.1"}, "1.38.2")
 
     def test_capacity_includes_autoscaler_surge_and_explicit_proxy_count(self):
         parameters = pool_parameters()
@@ -941,12 +1074,13 @@ class Contracts(unittest.TestCase):
             def assignments(*args, **kwargs):
                 proof = runner.load(evidence / "rbac-bootstrap.json")
                 valid = {"id": proof["scope"] + "/providers/Microsoft.Authorization/roleAssignments/one",
-                         "scope": proof["scope"], "principalId": principal,
+                         "scope": proof["scope"], "principalId": principal, "principalType": "ServicePrincipal",
                          "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/" +
                                              proof["roleDefinitionId"],
                          "conditionVersion": "2.0", "condition": proof["condition"]}
                 if not rejected:
                     for field, value in (("scope", "/subscriptions/other"), ("principalId", "other"),
+                                         ("principalType", "User"),
                                          ("roleDefinitionId", "owner"), ("conditionVersion", None),
                                          ("condition", None)):
                         rejected.append({**valid, field: value})
@@ -968,20 +1102,18 @@ class Contracts(unittest.TestCase):
             proof = runner.load(evidence / "rbac-bootstrap.json")
             self.assertEqual(proof["status"], "granted")
             self.assertEqual(len(proof["allowedRoleDefinitionIds"]), 2)
-            self.assertNotIn("acdd72a7", proof["condition"])
+            self.assertIn("acdd72a7", proof["condition"])
             self.assertIn("'ServicePrincipal'", proof["condition"])
             self.assertNotIn("'User'", proof["condition"])
             self.assertIn("@Request", proof["condition"])
             self.assertIn("@Resource", proof["condition"])
             self.assertEqual(host.receipt["rbacDelegationId"], proof["assignmentId"])
             command = (evidence / "rbac-bootstrap.ps1").read_text()
-            self.assertIn("--scope " + proof["scope"], command)
+            self.assertIn("$parentScope = '" + proof["scope"] + "'", command)
             self.assertIn("AddMinutes(10)", command)
             self.assertIn("do {", command)
-            self.assertIn("$output = & az role assignment create", command)
-            self.assertIn("if ($exitCode -eq 0) { $output; break }", command)
             self.assertIn("authorizationfailed", command)
-            self.assertIn("microsoft.authorization/roleassignments/write", command)
+            self.assertIn("roleassignments/write", command)
             self.assertIn("} while ($true)", command)
             host.az = Mock(return_value=[])
             with patch.object(runner.time, "monotonic", side_effect=[0, 1200]), \
@@ -994,6 +1126,376 @@ class Contracts(unittest.TestCase):
                 self.assertNotIn("--scope", timeout_command)
                 self.assertNotIn("--all", timeout_command)
 
+    def test_sre_persistent_read_grant_contract(self):
+        principal = "e2bd6e9c-e75e-438b-8f57-2bb62327f346"
+        reader = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        monitoring = "b0d8363b-8ddd-447d-831f-62ca05bff136"
+        subscription = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
+        group = f"/subscriptions/{subscription}/resourceGroups/ama-e2e-persistent-mixed"
+        workspace = group + "/providers/Microsoft.Monitor/accounts/example"
+        condition = runner.rbac_condition(runner.RBAC_ALLOWED_ROLES, sre=True)
+        write, delete = condition.split(" AND ((!(ActionMatches")
+        self.assertIn(f"{{{reader}}} AND @Request[Microsoft.Authorization/roleAssignments:PrincipalId] "
+                      f"ForAnyOfAnyValues:GuidEquals {{{principal}}}", write)
+        self.assertNotIn(reader, delete)
+        self.assertNotIn(principal, delete)
+        authorized = {"4d97b98b-1d4f-4787-a291-c67834d212e7", monitoring}
+        self.assertEqual(set(re.findall(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", write)),
+                         authorized | {reader, principal})
+        self.assertEqual(set(re.findall(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", delete)), authorized)
+        for role in authorized:
+            self.assertIn(role, write)
+            self.assertIn(role, delete)
+        proxy_roles = runner.RBAC_ALLOWED_ROLES + [reader]
+        self.assertEqual(runner.rbac_condition(proxy_roles, sre=True), runner.rbac_condition(proxy_roles))
+        bicep = (runner.ROOT / "clusters" / "aks.bicep").read_text(encoding="utf-8")
+        self.assertIn(f"var srePrincipalId = '{principal}'", bicep)
+        self.assertIn("var monitoringDataReader = subscriptionResourceId("
+                      f"'Microsoft.Authorization/roleDefinitions', '{monitoring}')", bicep)
+        assignment = bicep.split("resource sreWorkspaceReader ", 1)[1].split("\n}\n", 1)[0]
+        self.assertEqual(" ".join(assignment.split()),
+                         "'Microsoft.Authorization/roleAssignments@2022-04-01' = { "
+                         "name: empty(sreWorkspaceAssignmentId) ? guid(workspace.id, srePrincipalId, monitoringDataReader) "
+                         ": last(split(sreWorkspaceAssignmentId, '/')) scope: workspace "
+                         "properties: { principalId: srePrincipalId principalType: 'ServicePrincipal' "
+                         "roleDefinitionId: monitoringDataReader }")
+        with tempfile.TemporaryDirectory() as directory:
+            host = runner.Host(types.SimpleNamespace(evidence=Path(directory), subscription=subscription,
+                                                     location="eastus2", run_id="run"),
+                               scenario(), Mock())
+            host.receipt = {"resourceGroup": "ama-e2e-persistent-mixed"}
+            host.assert_owned = Mock()
+            host.az_with_rbac_retry = Mock()
+            for scope, role in ((group, reader), (workspace, monitoring)):
+                exact = {"scope": scope, "principalId": principal, "principalType": "ServicePrincipal",
+                         "roleDefinitionId": f"/subscriptions/{subscription}/providers/Microsoft.Authorization/roleDefinitions/{role}",
+                         "condition": None, "conditionVersion": None}
+                for field, value in ((None, None), ("scope", group if scope == workspace else "/subscriptions/" + subscription),
+                                     ("principalId", "other"), ("principalType", "User"),
+                                     ("roleDefinitionId", exact["roleDefinitionId"] + "-wrong"),
+                                     ("condition", "restricted"), ("conditionVersion", "2.0")):
+                    with self.subTest(scope=scope, field=field):
+                        host.az = Mock(return_value=[{**exact, **({field: value} if field else {})}])
+                        if field in ("scope", "principalId", "roleDefinitionId"):
+                            host.az.side_effect = [
+                                [{**exact, field: value}], [exact],
+                            ]
+                        host.az_with_rbac_retry.reset_mock()
+                        if field in ("principalType", "condition", "conditionVersion"):
+                            with self.assertRaisesRegex(ValueError, "conditional or has an invalid"):
+                                host.grant_sre_read(workspace if scope == workspace else None)
+                            host.az_with_rbac_retry.assert_not_called()
+                        elif field is None:
+                            host.grant_sre_read(workspace if scope == workspace else None)
+                            host.az_with_rbac_retry.assert_not_called()
+                        else:
+                            host.grant_sre_read(workspace if scope == workspace else None)
+                            host.az_with_rbac_retry.assert_called_once_with(
+                                "role", "assignment", "create", "--assignee-object-id", principal,
+                                "--assignee-principal-type", "ServicePrincipal", "--role", role, "--scope", scope)
+                        self.assertEqual(host.az.call_args.args[-1], scope)
+            for bad in ("/subscriptions/" + subscription, group, group + "/providers/Microsoft.Monitor/accounts/x/child",
+                        group + "-other/providers/Microsoft.Monitor/accounts/example"):
+                with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "owned resource group"):
+                    host.grant_sre_read(bad)
+            host.az_with_rbac_retry = runner.Host.az_with_rbac_retry.__get__(host)
+            host.commands.deadline = None
+            for identity, scope, role in (("other", group, reader), (principal, "/subscriptions/" + subscription, reader),
+                                          (principal, group, monitoring), (principal, "/subscriptions/" + subscription, monitoring),
+                                          (principal, group, runner.RBAC_ADMIN_ROLE)):
+                with self.subTest(identity=identity, scope=scope, role=role), self.assertRaises(ValueError):
+                    host.az_with_rbac_retry("role", "assignment", "create", "--assignee-object-id", identity,
+                                            "--assignee-principal-type", "ServicePrincipal", "--role", role, "--scope", scope)
+            existing = {"scope": group, "principalId": principal, "principalType": "ServicePrincipal",
+                        "roleDefinitionId": f"/subscriptions/{subscription}/providers/Microsoft.Authorization/roleDefinitions/{reader}",
+                        "condition": None, "conditionVersion": None}
+            host.az = Mock(side_effect=[RuntimeError("RoleAssignmentExists"), [existing]])
+            self.assertEqual(host.az_with_rbac_retry(
+                "role", "assignment", "create", "--assignee-object-id", principal,
+                "--assignee-principal-type", "ServicePrincipal", "--role", reader, "--scope", group), existing)
+            delegation = {"scope": group, "principalId": "df26555d-400a-48dd-b013-940eb85ab5bb",
+                          "principalType": "ServicePrincipal", "roleDefinitionId": runner.RBAC_ADMIN_ROLE,
+                          "conditionVersion": "2.0", "condition": runner.rbac_condition(runner.RBAC_ALLOWED_ROLES)}
+            with self.assertRaisesRegex(ValueError, "SRE identity cannot receive"):
+                host.wait_for_rbac(principal, retained=True)
+            modern = {**delegation, "id": group + "/providers/Microsoft.Authorization/roleAssignments/34ac9134-6223-4407-ab90-f15392ee8954",
+                      "condition": condition}
+            host.az = Mock(side_effect=[[delegation], [modern]])
+            with patch("sys.stdout", new=io.StringIO()):
+                host.wait_for_rbac(delegation["principalId"], retained=True)
+            host.az = Mock(return_value=[{**delegation, "condition": condition}])
+            host.wait_for_rbac(delegation["principalId"], retained=True)
+            self.assertFalse(any(c.args[:3] == ("role", "assignment", "create") for c in host.az.call_args_list))
+            sibling_condition = runner.sibling_rbac_condition()
+            self.assertEqual(set(re.findall(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", sibling_condition)),
+                             {reader, principal})
+            self.assertIn(f"roleAssignments:PrincipalId] ForAnyOfAnyValues:GuidEquals {{{principal}}}", sibling_condition)
+            self.assertIn("roleAssignments:PrincipalType", sibling_condition)
+            self.assertIn("(!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'}))", sibling_condition)
+            with tempfile.TemporaryDirectory() as evidence:
+                host = runner.Host(types.SimpleNamespace(evidence=Path(evidence), subscription=subscription),
+                                   scenario(), Mock())
+                owner = runner.persistent_identity("mixed")[1]
+                host.receipt = {"resourceGroup": "ama-e2e-persistent-mixed", "runId": owner}
+                host.assert_owned = Mock()
+                host.az = Mock(return_value=[{**delegation, "id": "delegation", "condition": condition}])
+                with patch("sys.stdout", new=io.StringIO()):
+                    host.wait_for_rbac(delegation["principalId"])
+                script = (Path(evidence) / "rbac-bootstrap.ps1").read_text()
+                tags = {"owner": "ama-metrics-e2e", "scenario": "default", "run": owner}
+                cluster = group + "/providers/Microsoft.ContainerService/managedClusters/example"
+                node = f"/subscriptions/{subscription}/resourceGroups/nodes"
+                managed = f"/subscriptions/{subscription}/resourceGroups/amw"
+                role_prefix = f"/subscriptions/{subscription}/providers/Microsoft.Authorization/roleDefinitions/"
+                def row(scope, identity, role, condition=None):
+                    return {"scope": scope, "principalId": identity, "principalType": "ServicePrincipal",
+                            "roleDefinitionId": role_prefix + role, "condition": condition,
+                            "conditionVersion": "2.0" if condition else None}
+                fixtures = {
+                    "parent": {"id": group, "tags": {"owner": "ama-metrics-e2e", "scenario": "mixed",
+                               "scenario-run": owner, "scenario-token": owner}},
+                    "cluster": {"id": cluster, "tags": tags, "nodeResourceGroup": "nodes"},
+                    "workspace": {"id": workspace, "tags": tags, "properties": {"defaultIngestionSettings": {
+                        "dataCollectionEndpointResourceId": managed + "/providers/Microsoft.Insights/dataCollectionEndpoints/dce"}}},
+                    "groups": [{"id": node, "managedBy": cluster}, {"id": managed, "managedBy": workspace}],
+                }
+                outputs = {"clusterId": cluster, "clusterName": "example", "workspaceId": workspace,
+                           "nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+                for case in ("exact", "missing-reader", "missing-delegation", "foreign", "bad-delegation"):
+                    with self.subTest(verification=case):
+                        data = copy.deepcopy(fixtures)
+                        if case == "foreign":
+                            data["workspace"]["tags"]["owner"] = "other"
+                        sibling = row(node, delegation["principalId"], runner.RBAC_ADMIN_ROLE,
+                                      "bad" if case == "bad-delegation" else sibling_condition)
+                        host.sre_read_assignment = Mock(return_value={"id": "existing"})
+                        if case == "missing-reader":
+                            host.sre_read_assignment.side_effect = [None, {"id": "new"}, None, {"id": "new"}]
+                        host.az_with_rbac_retry = Mock()
+                        def az(*args, **kwargs):
+                            if args[:2] == ("aks", "show"):
+                                return data["cluster"]
+                            if args[:2] == ("resource", "show"):
+                                return data["workspace"]
+                            if args[:2] == ("group", "show"):
+                                return next(g for g in data["groups"] if g["id"].endswith("/" + args[3]))
+                            if args[:3] == ("role", "assignment", "list"):
+                                scope = args[args.index("--scope") + 1]
+                                return [] if case == "missing-delegation" else [{**sibling, "scope": scope}]
+                            raise AssertionError(args)
+                        host.az = Mock(side_effect=az)
+                        host.commands.deadline = None
+                        if case in ("exact", "missing-reader"):
+                            host.verify_sre_managed_groups(outputs, delegation["principalId"], "ServicePrincipal", retained=True)
+                            self.assertEqual(host.az_with_rbac_retry.call_args_list, [
+                                call("role", "assignment", "create", "--assignee-object-id", principal,
+                                     "--assignee-principal-type", "ServicePrincipal", "--role", reader,
+                                     "--scope", scope) for scope in (node, managed)
+                            ] if case == "missing-reader" else [])
+                        elif case == "missing-delegation":
+                            self.assertFalse(host.verify_sre_managed_groups(
+                                outputs, delegation["principalId"], "ServicePrincipal", retained=True))
+                            host.az_with_rbac_retry.assert_not_called()
+                        else:
+                            with self.assertRaises((ValueError, RuntimeError)):
+                                host.verify_sre_managed_groups(outputs, delegation["principalId"], "ServicePrincipal", retained=True)
+                            host.az_with_rbac_retry.assert_not_called()
+                mock_az = r"""
+$data = ConvertFrom-Json '@@FIXTURE@@'
+$global:assignments = @($data.assignments)
+$global:created = @()
+$global:updated = @()
+function az {
+  $a = $args
+  $global:LASTEXITCODE = 0
+  function option($name) { $i = [array]::IndexOf($a, $name); if ($i -ge 0) { return $a[$i + 1] } }
+  $result = switch ("$($a[0]) $($a[1]) $($a[2])") {
+    'role assignment create' {
+      $scope = option '--scope'; $identity = option '--assignee-object-id'; $role = option '--role'
+      $condition = option '--condition'
+      if (@($global:assignments | Where-Object { $_.scope -ieq $scope -and $_.principalId -ieq $identity -and $_.roleDefinitionId -ieq "@@PREFIX@@$role" }).Count) {
+        $global:LASTEXITCODE = 1; 'RoleAssignmentExists'; break
+      }
+      $item = @{ scope=$scope; principalId=$identity; principalType='ServicePrincipal';
+        roleDefinitionId="@@PREFIX@@$role"; condition=$condition; conditionVersion=$(if ($condition) {'2.0'} else {$null}) }
+      $global:assignments += $item; $global:created += $item
+      break
+    }
+    'role assignment list' { ,@($global:assignments); break }
+    'role assignment update' {
+      $update = Get-Content -LiteralPath (option '--role-assignment') -Raw | ConvertFrom-Json
+      $global:assignments = @($global:assignments | ForEach-Object { if ($_.id -eq $update.id) { $update } else { $_ } })
+      $global:updated += $update
+      break
+    }
+    default {
+      if ($a[0] -eq 'group' -and $a[1] -eq 'show') {
+        $name = option '--name'
+        if ($name -eq 'ama-e2e-persistent-mixed') { $data.parent } else { $data.groups | Where-Object { $_.id -like "*/$name" } }
+      } elseif ($a[0] -eq 'group' -and $a[1] -eq 'exists') { $true }
+      elseif ($a[0] -eq 'aks' -and $a[1] -eq 'list') { ,@($data.cluster) }
+      elseif ($a[0] -eq 'resource' -and $a[1] -eq 'list') { ,@($data.workspace) }
+      elseif ($a[0] -eq 'resource' -and $a[1] -eq 'show') { $data.workspace }
+      elseif ($a[0] -eq 'deployment') {
+        if ($data.noDeployment) { ,@() }
+        else { ,@(@{name='scenario'; properties=@{provisioningState='Failed'; timestamp='2099-01-01T00:00:00Z'}}) }
+      }
+      else { throw "Unexpected az command: $a" }
+    }
+  }
+  ConvertTo-Json -InputObject $result -Depth 30 -Compress
+}
+function Start-Sleep { throw 'Unexpected polling' }
+""".replace("@@PREFIX@@", role_prefix)
+                for case in ("fresh", "existing", "legacy", "invalid-parent-id", "unapproved-parent",
+                             "foreign", "incompatible", "terminal", "never-started"):
+                    with self.subTest(script=case):
+                        data = copy.deepcopy(fixtures)
+                        data["assignments"] = []
+                        if case == "existing":
+                            data["assignments"] = [row(group, delegation["principalId"], runner.RBAC_ADMIN_ROLE, condition)]
+                            data["assignments"] += [row(scope, identity, role, cond) for scope in (node, managed)
+                                                   for identity, role, cond in ((delegation["principalId"], runner.RBAC_ADMIN_ROLE, sibling_condition),
+                                                                                (principal, reader, None))]
+                        elif case in ("legacy", "invalid-parent-id", "unapproved-parent"):
+                            data["assignments"] = [{**row(group, delegation["principalId"], runner.RBAC_ADMIN_ROLE,
+                                                        runner.rbac_condition(runner.RBAC_ALLOWED_ROLES)),
+                                                    "id": modern["id"]}]
+                            if case == "invalid-parent-id":
+                                data["assignments"][0]["id"] = "/subscriptions/other/providers/Microsoft.Authorization/roleAssignments/34ac9134-6223-4407-ab90-f15392ee8954"
+                            elif case == "unapproved-parent":
+                                data["assignments"][0]["condition"] += " OR true"
+                        elif case == "incompatible":
+                            data["assignments"] = [row(node, delegation["principalId"], runner.RBAC_ADMIN_ROLE, "bad")]
+                        elif case == "foreign":
+                            data["cluster"]["tags"]["owner"] = "other"
+                        elif case in ("terminal", "never-started"):
+                            data["cluster"] = []
+                        candidate_script = script
+                        if case == "never-started":
+                            data["noDeployment"] = True
+                            candidate_script = script.replace(
+                                "$waitingForDeploymentUntil = [DateTimeOffset]::UtcNow.AddMinutes(20)",
+                                "$waitingForDeploymentUntil = [DateTimeOffset]::UtcNow.AddMinutes(-1)")
+                        payload = mock_az.replace("@@FIXTURE@@", json.dumps(data).replace("'", "''"))
+                        result = subprocess.run(["pwsh", "-NoProfile", "-NonInteractive", "-Command",
+                                                 payload + candidate_script + "\n'CREATED:' + (ConvertTo-Json -InputObject $global:created -Depth 20 -Compress) + "
+                                                 "'UPDATED:' + (ConvertTo-Json -InputObject $global:updated -Depth 20 -Compress)"],
+                                                text=True, capture_output=True)
+                        if case in ("fresh", "existing", "legacy"):
+                            self.assertEqual(result.returncode, 0, result.stderr)
+                            created = json.loads(result.stdout.split("CREATED:")[-1].split("UPDATED:")[0])
+                            expected = [
+                                row(group, delegation["principalId"], runner.RBAC_ADMIN_ROLE, condition),
+                                row(node, delegation["principalId"], runner.RBAC_ADMIN_ROLE, sibling_condition),
+                                row(node, principal, reader), row(managed, delegation["principalId"], runner.RBAC_ADMIN_ROLE, sibling_condition),
+                                row(managed, principal, reader)]
+                            self.assertEqual(created, [] if case == "existing" else expected[1:] if case == "legacy" else expected)
+                            updated = json.loads(result.stdout.split("UPDATED:")[-1])
+                            self.assertEqual(updated, [dict(row(group, delegation["principalId"], runner.RBAC_ADMIN_ROLE, condition),
+                                                          id=modern["id"])] if case == "legacy" else [])
+                        else:
+                            self.assertNotEqual(result.returncode, 0, result.stdout)
+                            self.assertIn({"invalid-parent-id": "unapproved assignment",
+                                           "unapproved-parent": "Incompatible sibling",
+                                           "foreign": "Unowned", "incompatible": "Incompatible sibling",
+                                           "terminal": "ended before both",
+                                           "never-started": "did not start after bootstrap"}[case], result.stderr)
+            for reused in (False, True):
+                with self.subTest(reused=reused), tempfile.TemporaryDirectory() as evidence:
+                    host = runner.Host(types.SimpleNamespace(evidence=Path(evidence), subscription=subscription,
+                                                             location="eastus2", run_id="run"),
+                                       scenario(), Mock())
+                    outputs = {"workspaceId": workspace, "nodeResourceGroupName": "nodes",
+                               "amwManagedResourceGroupName": "amw"}
+                    host.persistent_state = Mock(return_value=outputs if reused else None)
+                    host.wait_for_rbac = Mock()
+                    host.grant_sre_read = Mock()
+                    host.verify_sre_managed_groups = Mock(side_effect=[False, True] if reused else [True])
+                    host.az = Mock(side_effect=["false", None, []])
+                    host.az_with_rbac_retry = Mock(return_value={"properties": {"outputs": {
+                        key: {"value": value} for key, value in outputs.items()}}})
+                    host.provision({}, delegation["principalId"], "ServicePrincipal")
+                    self.assertEqual(host.grant_sre_read.call_args_list,
+                                     [call(), call(workspace)])
+                    self.assertEqual(host.az_with_rbac_retry.call_count, int(not reused))
+                    if reused:
+                        self.assertEqual(host.wait_for_rbac.call_args_list, [
+                            call(delegation["principalId"], retained=True), call(delegation["principalId"])])
+                        self.assertEqual(host.verify_sre_managed_groups.call_count, 2)
+                    else:
+                        host.wait_for_rbac.assert_called_once_with(delegation["principalId"])
+            owner = runner.persistent_identity("mixed")[1]
+            assignment_id = workspace + "/providers/Microsoft.Authorization/roleAssignments/34ac9134-6223-4407-ab90-f15392ee8954"
+            with self.subTest("compiled ARM"):
+                az = shutil.which("az")
+                if not az:
+                    self.skipTest("Azure CLI is required to compile the ARM parameter shapes")
+                for override_id in ("", assignment_id):
+                    env = {**os.environ, "SCENARIO_RUN_NAME": owner, "SCENARIO_LOCATION": "eastus2",
+                           "SCENARIO_KUBERNETES_VERSION": "1.36.5", "SCENARIO_OWNER": "ama-metrics-e2e",
+                           "SCENARIO_WINDOWS_PASSWORD": "offline-test-password"}
+                    env.pop("BICEP_PARAMETERS_OVERRIDES", None)
+                    if override_id:
+                        env["BICEP_PARAMETERS_OVERRIDES"] = json.dumps({"sreWorkspaceAssignmentId": override_id})
+                    result = subprocess.run([az, "bicep", "build-params", "--file",
+                                             str(runner.ROOT / "clusters" / "default.bicepparam"), "--stdout"],
+                                            env=env, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, "Bicep parameter compilation failed")
+                    built = json.loads(result.stdout)
+                    parameters, template = json.loads(built["parametersJson"]), json.loads(built["templateJson"])
+                    self.assertEqual(parameters["parameters"].get("sreWorkspaceAssignmentId", {}).get("value", ""),
+                                     override_id)
+                    self.assertEqual(template["parameters"]["sreWorkspaceAssignmentId"]["defaultValue"], "")
+                    arm = template["resources"]["sreWorkspaceReader"]
+                    self.assertEqual(arm["dependsOn"], ["workspace"])
+                    self.assertEqual(template["resources"]["workspace"]["dependsOn"], ["guards"])
+                    self.assertIn("sreWorkspaceAssignmentValid",
+                                  template["resources"]["guards"]["properties"]["parameters"]["validPoolPlan"]["value"])
+                    self.assertIn("if(empty(parameters('sreWorkspaceAssignmentId'))", arm["name"])
+                    self.assertIn("last(split(parameters('sreWorkspaceAssignmentId'), '/'))", arm["name"])
+                    self.assertEqual(arm["properties"], {
+                        "principalId": "[variables('srePrincipalId')]", "principalType": "ServicePrincipal",
+                        "roleDefinitionId": "[variables('monitoringDataReader')]",
+                    })
+            account = {"id": workspace, "tags": {"owner": "ama-metrics-e2e", "scenario": "default", "run": owner}}
+            exact = {"id": assignment_id, "scope": workspace, "principalId": principal,
+                     "principalType": "ServicePrincipal",
+                     "roleDefinitionId": f"/subscriptions/{subscription}/providers/Microsoft.Authorization/roleDefinitions/{monitoring}",
+                     "condition": None, "conditionVersion": None}
+            for case in ("existing", "new", "wrong-principal", "condition", "foreign", "multiple", "bad-id"):
+                with self.subTest(case=case), tempfile.TemporaryDirectory() as evidence:
+                    host = runner.Host(types.SimpleNamespace(evidence=Path(evidence), subscription=subscription,
+                                                             location="eastus2", run_id="run"),
+                                       scenario(), Mock())
+                    host.persistent_state, host.wait_for_rbac, host.grant_sre_read = Mock(return_value=None), Mock(), Mock()
+                    host.verify_sre_managed_groups = Mock()
+                    found = [] if case == "new" else [copy.deepcopy(account)]
+                    if case == "foreign":
+                        found[0]["tags"]["owner"] = "other"
+                    if case == "multiple":
+                        found.append(copy.deepcopy(account))
+                    grant = copy.deepcopy(exact)
+                    if case == "wrong-principal":
+                        grant["principalId"] = "other"
+                    if case == "condition":
+                        grant["condition"] = "restricted"
+                    if case == "bad-id":
+                        grant["id"] = group + "/providers/Microsoft.Authorization/roleAssignments/34ac9134-6223-4407-ab90-f15392ee8954"
+                    host.az = Mock(side_effect=["false", None, found, [grant]])
+                    host.az_with_rbac_retry = Mock(return_value={"properties": {"outputs": {
+                        "workspaceId": {"value": workspace},
+                        "nodeResourceGroupName": {"value": "nodes"}, "amwManagedResourceGroupName": {"value": "amw"}}}})
+                    if case in ("foreign", "multiple", "bad-id", "condition"):
+                        with self.assertRaises(ValueError):
+                            host.provision({}, delegation["principalId"], "ServicePrincipal")
+                        host.az_with_rbac_retry.assert_not_called()
+                    else:
+                        host.provision({"SCENARIO_WINDOWS_PASSWORD": "private-value"}, delegation["principalId"], "ServicePrincipal")
+                        command = host.az_with_rbac_retry.call_args.args
+                        overrides = [value for value in command if value.startswith("sreWorkspaceAssignmentId=")]
+                        self.assertEqual(overrides, ["sreWorkspaceAssignmentId=" + assignment_id] if case == "existing" else [])
+                        self.assertNotIn("private-value", str(command))
     def test_rbac_bootstrap_is_before_deployment_and_cleanup_verifies_delegation_absence(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
@@ -1021,7 +1523,8 @@ class Contracts(unittest.TestCase):
                                          location="eastus2")
             host = runner.Host(args, scenario(), Mock())
             host.commands.deadline = None
-            outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+            outputs = {"workspaceId": "/subscriptions/sub/resourceGroups/owned/providers/Microsoft.Monitor/accounts/amw",
+                       "nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
             failure = RuntimeError(
                 "Command failed (1): az deployment: ERROR: {\"code\": \"InvalidTemplateDeployment\", \"message\": "
                 "\"The template deployment failed with error: 'Authorization failed for template "
@@ -1029,10 +1532,10 @@ class Contracts(unittest.TestCase):
                 "The client 'app-id' with object id 'principal-id' does not have permission to "
                 "perform action 'Microsoft.Authorization/roleAssignments/write' at scope 'scope'.'.\"}")
             host.az = Mock(side_effect=[
-                "false", None, failure,
+                "false", None, [], failure,
                 {"properties": {"outputs": {key: {"value": value} for key, value in outputs.items()}}},
             ])
-            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "verify_deployment"), patch.object(host, "wait_for_rbac"), \
+            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "verify_deployment"), patch.object(host, "wait_for_rbac"), patch.object(host, "grant_sre_read"), patch.object(host, "verify_sre_managed_groups"), \
                     patch.object(runner.time, "monotonic", side_effect=[0, 0, 30]), \
                     patch.object(runner.time, "sleep") as sleep, \
                     patch("sys.stdout", new=io.StringIO()):
@@ -1048,17 +1551,14 @@ class Contracts(unittest.TestCase):
                 ("ServicePrincipal", "AuthorizationFailed: Microsoft.Compute/virtualMachines/write"),
                 ("ServicePrincipal", "InvalidTemplateDeployment: Microsoft.Authorization/roleAssignments/write"),
                 ("ServicePrincipal", "InvalidTemplateDeployment: Authorization failed for "
-                                     "Microsoft.Compute/virtualMachines/write"),
-                ("User", "InvalidTemplateDeployment: Authorization failed for template resource "
-                         "of type Microsoft.Authorization/roleAssignments; action "
-                         "Microsoft.Authorization/roleAssignments/write")):
+                                     "Microsoft.Compute/virtualMachines/write")):
             with self.subTest(principal_type=principal_type), tempfile.TemporaryDirectory() as temporary:
                 args = types.SimpleNamespace(evidence=Path(temporary), subscription="sub", run_id="run",
                                              location="eastus2")
                 host = runner.Host(args, scenario(), Mock())
                 host.commands.deadline = None
-                host.az = Mock(side_effect=["false", None, RuntimeError(failure)])
-                with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), patch.object(runner.time, "sleep") as sleep:
+                host.az = Mock(side_effect=["false", None, [], RuntimeError(failure)])
+                with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), patch.object(host, "grant_sre_read"), patch.object(runner.time, "sleep") as sleep:
                     with self.assertRaises(RuntimeError) as error:
                         host.provision({}, "principal", principal_type, pool_parameters()["nodePools"])
                 self.assertEqual(str(error.exception), failure)
@@ -1090,6 +1590,8 @@ class Contracts(unittest.TestCase):
                     return None
                 if command[:3] == ("deployment", "group", "create"):
                     raise failure
+                if command[:2] == ("resource", "list"):
+                    return []
                 raise AssertionError(f"Unexpected command: {command}")
 
             host.az = Mock(side_effect=az)
@@ -1098,7 +1600,7 @@ class Contracts(unittest.TestCase):
                 delays.append(delay)
                 now[0] += delay
 
-            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), \
+            with patch.object(host, "persistent_state", return_value=None), patch.object(host, "wait_for_rbac"), patch.object(host, "grant_sre_read"), \
                     patch.object(runner.time, "monotonic", side_effect=lambda: now[0]), \
                     patch.object(runner.time, "sleep", side_effect=sleep), \
                     patch("sys.stdout", new=io.StringIO()):
@@ -1112,20 +1614,26 @@ class Contracts(unittest.TestCase):
             self.assertEqual(delays, [30, 60, 120, 240, 150])
             self.assertIsNone(host.commands.deadline)
 
-    def test_provision_routes_only_service_principal_deployments_through_retry(self):
+    def test_provision_requires_service_principal_for_independent_bootstrap(self):
         for kind in ("User", "ServicePrincipal"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
                 host = runner.Host(types.SimpleNamespace(
                     evidence=Path(directory), subscription="sub", location="eastus2", run_id="run"),
                     scenario(), Mock())
-                outputs = {"nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
+                outputs = {"workspaceId": "/subscriptions/sub/resourceGroups/owned/providers/Microsoft.Monitor/accounts/amw",
+                           "nodeResourceGroupName": "nodes", "amwManagedResourceGroupName": "amw"}
                 deployment = {"properties": {"outputs": {
                     key: {"value": value} for key, value in outputs.items()}}}
-                host.az = Mock(side_effect=["false", {}, deployment])
+                host.az = Mock(side_effect=["false", {}, [], deployment])
                 with patch.object(host, "persistent_state", return_value=None), \
-                        patch.object(host, "wait_for_rbac") as wait, \
+                        patch.object(host, "wait_for_rbac") as wait, patch.object(host, "grant_sre_read"), \
+                        patch.object(host, "verify_sre_managed_groups"), \
                         patch.object(host, "az_with_rbac_retry", return_value=deployment) as retry:
-                    self.assertEqual(host.provision({}, "principal", kind), outputs)
+                    if kind == "User":
+                        with self.assertRaisesRegex(RuntimeError, "requires a ServicePrincipal"):
+                            host.provision({}, "principal", kind)
+                    else:
+                        self.assertEqual(host.provision({}, "principal", kind), outputs)
                 self.assertEqual(retry.call_count, int(kind == "ServicePrincipal"))
                 self.assertEqual(wait.call_count, int(kind == "ServicePrincipal"))
 
@@ -1382,9 +1890,11 @@ class Contracts(unittest.TestCase):
             ):
                 with self.subTest(expected=expected):
                     host = Mock(spec=runner.Host)
+                    host.scenario = row
                     host.receipt = {"resourceGroup": "owned"}
                     host.kubeconfig = args.evidence / "kubeconfig"
                     host.reused = True
+                    host.current_kubernetes_version = "1.37.1"
                     host.provision.return_value = outputs
                     host.retain.return_value = {"retained": True}
                     responses = iter((cluster_locks, workspace_locks))
@@ -1401,7 +1911,9 @@ class Contracts(unittest.TestCase):
                     host.az.side_effect = az
                     with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
                             patch.object(runner, "label_filter", return_value=""), \
-                            patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.37.1", "existing": True}), \
+                            patch.object(runner, "preflight", return_value={
+                                "expectedPools": [], "kubernetesVersion": "1.38.0", "existing": True,
+                                "upgradePlan": {"action": "aks-upgrade-in-place", "from": "1.37.1", "to": "1.38.0"}}), \
                             patch.object(runner, "candidate_receipt", return_value=([], {})), \
                             patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
                             patch.object(runner, "deployment_env", return_value={}), \
@@ -1410,6 +1922,8 @@ class Contracts(unittest.TestCase):
                         runner.execute(args, row, {}, runner.Commands(args.evidence))
                     self.assertLess(host.method_calls.index(unittest.mock.call.assert_owned()),
                                     next(i for i, call in enumerate(host.method_calls) if call[0] == "az"))
+                    upgrade_calls = [call for call in host.az.call_args_list if call.args[:2] == ("aks", "upgrade")]
+                    self.assertEqual(len(upgrade_calls), int(expected == "credentials reached"))
 
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -1788,8 +2302,11 @@ class Contracts(unittest.TestCase):
             host.kube.return_value = {"status": "success", "data": {"resultType": "vector", "result": [
                 {"value": [105, "105"]},
             ]}}
-            with patch.object(runner.time, "time", return_value=110):
+            output = io.StringIO()
+            with patch.object(runner.time, "time", return_value=110), patch("sys.stdout", new=output):
                 result = runner.verify_ingestion(host, {"queryEndpoint": "https://amw.example"}, 100)
+            self.assertEqual(json.loads(output.getvalue().split(": ", 1)[1]), result)
+            self.assertNotIn("test-token", output.getvalue())
             self.assertEqual(result["sampleTimestamp"], 105)
             self.assertIn('scenario_run="fresh-run-marker"', result["query"])
             self.assertNotIn("test-token", (Path(temporary) / "ingestion.json").read_text())
@@ -2187,6 +2704,33 @@ def mutations():
     original = runner
     source = SOURCE.read_text()
     changes = {
+        "preview-only-selection": ('r.get("isPreview") is True', 'not r.get("isPreview")'),
+        "preview-minimum-version": ('if not scoped_secrets or key >= (1, 37, 0):',
+                                    'if not scoped_secrets or key >= (1, 36, 0):'),
+        "non-operator-secret-watch-minor": (
+            'if not scoped_secrets or key >= (1, 37, 0):',
+            'if not scoped_secrets or (key >= (1, 37, 0) and key[:2] == (1, 37)):'),
+        "preview-highest-version": ('return ".".join(map(str, max(eligible)))',
+                                    'return ".".join(map(str, min(eligible)))'),
+        "retained-preview-upgrade-plan": (
+            'if (existing and scenario["id"] == "operator-secret-watch"\n'
+            '            and retained.current_kubernetes_version != version):',
+            'if False:'),
+        "retained-preview-in-place-upgrade": (
+            'host.az("aks", "upgrade", "--resource-group", host.receipt["resourceGroup"],',
+            'host.az("group", "create", "--resource-group", host.receipt["resourceGroup"],'),
+        "retained-preview-no-downgrade": (
+            'and version_key(current_version) < version_key(requested_version)',
+            'and version_key(current_version) > version_key(requested_version)'),
+        "retained-preview-target-verification": (
+            'cluster.get("kubernetesVersion") != target or cluster.get("provisioningState") != "Succeeded"',
+            'False or cluster.get("provisioningState") != "Succeeded"'),
+        "retained-secret-watch-no-recreate": (
+            'if self.scenario["id"] == "operator-secret-watch":',
+            'if False:'),
+        "secret-watch-selected-preview": (
+            'if expected is not None and actual != expected:',
+            'if False:'),
         "cilium-dns-policy": ('if observed.get("spec") != policy["spec"]:', "if False:"),
         "cilium-resource-handoff": (
             'host.az("resource", "update", "--ids", outputs["clusterId"],',
@@ -2212,13 +2756,13 @@ def mutations():
         "persistent-bootstrap-grants": (
             'if group.casefold().startswith("ama-e2e-persistent-"):', "if False:"),
         "rbac-retry-write-only": ('"microsoft.authorization/roleassignments/write" not in message', "False"),
-        "rbac-retry-exact-role": ('options.get("--role", "").casefold() != RBAC_MONITORING_DATA_READER', "False"),
+        "rbac-retry-exact-role": ('role != RBAC_MONITORING_DATA_READER', "False"),
         "rbac-retry-existing-role": ('assigned_role.casefold() == role_assignment["roleDefinitionId"]', "True"),
         "rbac-retry-existing-principal": (
             '== role_assignment["principalId"].casefold()', "== assignment.get(\"principalId\", \"\").casefold()"),
         "rbac-retry-existing-scope": (
             '== role_assignment["scope"].casefold()', "== assignment.get(\"scope\", \"\").casefold()"),
-        "rbac-retry-existing-condition": ('and not assignment.get("condition")', "and True"),
+        "rbac-retry-existing-condition": ('and assignment.get("condition") is None', "and True"),
         "rbac-retry-backoff-cap": (
             "interval = min(interval * 2, RBAC_AUTH_RETRY_MAX_INTERVAL)", "interval = interval * 2"),
         "rbac-retry-ten-minute-window": ("RBAC_AUTH_RETRY_TIMEOUT = 600", "RBAC_AUTH_RETRY_TIMEOUT = 300"),
@@ -2226,16 +2770,36 @@ def mutations():
         "rbac-retry-preserves-user-bootstrap": (
             'assign = host.az_with_rbac_retry if kind == "ServicePrincipal" else host.az',
             "assign = host.az_with_rbac_retry"),
-        "rbac-retry-preserves-user-deployment": (
-            'deploy = self.az_with_rbac_retry if principal_type == "ServicePrincipal" else self.az',
-            "deploy = self.az_with_rbac_retry"),
-        "rbac-before-deployment": ("self.wait_for_rbac(principal)", "pass"),
-        "rbac-exact-scope": ('assignment.get("scope", "").casefold() == scope.casefold()', "True"),
-        "rbac-exact-principal": ('assignment.get("principalId", "").casefold() == principal.casefold()', "True"),
+        "rbac-before-deployment": (
+            "        self.wait_for_rbac(principal)\n        self.grant_sre_read()",
+            "        pass\n        self.grant_sre_read()"),
+        "rbac-exact-scope": (
+            'assignment.get("scope", "").casefold() == scope.casefold()\n'
+            '                        and assignment.get("principalId", "").casefold() == principal.casefold()\n'
+            '                        and assignment.get("principalType", "").casefold() == "serviceprincipal"',
+            'True\n'
+            '                        and assignment.get("principalId", "").casefold() == principal.casefold()\n'
+            '                        and assignment.get("principalType", "").casefold() == "serviceprincipal"'),
+        "rbac-exact-principal": (
+            'assignment.get("principalId", "").casefold() == principal.casefold()\n'
+            '                        and assignment.get("principalType", "").casefold() == "serviceprincipal"',
+            'True\n                        and assignment.get("principalType", "").casefold() == "serviceprincipal"'),
         "rbac-required-condition": ('re.sub(r"\\s+", "", assignment.get("condition") or "") == re.sub(r"\\s+", "", condition)', "True"),
         "rbac-cleanup": ('if any(row["scope"].casefold() == self.receipt["rbacBootstrapScope"].casefold()\n                       for row in assignments):', 'if False:'),
         "bootstrap-revocation-exact-role": ('assignment.get("roleDefinitionId", "").rsplit("/", 1)[-1].casefold() != admin_role', "False"),
-        "bootstrap-revocation-condition": ('re.sub(r"\\s+", "", condition) != re.sub(r"\\s+", "", rbac_condition(allowed))', "False"),
+        "bootstrap-revocation-condition": ('re.sub(r"\\s+", "", condition) not in {',
+                                           'False and re.sub(r"\\s+", "", condition) not in {'),
+        "sre-no-administrator": ('if principal.casefold() == SRE_PRINCIPAL:', 'if False:'),
+        "sre-principal-bound-reader": (
+            'f"ForAnyOfAnyValues:GuidEquals {{{SRE_PRINCIPAL}}}))")',
+            'f"ForAnyOfAnyValues:GuidEquals {{{RBAC_PROXY_READER}}}))")'),
+        "sre-managed-reader-created": (
+            'self.az_with_rbac_retry(\n                            "role", "assignment", "create",',
+            'if False: self.az_with_rbac_retry(\n                            "role", "assignment", "create",'),
+        "bootstrap-no-deployment-timeout": (
+            "if ((!$deployment.Count -or [DateTimeOffset]::Parse($deployment[0].properties.timestamp) -lt $started) -and\n"
+            "      [DateTimeOffset]::UtcNow -ge $waitingForDeploymentUntil) {",
+            "if ($false) {"),
         "bootstrap-revocation-owned-group": (
             '        self.assert_owned()\n        if self.az("account", "show", "--query", "user.type")',
             '        if False: self.assert_owned()\n        if self.az("account", "show", "--query", "user.type")'),
@@ -2297,11 +2861,17 @@ def mutations():
         "literal-labels": ('known.update(re.findall(r\'"([^"]+)"\', arguments))', "pass"),
         "query-auth-template": ("Bearer $token", "Bearer"),
         "fresh-sample": ("if not math.isfinite(observed) or not started <= observed <= time.time() + 60:", "if False:"),
+        "fresh-proof-output": ('print("Fresh run-specific ingestion proof: " + json.dumps(evidence), flush=True)', "pass"),
         "fresh-sample-keep": ('keep[0]["regex"] = "up|myapp_temperature"', 'keep[0]["regex"] = "up"'),
         "empty-junit": ("if not executed or failed:", "if failed:"),
         "cleanup-ownership": ('any(tags.get(k) != v for k, v in expected.items())', "False"),
         "retry-deployment-state": ('if properties.get("provisioningState") != "Succeeded":', "if False:"),
-        "role-assignment-retry-loop": ('"do {\\n"', '"if ($false) {\\n"'),
+        "role-assignment-retry-loop": (
+            "  do {\n    $args = @('role','assignment','create',",
+            "  if ($false) {\n    $args = @('role','assignment','create',"),
+        "retained-delegation-in-place-migration": (
+            "$args = @('role','assignment','update','--subscription',$subscription,'--role-assignment',$file,'--output','none')",
+            "$args = @('role','assignment','create','--subscription',$subscription,'--role-assignment',$file,'--output','none')"),
         "managed-acns-enabled": (
             'if (advanced.get("enabled") is not True\n                or (advanced.get("observability") or {}).get("enabled") is not True):',
             "if False:"),
