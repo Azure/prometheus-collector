@@ -1833,6 +1833,10 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
             host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
             host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=15m")
+        host.assert_owned()
+        host.kube("delete", "-f", str(TEST_SOURCE / "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml"),
+                  "--ignore-not-found")
+        host.kube("delete", "servicemonitor", "scenario-network-probe", "-n", "default", "--ignore-not-found")
         save(args.evidence / "images-before.json", audit_images(host, images))
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])

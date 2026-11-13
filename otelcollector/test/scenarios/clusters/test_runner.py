@@ -1455,6 +1455,16 @@ class Contracts(unittest.TestCase):
                 else:
                     self.assertNotIn(exporter, calls)
                     self.assertNotIn(ready, calls)
+                reset = ("delete", "-f", str(runner.TEST_SOURCE /
+                    "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml"),
+                    "--ignore-not-found")
+                probe_reset = ("delete", "servicemonitor", "scenario-network-probe",
+                               "-n", "default", "--ignore-not-found")
+                self.assertEqual([call for call in calls if call[0] == "delete"], [reset, probe_reset])
+                ownership = [i for i, call in enumerate(host.mock_calls) if call[0] == "assert_owned"]
+                deletion = next(i for i, call in enumerate(host.mock_calls) if call.args == reset)
+                self.assertEqual(len(ownership), 2)
+                self.assertLess(ownership[-1], deletion)
 
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
