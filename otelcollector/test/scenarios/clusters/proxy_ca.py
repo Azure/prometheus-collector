@@ -8,10 +8,17 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
-CERTIFICATE_ERROR = re.compile(
-    r"certificate verify failed|certificate signed by unknown authority|SSL peer certificate|"
-    r"unable to get local issuer|CERTIFICATE_VERIFY_FAILED|CERT_E_UNTRUSTEDROOT|0x800b0109",
-    re.IGNORECASE)
+DCE_CERTIFICATE_ERROR = re.compile(
+    r'PublicationEndpoint:\s*"https://[^"]*\.metrics\.ingest\.monitor\.azure\.com[^"]*"'
+    r'.*(?:certificate verify failed|certificate signed by unknown authority|SSL peer certificate|'
+    r'unable to get local issuer|CERTIFICATE_VERIFY_FAILED|CERT_E_UNTRUSTEDROOT|0x800b0109|'
+    r'Error in SSL handshake)', re.IGNORECASE)
+
+
+def require_certificate_rejection(exit_code):
+    if str(exit_code).strip() != "60":
+        raise RuntimeError("Proxy CA distrust probe did not fail certificate verification")
+    return {"curlExitCode": 60, "certificateRejected": True}
 
 
 def failure_proof(scrapes, errors, observations, started):
@@ -79,9 +86,9 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
             containers = document["spec"]["template"]["spec"]["containers"]
             index = next(i for i, container in enumerate(containers) if container["name"] == "prometheus-collector")
             mounts = containers[index].get("volumeMounts", [])
-            untrusted = [mount for mount in mounts if not mount["mountPath"].startswith("/anchors/")]
+            untrusted = [mount for mount in mounts if mount.get("name") != "scenario-proxy-ca"]
             if mounts == untrusted:
-                raise RuntimeError("CA failure adapter found no collector trust anchors to remove")
+                raise RuntimeError("CA failure adapter found no owned proxy CA trust mount to remove")
             patch = {"op": "replace", "path": f"/spec/template/spec/containers/{index}/volumeMounts"}
             originals.append((resource, dict(patch, value=mounts)))
             host.kube("patch", resource, "-n", "kube-system", "--type=json",
@@ -90,6 +97,30 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
             host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=5m")
         # A new marker cannot be satisfied by samples queued before CA removal.
         started = time.time()
+        ca_probes = []
+        untrusted_pods = host.kube(
+            "get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+        for pod in untrusted_pods:
+            collector = next((container for container in pod["spec"]["containers"]
+                              if container["name"] == "prometheus-collector"), None)
+            if collector is None:
+                continue
+            if any(mount.get("name") == "scenario-proxy-ca"
+                   for mount in collector.get("volumeMounts", [])):
+                raise RuntimeError("Collector still mounts the owned proxy CA during distrust")
+            result = host.kube(
+                "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
+                "--", "sh", "-c",
+                'set +e; curl --noproxy "" --proxy "$HTTPS_PROXY" --connect-timeout 10 --max-time 30 '
+                '--silent --output /dev/null "$1" 2>/dev/null; printf "%s" "$?"',
+                "scenario-ca-probe", outputs["dceMetricsIngestionEndpoint"], private=True)
+            ca_probes.append({"pod": pod["metadata"]["name"],
+                              **require_certificate_rejection(result)})
+        if not ca_probes:
+            raise RuntimeError("No collectors available for the proxy CA distrust probe")
+        print("Proxy CA distrust probe: " + json.dumps({
+            "status": "PASS", "scope": "proxy-custom-ca", "collectors": ca_probes,
+        }), flush=True)
         mark_probe(host, marker)
         time.sleep(90)
         observations = []
@@ -118,7 +149,8 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
                                     "timestamp": datetime.fromisoformat(target["lastScrape"].replace("Z", "+00:00")).timestamp()})
             log = host.kube("exec", name, "-n", "kube-system", "-c", "prometheus-collector",
                             "--", "cat", "/MetricsExtensionConsoleDebugLog.log", private=True)
-            errors += len(CERTIFICATE_ERROR.findall(log))
+            errors += sum(1 for line in log.splitlines()
+                          if DCE_CERTIFICATE_ERROR.search(line))
         proof = failure_proof(scrapes, errors, observations, started)
         proof["proxy"] = proxy_negative
         print("Collector CA distrust proof: " + json.dumps(proof), flush=True)

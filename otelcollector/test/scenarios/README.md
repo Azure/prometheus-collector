@@ -250,10 +250,12 @@ collector-to-DCE proxy requests accompanied zero proxy routes to bypass targets.
 Direct egress denial and temporary-access cleanup passed; its matrix blocker is
 removed. Independent vulnerability-scan and global coverage gates still failed.
 
-The custom-CA lane removes all collector trust-anchor mounts and restarts the
-collectors. It requires fresh successful scraping, certificate-validation errors,
-and independent authenticated AMW queries with no samples for a new negative-phase
-marker. Certificate errors are read privately from `/MetricsExtensionConsoleDebugLog.log`;
+The custom-CA lane removes only its owned `/anchors/proxy` mount and restarts the
+collectors, retaining the distro trust anchors. It requires fresh successful
+scraping, curl exit 60 through the proxy, a matching DCE-specific MetricsExtension
+SSL-handshake error, and independent authenticated AMW queries with no samples
+for a new negative-phase marker. MetricsExtension errors are read privately from
+`/MetricsExtensionConsoleDebugLog.log`;
 MetricsExtension uses file logging rather than container stdout. It restores and
 reads back the original mounts even after failure. Successful negative proof must
 then be followed by fresh ingestion after recovery.

@@ -138,9 +138,15 @@ class Contracts(unittest.TestCase):
             host.args.evidence = Path(directory)
             host.args.run_id = "ca-run"
             host.commands.run.return_value = "test-token"
+            outputs = {
+                "queryEndpoint": "https://amw.example",
+                "dceMetricsIngestionEndpoint": "https://dce.example.metrics.ingest.monitor.azure.com",
+            }
             document = {"spec": {"template": {"spec": {"containers": [{
                 "name": "prometheus-collector", "volumeMounts": [
-                    {"name": "proxy", "mountPath": "/anchors/proxy"},
+                    {"name": "scenario-proxy-ca", "mountPath": "/anchors/proxy"},
+                    {"name": "anchors-mariner", "mountPath": "/anchors/mariner"},
+                    {"name": "anchors-ubuntu", "mountPath": "/anchors/ubuntu"},
                     {"name": "runtime", "mountPath": "/runtime"}],
             }]}}}}
             def kube(*args, **kwargs):
@@ -155,12 +161,16 @@ class Contracts(unittest.TestCase):
                     return copy.deepcopy(document)
                 if args[0] in ("patch", "rollout"):
                     return ""
+                if args[0] == "exec" and any("curl --noproxy" in str(arg) for arg in args):
+                    return "60"
                 if args[-2:] in (("cat", "/usr/sbin/me.config"), ("cat", "/usr/sbin/me_ds.config")):
                     return '{"proxyDefinitionMode":1,"validateCertificates":2}'
                 if args[0] == "logs":
                     return "collector started"
                 if args[-2:] == ("cat", "/MetricsExtensionConsoleDebugLog.log"):
-                    return "SSL peer certificate cannot be authenticated with given CA certificates"
+                    return (
+                        'PublicationEndpoint: "https://dce.example.metrics.ingest.monitor.azure.com/data", '
+                        'Exception: "Error in SSL handshake"')
                 if args[-1] == "http://localhost:9090/api/v1/targets":
                     return {"data": {"activeTargets": [{"scrapePool": "scenario-network-probe",
                              "health": "up", "lastScrape": "1970-01-01T00:01:50Z"}]}}
@@ -175,7 +185,7 @@ class Contracts(unittest.TestCase):
                     adapter.time, "sleep"), patch.object(
                     adapter.time, "time", side_effect=[100, 100, 120, 155, 190, 200]):
                 proof = adapter.verify_ca_recovery(
-                    host, {"queryEndpoint": "https://amw.example"}, Mock(), recovered, proxy)
+                host, outputs, Mock(), recovered, proxy)
             self.assertEqual(proof["status"], "PASS")
             self.assertEqual(proof["certificateErrors"], 2)
             self.assertEqual(proof["proxy"]["phase"], "untrusted-ca")
@@ -186,10 +196,55 @@ class Contracts(unittest.TestCase):
                  if call.args[-1] in {"/usr/sbin/me.config", "/usr/sbin/me_ds.config"}],
                 ["/usr/sbin/me.config", "/usr/sbin/me_ds.config"])
             proxy.assert_any_call(
-                host, {"queryEndpoint": "https://amw.example"}, 100, phase="untrusted-ca")
+                host, outputs, 100, phase="untrusted-ca")
             proxy.assert_any_call(
-                host, {"queryEndpoint": "https://amw.example"}, 200, phase="recovered-ca")
-            recovered.assert_called_once_with(host, {"queryEndpoint": "https://amw.example"}, 200)
+                host, outputs, 200, phase="recovered-ca")
+            recovered.assert_called_once_with(host, outputs, 200)
+            negative_mounts = [
+                json.loads(call.args[6])[0]["value"]
+                for call in host.kube.call_args_list
+                if call.args[:1] == ("patch",)
+                and "scenario-proxy-ca" not in {
+                    mount["name"] for mount in json.loads(call.args[6])[0]["value"]
+                }
+            ]
+            self.assertEqual(len(negative_mounts), 2)
+            for mounts in negative_mounts:
+                names = {mount["name"] for mount in mounts}
+                self.assertNotIn("scenario-proxy-ca", names)
+                self.assertIn("anchors-mariner", names)
+                self.assertIn("anchors-ubuntu", names)
+            self.assertEqual(
+                len([call for call in host.kube.call_args_list
+                     if call.args[0] == "exec"
+                     and any("curl --noproxy" in str(arg) for arg in call.args)]),
+                2)
+
+    def test_ca_matches_only_dce_certificate_errors(self):
+        adapter = sys.modules["clusters.proxy_ca"]
+        message = (
+            'PublicationEndpoint: "https://msprom.example.metrics.ingest.monitor.azure.com/data", '
+            'Exception: "Error in SSL handshake"')
+        self.assertRegex(message, adapter.DCE_CERTIFICATE_ERROR)
+        self.assertNotRegex(
+            message.replace(".metrics.ingest.monitor.azure.com", ".example.com"),
+            adapter.DCE_CERTIFICATE_ERROR)
+        self.assertNotRegex(
+            message.replace("Error in SSL handshake", "HTTP timeout"),
+            adapter.DCE_CERTIFICATE_ERROR)
+        self.assertRegex(
+            message.replace("Error in SSL handshake", "certificate verify failed"),
+            adapter.DCE_CERTIFICATE_ERROR)
+
+    def test_ca_probe_requires_curl_certificate_verification_failure(self):
+        adapter = sys.modules["clusters.proxy_ca"]
+        self.assertEqual(adapter.require_certificate_rejection("60"), {
+            "curlExitCode": 60, "certificateRejected": True,
+        })
+        for exit_code in ("0", "7", "35", ""):
+            with self.subTest(exit_code=exit_code), self.assertRaisesRegex(
+                    RuntimeError, "did not fail certificate verification"):
+                adapter.require_certificate_rejection(exit_code)
 
     def test_ca_requires_proxy_certificate_validation_override(self):
         adapter = sys.modules["clusters.proxy_ca"]
