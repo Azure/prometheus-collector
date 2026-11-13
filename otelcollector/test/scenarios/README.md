@@ -83,6 +83,14 @@ Pipeline 979 uses a sequential stage-level exclusive lock per profile. Direct
 execution outside the corresponding locked 979 stage is refused; each attempt has
 a separate execution ID and ingestion marker.
 
+The retained `operator-secret-watch` AKS cluster and Azure Monitor workspace
+have resource-scoped `scenario-retain` `CanNotDelete` locks. After verifying
+ownership, the runner requires an effective `CanNotDelete` or `ReadOnly` lock on
+each resource before using the cluster. It does not create locks; if protection
+is missing, an authorized operator must add a resource-scoped lock before reuse.
+These management locks are separate from the pipeline execution lock and can
+block deletion of child resources. They do not survive resource recreation.
+
 Before provisioning any host in a full campaign, run the read-only aggregate
 admission once against its clean, exact-source checkout:
 

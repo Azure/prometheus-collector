@@ -1218,6 +1218,62 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
+    def test_secret_watch_requires_effective_locks_before_cluster_access(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(
+                evidence=Path(temporary), build_id=1, max_run_seconds=60, run_id="run",
+                subscription=runner.BUILD_SUBSCRIPTION, location="eastus2", settle_seconds=0,
+                test_source_sha="b" * 40, admitted_existing=False,
+            )
+            group = f"/subscriptions/{args.subscription}/resourceGroups/owned"
+            outputs = {"clusterName": "aks",
+                       "clusterId": group + "/providers/Microsoft.ContainerService/managedClusters/aks",
+                       "workspaceId": group + "/providers/Microsoft.Monitor/accounts/amw"}
+
+            def lock(scope, level="CanNotDelete"):
+                return {"name": "retained", "level": level,
+                        "id": scope + "/providers/Microsoft.Authorization/locks/retained"}
+
+            row = dict(scenario(), id="operator-secret-watch", settingsVariants=[], clusterFeatures=[], platforms=[])
+            for cluster_locks, workspace_locks, expected in (
+                ([lock(outputs["clusterId"])], [lock(group, "ReadOnly")], "credentials reached"),
+                ([], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                ([lock(outputs["clusterId"])], [], "workspaceId has no effective"),
+                ([lock(group + "-other")], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                ([lock(outputs["clusterId"], "None")], [lock(outputs["workspaceId"])], "clusterId has no effective"),
+                (RuntimeError("lock access denied"), [], "lock access denied"),
+            ):
+                with self.subTest(expected=expected):
+                    host = Mock(spec=runner.Host)
+                    host.receipt = {"resourceGroup": "owned"}
+                    host.kubeconfig = args.evidence / "kubeconfig"
+                    host.reused = True
+                    host.provision.return_value = outputs
+                    host.retain.return_value = {"retained": True}
+                    responses = iter((cluster_locks, workspace_locks))
+
+                    def az(*command, **kwargs):
+                        if command[:2] == ("lock", "list"):
+                            self.assertTrue(kwargs["private"])
+                            self.assertTrue(kwargs["json_output"])
+                            value = next(responses)
+                            if isinstance(value, Exception):
+                                raise value
+                            return value
+                        raise RuntimeError("credentials reached")
+                    host.az.side_effect = az
+                    with patch.object(runner, "verified_candidate", return_value=({"source": {"commit": "a" * 40}}, {})), \
+                            patch.object(runner, "label_filter", return_value=""), \
+                            patch.object(runner, "preflight", return_value={"expectedPools": [], "kubernetesVersion": "1.37.1", "existing": True}), \
+                            patch.object(runner, "candidate_receipt", return_value=([], {})), \
+                            patch.object(runner, "prepare_testkube", return_value=("chart", "principal", "User")), \
+                            patch.object(runner, "deployment_env", return_value={}), \
+                            patch.object(runner, "Host", return_value=host), \
+                            self.assertRaisesRegex(RuntimeError, expected):
+                        runner.execute(args, row, {}, runner.Commands(args.evidence))
+                    self.assertLess(host.method_calls.index(unittest.mock.call.assert_owned()),
+                                    next(i for i, call in enumerate(host.method_calls) if call[0] == "az"))
+
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)

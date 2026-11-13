@@ -1628,6 +1628,28 @@ def execute(args, scenario, variants, commands):
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
         resolved["existing"] = host.reused
         host.assert_owned()
+        if scenario["id"] == "operator-secret-watch":
+            group_scope = f"/subscriptions/{args.subscription}/resourceGroups/{host.receipt['resourceGroup']}"
+            for key, resource_type in (("clusterId", "Microsoft.ContainerService/managedClusters"),
+                                       ("workspaceId", "Microsoft.Monitor/accounts")):
+                resource_id = outputs[key].rstrip("/")
+                if not re.fullmatch(re.escape(f"{group_scope}/providers/{resource_type}/") + r"[^/]+",
+                                    resource_id, re.IGNORECASE):
+                    raise ValueError(f"Retained {key} is outside the owned resource group or has the wrong type")
+                if key == "clusterId" and resource_id.rsplit("/", 1)[-1].casefold() != outputs["clusterName"].casefold():
+                    raise ValueError("Retained clusterId does not match the cluster name")
+                scopes = (f"/subscriptions/{args.subscription}", group_scope, resource_id)
+                locks = host.az("lock", "list", "--resource", resource_id, json_output=True, private=True)
+                if not isinstance(locks, list) or not any(
+                    isinstance(lock, dict) and isinstance(lock.get("id"), str)
+                    and isinstance(lock.get("name"), str) and lock["name"]
+                    and lock.get("level") in ("CanNotDelete", "ReadOnly")
+                    and any(lock.get("id", "").casefold() == (
+                        scope + "/providers/Microsoft.Authorization/locks/" + lock["name"]
+                    ).casefold() for scope in scopes)
+                    for lock in locks
+                ):
+                    raise RuntimeError(f"Retained {key} has no effective deletion-protection lock")
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
                 "--file", str(host.kubeconfig), "--admin", private=True)
