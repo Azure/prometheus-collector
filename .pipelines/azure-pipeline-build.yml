@@ -1,3 +1,9 @@
+parameters:
+- name: restartGuardTestSourceSha
+  displayName: 'Full test-source commit for restart guard tests'
+  type: string
+  default: ''
+
 trigger:
   branches:
     include:
@@ -947,6 +953,49 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -euo pipefail
+            pipeline_sha="$BUILD_SOURCEVERSION"
+            test_sha="${RESTART_GUARD_TEST_SOURCE_SHA:-$pipeline_sha}"
+            [[ "$pipeline_sha" =~ ^[0-9a-f]{40}$ && "$test_sha" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "Pipeline and restart-guard test sources must be full commit SHAs" >&2
+              exit 1
+            }
+
+            test_root="$BUILD_SOURCESDIRECTORY"
+            worktree_path="$AGENT_TEMPDIRECTORY/restart-guard-tests-$BUILD_BUILDID"
+            if [[ "$test_sha" != "$pipeline_sha" ]]; then
+              [[ ! -e "$worktree_path" ]] || { echo "Restart-guard worktree path already exists" >&2; exit 1; }
+              git -C "$BUILD_SOURCESDIRECTORY" fetch --no-tags origin "$test_sha"
+              git -C "$BUILD_SOURCESDIRECTORY" worktree add --detach "$worktree_path" "$test_sha"
+              test_root="$worktree_path"
+              trap 'git -C "$BUILD_SOURCESDIRECTORY" worktree remove --force "$worktree_path" >/dev/null' EXIT
+            fi
+
+            actual_test_sha="$(git -C "$test_root" rev-parse HEAD)"
+            [[ "$actual_test_sha" == "$test_sha" ]] || { echo "Restart-guard test checkout SHA mismatch" >&2; exit 1; }
+            printf 'Pipeline source SHA: %s\nRestart-guard test source SHA: %s\n' "$pipeline_sha" "$actual_test_sha"
+
+            test_dir="$test_root/otelcollector/test/ginkgo-e2e/configprocessing"
+            test_pattern='^(TestCollectorSettleGuard|TestSettingsTransitionGuards|TestAnnotationTargetSet|TestMonitorAccessAssertions)$'
+            listed="$(cd "$test_dir" && go test -list "$test_pattern" .)"
+            if [[ -z "$RESTART_GUARD_TEST_SOURCE_SHA" && -z "$listed" ]]; then
+              echo "Restart-guard tests are not present at this source; skipping"
+              exit 0
+            fi
+            for name in TestCollectorSettleGuard TestSettingsTransitionGuards TestAnnotationTargetSet TestMonitorAccessAssertions; do
+              printf '%s\n' "$listed" | grep -Fxq "$name" || { echo "Restart-guard test missing: $name" >&2; exit 1; }
+            done
+
+            cd "$test_dir"
+            go test -count=1 -v -run "$test_pattern"
+          displayName: 'Test: run cluster-free SRE restart guard tests'
+          env:
+            BUILD_SOURCEVERSION: $(Build.SourceVersion)
+            BUILD_SOURCESDIRECTORY: $(Build.SourcesDirectory)
+            AGENT_TEMPDIRECTORY: $(Agent.TempDirectory)
+            BUILD_BUILDID: $(Build.BuildId)
+            RESTART_GUARD_TEST_SOURCE_SHA: ${{ parameters.restartGuardTestSourceSha }}
         - bash: |
             echo "=== Docker Version Info (AMD64 Agent) ==="
             docker version
@@ -2428,6 +2477,7 @@ extends:
             git push origin "v$(HELM_SEMVER)"
           displayName: Tag commit with semver
     - stage: Deploy
+      condition: and(succeeded(), eq('${{ parameters.restartGuardTestSourceSha }}', ''))
       lockBehavior: sequential
       dependsOn: Build
       jobs:
