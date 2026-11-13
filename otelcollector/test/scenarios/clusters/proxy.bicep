@@ -19,8 +19,8 @@ umask 077
 if [ '__CUSTOM_CA__' = 'true' ]; then
   install -d -o root -g proxy -m 0750 /etc/squid/ssl_cert
   if [ ! -s /etc/squid/ssl_cert/ca.key ]; then
-    openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 7 \
-      -subj '/CN=Disposable AKS scenario proxy CA' \
+    openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
+      -subj '/CN=Retained AKS scenario proxy CA' \
       -addext 'basicConstraints=critical,CA:TRUE' \
       -addext 'keyUsage=critical,keyCertSign,cRLSign' \
       -addext 'subjectAltName=DNS:scenario-proxy,IP:10.226.0.4' \
@@ -57,7 +57,7 @@ http_access allow localhost
 http_access allow nodes
 http_access deny all
 cache deny all
-logformat scenario %ts.%03tu %>a %rm %rd %>Hs %Sh/%<a
+logformat scenario %ts.%03tu %>a %rm %>rd %>Hs %Sh/%<a
 access_log stdio:/var/log/squid/access.log scenario
 visible_hostname scenario-proxy
 SQUID_COMMON
@@ -139,12 +139,12 @@ resource configure 'Microsoft.Compute/virtualMachines/runCommands@2024-07-01' = 
     treatFailureAsDeploymentFailure: true
     timeoutInSeconds: 1800
     source: {
-      script: replace(replace(bootstrap, '__CUSTOM_CA__', string(customCa)), '__PROBE_URL__', '${environment().resourceManager}metadata/endpoints?api-version=2020-06-01')
+      script: replace(replace(bootstrap, '__CUSTOM_CA__', toLower(string(customCa))), '__PROBE_URL__', '${environment().resourceManager}metadata/endpoints?api-version=2020-06-01')
     }
   }
 }
 
-// Only the public certificate crosses the VM boundary; the signing key remains on its disposable disk.
+// Only the public certificate crosses the VM boundary; the signing key remains on its retained disk.
 resource certificateReader 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (customCa) {
   name: '${name}-certificate-reader'
   location: location

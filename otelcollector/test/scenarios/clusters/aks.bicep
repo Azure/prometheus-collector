@@ -270,6 +270,11 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
     nodeResourceGroup: '${clusterName}-nodes'
     kubernetesVersion: kubernetesVersion
     enableRBAC: true
+    aadProfile: effectivePrivateApi ? {
+      managed: true
+      enableAzureRBAC: true
+      tenantID: tenant().tenantId
+    } : null
     oidcIssuerProfile: { enabled: workloadIdentityEnabled }
     securityProfile: { workloadIdentity: { enabled: workloadIdentityEnabled } }
     autoUpgradeProfile: {
