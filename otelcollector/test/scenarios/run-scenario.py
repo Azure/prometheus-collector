@@ -1824,6 +1824,10 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
             host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
             host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=15m")
+        host.assert_owned()
+        host.kube("delete", "-f", str(TEST_SOURCE / "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml"),
+                  "--ignore-not-found")
+        host.kube("delete", "servicemonitor", "scenario-network-probe", "-n", "default", "--ignore-not-found")
         save(args.evidence / "images-before.json", audit_images(host, images))
         if "ampls" in scenario["clusterFeatures"]:
             outcome["ampls"] = ampls_proofs.verify(host, outputs)
@@ -1875,7 +1879,7 @@ def execute(args, scenario, variants, commands):
                 host, "querymetrics", args.evidence / "health" / "otlp", "candidate-otlp")
             outcome["suites"]["otlp-processes"] = run_suite(
                 host, "containerstatus", args.evidence / "health" / "otlp-processes", "otlp && !windows")
-        if "private-api" in scenario["clusterFeatures"]:
+        if {"private-api", "ampls"} & set(scenario["clusterFeatures"]):
             probe_started = time.time()
             network_probe_monitor(host, args.run_id)
         outcome["ingestion"] = verify_ingestion(host, outputs, probe_started)

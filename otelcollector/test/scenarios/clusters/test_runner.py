@@ -1461,18 +1461,18 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
-    def test_retained_cluster_resumes_addon_token_and_windows_exporter_bootstrap(self):
-        for token, enabled, enable, disable, platforms in (
-                ("", False, 1, 1, ["linux", "windows"]), ("", True, 0, 1, ["linux"]),
-                ("secret/aad-msi-auth-token", True, 0, 1, ["linux"]),
-                ("secret/aad-msi-auth-token", False, 0, 0, ["linux"])):
+    def test_retained_cluster_bootstrap_isolates_settings_and_prepares_fresh_ingestion(self):
+        for token, enabled, enable, disable, platforms, features in (
+                ("", False, 1, 1, ["linux", "windows"], []), ("", True, 0, 1, ["linux"], []),
+                ("secret/aad-msi-auth-token", True, 0, 1, ["linux"], []),
+                ("secret/aad-msi-auth-token", False, 0, 0, ["linux"], ["ampls"])):
             with self.subTest(token=token, enabled=enabled), tempfile.TemporaryDirectory() as temporary:
                 evidence = Path(temporary)
                 args = types.SimpleNamespace(
                     evidence=evidence, build_id=1, max_run_seconds=60, run_id="test",
                     subscription=runner.BUILD_SUBSCRIPTION, location="westcentralus",
-                    test_source_sha="b" * 40, admitted_existing=False)
-                row = dict(scenario(), settingsVariants=[], clusterFeatures=[], platforms=platforms)
+                    test_source_sha="b" * 40, admitted_existing=False, settle_seconds=0)
+                row = dict(scenario(), settingsVariants=[], clusterFeatures=features, platforms=platforms)
                 host = Mock(spec=runner.Host, reused=True, receipt={"resourceGroup": "owned"},
                             scenario=row, kubeconfig=evidence / "kubeconfig")
                 host.provision.return_value = {"clusterName": "owned", "workspaceId": "workspace"}
@@ -1492,9 +1492,17 @@ class Contracts(unittest.TestCase):
                         patch.object(runner, "verify_pool_inventory", return_value={}), \
                         patch.object(runner, "Host", return_value=host), \
                         patch.object(runner, "render_chart", return_value=evidence / "chart"), \
-                        patch.object(runner, "audit_images", side_effect=RuntimeError("bootstrap reached")):
+                        patch.object(runner, "audit_images", return_value={}), \
+                        patch.object(runner.ampls_proofs, "initialize"), \
+                        patch.object(runner.ampls_proofs, "verify", return_value={}), \
+                        patch.object(runner, "run_suite", return_value={}), \
+                        patch.object(runner, "network_probe_monitor") as probe, \
+                        patch.object(runner, "verify_ingestion", side_effect=RuntimeError("bootstrap reached")):
                     with self.assertRaisesRegex(RuntimeError, "bootstrap reached"):
                         runner.execute(args, row, {}, Mock())
+                    self.assertEqual(probe.call_count, int("ampls" in features))
+                    if "ampls" in features:
+                        probe.assert_called_once_with(host, args.run_id)
                 calls = [call.args for call in host.az.call_args_list]
                 self.assertEqual(sum("--enable-azure-monitor-metrics" in call for call in calls), enable)
                 self.assertEqual(sum("--disable-azure-monitor-metrics" in call for call in calls), disable)
@@ -1507,6 +1515,20 @@ class Contracts(unittest.TestCase):
                 else:
                     self.assertNotIn(exporter, calls)
                     self.assertNotIn(ready, calls)
+                reset = ("delete", "-f", str(runner.TEST_SOURCE /
+                    "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml"),
+                    "--ignore-not-found")
+                probe_reset = ("delete", "servicemonitor", "scenario-network-probe",
+                               "-n", "default", "--ignore-not-found")
+                health = ("apply", "-f", str(runner.TEST_SOURCE /
+                    "internal/referenceapp/prometheus-reference-app.yaml"))
+                self.assertLess(calls.index(reset), calls.index(health))
+                self.assertLess(calls.index(probe_reset), calls.index(health))
+                self.assertEqual([call for call in calls if call[0] == "delete"], [reset, probe_reset])
+                ownership = [i for i, call in enumerate(host.mock_calls) if call[0] == "assert_owned"]
+                deletion = next(i for i, call in enumerate(host.mock_calls) if call.args == reset)
+                self.assertEqual(len(ownership), 2)
+                self.assertLess(ownership[-1], deletion)
 
     def test_revoke_bootstrap_removes_only_the_exact_assignment_and_preserves_workload_roles(self):
         with tempfile.TemporaryDirectory() as temporary:
