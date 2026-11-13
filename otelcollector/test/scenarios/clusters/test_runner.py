@@ -1553,7 +1553,8 @@ class Contracts(unittest.TestCase):
 
             def kube(*args, **kwargs):
                 if args[:2] == ("get", "deployments"):
-                    return {"items": [{"metadata": {"name": "testkube-api-server"}}]}
+                    return {"items": [{"metadata": {"name": name}} for name in
+                                      ("testkube-api-server", "testkube-minio-testkube", "testkube-mongodb")]}
                 return "testworkflows <none> testworkflows.testkube.io/v1 true TestWorkflow"
 
             host.az.side_effect = az
@@ -1566,6 +1567,15 @@ class Contracts(unittest.TestCase):
             outputs = {"clusterName": "owned-cluster", "workspaceId": "/owned/workspace",
                        "queryEndpoint": "https://amw.example"}
             runner.bootstrap_testkube(host, outputs, Path("pinned-chart.tgz"), "caller-object", "User")
+            calls = [call.args for call in host.kube.call_args_list]
+            restart = ("rollout", "restart", "deployment/testkube-api-server", "-n", "testkube")
+            self.assertIn(restart, calls)
+            for name in ("testkube-api-server", "testkube-minio-testkube", "testkube-mongodb"):
+                self.assertLess(calls.index(("rollout", "status", "deployment/" + name,
+                                             "-n", "testkube", "--timeout=15m")), calls.index(restart))
+            self.assertEqual(calls[calls.index(restart) + 1],
+                             ("rollout", "status", "deployment/testkube-api-server",
+                              "-n", "testkube", "--timeout=15m"))
             self.assertEqual(host.az_with_rbac_retry.call_count, 1)
             helm = next(c.args[0] for c in host.commands.run.call_args_list if c.args[0][0] == "helm")
             for setting in ("testkube-api.minio.podSecurityContext.fsGroup=1001",

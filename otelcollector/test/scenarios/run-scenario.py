@@ -1456,6 +1456,10 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type):
     for deployment in deployments:
         host.kube("rollout", "status", "deployment/" + deployment["metadata"]["name"],
                   "-n", "testkube", "--timeout=15m")
+    # API readiness stays green after bucket initialization exhausts its retries.
+    # Replay startup only after MinIO is ready, including on retained clusters.
+    host.kube("rollout", "restart", "deployment/testkube-api-server", "-n", "testkube")
+    host.kube("rollout", "status", "deployment/testkube-api-server", "-n", "testkube", "--timeout=15m")
     workflows = host.kube("api-resources", "--api-group=testworkflows.testkube.io", "--no-headers")
     if not re.search(r"^testworkflows\s", workflows, re.MULTILINE):
         raise RuntimeError("TestKube workflow API was not installed")

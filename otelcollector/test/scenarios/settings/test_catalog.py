@@ -1,9 +1,13 @@
+import http.server
 import json
 import re
 import sys
+import threading
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.request import urlopen
 
 import jsonschema
 import yaml
@@ -299,6 +303,39 @@ class SettingsCatalogTests(unittest.TestCase):
                     if baseline is None:
                         baseline = values
                     self.assertEqual(values, baseline)
+
+    def test_annotation_fixtures_serve_required_weather_metric(self):
+        pods = [
+            doc for name in ("annotation-targets.yaml", "annotation-edge-targets.yaml")
+            for doc in yaml.safe_load_all((ROOT / name).read_text()) if doc["kind"] == "Pod"
+        ]
+        self.assertEqual(len(pods), 4)
+        scripts = set()
+        for pod in pods:
+            container = pod["spec"]["containers"][0]
+            self.assertEqual(container["command"], ["python3", "-c"])
+            self.assertEqual(container["ports"][0]["containerPort"], 2112)
+            self.assertRegex(container["image"], r"^mcr\.microsoft\.com/azurelinux/base/python@sha256:[0-9a-f]{64}$")
+            scripts.add(container["args"][0])
+        self.assertEqual(len(scripts), 1)
+        script = scripts.pop()
+        self.assertIn('HTTPServer(("", 2112), Handler)', script)
+
+        def verify(server):
+            server.timeout = 5
+            worker = threading.Thread(target=server.handle_request)
+            worker.start()
+            try:
+                with urlopen(f"http://127.0.0.1:{server.server_port}/metrics", timeout=5) as response:
+                    self.assertEqual(response.headers["Content-Type"], "text/plain; version=0.0.4")
+                    self.assertEqual(response.read(), b"weather_temperature 1\n")
+            finally:
+                worker.join(timeout=6)
+                server.server_close()
+            self.assertFalse(worker.is_alive())
+
+        with patch.object(http.server.HTTPServer, "serve_forever", verify):
+            exec(script.replace('("", 2112)', '("127.0.0.1", 0)'), {})
 
     def test_empty_labels_cannot_select_every_suite(self):
         path = ROOT / "default/manifest.json"
