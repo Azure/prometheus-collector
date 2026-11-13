@@ -510,10 +510,7 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 11)
-            self.assertEqual(len(report["blockedVariants"]), 5)
-            self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
-                             ["arc-conformance", "ccp-health", "regionTests"])
+            self.assertEqual(report, plan(root, "default"))
 
     def test_candidate_coverage_gate_runs_after_tests_and_before_evidence_publish(self):
         steps = yaml.safe_load(
