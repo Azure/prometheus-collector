@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import io
+import json
 from pathlib import Path
 import re
 import shutil
@@ -144,12 +145,18 @@ class Contracts(unittest.TestCase):
             }]}}}}
             def kube(*args, **kwargs):
                 if args[:2] == ("get", "pods"):
-                    return {"items": [{"metadata": {"name": "collector"},
+                    return {"items": [{"metadata": {"name": "collector-replica",
+                                                    "ownerReferences": [{"kind": "ReplicaSet"}]},
+                                       "spec": {"containers": [{"name": "prometheus-collector"}]}},
+                                      {"metadata": {"name": "collector-node",
+                                                    "ownerReferences": [{"kind": "DaemonSet"}]},
                                        "spec": {"containers": [{"name": "prometheus-collector"}]}}]}
                 if args[0] == "get":
                     return copy.deepcopy(document)
                 if args[0] in ("patch", "rollout"):
                     return ""
+                if args[-2:] in (("cat", "/usr/sbin/me.config"), ("cat", "/usr/sbin/me_ds.config")):
+                    return '{"proxyDefinitionMode":1,"validateCertificates":2}'
                 if args[0] == "logs":
                     return "collector started"
                 if args[-2:] == ("cat", "/MetricsExtensionConsoleDebugLog.log"):
@@ -162,14 +169,43 @@ class Contracts(unittest.TestCase):
             response = lambda *args, **kwargs: io.StringIO(
                 '{"status":"success","data":{"resultType":"vector","result":[]}}')
             recovered = Mock(return_value={"status": "fresh"})
+            proxy = Mock(side_effect=[{"status": "PASS", "phase": "untrusted-ca"},
+                                      {"status": "PASS", "phase": "recovered-ca"}])
             with patch.object(adapter, "urlopen", side_effect=response), patch.object(
                     adapter.time, "sleep"), patch.object(
                     adapter.time, "time", side_effect=[100, 100, 120, 155, 190, 200]):
                 proof = adapter.verify_ca_recovery(
-                    host, {"queryEndpoint": "https://amw.example"}, Mock(), recovered)
+                    host, {"queryEndpoint": "https://amw.example"}, Mock(), recovered, proxy)
             self.assertEqual(proof["status"], "PASS")
-            self.assertEqual(proof["certificateErrors"], 1)
+            self.assertEqual(proof["certificateErrors"], 2)
+            self.assertEqual(proof["proxy"]["phase"], "untrusted-ca")
+            self.assertEqual(proof["recovery"]["proxy"]["phase"], "recovered-ca")
+            self.assertEqual(proxy.call_count, 2)
+            self.assertEqual(
+                [call.args[-1] for call in host.kube.call_args_list
+                 if call.args[-1] in {"/usr/sbin/me.config", "/usr/sbin/me_ds.config"}],
+                ["/usr/sbin/me.config", "/usr/sbin/me_ds.config"])
+            proxy.assert_any_call(
+                host, {"queryEndpoint": "https://amw.example"}, 100, phase="untrusted-ca")
+            proxy.assert_any_call(
+                host, {"queryEndpoint": "https://amw.example"}, 200, phase="recovered-ca")
             recovered.assert_called_once_with(host, {"queryEndpoint": "https://amw.example"}, 200)
+
+    def test_ca_requires_proxy_certificate_validation_override(self):
+        adapter = sys.modules["clusters.proxy_ca"]
+        host = Mock()
+        host.args.run_id = "ca-run"
+        host.kube.side_effect = [
+            {"items": [{"metadata": {"name": "collector",
+                                     "ownerReferences": [{"kind": "ReplicaSet"}]},
+                        "spec": {"containers": [{"name": "prometheus-collector"}]}}]},
+            '{"proxyDefinitionMode":1,"validateCertificates":1}',
+        ]
+        host.commands.run.return_value = ""
+        with self.assertRaisesRegex(RuntimeError, "override is not active"):
+            adapter.verify_ca_recovery(
+                host, {"queryEndpoint": "https://amw.example"}, Mock(), Mock(), Mock())
+        host.commands.run.assert_not_called()
 
     def test_private_api_uses_single_ip_pinned_host_and_cleans_up_on_failure(self):
         adapter = sys.modules["clusters.private_api"]
@@ -281,12 +317,13 @@ class Contracts(unittest.TestCase):
                 discover.assert_not_called()
 
     def test_proxy_adapter_injects_collector_environment_and_public_trust_only(self):
-        documents = [
+        workloads = [
             {"kind": kind, "spec": {"template": {"spec": {"containers": [
                 {"name": "prometheus-collector", "env": [{"name": "HTTPS_PROXY", "value": "wrong"}]},
                 {"name": "config-reader", "env": []},
             ]}}}} for kind in ("Deployment", "DaemonSet")
         ]
+        documents = copy.deepcopy(workloads)
         outputs = {"proxyEndpoint": "http://10.226.0.4:3128",
                    "proxyNoProxyCsv": "localhost,10.244.0.0/16,.svc",
                    "proxyTrustedCa": runner.base64.b64encode(
@@ -299,8 +336,21 @@ class Contracts(unittest.TestCase):
                              [outputs["proxyEndpoint"]])
             self.assertIn({"name": "NO_PROXY", "value": outputs["proxyNoProxyCsv"]}, env)
             self.assertEqual(spec["containers"][0]["volumeMounts"][0]["mountPath"], "/anchors/proxy")
+            config_file = "me.config" if document["kind"] == "Deployment" else "me_ds.config"
+            self.assertEqual(spec["containers"][0]["volumeMounts"][1],
+                             {"name": "scenario-me-config-overrides",
+                              "mountPath": f"/usr/sbin/{config_file}",
+                              "subPath": config_file, "readOnly": True})
             self.assertEqual(spec["containers"][1]["env"], [])
-        self.assertIn("public", documents[-1]["stringData"]["proxy-cert.crt"])
+        self.assertIn("public", documents[-2]["stringData"]["proxy-cert.crt"])
+        for config_file in ("me.config", "me_ds.config"):
+            expected = json.loads((runner.REPO / "otelcollector/metricextension" / config_file).read_text())
+            expected["validateCertificates"] = 2
+            self.assertEqual(json.loads(documents[-1]["data"][config_file]), expected)
+        plain = copy.deepcopy(workloads)
+        runner.configure_proxy(plain, dict(outputs, proxyTrustedCa=""))
+        self.assertFalse(any(document.get("metadata", {}).get("name") == "scenario-me-config-overrides"
+                             for document in plain))
         for change in ({"proxyEndpoint": "http://external:3128"}, {"proxyNoProxyCsv": "*"},
                        {"proxyTrustedCa": "not-base64"}):
             with self.subTest(change=change), self.assertRaises(ValueError):
@@ -310,10 +360,24 @@ class Contracts(unittest.TestCase):
 
     def test_proxy_routes_reject_missing_stale_bypass_or_unrelated_traffic(self):
         route = "101.000 10.244.0.2 CONNECT ingest.monitor.azure.com 200 HIER_DIRECT/1.2.3.4"
+        post = "101.100 10.244.0.2 POST ingest.monitor.azure.com 200 HIER_DIRECT/1.2.3.4"
         def verify(log):
             return runner.proxy_routes(log, 100, {"10.244.0.2"}, "ingest.monitor.azure.com",
                                        {"10.244.0.3"})
         self.assertEqual(len(verify(route)), 1)
+        self.assertEqual(runner.proxy_routes(
+            post, 100, {"10.244.0.2"}, "ingest.monitor.azure.com", {"10.244.0.3"},
+            require_post=True)[0]["method"], "POST")
+        self.assertEqual(runner.proxy_routes(
+            route, 100, {"10.244.0.2"}, "ingest.monitor.azure.com", {"10.244.0.3"},
+            forbid_post=True)[0]["method"], "CONNECT")
+        for log, options in ((route, {"require_post": True}),
+                             (route + "\n" + post, {"forbid_post": True}),
+                             (route + "\n" + post.replace(" 200 ", " 403 "),
+                              {"forbid_post": True})):
+            with self.subTest(log=log, options=options), self.assertRaises(RuntimeError):
+                runner.proxy_routes(log, 100, {"10.244.0.2"}, "ingest.monitor.azure.com",
+                                    {"10.244.0.3"}, **options)
         for log in ("", route.replace("101.000", "99.000"),
                     route.replace("10.244.0.2", "10.244.0.9"),
                     route.replace(" 200 ", " 403 "),

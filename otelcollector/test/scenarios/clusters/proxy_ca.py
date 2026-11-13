@@ -28,9 +28,42 @@ def failure_proof(scrapes, errors, observations, started):
             "observationSeconds": observations[-1]["time"] - observations[0]["time"]}
 
 
-def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion):
+def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy_routes):
     originals = []
     marker = host.args.run_id + "-untrusted-ca"
+    collectors = [
+        pod for pod in host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                                 json_output=True)["items"]
+        if any(container["name"] == "prometheus-collector"
+               for container in pod["spec"]["containers"])
+    ]
+    if not collectors:
+        raise RuntimeError("No running collector pods to verify the MetricsExtension override")
+    config_proof = []
+    for pod in collectors:
+        owners = pod["metadata"].get("ownerReferences", [])
+        if any(owner.get("kind") == "ReplicaSet" for owner in owners):
+            config_file = "me.config"
+        elif any(owner.get("kind") == "DaemonSet" for owner in owners):
+            config_file = "me_ds.config"
+        else:
+            raise RuntimeError("Cannot determine the MetricsExtension config file for a collector pod")
+        config_path = f"/usr/sbin/{config_file}"
+        config = host.kube(
+            "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
+            "--", "cat", config_path)
+        try:
+            overrides = json.loads(config)
+        except (TypeError, json.JSONDecodeError) as error:
+            raise RuntimeError("MetricsExtension config override is not valid JSON") from error
+        if overrides.get("validateCertificates") != 2:
+            raise RuntimeError("MetricsExtension proxy certificate validation override is not active")
+        config_proof.append({"pod": pod["metadata"]["name"], "configOverridesPath": config_path,
+                             "validateCertificates": 2})
+    print("MetricsExtension proxy certificate validation: " + json.dumps({
+        "scope": "proxy-custom-ca", "collectors": config_proof,
+    }), flush=True)
+
     token = host.commands.run([
         "az", "account", "get-access-token", "--resource", "https://prometheus.monitor.azure.com",
         "--query", "accessToken", "-o", "tsv"], private=True).strip()
@@ -68,6 +101,7 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion):
             observations.append({"time": time.time(), "result": result["data"]["result"]})
             if attempt < 2:
                 time.sleep(35)
+        proxy_negative = verify_proxy_routes(host, outputs, started, phase="untrusted-ca")
         pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
         scrapes, errors = [], 0
         for pod in pods:
@@ -86,6 +120,7 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion):
                             "--", "cat", "/MetricsExtensionConsoleDebugLog.log", private=True)
             errors += len(CERTIFICATE_ERROR.findall(log))
         proof = failure_proof(scrapes, errors, observations, started)
+        proof["proxy"] = proxy_negative
         print("Collector CA distrust proof: " + json.dumps(proof), flush=True)
     finally:
         deadline, host.commands.deadline = host.commands.deadline, None
@@ -109,7 +144,9 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion):
             host.commands.deadline = deadline
     recovered = time.time()
     mark_probe(host, host.args.run_id)
-    proof["recovery"] = verify_ingestion(host, outputs, recovered)
+    recovery_ingestion = verify_ingestion(host, outputs, recovered)
+    recovery_proxy = verify_proxy_routes(host, outputs, recovered, phase="recovered-ca")
+    proof["recovery"] = {"ingestion": recovery_ingestion, "proxy": recovery_proxy}
     (host.args.evidence / "proxy-ca-proof.json").write_text(json.dumps(proof, indent=2) + "\n")
     print("Collector CA recovery proof: " + json.dumps(proof), flush=True)
     return proof

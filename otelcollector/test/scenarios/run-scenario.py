@@ -1120,6 +1120,15 @@ def configure_proxy(documents, outputs):
             "metadata": {"name": "scenario-proxy-ca", "namespace": "kube-system"},
             "stringData": {"proxy-cert.crt": certificate},
         })
+        documents.append({
+            "apiVersion": "v1", "kind": "ConfigMap",
+            "metadata": {"name": "scenario-me-config-overrides", "namespace": "kube-system"},
+            "data": {
+                name: json.dumps(dict(load(REPO / "otelcollector/metricextension" / name),
+                                      validateCertificates=2))
+                for name in ("me.config", "me_ds.config")
+            },
+        })
     collectors = 0
     for document in documents:
         if document.get("kind") not in {"Deployment", "DaemonSet"}:
@@ -1139,19 +1148,27 @@ def configure_proxy(documents, outputs):
             container["env"].extend({"name": name, "value": value}
                                     for name, value in environment.items())
             if certificate:
-                container.setdefault("volumeMounts", []).append({
-                    "name": "scenario-proxy-ca", "mountPath": "/anchors/proxy", "readOnly": True,
-                })
+                config_file = "me.config" if document["kind"] == "Deployment" else "me_ds.config"
+                container.setdefault("volumeMounts", []).extend([
+                    {"name": "scenario-proxy-ca", "mountPath": "/anchors/proxy", "readOnly": True},
+                    {"name": "scenario-me-config-overrides", "mountPath": f"/usr/sbin/{config_file}",
+                     "subPath": config_file, "readOnly": True},
+                ])
         if certificate and any(c["name"] == "prometheus-collector" for c in spec["containers"]):
-            spec.setdefault("volumes", []).append({
-                "name": "scenario-proxy-ca", "secret": {"secretName": "scenario-proxy-ca"},
-            })
+            spec.setdefault("volumes", []).extend([
+                {"name": "scenario-proxy-ca", "secret": {"secretName": "scenario-proxy-ca"}},
+                {"name": "scenario-me-config-overrides",
+                 "configMap": {"name": "scenario-me-config-overrides"}},
+            ])
     if collectors < 2:
         raise ValueError("Proxy adapter did not find both replica and node collectors")
 
 
-def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
-    routes = []
+def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips,
+                 require_post=False, forbid_post=False):
+    if require_post and forbid_post:
+        raise ValueError("Proxy route proof cannot require and forbid DCE POSTs")
+    connects, posts = [], []
     for line in log.splitlines():
         fields = line.split()
         if len(fields) != 6:
@@ -1161,12 +1178,21 @@ def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
             continue
         if destination in bypass_ips:
             raise RuntimeError("NO_PROXY target appeared in the collector's proxy route log")
-        if (destination == ingestion_hostname and method in {"CONNECT", "POST"}
-                and status == "200" and hierarchy.startswith("HIER_DIRECT/")):
-            routes.append({"timestamp": float(timestamp), "source": source,
-                           "destination": destination, "status": int(status)})
+        if destination != ingestion_hostname:
+            continue
+        if method == "POST":
+            if forbid_post:
+                raise RuntimeError("DCE POST reached the proxy during CA distrust")
+            if status == "200" and hierarchy.startswith("HIER_DIRECT/"):
+                posts.append({"timestamp": float(timestamp), "source": source,
+                              "destination": destination, "method": method, "status": int(status)})
+        elif (method == "CONNECT" and status == "200"
+              and hierarchy.startswith("HIER_DIRECT/")):
+            connects.append({"timestamp": float(timestamp), "source": source,
+                             "destination": destination, "method": method, "status": int(status)})
+    routes = posts if require_post else connects if forbid_post else connects + posts
     if not routes:
-        raise RuntimeError("No successful fresh collector-to-ingestion route in the owned proxy log")
+        raise RuntimeError("No matching fresh collector-to-ingestion route in the owned proxy log")
     return routes
 
 
@@ -1189,7 +1215,9 @@ def network_probe_monitor(host, marker):
         raise RuntimeError("Run-specific proxy-from-environment scrape monitor did not read back")
 
 
-def verify_proxy(host, outputs, started):
+def verify_proxy(host, outputs, started, phase="default"):
+    if phase not in {"default", "trusted-ca", "untrusted-ca", "recovered-ca"}:
+        raise ValueError("Unknown proxy proof phase")
     pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
     sources = set()
     for pod in pods:
@@ -1210,15 +1238,19 @@ def verify_proxy(host, outputs, started):
     if not bypass:
         raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
     endpoint = outputs["dceMetricsIngestionEndpoint"]
-    host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
-              "--", "sh", "-c",
-              'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
-              'result=$?; test "$result" -eq 7 || test "$result" -eq 28',
-              "direct-egress-denial", endpoint)
+    if phase in {"default", "trusted-ca"}:
+        host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
+                  "--", "sh", "-c",
+                  'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
+                  'result=$?; test "$result" -eq 7 || test "$result" -eq 28',
+                  "direct-egress-denial", endpoint)
+    require_post = phase in {"trusted-ca", "recovered-ca"}
+    forbid_post = phase == "untrusted-ca"
     script = ("python3 - <<'PY'\nimport json\n" + inspect.getsource(proxy_routes)
               + "\ntry:\n"
               + f"    routes = proxy_routes(open('/var/log/squid/access.log').read(), {started!r}, "
-              + f"{sources!r}, {urlparse(endpoint).hostname!r}, {bypass!r})\n"
+              + f"{sources!r}, {urlparse(endpoint).hostname!r}, {bypass!r}, "
+              + f"require_post={require_post!r}, forbid_post={forbid_post!r})\n"
               + "    result = {'status': 'PASS', 'successfulRequests': len(routes), "
               + "'first': routes[0], 'last': routes[-1], 'noProxyRoutes': 0}\n"
               + "except (RuntimeError, ValueError) as error:\n"
@@ -1227,11 +1259,13 @@ def verify_proxy(host, outputs, started):
     result = vm_script(host, outputs["proxyVmName"], script)
     if result.get("status") != "PASS":
         raise RuntimeError("Collector proxy route proof failed: " + result.get("error", "missing result"))
-    result.update(directWebDenied=True, scrapeProxyFromEnvironment=True,
+    result.update(phase=phase, directWebDenied=phase in {"default", "trusted-ca"},
+                  scrapeProxyFromEnvironment=True,
                   bypassTargets=sorted(bypass), logSource="complete owned Squid access.log",
                   ingestionHostname=urlparse(endpoint).hostname)
-    save(host.args.evidence / "proxy-proof.json", result)
-    print("Collector proxy proof: " + json.dumps(result), flush=True)
+    name = "proxy-proof.json" if phase == "default" else f"proxy-{phase}-proof.json"
+    save(host.args.evidence / name, result)
+    print(f"Collector {phase} proxy proof: " + json.dumps(result), flush=True)
     return result
 
 
@@ -1824,7 +1858,6 @@ def execute(args, scenario, variants, commands):
             host.kube("apply", "-f", "-", data=yaml.safe_dump(settings), private=True)
         chart = render_chart(commands, args.evidence, outputs, source, mapping,
                              otlp=scenario["id"] == "otlp")
-        proxy_started = time.time()
         commands.run(["helm", "upgrade", "--install", "ama-metrics", str(chart),
                       "--kubeconfig", str(host.kubeconfig), "--namespace", "kube-system",
                       "--wait", "--timeout", "20m"])
@@ -1890,11 +1923,13 @@ def execute(args, scenario, variants, commands):
         if "private-api" in scenario["clusterFeatures"]:
             probe_started = time.time()
             network_probe_monitor(host, args.run_id)
+        if "http-proxy" in scenario["clusterFeatures"]:
+            phase = "trusted-ca" if "custom-ca" in scenario["clusterFeatures"] else "default"
+            outcome["proxy"] = verify_proxy(host, outputs, probe_started, phase)
         outcome["ingestion"] = verify_ingestion(host, outputs, probe_started)
         if "custom-ca" in scenario["clusterFeatures"]:
-            outcome["ca"] = verify_ca_recovery(host, outputs, network_probe_monitor, verify_ingestion)
-        if "http-proxy" in scenario["clusterFeatures"]:
-            outcome["proxy"] = verify_proxy(host, outputs, proxy_started)
+            outcome["ca"] = verify_ca_recovery(
+                host, outputs, network_probe_monitor, verify_ingestion, verify_proxy)
         save(args.evidence / "images-after.json", audit_images(host, images))
         outcome["status"] = "TESTS_PASSED"
     except (RuntimeError, ValueError, KeyError, OSError, ET.ParseError, yaml.YAMLError) as failure:
