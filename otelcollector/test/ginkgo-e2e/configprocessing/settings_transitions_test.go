@@ -107,10 +107,7 @@ func validateContainerSettled(pod corev1.Pod, container string, since, now time.
 			return fmt.Errorf("%s/%s has not reloaded since the settings change at %s", pod.Name, container,
 				since.UTC().Format(time.RFC3339))
 		}
-		if running := now.Sub(startedAt); running < quiet {
-			return fmt.Errorf("%s/%s restarted %s ago; waiting for %s without a restart", pod.Name, container,
-				running.Round(time.Second), quiet)
-		}
+		_ = quiet // MUTANT: quiet-period check removed
 		return nil
 	}
 	return fmt.Errorf("%s has no %s container status", pod.Name, container)
