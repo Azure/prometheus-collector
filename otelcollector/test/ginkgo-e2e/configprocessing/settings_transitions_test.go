@@ -44,13 +44,23 @@ func transitionFixture(parts ...string) []byte {
 	return data
 }
 
+// lastSettingsChange is when this suite last changed the settings ConfigMap data. Every such change
+// restarts the replicaset collectors, which are then followed by one more restart (see
+// collectorFollowOnWindow).
+var lastSettingsChange time.Time
+
 func replaceSettings(data map[string]string) {
 	cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
 		"ama-metrics-settings-configmap", metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	changed := !maps.Equal(cm.Data, data)
 	cm.Data = maps.Clone(data)
+	written := time.Now()
 	_, err = K8sClient.CoreV1().ConfigMaps("kube-system").Update(context.Background(), cm, metav1.UpdateOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	if changed {
+		lastSettingsChange = written
+	}
 }
 
 func settingsPhase(variant, file string) time.Time {
@@ -76,20 +86,31 @@ func settingsChanged(variant, file string) bool {
 }
 
 // collectorSettleQuietPeriod is how long the ama-metrics replicaset collectors, the config-reader
-// and the target allocator must run without restarting before a phase is observed. Every
-// config-reader start regenerates the operator-targets TLS secrets. When that projection reaches a
-// collector whose client-cert watch is already running, the liveness probe (120 s initial delay,
-// 15 s period, 3 failures) restarts the collector once more. In 979 run 132116 that happened
-// 60-90 s after the reader restart. Three quiet minutes after the latest restart covers it.
+// and the target allocator must run without restarting before a phase is observed. In 979 run
+// 132116 a collector restarted again 60-90 s after the config-reader restart that follows a
+// settings change; three quiet minutes after the latest restart covers that case.
 const collectorSettleQuietPeriod = 3 * time.Minute
+
+// collectorFollowOnWindow bounds the later follow-on restart of the replicaset collectors. In 979
+// runs 132186 (default) and 132187 (classic), container start times from the workspaces show that a
+// collector restarted by a settings change restarted once more, with no DaemonSet settings restart
+// nearby, 450-570 s after that start (13 cases). Two more ambiguous cases took 705-750 s. The
+// follow-on instance then stayed up (13.5 min and 64 min observed). In 132186 the collectors also
+// logged x509 "certificate signed by unknown authority" against the target allocator between the
+// two starts. Logs of the restarted instances were never shipped, so the watched path that fired is
+// unknown. A collector therefore counts as settled only once it is the follow-on instance (its
+// previous instance also started after the latest settings change), or once it has run longer
+// than every observed follow-on interval.
+const collectorFollowOnWindow = 13 * time.Minute
 
 var settledContainers = []struct {
 	label, container string
 	reloads          bool // restarts on every settings change
+	followOn         bool // restarts once more after a settings-driven start
 }{
-	{"ama-metrics", "prometheus-collector", true},
-	{"ama-metrics-operator-targets", "config-reader", true},
-	{"ama-metrics-operator-targets", "targetallocator", false},
+	{"ama-metrics", "prometheus-collector", true, true},
+	{"ama-metrics-operator-targets", "config-reader", true, false},
+	{"ama-metrics-operator-targets", "targetallocator", false, false},
 }
 
 // validateContainerSettled requires the container to be ready and running, to have started at or
@@ -116,10 +137,40 @@ func validateContainerSettled(pod corev1.Pod, container string, since, now time.
 	return fmt.Errorf("%s has no %s container status", pod.Name, container)
 }
 
+// validateFollowOnCleared requires that the container either is the follow-on instance after the
+// settings change at changedAt (its previous instance also started at or after changedAt), or has
+// run for at least window. With no recorded change only validateContainerSettled applies.
+func validateFollowOnCleared(pod corev1.Pod, container string, changedAt, now time.Time, window time.Duration) error {
+	if changedAt.IsZero() {
+		return nil
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name != container {
+			continue
+		}
+		if status.State.Running == nil {
+			return fmt.Errorf("%s/%s is not running", pod.Name, container)
+		}
+		changed := changedAt.Truncate(time.Second)
+		if previous := status.LastTerminationState.Terminated; previous != nil && !previous.StartedAt.Time.Before(changed) {
+			return nil
+		}
+		if running := now.Sub(status.State.Running.StartedAt.Time); running < window {
+			return fmt.Errorf("%s/%s has run %s since its last start without the follow-on restart that follows "+
+				"the settings change at %s; waiting for that restart or %s without one", pod.Name, container,
+				running.Round(time.Second), changedAt.UTC().Format(time.RFC3339), window)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s has no %s container status", pod.Name, container)
+}
+
 // waitForCollectorsSettled waits until the collectors, config-reader and target allocator have
 // reloaded after since (when set) and then run for collectorSettleQuietPeriod without a restart,
-// so that follow-on liveness restarts finish before any phase observation starts. It only delays
-// observation; every phase assertion still runs unchanged afterwards.
+// and until the collectors have also had their follow-on restart after the latest settings change
+// (or outlived collectorFollowOnWindow without one). Follow-on restarts therefore finish before any
+// phase observation starts. It only delays observation; every phase assertion still runs unchanged
+// afterwards.
 func waitForCollectorsSettled(since time.Time) {
 	Eventually(func(g Gomega) {
 		now := time.Now()
@@ -133,9 +184,12 @@ func waitForCollectorsSettled(since time.Time) {
 			}
 			for _, pod := range pods {
 				g.Expect(validateContainerSettled(pod, source.container, reloadSince, now, collectorSettleQuietPeriod)).To(Succeed())
+				if source.followOn {
+					g.Expect(validateFollowOnCleared(pod, source.container, lastSettingsChange, now, collectorFollowOnWindow)).To(Succeed())
+				}
 			}
 		}
-	}, collectorSettleQuietPeriod+10*time.Minute, 15*time.Second).Should(Succeed())
+	}, collectorFollowOnWindow+collectorSettleQuietPeriod+5*time.Minute, 15*time.Second).Should(Succeed())
 	AddReportEntry("collectors-settled", time.Now().UTC().Format(time.RFC3339Nano))
 }
 
@@ -803,6 +857,91 @@ func TestCollectorSettleGuard(t *testing.T) {
 	}
 	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), true), "config-reader", since, now, quiet); err == nil {
 		t.Fatal("a missing container status must not be settled")
+	}
+	t.Run("follow-on-restart", testCollectorFollowOnGuard)
+}
+
+// testCollectorFollowOnGuard replays replicaset collector container starts from the workspaces of
+// 979 runs 132186 (default) and 132187 (classic).
+func testCollectorFollowOnGuard(t *testing.T) {
+	at := func(clock string) time.Time {
+		parsed, err := time.Parse(time.RFC3339, "2026-11-13T"+clock+"Z")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return parsed
+	}
+	collector := func(started, previous time.Time) corev1.Pod {
+		status := corev1.ContainerStatus{
+			Name: "prometheus-collector", Ready: true,
+			State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(started)}},
+		}
+		if !previous.IsZero() {
+			status.LastTerminationState.Terminated = &corev1.ContainerStateTerminated{
+				StartedAt: metav1.NewTime(previous), FinishedAt: metav1.NewTime(started.Add(-time.Second)),
+			}
+		}
+		return corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "ama-metrics-56f9b9ccb5-m8bsf"},
+			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{status}}}
+	}
+	settled := func(pod corev1.Pod, since, changedAt, now time.Time) error {
+		if err := validateContainerSettled(pod, "prometheus-collector", since, now, collectorSettleQuietPeriod); err != nil {
+			return err
+		}
+		return validateFollowOnCleared(pod, "prometheus-collector", changedAt, now, collectorFollowOnWindow)
+	}
+	window := collectorFollowOnWindow
+
+	// 132186 default: phase 10:02:33, settings-driven start 10:03:41 (previous instance 09:56:41),
+	// x509 against the target allocator at 10:04:52, follow-on start 10:11:18.
+	change := at("10:02:33")
+	first := collector(at("10:03:41"), at("09:56:41"))
+	for _, now := range []string{"10:06:57", "10:09:00", "10:11:10"} {
+		if err := settled(first, change, change, at(now)); err == nil {
+			t.Fatalf("132186: the settings-driven collector must not be settled at %s before its follow-on restart", now)
+		}
+	}
+	followOn := collector(at("10:11:18"), at("10:03:41"))
+	if err := settled(followOn, change, change, at("10:12:30")); err == nil {
+		t.Fatal("132186: the follow-on instance must still wait for the quiet period")
+	}
+	if err := settled(followOn, change, change, at("10:14:20")); err != nil {
+		t.Fatalf("132186: the quiet follow-on instance must be settled: %v", err)
+	}
+
+	// 132187 classic: alternation 09:12:03, settings-driven start 09:12:49 (previous 09:09:41),
+	// follow-on start 09:20:35.
+	change = at("09:12:03")
+	if err := settled(collector(at("09:12:49"), at("09:09:41")), change, change, at("09:16:00")); err == nil {
+		t.Fatal("132187: the settings-driven collector must not be settled before its follow-on restart")
+	}
+	if err := settled(collector(at("09:20:35"), at("09:12:49")), change, change, at("09:23:40")); err != nil {
+		t.Fatalf("132187: the quiet follow-on instance must be settled: %v", err)
+	}
+
+	// No follow-on restart (132186 m8bsf 09:25:11 ran 750 s): settled only after the window.
+	change = at("09:24:11")
+	noFollowOn := collector(at("09:25:11"), at("09:20:26"))
+	if err := settled(noFollowOn, change, change, at("09:25:11").Add(window-time.Second)); err == nil {
+		t.Fatal("a settings-driven collector without a follow-on restart must not be settled inside the window")
+	}
+	if err := settled(noFollowOn, change, change, at("09:25:11").Add(window)); err != nil {
+		t.Fatalf("a settings-driven collector that outlived the window must be settled: %v", err)
+	}
+
+	// Unchanged phase (since unset) after an earlier change still waits for the pending follow-on.
+	if err := settled(first, time.Time{}, at("10:02:33"), at("10:07:00")); err == nil {
+		t.Fatal("a later phase must not observe before the follow-on restart of an earlier change")
+	}
+	// Without any recorded settings change only the quiet period applies.
+	if err := settled(first, time.Time{}, time.Time{}, at("10:07:00")); err != nil {
+		t.Fatalf("without a recorded settings change only the quiet period applies: %v", err)
+	}
+	// Every observed follow-on interval (450-570 s, ambiguous 705-750 s) is inside the window.
+	for _, seconds := range []int{450, 570, 750} {
+		if time.Duration(seconds)*time.Second >= window {
+			t.Fatalf("observed follow-on interval %ds must be inside the %s window", seconds, window)
+		}
 	}
 }
 
