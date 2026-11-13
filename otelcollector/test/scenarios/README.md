@@ -27,6 +27,8 @@ the exact submitted execution IDs, immutable test-source SHA and runner-image
 digest, terminal passed status and nonempty JUnit/artifacts. Legacy `main`/`latest`
 defaults are not candidate provenance.
 `regionTests` is a separate region/rule validation, not a cluster-health substitute.
+The run-specific health monitors keep `myapp_temperature` as well as `up`, so
+the fresh-ingestion query can verify a marked sample from this run.
 
 ## Prerequisites
 
