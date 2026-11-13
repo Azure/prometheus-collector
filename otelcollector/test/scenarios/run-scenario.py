@@ -1140,6 +1140,26 @@ def verify_pool_inventory(expected, actual, nodes):
     return evidence
 
 
+def mark_health_monitors(monitors, marker):
+    marked = 0
+    for monitor in monitors:
+        if not monitor or monitor.get("kind") not in {"PodMonitor", "ServiceMonitor"}:
+            continue
+        for field in ("endpoints", "podMetricsEndpoints"):
+            for endpoint in monitor["spec"].get(field, []):
+                rules = endpoint.get("metricRelabelings", [])
+                keep = [rule for rule in rules if rule.get("action") == "keep"
+                        and rule.get("sourceLabels") == ["__name__"] and rule.get("regex") == "up"]
+                if len(keep) != 1:
+                    raise ValueError("Reference monitor must keep up before adding the fresh ingestion metric")
+                keep[0]["regex"] = "up|myapp_temperature"
+                rules.append({"action": "replace", "targetLabel": "scenario_run", "replacement": marker})
+                marked += 1
+    if not marked:
+        raise ValueError("No reference-monitor endpoint was marked for fresh ingestion proof")
+    return monitors
+
+
 def verify_ingestion(host, outputs, started):
     token = host.commands.run(["az", "account", "get-access-token", "--resource",
                                "https://prometheus.monitor.azure.com", "--query", "accessToken",
@@ -1673,19 +1693,8 @@ def execute(args, scenario, variants, commands):
         monitors = list(yaml.safe_load_all(
             (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml").read_text()))
         probe_started = time.time()
-        marked = 0
-        for monitor in monitors:
-            if not monitor or monitor.get("kind") not in {"PodMonitor", "ServiceMonitor"}:
-                continue
-            for field in ("endpoints", "podMetricsEndpoints"):
-                for endpoint in monitor["spec"].get(field, []):
-                    endpoint.setdefault("metricRelabelings", []).append({
-                        "action": "replace", "targetLabel": "scenario_run", "replacement": args.run_id,
-                    })
-                    marked += 1
-        if not marked:
-            raise RuntimeError("No reference-monitor endpoint was marked for fresh ingestion proof")
-        host.kube("apply", "-f", "-", data=yaml.safe_dump_all(monitors), private=True)
+        host.kube("apply", "-f", "-", data=yaml.safe_dump_all(
+            mark_health_monitors(monitors, args.run_id)), private=True)
         time.sleep(args.settle_seconds)
         outcome["suites"] = {}
         for suite in SUITES:

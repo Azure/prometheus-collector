@@ -1566,6 +1566,24 @@ class Contracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "uncommitted"):
             runner.source_commit(commands, runner.REPO, ["otelcollector/test/testkube"])
 
+    def test_health_monitors_keep_marked_fresh_ingestion_metric(self):
+        fixture = runner.TEST_SOURCE / "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml"
+        monitors = list(runner.yaml.safe_load_all(fixture.read_text()))
+        marked = runner.mark_health_monitors(monitors, "fresh-run-marker")
+        for monitor in marked:
+            endpoints = monitor["spec"].get("endpoints", monitor["spec"].get("podMetricsEndpoints", []))
+            self.assertTrue(endpoints)
+            for endpoint in endpoints:
+                rules = endpoint["metricRelabelings"]
+                keep = next(rule for rule in rules if rule["action"] == "keep")
+                self.assertIsNotNone(re.fullmatch(keep["regex"], "up"))
+                self.assertIsNotNone(re.fullmatch(keep["regex"], "myapp_temperature"))
+                self.assertIsNone(re.fullmatch(keep["regex"], "another_metric"))
+                self.assertIn({"action": "replace", "targetLabel": "scenario_run",
+                               "replacement": "fresh-run-marker"}, rules)
+        with self.assertRaisesRegex(ValueError, "must keep up"):
+            runner.mark_health_monitors(marked, "another-run")
+
     def test_fresh_ingestion_requires_this_run_and_never_logs_query_token(self):
         with tempfile.TemporaryDirectory() as temporary:
             host = Mock()
@@ -2031,6 +2049,7 @@ def mutations():
         "literal-labels": ('known.update(re.findall(r\'"([^"]+)"\', arguments))', "pass"),
         "query-auth-template": ("Bearer $token", "Bearer"),
         "fresh-sample": ("if not math.isfinite(observed) or not started <= observed <= time.time() + 60:", "if False:"),
+        "fresh-sample-keep": ('keep[0]["regex"] = "up|myapp_temperature"', 'keep[0]["regex"] = "up"'),
         "empty-junit": ("if not executed or failed:", "if failed:"),
         "cleanup-ownership": ('if any(group.get("tags", {}).get(k) != v for k, v in expected.items()):', "if False:"),
         "retry-deployment-state": ('if properties.get("provisioningState") != "Succeeded":', "if False:"),
