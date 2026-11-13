@@ -242,6 +242,14 @@ Its run-specific ServiceMonitor enables `proxyFromEnvironment`; fresh marked
 reference samples, denied direct web egress, and complete Squid-log aggregation
 must agree. Proxy proof and per-execution JUnit counts are printed to build logs;
 configuration or successful infrastructure deployment alone is not lane coverage.
+
+The proxy lane's functional proof passed in pipeline 979 build 132171
+(producer 131983, product source `d34c33d1`, test source `aa9d2052`): all nine
+native executions passed, fresh AMW ingestion was verified, and 54 successful
+collector-to-DCE proxy requests accompanied zero proxy routes to bypass targets.
+Direct egress denial and temporary-access cleanup passed; its matrix blocker is
+removed. Independent vulnerability-scan and global coverage gates still failed.
+
 The custom-CA lane removes all collector trust-anchor mounts and restarts the
 collectors. It requires fresh successful scraping, certificate-validation errors,
 and independent authenticated AMW queries with no samples for a new negative-phase

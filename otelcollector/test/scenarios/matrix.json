@@ -75,8 +75,7 @@
       "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Owned proxy infrastructure exists; private access, explicit collector env, route logs and NO_PROXY proofs are not implemented."
+      "tier": "weekly"
     },
     {
       "id": "proxy-custom-ca",
