@@ -2239,14 +2239,6 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
         - bash: |
             set -euo pipefail
             printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
