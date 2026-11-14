@@ -932,10 +932,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Linux_Prometheus_Collector_AMD64
-        - Linux_Prometheus_Collector_ARM64
+        # The arch jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -973,6 +971,24 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -euo pipefail
+            url="${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECTID}/_apis/build/builds/${BUILD_BUILDID}/timeline?api-version=7.1"
+            while :; do
+              status=$(curl -fsSL --retry 5 --retry-all-errors -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" "$url" | jq -r '
+                [.records[] | select(.type == "Phase" and (.identifier == "Build.Linux_Prometheus_Collector_AMD64" or .identifier == "Build.Linux_Prometheus_Collector_ARM64"))]
+                | if any(.state == "completed" and .result != "succeeded" and .result != "succeededWithIssues") then "failed"
+                  elif length == 2 and all(.state == "completed") then "done" else "wait" end')
+              echo "$status"
+              case "$status" in
+                done) break ;;
+                failed) echo "##vso[task.logissue type=error]An architecture image job did not succeed"; exit 1 ;;
+              esac
+              sleep 15
+            done
+          displayName: "Build: wait for architecture images"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -2204,10 +2220,8 @@ extends:
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Windows2019_Prometheus_Collector
-        - Windows2022_Prometheus_Collector
+        # The Windows image jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
@@ -2223,6 +2237,20 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
+        - powershell: |
+            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
+            $ids = 'Build.Windows2019_Prometheus_Collector', 'Build.Windows2022_Prometheus_Collector'
+            while ($true) {
+              $jobs = @((Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Phase' -and $ids -contains $_.identifier })
+              if ($jobs | Where-Object { $_.state -eq 'completed' -and $_.result -notin 'succeeded', 'succeededWithIssues' }) { throw 'A Windows image job did not succeed' }
+              if ($jobs.Count -eq $ids.Count -and -not ($jobs | Where-Object { $_.state -ne 'completed' })) { break }
+              Write-Host ($jobs | ForEach-Object { "$($_.identifier)=$($_.state)" })
+              Start-Sleep 15
+            }
+          displayName: "Build: wait for Windows images"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             set -euo pipefail
             printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
