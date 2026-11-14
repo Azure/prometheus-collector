@@ -1843,8 +1843,6 @@ extends:
         # Pulling the base inside docker build --pull costs ~3.5m; start it now so it overlaps the Go build.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2019 base image pull"
-        - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
-          displayName: "Build: test Windows runtime setup"
         # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
         - powershell: |
             curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
@@ -2011,8 +2009,6 @@ extends:
         # The host's cached ltsc2022 base can be months stale; pull overlaps the Go build and docker build --pull joins it.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2022 base image pull"
-        - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
-          displayName: "Build: test Windows runtime setup"
         # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
         - powershell: |
             curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
@@ -2154,6 +2150,9 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
+        # Host-only check of setup.ps1: run it here, idle until the image jobs finish, not on their critical paths.
+        - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
+          displayName: "Build: test Windows runtime setup"
         - powershell: |
             $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
             # Job records complete ~0.1-0.2m before their Phase records.
