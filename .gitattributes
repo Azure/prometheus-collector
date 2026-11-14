@@ -1,0 +1,2 @@
+# Pipeline scripts are sourced by Git Bash on Windows agents, where CRLF checkouts break bash.
+.pipelines/**/*.sh text eol=lf

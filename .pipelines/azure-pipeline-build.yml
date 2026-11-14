@@ -94,8 +94,11 @@ extends:
         steps:
         - checkout: self
           submodules: true
-        - bash: bash .pipelines/tests/windows-image-restore-test.sh
-          displayName: "Build: test Windows image recovery"
+        - bash: |
+            set -e
+            bash .pipelines/tests/windows-image-restore-test.sh
+            bash .pipelines/tests/image-tag-test.sh
+          displayName: "Build: test Windows image recovery and image tags"
         - bash: |
             set -euo pipefail
             release_file=$(mktemp)
@@ -114,23 +117,7 @@ extends:
           name: trivyVersion
           displayName: "Build: resolve latest stable Trivy version"
         - bash: |
-            if [ $(IS_PR) == "True" ]; then
-              BRANCH_NAME=$(System.PullRequest.SourceBranch)
-            else
-              BRANCH_NAME=$(Build.SourceBranch)
-              BRANCH_NAME=${BRANCH_NAME#refs/heads/}
-            fi
-            BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
-            COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
-            DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-            VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
-            SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
-            LINUX_IMAGE_TAG=$SEMVER
-            if [ "$(IS_SRE_BRANCH)" = "True" ]; then
-              LINUX_IMAGE_TAG="sre-$(Build.BuildId)-$SEMVER"
-            fi
-            # Truncating to 128 characters as it is required by docker
-            LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
+            source .pipelines/image-tag.sh
             #Truncating this to 128 to add the arm/amd suffix
             LINUX_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
             #Truncating this to 124 to add the cfg suffix
@@ -144,9 +131,6 @@ extends:
             LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
             LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
             LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
-            # Truncating to 115 characters as it is required by docker (4 characters used in -win, 9 characters used in -ltsc2019/-ltsc2022, 10 characters used in -unsigned)
-            WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-105)
-            WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
             #Truncating this to 112 characters to add the targetallocator suffix
             TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
             TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
@@ -158,9 +142,6 @@ extends:
             WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
             WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
             WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
-            # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
-            WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
-            WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
             #Truncating this to 123 characters to add the conf prefix
             ARC_CONFORMANCE_TAG_SUFFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-123)
             ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
@@ -168,7 +149,6 @@ extends:
             TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
             LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
             LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
-            WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
             AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
@@ -209,6 +189,8 @@ extends:
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
           displayName: 'Build: set image registry, repo, and tags'
           name: setup
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             cd .pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
@@ -1816,14 +1798,17 @@ extends:
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
         variables:
-          WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-          WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
+        - bash: |
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME]$WINDOWS_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION]$WINDOWS_2019_BASE_IMAGE_VERSION"
+          displayName: "Build: set image name"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
         # The ltsc2019 base is not cached on the host; pulling it in docker build costs ~3.5m. docker build joins this pull.
@@ -2000,11 +1985,7 @@ extends:
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
         variables:
-          WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-          WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         templateContext:
@@ -2015,6 +1996,13 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/sre-push'
             artifactName: sre-push-windows2022
         steps:
+        - bash: |
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME]$WINDOWS_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION]$WINDOWS_2022_BASE_IMAGE_VERSION"
+          displayName: "Build: set image name"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
         - powershell: |
