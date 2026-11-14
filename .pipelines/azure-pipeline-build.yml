@@ -244,14 +244,26 @@ extends:
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
       - job: DevClusterHelmChartFiles
         displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
-        # Deploy-only artifacts share one job after the tag job so they don't take Ubuntu agents from the critical path.
+        # Deploy-only artifacts and the Aks Arc chart share one job after the tag job: each extra request here can
+        # starve the multi-arch job of a pool slot (max 14) while other pipelines hold agents.
         dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
+        variables:
+          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+          AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
+          INCLUDE_DEPENDENT_CHARTS: true
         templateContext:
           outputs:
+          - output: pipelineArtifact
+            displayName: 'Ev2: publish helm chart artifacts'
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
+            artifactName: aks-arc-drop
           - output: pipelineArtifact
             displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
             targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
@@ -334,6 +346,34 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+        # The Aks Arc steps edit the addon chart in place, so they must run after it is copied for the dev clusters.
+        - bash: |
+            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
+            envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+            helm version
+          displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+        - bash: |
+            helm dep update
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+          displayName: "Build: update helm dependencies"
+        - bash: |
+            helm package ./azure-monitor-metrics-addon/
+            # Also package the SAME chart contents under <ver>-arc so the
+            # Arc extension central rollout pipeline can pull a distinct
+            # OCI tag from the same artifact. Chart.yaml version is
+            # overridden at package time so the embedded version matches
+            # the OCI tag.
+            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+          displayName: "Build: package helm chart (aks + arc-tagged variant)"
+        - bash: |
+            helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
+            echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+          displayName: "Build: push helm chart to dev ACR (aks + arc tags)"
 
       - job: SRE_TestKube_Runner_Receipt
         displayName: "SRE: pin existing TestKube runner and test source"
@@ -2158,6 +2198,9 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
+        - checkout: self
+          fetchDepth: 1
+          fetchTags: false
         # Host-only check of setup.ps1: run it here, idle until the image jobs finish, not on their critical paths.
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
@@ -2297,60 +2340,6 @@ extends:
             DisableRemediation: false
             AcceptableOutdatedSignatureInHours: 48
             TreatAcceptableOutdatedSignatureAs: Warning
-      - job: Aks_Arc_Helm_Chart
-        displayName: "Package: Aks Arc helm chart"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        # Only needs tag outputs and sources; waiting for the Linux merge added an agent hop to the build tail.
-        dependsOn: Image_Tags_and_Ev2_Artifacts
-        variables:
-          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-          IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-          IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
-          INCLUDE_DEPENDENT_CHARTS: true
-          skipComponentGovernanceDetection: true
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Ev2: publish helm chart artifacts'
-            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
-            artifactName: aks-arc-drop
-        steps:
-        - task: HelmInstaller@1
-          displayName: 'Build: install Helm version'
-          inputs:
-            helmVersionToInstall: $(HELM_VERSION)
-        - bash: |
-            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
-            envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-            helm version
-          displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
-        - bash: |
-            helm dep update
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-          displayName: "Build: update helm dependencies"
-        - bash: |
-            helm package ./azure-monitor-metrics-addon/
-            # Also package the SAME chart contents under <ver>-arc so the
-            # Arc extension central rollout pipeline can pull a distinct
-            # OCI tag from the same artifact. Chart.yaml version is
-            # overridden at package time so the embedded version matches
-            # the OCI tag.
-            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: package helm chart (aks + arc-tagged variant)"
-        - bash: |
-            helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-            mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
-            echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: push helm chart to dev ACR (aks + arc tags)"
       - job: Tag_Github_Commit
         displayName: "CI/CD: Tag commit with semver"
         pool:
@@ -2359,7 +2348,7 @@ extends:
           os: linux
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
-        - Aks_Arc_Helm_Chart
+        - DevClusterHelmChartFiles
         - Linux_Prometheus_Collector
         - WindowsMultiArch_Prometheus_Collector
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
