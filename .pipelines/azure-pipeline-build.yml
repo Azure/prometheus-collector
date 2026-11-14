@@ -1844,7 +1844,7 @@ extends:
           displayName: "Build: set image name"
           env:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        # Pulling the base inside docker build --pull costs ~3.5m; start it now so it overlaps the Go build.
+        # Pulling the base inside docker build --pull costs ~3.5m; start it before the seed setup and docker build --pull joins it.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2019 base image pull"
         # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
@@ -1878,11 +1878,40 @@ extends:
           displayName: "Build: install golang $(GOLANG_VERSION)"
           retryCountOnTaskFailure: 3
         - powershell: |
-            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION) -Only otelcollector, main, prometheusui
+            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
             New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
             Copy-Item otelcollector.exe, ../main/main.exe, ../prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build and stage first-party binaries"
+          displayName: "Build: build Go binaries and stage first-party binaries"
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
+            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        # WS2022's agent usually starts minutes later, so it only signs these. They stay out of the staging directory,
+        # whose windows-signed artifact WS2022 downloads over its own signed copies.
+        - powershell: |
+            New-Item -ItemType Directory -Force $(Agent.TempDirectory)/ossGoUnsigned | Out-Null
+            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Agent.TempDirectory)/ossGoUnsigned
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: stage host-built OSS binaries"
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish unsigned OSS binaries for WS2022 signing'
+          inputs:
+            path: $(Agent.TempDirectory)/ossGoUnsigned
+            artifact: windows-oss-unsigned-$(System.JobAttempt)
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -2013,7 +2042,7 @@ extends:
           displayName: "Build: set image name"
           env:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        # The host's cached ltsc2022 base can be months stale; pull overlaps the Go build and docker build --pull joins it.
+        # The host's cached ltsc2022 base can be months stale; pull starts before the seed setup and docker build --pull joins it.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2022 base image pull"
         # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
@@ -2030,47 +2059,19 @@ extends:
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
             Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
             (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
-            # The Go build overwrites the placeholders, so let docker finish reading the build context first.
-            while (-not ((Get-Content $(Agent.TempDirectory)\image-build.log -Raw -ErrorAction Ignore) -match 'Step 1/') -and -not (Test-Path $(Agent.TempDirectory)\image-build.exit)) { Start-Sleep 1 }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: start WS2022 image build"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
-            if ($LASTEXITCODE) { throw "Go download failed" }
-            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
-            New-Item -ItemType Directory -Force C:\go | Out-Null
-            tar.exe -xf go.zip -C C:\
-            if ($LASTEXITCODE) { throw "Go extraction failed" }
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2019_Prometheus_Collector windows-oss-unsigned WINDOWS_OSS_UNSIGNED_ARTIFACT
+          displayName: "Build: wait for WS2019 unsigned OSS binaries"
           retryCountOnTaskFailure: 3
-        - powershell: ./makefile_windows.ps1 -Only promconfigvalidator, fluent-bit-plugin
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build promconfigvalidator and fluent-bit plugin"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
-            if ($LASTEXITCODE) { throw "Go download failed" }
-            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
-            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
-            if ($LASTEXITCODE) { throw "Go extraction failed" }
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        - powershell: |
-            ./makefile_windows.ps1
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
-          displayName: "Build: build fluent-bit plugin"
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        - powershell: |
-            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/ossGoSigning | Out-Null
-            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Build.ArtifactStagingDirectory)/ossGoSigning
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: stage host-built OSS binaries"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2019 unsigned OSS binaries"
+          inputs:
+            buildType: current
+            artifactName: $(WINDOWS_OSS_UNSIGNED_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)/ossGoSigning
         # Signing these here runs in parallel with the WS2019 first-party signing, which would otherwise wait ~3m for them.
         - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
           parameters:

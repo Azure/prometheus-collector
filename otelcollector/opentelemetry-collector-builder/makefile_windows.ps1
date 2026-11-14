@@ -1,9 +1,7 @@
 # Temporary method to build the OTL collector and fluent-bit for windows
 param(
     [Parameter()]
-    [string]$PROMETHEUS_VERSION = "",  # Default value if not provided
-    # Build only these targets; the producer splits them across its Windows jobs so their signing runs in parallel.
-    [string[]]$Only = @()
+    [string]$PROMETHEUS_VERSION = ""  # Default value if not provided
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,7 +10,6 @@ $otel = Split-Path -Parent $PSScriptRoot
 # The Go modules are independent, so build them concurrently. Each runs in its own Windows PowerShell because jobs
 # drop native stderr (the go errors), and via -File because -EncodedCommand writes errors to stderr as CLIXML.
 function Start-Build([string]$Name, [string]$Dir, [string]$Command) {
-    if ($Only -and $Name -notin $Only) { return }
     Set-Content "$env:TEMP\$Name.ps1" "`$ErrorActionPreference = 'Stop'`n$Command`nexit `$LASTEXITCODE"
     $process = Start-Process powershell.exe -WorkingDirectory "$otel\$Dir" -NoNewWindow -PassThru `
         -ArgumentList "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$env:TEMP\$Name.ps1`"" `
@@ -38,7 +35,6 @@ $builds = @(
     Start-Build main main $mainBuild
     Start-Build prometheusui prometheus-ui ".\makefile_windows.ps1 -PROMETHEUS_VERSION '$PROMETHEUS_VERSION'"
 )
-if ($Only -and $builds.Count -ne $Only.Count) { throw "-Only names an unknown build: $Only" }
 
 $failed = @()
 foreach ($build in $builds) {
