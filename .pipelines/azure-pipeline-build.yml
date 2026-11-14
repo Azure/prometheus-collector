@@ -2374,6 +2374,8 @@ extends:
     - stage: Deploy
       lockBehavior: sequential
       dependsOn: Build
+      # Every Deploy job is gated on these; skipping the stage otherwise avoids queueing on the environment's exclusive lock.
+      condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
       jobs:
       - deployment: Deploy_Chart_ARC
         templateContext:

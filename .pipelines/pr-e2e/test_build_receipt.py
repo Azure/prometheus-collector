@@ -43,7 +43,8 @@ class ReceiptTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as directory:
                 body = script
                 for key, value in {"WINDOWS_FULL_IMAGE_NAME": image, "WINDOWS_2022_BASE_IMAGE_VERSION": "ltsc2022",
-                                   "Build.ArtifactStagingDirectory": directory, "ACR_USERNAME": "dummy",
+                                   "Build.ArtifactStagingDirectory": directory, "Agent.TempDirectory": directory,
+                                   "ACR_USERNAME": "dummy",
                                    "ACR_PASSWORD": "dummy"}.items():
                     body = body.replace("$(" + key + ")", value)
                 stub = "$ErrorActionPreference='Stop'\n$lines=@(" + ",".join("'" + value + "'" for value in output) + ")\n"
