@@ -1968,6 +1968,12 @@ extends:
           parameters:
             folderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
             displayName: 'EsrpCodeSigning for OSS binaries'
+        # The WS2022 job ships these rather than signing its own build of the same source (~5m of ESRP on its critical path).
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish signed binaries for the WS2022 image'
+          inputs:
+            path: $(Build.ArtifactStagingDirectory)
+            artifact: windows-signed-$(System.JobAttempt)
         - task: PowerShell@2
           displayName: Replace files in origin Image
           inputs:
@@ -2060,62 +2066,13 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
           condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        # The image build runs in the background while the host-built binaries it copies in are signed.
+        # The image build runs in the background while the WS2019 job signs the binaries.
         - powershell: |
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
             Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
             (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
-            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
-            Copy-Item opentelemetry-collector-builder/otelcollector.exe, main/main.exe, prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
-            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/ossGoSigning | Out-Null
-            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Build.ArtifactStagingDirectory)/ossGoSigning
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: start WS2022 image build and stage first-party binaries"
-        - task: EsrpCodeSigning@6
-          inputs:
-            ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-            UseMSIAuthentication: true
-            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-            AuthAKVName: 'ESRPPrometheusKVProd'
-            AuthCertName: 'ESRPContainerImageSignCert'
-            AuthSignCertName: 'ESRPReqPrometheusProdCert'
-            FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
-            Pattern: '*.dll,*.exe,*.so,*.ps1'
-            signConfigType: 'inlineSignParams'
-            inlineOperation: |
-              [
-                      {
-                          "KeyCode" : "CP-230012",
-                          "OperationCode" : "SigntoolSign",
-                          "Parameters" : {
-                              "OpusName" : "Microsoft",
-                              "OpusInfo" : "http://www.microsoft.com",
-                              "FileDigest" : "/fd \"SHA256\"",
-                              "PageHash" : "/NPH",
-                              "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-                          },
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      },
-                      {
-                          "KeyCode" : "CP-230012",
-                          "OperationCode" : "SigntoolVerify",
-                          "Parameters" : {},
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      }
-                  ]
-            SessionTimeout: '60'
-            MaxConcurrency: '50'
-            MaxRetryAttempts: '5'
-          displayName: 'EsrpCodeSigning for first party binaries'
-        # promconfigvalidator.exe and out_appinsights.so took ~2m of the post-build OSS signing; sign them during the image build.
-        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
-          parameters:
-            folderPath: '$(Build.ArtifactStagingDirectory)/ossGoSigning'
-            displayName: 'EsrpCodeSigning for host-built OSS binaries'
+          displayName: "Build: start WS2022 image build"
         - powershell: |
             Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
             function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
@@ -2129,32 +2086,38 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: wait for WS2022 image build"
           retryCountOnTaskFailure: 1
-        - task: PowerShell@2
-          displayName: Extract files to sign
+        - powershell: |
+            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID"
+            $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }
+            while ($true) {
+              # Read the job state first so an artifact published just before completion is still seen.
+              $job = (Invoke-RestMethod "$url/timeline?api-version=7.1" -Headers $headers).records | Where-Object { $_.type -eq 'Job' -and $_.identifier -eq 'Build.Windows2019_Prometheus_Collector.__default' }
+              $names = @((Invoke-RestMethod "$url/artifacts?api-version=7.1" -Headers $headers).value.name) -match '^windows-signed-\d+$'
+              $name = $names | Sort-Object { [int]($_ -split '-')[-1] } | Select-Object -Last 1
+              if ($name) { break }
+              if ($job.state -eq 'completed') { throw 'The WS2019 job completed without publishing signed binaries' }
+              Start-Sleep 5
+            }
+            Write-Host "##vso[task.setvariable variable=WINDOWS_SIGNED_ARTIFACT]$name"
+          displayName: "Build: wait for WS2019 signed binaries"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2019 signed binaries"
           inputs:
-            targetType: 'inline'
-            script: |
-              echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
-              echo "Creating OSS directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
-              cd $(Build.ArtifactStagingDirectory)/ossSigning
-              echo "Extract fluent-bit"
-              docker cp signingContainer:C:\opt\fluent-bit .
-              Remove-Item fluent-bit\bin\out_appinsights.so
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
-              echo "Removing container"
-              docker rm signingContainer
-              echo "List ArtifactStagingDirectory"
-              ls $(Build.ArtifactStagingDirectory)
-              ls .       
-        - script: dir $(Build.ArtifactStagingDirectory)
-          displayName: 'List files in Staging Directory'
-        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
-          parameters:
-            folderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
-            displayName: 'EsrpCodeSigning for OSS binaries'
+            buildType: current
+            artifactName: $(WINDOWS_SIGNED_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)
+        # Both images run the same setup.ps1, so the signed fluent-bit set must match this image's file for file.
+        - powershell: |
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+            docker cp signingContainer:C:\opt\fluent-bit $(Agent.TempDirectory)
+            docker rm signingContainer
+            $image = Get-ChildItem -Recurse -File -Name $(Agent.TempDirectory)\fluent-bit | Where-Object { $_ -ne 'bin\out_appinsights.so' }
+            $signed = Get-ChildItem -Recurse -File -Name $(Build.ArtifactStagingDirectory)\ossSigning\fluent-bit
+            if (-not $image -or (Compare-Object $image $signed)) { throw 'WS2022 fluent-bit files differ from the WS2019 signed set' }
+          displayName: "Build: verify signed fluent-bit matches the WS2022 image"
         - task: PowerShell@2
           displayName: Replace files in origin Image
           inputs:
