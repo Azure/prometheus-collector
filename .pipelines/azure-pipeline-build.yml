@@ -99,6 +99,7 @@ extends:
             bash .pipelines/tests/windows-image-restore-test.sh
             bash .pipelines/tests/image-tag-test.sh
             bash .pipelines/tests/tag-job-trivy-version-test.sh
+            bash .pipelines/tests/wait-for-jobs-test.sh
           displayName: "Build: test Windows image recovery and image tags"
         - bash: |
             set -euo pipefail
@@ -963,21 +964,7 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
-        - bash: |
-            set -euo pipefail
-            url="${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECTID}/_apis/build/builds/${BUILD_BUILDID}/timeline?api-version=7.1"
-            while :; do
-              status=$(curl -fsSL --retry 5 --retry-all-errors -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" "$url" | jq -r '
-                [.records[] | select(.type == "Phase" and (.identifier == "Build.Linux_Prometheus_Collector_AMD64" or .identifier == "Build.Linux_Prometheus_Collector_ARM64"))]
-                | if any(.state == "completed" and .result != "succeeded" and .result != "succeededWithIssues") then "failed"
-                  elif length == 2 and all(.state == "completed") then "done" else "wait" end')
-              echo "$status"
-              case "$status" in
-                done) break ;;
-                failed) echo "##vso[task.logissue type=error]An architecture image job did not succeed"; exit 1 ;;
-              esac
-              sleep 15
-            done
+        - bash: bash .pipelines/wait-for-jobs.sh Linux_Prometheus_Collector_AMD64 Linux_Prometheus_Collector_ARM64
           displayName: "Build: wait for architecture images"
           env:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -1202,12 +1189,22 @@ extends:
             GdnBreakGdnToolGosecSeverity: 'Warning'
             GdnBreakGdnToolSemmle: true
             GdnBreakGdnToolSemmleSeverity: 'Warning'
+      # Pool 66 hands its one warm Ubuntu agent to the lowest pending request; holding these t=0 jobs behind an
+      # agentless job keeps it for the tag job, which every other Linux job waits on.
+      - job: Agent_Request_Gate
+        displayName: "Build: hold image job agent requests behind the tag job"
+        pool: server
+        steps:
+        - task: Delay@1
+          inputs:
+            delayForMinutes: '0'
       - job: Linux_CCP_Prometheus_Collector
         displayName: "Build: linux CCP prometheus-collector image"
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
+        dependsOn: Agent_Request_Gate
         variables:
           DOCKER_BUILDKIT: 1
         templateContext:
@@ -1495,10 +1492,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Linux_Target_Allocator_ARM64
-        - Linux_Target_Allocator_AMD64
+        # The arch jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
@@ -1524,6 +1519,10 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: bash .pipelines/wait-for-jobs.sh Linux_Target_Allocator_AMD64 Linux_Target_Allocator_ARM64
+          displayName: "Build: wait for architecture images"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1681,6 +1680,7 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
+        dependsOn: Agent_Request_Gate
         variables:
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
@@ -1842,8 +1842,11 @@ extends:
           continueOnError: true
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
+            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive.
+            tar.exe -xf go.zip -C C:\
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
@@ -1854,8 +1857,11 @@ extends:
           displayName: "Build: build otelcollector and promconfigvalidator"
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
+            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
@@ -2022,8 +2028,11 @@ extends:
           continueOnError: true
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
+            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive.
+            tar.exe -xf go.zip -C C:\
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
@@ -2034,8 +2043,11 @@ extends:
           displayName: "Build: build otelcollector and promconfigvalidator"
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
+            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
