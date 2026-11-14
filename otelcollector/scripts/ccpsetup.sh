@@ -11,15 +11,6 @@ sudo update-ca-trust
 chmod 544 $TMPDIR/*.sh
 chmod 544 $TMPDIR/microsoft/liveness/*.sh
 
-echo "Installing packages for re2 gem install..."
-sudo tdnf install -y build-essential re2-devel
-
-echo "Installing tomlrb, deep_merge and re2 gems..."
-gem install colorize
-gem install tomlrb
-gem install deep_merge
-gem install re2
-
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
 sudo tdnf check-update
