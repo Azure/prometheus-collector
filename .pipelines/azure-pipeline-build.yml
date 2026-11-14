@@ -1811,7 +1811,7 @@ extends:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
-        # The ltsc2019 base is not cached on the host; pulling it in docker build costs ~3.5m. docker build joins this pull.
+        # Pulling the base inside docker build --pull costs ~3.5m; start it now so it overlaps the Go build.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2019 base image pull"
         - powershell: |
@@ -1842,7 +1842,7 @@ extends:
           condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
         - powershell: |
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2019 image"
           retryCountOnTaskFailure: 2
@@ -2005,6 +2005,9 @@ extends:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
+        # The host's cached ltsc2022 base can be months stale; pull overlaps the Go build and docker build --pull joins it.
+        - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)' -WindowStyle Hidden
+          displayName: "Build: start WS2022 base image pull"
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
@@ -2033,7 +2036,7 @@ extends:
           condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
         - powershell: |
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build WS2022 image"
           retryCountOnTaskFailure: 2
