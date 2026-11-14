@@ -285,6 +285,8 @@ extends:
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
       - job: CreateSidecarArtifact
         displayName: "Create Sidecar YAML Artifact for Remote Write"
+        # Deploy-only artifacts wait for the tag job so they don't take the first Ubuntu agent from the critical path.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
@@ -305,6 +307,7 @@ extends:
 
       - job: DevClusterHelmChartFiles
         displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
@@ -374,6 +377,7 @@ extends:
 
       - job: TestKubeTestFiles
         displayName: "CI/CD: Export TestKube test files for Deploy stage"
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
