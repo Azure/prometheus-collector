@@ -1,4 +1,4 @@
-# Image names shared by the tag job and the Windows jobs, which start without waiting for it. Source from the repo root.
+# Image names shared by the tag job and the image jobs that start without waiting for it. Source from the repo root.
 # The date is the run's queue time in Pacific time so every job agrees. The POSIX TZ rule is needed because
 # Git Bash on Windows has no zoneinfo and silently treats TZ=America/Los_Angeles as UTC.
 QUEUE_TIME=$(curl -fsSL --retry 5 --retry-all-errors -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" \
@@ -29,3 +29,9 @@ WINDOWS_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-105)-win
 WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
 WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
 WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
+# Truncating to 124 characters to add the -cfg/-ccp suffix
+LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
+LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
+LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG

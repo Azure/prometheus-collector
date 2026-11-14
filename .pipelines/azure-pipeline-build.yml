@@ -98,6 +98,7 @@ extends:
             set -e
             bash .pipelines/tests/windows-image-restore-test.sh
             bash .pipelines/tests/image-tag-test.sh
+            bash .pipelines/tests/tag-job-trivy-version-test.sh
           displayName: "Build: test Windows image recovery and image tags"
         - bash: |
             set -euo pipefail
@@ -120,11 +121,6 @@ extends:
             source .pipelines/image-tag.sh
             #Truncating this to 128 to add the arm/amd suffix
             LINUX_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-            #Truncating this to 124 to add the cfg suffix
-            LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-            LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
-            LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
-            LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
             LINUX_ARM64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-arm
             LINUX_AMD64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-amd
             #Truncating this to 113 to add the ref app suffices
@@ -147,8 +143,6 @@ extends:
             ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
             LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
             TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
-            LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
-            LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
             AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
@@ -166,8 +160,6 @@ extends:
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
             echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
-            echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
-            echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
@@ -1216,10 +1208,7 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         templateContext:
           outputs:
@@ -1242,6 +1231,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME]$LINUX_CCP_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1684,10 +1681,7 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         templateContext:
@@ -1706,6 +1700,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             set -e
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
