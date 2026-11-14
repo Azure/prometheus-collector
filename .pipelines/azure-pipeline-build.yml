@@ -1844,7 +1844,8 @@ extends:
             $ErrorActionPreference = "Stop"
             curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
             if ($LASTEXITCODE) { throw "Go download failed" }
-            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive.
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
+            New-Item -ItemType Directory -Force C:\go | Out-Null
             tar.exe -xf go.zip -C C:\
             if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go\bin"
@@ -2030,7 +2031,8 @@ extends:
             $ErrorActionPreference = "Stop"
             curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
             if ($LASTEXITCODE) { throw "Go download failed" }
-            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive.
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
+            New-Item -ItemType Directory -Force C:\go | Out-Null
             tar.exe -xf go.zip -C C:\
             if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go\bin"
