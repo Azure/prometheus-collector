@@ -1830,6 +1830,14 @@ extends:
         # Pulling the base inside docker build --pull costs ~3.5m; start it now so it overlaps the Go build.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2019 base image pull"
+        # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
+        - powershell: |
+            curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
+            Expand-Archive $(Agent.TempDirectory)\oras.zip $(Agent.TempDirectory)\oras -Force
+            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
+          displayName: "Build: start WS2019 base layer registry seed"
+          continueOnError: true
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
@@ -1999,6 +2007,7 @@ extends:
               docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
       - job: Windows2022_Prometheus_Collector
@@ -2031,6 +2040,14 @@ extends:
         # The host's cached ltsc2022 base can be months stale; pull overlaps the Go build and docker build --pull joins it.
         - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)' -WindowStyle Hidden
           displayName: "Build: start WS2022 base image pull"
+        # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
+        - powershell: |
+            curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
+            Expand-Archive $(Agent.TempDirectory)\oras.zip $(Agent.TempDirectory)\oras -Force
+            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
+          displayName: "Build: start WS2022 base layer registry seed"
+          continueOnError: true
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
@@ -2200,6 +2217,7 @@ extends:
               docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
             $pushOutput = @(docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION))
             if ($LASTEXITCODE -ne 0) { throw "Windows2022 push failed: $LASTEXITCODE" }
             $pushOutput
