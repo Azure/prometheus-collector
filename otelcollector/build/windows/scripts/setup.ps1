@@ -47,19 +47,66 @@ catch {
 Write-Host ('Finished installing fluentbit')
 ############################################################################################
 Write-Host ('Installing Visual C++ Redistributable Package')
+# The bundle's Burn engine relaunches itself via ShellExecute "runas", which stalls 30m in WS2019 Hyper-V builds.
+# Install its x64 MSIs directly instead, after the same payload hash checks and with the same MSI properties Burn uses.
+function Get-VcRedistMsiPackages($Bundle, $Destination) {
+    New-Item -Type Directory -Path $Destination -Force | Out-Null
+    $bytes = [IO.File]::ReadAllBytes($Bundle)
+    $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+    $sections = $pe + 24 + [BitConverter]::ToUInt16($bytes, $pe + 20)
+    $burn = 0..([BitConverter]::ToUInt16($bytes, $pe + 6) - 1) | ForEach-Object { $sections + 40 * $_ } |
+        Where-Object { [Text.Encoding]::ASCII.GetString($bytes, $_, 8).TrimEnd([char]0) -eq '.wixburn' } |
+        ForEach-Object { [BitConverter]::ToInt32($bytes, $_ + 20) }
+    if ($null -eq $burn -or [BitConverter]::ToUInt32($bytes, $burn) -ne 0x00f14300) { throw 'Visual C++ installer is not a WiX Burn bundle' }
+    # Burn v3 layout: UX container after the engine stub, attached container after the engine's original signature.
+    $containers = @{
+        ux       = [BitConverter]::ToUInt32($bytes, $burn + 24), [BitConverter]::ToUInt32($bytes, $burn + 48)
+        attached = ([BitConverter]::ToUInt32($bytes, $burn + 32) + [BitConverter]::ToUInt32($bytes, $burn + 36)), [BitConverter]::ToUInt32($bytes, $burn + 52)
+    }
+    foreach ($name in $containers.Keys) {
+        $offset, $size = $containers[$name]
+        if ([Text.Encoding]::ASCII.GetString($bytes, $offset, 4) -ne 'MSCF' -or [BitConverter]::ToUInt32($bytes, $offset + 8) -ne $size) {
+            throw "Unexpected Visual C++ $name container"
+        }
+        $cab = New-Object byte[] $size
+        [Array]::Copy($bytes, $offset, $cab, 0, $size)
+        [IO.File]::WriteAllBytes("$Destination\$name.cab", $cab)
+        New-Item -Type Directory -Path "$Destination\$name" -Force | Out-Null
+        expand.exe -F:* "$Destination\$name.cab" "$Destination\$name" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Failed to expand Visual C++ $name container" }
+    }
+    $manifest = [xml](Get-Content "$Destination\ux\0" -Raw)
+    foreach ($id in 'vcRuntimeMinimum_x64', 'vcRuntimeAdditional_x64') {
+        $package = $manifest.BurnManifest.Chain.MsiPackage | Where-Object Id -eq $id
+        if (-not $package) { throw "Visual C++ package $id not found" }
+        foreach ($payload in $manifest.BurnManifest.Payload | Where-Object Id -in $package.PayloadRef.Id) {
+            $file = "$Destination\attached\$($payload.SourcePath)"
+            if ((Get-FileHash $file -Algorithm SHA1).Hash -ne $payload.Hash) { throw "Hash mismatch for $($payload.FilePath)" }
+            New-Item -Type Directory -Path (Split-Path "$Destination\$($payload.FilePath)") -Force | Out-Null
+            Move-Item $file "$Destination\$($payload.FilePath)"
+        }
+        [pscustomobject]@{
+            Id         = $id
+            Path       = "$Destination\$(($manifest.BurnManifest.Payload | Where-Object Id -eq $id).FilePath)"
+            Properties = ($package.MsiProperty | ForEach-Object { "$($_.Id)=$($_.Value)" }) -join ' '
+        }
+    }
+}
 $vcRedistLocation = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
-$vcArgs = "/install /quiet /norestart /log \installation\vcredist.log"
 Invoke-WebRequest -Uri $vcRedistLocation -OutFile $vcInstallerLocation -ErrorAction Stop
 Write-Host 'Finished downloading Visual C++ Redistributable Package'
-$vcInstaller = Start-Process $vcInstallerLocation -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
-# Retain the process handle so Windows PowerShell can read ExitCode after exit.
-$vcInstaller.Handle | Out-Null
-$vcInstaller.WaitForExit()
-Write-Host "Visual C++ installer exit code: $($vcInstaller.ExitCode)"
-Get-Content -Path '\installation\vcredist*.log' -ErrorAction Stop
-if ($vcInstaller.ExitCode -notin @(0, 3010)) {
-    throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
+foreach ($vcPackage in (Get-VcRedistMsiPackages $vcInstallerLocation '\installation\vcredist')) {
+    $vcArgs = "/i `"$($vcPackage.Path)`" /qn /norestart $($vcPackage.Properties) /l*v \installation\vcredist_$($vcPackage.Id).log"
+    $vcInstaller = Start-Process msiexec.exe -ArgumentList $vcArgs -NoNewWindow -PassThru -ErrorAction Stop
+    # Retain the process handle so Windows PowerShell can read ExitCode after exit.
+    $vcInstaller.Handle | Out-Null
+    $vcInstaller.WaitForExit()
+    Write-Host "Visual C++ $($vcPackage.Id) installer exit code: $($vcInstaller.ExitCode)"
+    Get-Content -Path "\installation\vcredist_$($vcPackage.Id).log" -ErrorAction Stop
+    if ($vcInstaller.ExitCode -notin @(0, 3010)) {
+        throw "Visual C++ Redistributable installation failed with exit code $($vcInstaller.ExitCode)"
+    }
 }
 Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
 Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin -ErrorAction Stop
