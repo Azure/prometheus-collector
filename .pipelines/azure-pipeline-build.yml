@@ -2040,41 +2040,9 @@ extends:
             Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
           displayName: "Build: start WS2022 base layer registry seed"
           continueOnError: true
+        # The WS2019-signed copies replace these before push, so the image build needs only their paths, not a second Go build.
         - powershell: |
-            $ErrorActionPreference = "Stop"
-            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
-            if ($LASTEXITCODE) { throw "Go download failed" }
-            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
-            New-Item -ItemType Directory -Force C:\go | Out-Null
-            tar.exe -xf go.zip -C C:\
-            if ($LASTEXITCODE) { throw "Go extraction failed" }
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
-        - powershell: |
-            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector and promconfigvalidator"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
-            if ($LASTEXITCODE) { throw "Go download failed" }
-            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
-            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
-            if ($LASTEXITCODE) { throw "Go extraction failed" }
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        - powershell: |
-            ./makefile_windows.ps1
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
-          displayName: "Build: build fluent-bit plugin"
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        # The image build runs in the background while the WS2019 job signs the binaries.
-        - powershell: |
+            New-Item -ItemType File -Force opentelemetry-collector-builder/otelcollector.exe, prom-config-validator-builder/promconfigvalidator.exe, prometheus-ui/prometheusui.exe, fluent-bit/src/out_appinsights.so, main/main.exe | Out-Null
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
             Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
             (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
@@ -2124,7 +2092,9 @@ extends:
             $image = Get-ChildItem -Recurse -File -Name $(Agent.TempDirectory)\fluent-bit | Where-Object { $_ -ne 'bin\out_appinsights.so' }
             $signed = Get-ChildItem -Recurse -File -Name $(Build.ArtifactStagingDirectory)\ossSigning\fluent-bit
             if (-not $image -or (Compare-Object $image $signed)) { throw 'WS2022 fluent-bit files differ from the WS2019 signed set' }
-          displayName: "Build: verify signed fluent-bit matches the WS2022 image"
+            if ((Test-Path fpSigning\otelcollector.exe, fpSigning\prometheusui.exe, fpSigning\main.exe, ossGoSigning\promconfigvalidator.exe, ossGoSigning\out_appinsights.so) -contains $false) { throw 'A WS2022 placeholder binary has no WS2019 signed replacement' }
+          workingDirectory: $(Build.ArtifactStagingDirectory)
+          displayName: "Build: verify WS2019 signed binaries cover the WS2022 image"
         - task: PowerShell@2
           displayName: Replace files in origin Image
           inputs:
