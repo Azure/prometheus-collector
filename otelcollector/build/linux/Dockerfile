@@ -151,19 +151,10 @@ RUN mkdir -p $tmpdir/microsoft/configmapparser/
 RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=prometheus-ui /src/prometheus-ui/prometheusui $tmpdir/microsoft/otelcollector/
-COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config  ./metricextension/me_ds_setdim.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_setdim.config /usr/sbin/
 COPY ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.yaml ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
-COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
-COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
-COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
@@ -179,6 +170,16 @@ RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
+
+# Build outputs last so the package installs above run while the Go and fluent-bit stages build.
+COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
+COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=prometheus-ui /src/prometheus-ui/prometheusui $tmpdir/microsoft/otelcollector/
+COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
+COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 # If wanting to run without distroless, uncomment this line and comment everything after
 # ENTRYPOINT ["./opt/main"]
 

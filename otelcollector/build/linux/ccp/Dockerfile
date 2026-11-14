@@ -69,10 +69,6 @@ RUN mkdir -p $tmpdir/microsoft/configmapparser/
 RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/ccp-collector-config-default.yml ./opentelemetry-collector-builder/ccp-collector-config-template.yml ./opentelemetry-collector-builder/ccp-collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_setdim.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_setdim.config /usr/sbin/
@@ -80,7 +76,6 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -92,6 +87,12 @@ RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
+
+# Build outputs last so the emulated arm64 package installs above run while the Go stages build.
+COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
+COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 
 FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 LABEL description="Azure Monitor Prometheus metrics collector"

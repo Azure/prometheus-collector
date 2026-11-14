@@ -67,9 +67,6 @@ COPY ./logrotate/crontab /etc/crontab
 RUN mkdir -p $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 COPY ./scripts/*.sh $tmpdir/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
@@ -84,6 +81,11 @@ RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install 
     chmod 775 $tmpdir/*.sh && \
     sync && \
     $tmpdir/setup-configreader.sh ${TARGETARCH}
+
+# Build outputs last so the emulated arm64 package installs above run while the Go stages build.
+COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 
 # Stage 4: final
 FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
