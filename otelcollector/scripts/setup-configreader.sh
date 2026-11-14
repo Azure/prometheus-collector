@@ -9,17 +9,14 @@ else
     ARCH=$1
 fi
 
-sudo tdnf install ca-certificates-microsoft -y
+# One transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
+# inotify-tools watches configmap changes.
+echo "Installing inotify..."
+sudo tdnf install -y ca-certificates-microsoft inotify-tools
 sudo update-ca-trust
 
 #Need this for newer scripts
 chmod 744 /usr/sbin/
-
-#download inotify tools for watching configmap changes
-echo "Installing inotify..."
-sudo tdnf check-update
-sudo tdnf repolist --refresh
-sudo tdnf install inotify-tools -y
 
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/

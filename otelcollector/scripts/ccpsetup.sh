@@ -5,28 +5,19 @@ cd $TMPDIR
 
 chmod 744 /usr/sbin/
 
-sudo tdnf install ca-certificates-microsoft -y
+# One transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
+# inotify-tools watches configmap changes.
+echo "Installing inotify, mdsd and Metrics Extension..."
+sudo tdnf install -y ca-certificates-microsoft inotify-tools azure-mdsd-1.40.2 metricsext2-2.2026.227.1509
 sudo update-ca-trust
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
 chmod 544 $TMPDIR/microsoft/liveness/*.sh
 
-#download inotify tools for watching configmap changes
-echo "Installing inotify..."
-sudo tdnf check-update
-sudo tdnf repolist --refresh
-sudo tdnf install inotify-tools -y
-
-echo "Installing mdsd..."
-sudo tdnf install -y azure-mdsd-1.40.2
-
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
-# Install ME
-echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2026.227.1509
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # Remove any RPMs downloaded not from Mariner
