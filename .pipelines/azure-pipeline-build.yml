@@ -1195,8 +1195,8 @@ extends:
             GdnBreakGdnToolGosecSeverity: 'Warning'
             GdnBreakGdnToolSemmle: true
             GdnBreakGdnToolSemmleSeverity: 'Warning'
-      # Pool 66 hands its one warm Ubuntu agent to the lowest pending request; holding these t=0 jobs behind an
-      # agentless job keeps it for the tag job, which every other Linux job waits on.
+      # Pool 66 hands its one warm Ubuntu/Windows agent to the lowest pending request; holding these t=0 jobs behind
+      # an agentless job keeps them for the tag job and WS2019, which the other Linux jobs and WS2022 wait on.
       - job: Agent_Request_Gate
         displayName: "Build: hold image job agent requests behind the tag job"
         pool: server
@@ -2007,6 +2007,7 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
+        dependsOn: Agent_Request_Gate
         timeoutInMinutes: 120
         variables:
           skipComponentGovernanceDetection: true
