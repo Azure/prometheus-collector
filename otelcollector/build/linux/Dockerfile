@@ -118,7 +118,7 @@ RUN cmake \
 -DFLB_LOG_NO_CONTROL_CHARS=On \
 -DFLB_CHUNK_TRACE=On ../
 
-RUN make
+RUN make -j"$(nproc)"
 RUN make install
 
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
