@@ -77,12 +77,15 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 
 ARG TARGETARCH
+# A /tmp repo copy that skips the unused filelists/changelog metadata, which cost the emulated arm64 build ~5m.
+# The final image doesn't copy /tmp, so its /etc/yum.repos.d is unchanged.
+RUN mkdir /tmp/repos && cp /etc/yum.repos.d/*.repo /tmp/repos/ && sed -i '/^\[/a skip_md_filelists=1\nskip_md_other=1' /tmp/repos/*.repo
 RUN tdnf clean all
-RUN tdnf repolist --refresh
-RUN tdnf update -y
-# One install transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
+RUN tdnf --setopt=reposdir=/tmp/repos repolist --refresh
+RUN tdnf --setopt=reposdir=/tmp/repos update -y
+# One install transaction: in the emulated arm64 build each tdnf call reloads repo metadata.
 # inotify-tools watches configmap changes.
-RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl \
+RUN tdnf --setopt=reposdir=/tmp/repos install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl \
     ca-certificates-microsoft inotify-tools azure-mdsd-1.40.2 metricsext2-2.2026.227.1509
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;

@@ -73,8 +73,11 @@ COPY ./NOTICE $tmpdir/microsoft
 
 ARG TARGETARCH
 
-# One install transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
-RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install -y \
+# One install transaction, using a /tmp repo copy that skips the unused filelists/changelog metadata, which
+# cost the emulated arm64 build ~5m. The final image doesn't copy /tmp, so its /etc/yum.repos.d is unchanged.
+RUN mkdir /tmp/repos && cp /etc/yum.repos.d/*.repo /tmp/repos/ && sed -i '/^\[/a skip_md_filelists=1\nskip_md_other=1' /tmp/repos/*.repo && \
+    tdnf clean all && tdnf --setopt=reposdir=/tmp/repos repolist --refresh && tdnf --setopt=reposdir=/tmp/repos update -y && \
+    tdnf --setopt=reposdir=/tmp/repos install -y \
     wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl ca-certificates-microsoft inotify-tools && \
     mkdir /busybin && busybox --install /busybin && \
     chmod 775 /etc/cron.daily/logrotate && \
