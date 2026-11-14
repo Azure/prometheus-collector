@@ -70,12 +70,12 @@ COPY ./opentelemetry-collector-builder/collector-config-default.yml ./openteleme
 COPY ./scripts/*.sh $tmpdir/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 
+# One install transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
 RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install -y \
-    wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl && \
+    wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl ca-certificates-microsoft inotify-tools && \
     mkdir /busybin && busybox --install /busybin && \
     chmod 775 /etc/cron.daily/logrotate && \
     chmod 775 $tmpdir/*.sh && \

@@ -75,14 +75,15 @@ COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricex
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-# RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
-RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
+# One install transaction: in the emulated arm64 build each tdnf call spends ~55s loading repo metadata.
+# inotify-tools watches configmap changes.
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl \
+    ca-certificates-microsoft inotify-tools azure-mdsd-1.40.2 metricsext2-2.2026.227.1509
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
