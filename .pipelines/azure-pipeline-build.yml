@@ -1853,6 +1853,16 @@ extends:
             Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
           displayName: "Build: start WS2019 base layer registry seed"
           continueOnError: true
+        # The image build needs only the host-built binaries' paths: their signed copies replace them before push.
+        - powershell: |
+            New-Item -ItemType File -Force opentelemetry-collector-builder/otelcollector.exe, prom-config-validator-builder/promconfigvalidator.exe, prometheus-ui/prometheusui.exe, fluent-bit/src/out_appinsights.so, main/main.exe | Out-Null
+            Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
+            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
+            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            # The Go build overwrites the placeholders, so let docker finish reading the build context first.
+            while (-not ((Get-Content $(Agent.TempDirectory)\image-build.log -Raw -ErrorAction Ignore) -match 'Step 1/') -and -not (Test-Path $(Agent.TempDirectory)\image-build.exit)) { Start-Sleep 1 }
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: start WS2019 image build"
         - powershell: |
             $ErrorActionPreference = "Stop"
             curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
@@ -1866,37 +1876,11 @@ extends:
           displayName: "Build: install golang $(GOLANG_VERSION)"
           retryCountOnTaskFailure: 3
         - powershell: |
-            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector and promconfigvalidator"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
-            if ($LASTEXITCODE) { throw "Go download failed" }
-            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
-            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
-            if ($LASTEXITCODE) { throw "Go extraction failed" }
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        - powershell: |
-            ./makefile_windows.ps1
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
-          displayName: "Build: build fluent-bit plugin"
-          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
-        # The image build runs in the background while the host-built binaries it copies in are signed.
-        - powershell: |
-            Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
-            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION) -Only otelcollector, main, prometheusui
             New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
-            Copy-Item opentelemetry-collector-builder/otelcollector.exe, main/main.exe, prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
-            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/ossGoSigning | Out-Null
-            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Build.ArtifactStagingDirectory)/ossGoSigning
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: start WS2019 image build and stage first-party binaries"
+            Copy-Item otelcollector.exe, ../main/main.exe, ../prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+          displayName: "Build: build and stage first-party binaries"
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1937,11 +1921,6 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
-        # promconfigvalidator.exe and out_appinsights.so took ~2m of the post-build OSS signing; sign them during the image build.
-        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
-          parameters:
-            folderPath: '$(Build.ArtifactStagingDirectory)/ossGoSigning'
-            displayName: 'EsrpCodeSigning for host-built OSS binaries'
         - powershell: |
             Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
             function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
@@ -1968,8 +1947,6 @@ extends:
               echo "Extract fluent-bit"
               docker cp signingContainer:C:\opt\fluent-bit .
               Remove-Item fluent-bit\bin\out_appinsights.so
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
               echo "Removing container"
               docker rm signingContainer
               echo "List ArtifactStagingDirectory"
@@ -1987,22 +1964,19 @@ extends:
           inputs:
             path: $(Build.ArtifactStagingDirectory)
             artifact: windows-signed-$(System.JobAttempt)
-        - task: PowerShell@2
-          displayName: Replace files in origin Image
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2022_Prometheus_Collector windows-oss-go WINDOWS_OSS_GO_ARTIFACT
+          displayName: "Build: wait for WS2022 signed OSS binaries"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2022 signed OSS binaries"
           inputs:
-            targetType: 'inline'
-            script: |
-              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
-              echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossGoSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossGoSigning/out_appinsights.so pushContainer:C:\opt\fluent-bit\bin\out_appinsights.so
-              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-              docker rm pushContainer
+            buildType: current
+            artifactName: $(WINDOWS_OSS_GO_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)/ossGoSigning
+        - powershell: ./.pipelines/replace-signed-windows-binaries.ps1 '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)' '$(Build.ArtifactStagingDirectory)'
+          displayName: Replace files in origin Image
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
@@ -2047,14 +2021,63 @@ extends:
             Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
           displayName: "Build: start WS2022 base layer registry seed"
           continueOnError: true
-        # The WS2019-signed copies replace these before push, so the image build needs only their paths, not a second Go build.
+        # The image build needs only the host-built binaries' paths: their signed copies replace them before push.
         - powershell: |
             New-Item -ItemType File -Force opentelemetry-collector-builder/otelcollector.exe, prom-config-validator-builder/promconfigvalidator.exe, prometheus-ui/prometheusui.exe, fluent-bit/src/out_appinsights.so, main/main.exe | Out-Null
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
             Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
             (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            # The Go build overwrites the placeholders, so let docker finish reading the build context first.
+            while (-not ((Get-Content $(Agent.TempDirectory)\image-build.log -Raw -ErrorAction Ignore) -match 'Step 1/') -and -not (Test-Path $(Agent.TempDirectory)\image-build.exit)) { Start-Sleep 1 }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: start WS2022 image build"
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
+            New-Item -ItemType Directory -Force C:\go | Out-Null
+            tar.exe -xf go.zip -C C:\
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
+            Write-Host "##vso[task.prependpath]C:\go\bin"
+            & "C:\go\bin\go.exe" version
+          displayName: "Build: install golang $(GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
+        - powershell: ./makefile_windows.ps1 -Only promconfigvalidator, fluent-bit-plugin
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+          displayName: "Build: build promconfigvalidator and fluent-bit plugin"
+        - powershell: |
+            $ErrorActionPreference = "Stop"
+            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
+            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
+            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
+            & "C:\go-fluentbit\go\bin\go.exe" version
+          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
+          retryCountOnTaskFailure: 3
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        - powershell: |
+            ./makefile_windows.ps1
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
+          displayName: "Build: build fluent-bit plugin"
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        - powershell: |
+            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/ossGoSigning | Out-Null
+            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Build.ArtifactStagingDirectory)/ossGoSigning
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: stage host-built OSS binaries"
+        # Signing these here runs in parallel with the WS2019 first-party signing, which would otherwise wait ~3m for them.
+        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
+          parameters:
+            folderPath: '$(Build.ArtifactStagingDirectory)/ossGoSigning'
+            displayName: 'EsrpCodeSigning for host-built OSS binaries'
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish signed OSS binaries for the WS2019 image'
+          inputs:
+            path: $(Build.ArtifactStagingDirectory)/ossGoSigning
+            artifact: windows-oss-go-$(System.JobAttempt)
         - powershell: |
             Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
             function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
@@ -2068,19 +2091,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: wait for WS2022 image build"
           retryCountOnTaskFailure: 1
-        - powershell: |
-            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID"
-            $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }
-            while ($true) {
-              # Read the job state first so an artifact published just before completion is still seen.
-              $job = (Invoke-RestMethod "$url/timeline?api-version=7.1" -Headers $headers).records | Where-Object { $_.type -eq 'Job' -and $_.identifier -eq 'Build.Windows2019_Prometheus_Collector.__default' }
-              $names = @((Invoke-RestMethod "$url/artifacts?api-version=7.1" -Headers $headers).value.name) -match '^windows-signed-\d+$'
-              $name = $names | Sort-Object { [int]($_ -split '-')[-1] } | Select-Object -Last 1
-              if ($name) { break }
-              if ($job.state -eq 'completed') { throw 'The WS2019 job completed without publishing signed binaries' }
-              Start-Sleep 5
-            }
-            Write-Host "##vso[task.setvariable variable=WINDOWS_SIGNED_ARTIFACT]$name"
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2019_Prometheus_Collector windows-signed WINDOWS_SIGNED_ARTIFACT
           displayName: "Build: wait for WS2019 signed binaries"
           retryCountOnTaskFailure: 3
           env:
@@ -2099,25 +2110,10 @@ extends:
             $image = Get-ChildItem -Recurse -File -Name $(Agent.TempDirectory)\fluent-bit | Where-Object { $_ -ne 'bin\out_appinsights.so' }
             $signed = Get-ChildItem -Recurse -File -Name $(Build.ArtifactStagingDirectory)\ossSigning\fluent-bit
             if (-not $image -or (Compare-Object $image $signed)) { throw 'WS2022 fluent-bit files differ from the WS2019 signed set' }
-            if ((Test-Path fpSigning\otelcollector.exe, fpSigning\prometheusui.exe, fpSigning\main.exe, ossGoSigning\promconfigvalidator.exe, ossGoSigning\out_appinsights.so) -contains $false) { throw 'A WS2022 placeholder binary has no WS2019 signed replacement' }
           workingDirectory: $(Build.ArtifactStagingDirectory)
           displayName: "Build: verify WS2019 signed binaries cover the WS2022 image"
-        - task: PowerShell@2
+        - powershell: ./.pipelines/replace-signed-windows-binaries.ps1 '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)' '$(Build.ArtifactStagingDirectory)'
           displayName: Replace files in origin Image
-          inputs:
-            targetType: 'inline'
-            script: |
-              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
-              echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossGoSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossGoSigning/out_appinsights.so pushContainer:C:\opt\fluent-bit\bin\out_appinsights.so
-              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-              docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
             Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
