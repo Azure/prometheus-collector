@@ -124,13 +124,6 @@ extends:
             LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
             LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
             LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
-            #Truncating this to 112 characters to add the targetallocator suffix
-            TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
-            TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
-            #Truncating this 108 to characters to add the targetallocator-arm/amd suffix
-            TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
-            TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-arm
-            TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-amd
             #Truncating this to 113 to add the ref app suffices
             WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
             WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
@@ -139,7 +132,6 @@ extends:
             ARC_CONFORMANCE_TAG_SUFFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-123)
             ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
             LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-            TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
             AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
@@ -147,8 +139,6 @@ extends:
             WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
             WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
             ARC_CONFORMANCE_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$ARC_CONFORMANCE_IMAGE_TAG
-            TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_ARM64_IMAGE_TAG
-            TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_AMD64_IMAGE_TAG
             echo "##vso[build.updatebuildnumber]$SEMVER"
             echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
             echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
@@ -1405,10 +1395,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1422,6 +1410,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1446,11 +1442,8 @@ extends:
           os: linux
           hostArchitecture: Arm64
           image: ci-1es-managed-arm64-ubuntu--2204
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1465,6 +1458,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -1499,12 +1500,8 @@ extends:
           image: ci-1es-managed-ubuntu-2204
           os: linux
         # The arch jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         templateContext:
@@ -1525,6 +1522,16 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: bash .pipelines/wait-for-jobs.sh Linux_Target_Allocator_AMD64 Linux_Target_Allocator_ARM64
           displayName: "Build: wait for architecture images"
           env:
