@@ -283,30 +283,9 @@ extends:
             Contents: |
               **/*
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
-      - job: CreateSidecarArtifact
-        displayName: "Create Sidecar YAML Artifact for Remote Write"
-        # Deploy-only artifacts wait for the tag job so they don't take the first Ubuntu agent from the critical path.
-        dependsOn: Image_Tags_and_Ev2_Artifacts
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Publish sidecar.yaml as an artifact'
-            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
-            artifactName: 'remote-write-drop'
-        steps:
-        - task: CopyFiles@2
-          displayName: "Copy sidecar.yaml to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
-            Contents: 'sidecar.yaml'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
-
       - job: DevClusterHelmChartFiles
         displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+        # Deploy-only artifacts share one job after the tag job so they don't take Ubuntu agents from the critical path.
         dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
@@ -318,6 +297,14 @@ extends:
             displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
             targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
             artifactName: dev-cluster-helm-chart
+          - output: pipelineArtifact
+            displayName: 'Publish sidecar.yaml as an artifact'
+            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
+            artifactName: 'remote-write-drop'
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish TestKube test files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
+            artifactName: testkube-test-files
         steps:
         - checkout: self
           persistCredentials: true
@@ -374,23 +361,12 @@ extends:
             Contents: |
               azure-monitor-metrics-addon/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
-
-      - job: TestKubeTestFiles
-        displayName: "CI/CD: Export TestKube test files for Deploy stage"
-        dependsOn: Image_Tags_and_Ev2_Artifacts
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'CI/CD: Publish TestKube test files'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
-            artifactName: testkube-test-files
-        steps:
-        - checkout: self
-          persistCredentials: true
+        - task: CopyFiles@2
+          displayName: "Copy sidecar.yaml to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+            Contents: 'sidecar.yaml'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
         - task: CopyFiles@2
           displayName: "CI/CD: Copy TestKube files to artifact staging directory"
           inputs:
