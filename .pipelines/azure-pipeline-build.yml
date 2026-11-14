@@ -2155,12 +2155,14 @@ extends:
           displayName: "Build: test Windows runtime setup"
         - powershell: |
             $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
-            # Job records complete ~0.1-0.2m before their Phase records.
+            # Proceed once both images are pushed: the jobs' remaining CG/post-job steps take ~0.5m, and a later failure still fails the build.
             $ids = 'Build.Windows2019_Prometheus_Collector.__default', 'Build.Windows2022_Prometheus_Collector.__default'
             while ($true) {
-              $jobs = @((Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Job' -and $ids -contains $_.identifier })
+              $records = (Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records
+              $jobs = @($records | Where-Object { $_.type -eq 'Job' -and $ids -contains $_.identifier })
               if ($jobs | Where-Object { $_.state -eq 'completed' -and $_.result -notin 'succeeded', 'succeededWithIssues' }) { throw 'A Windows image job did not succeed' }
-              if ($jobs.Count -eq $ids.Count -and -not ($jobs | Where-Object { $_.state -ne 'completed' })) { break }
+              $pushed = @($records | Where-Object { $_.type -eq 'Task' -and $_.name -eq 'Build: push image to dev ACR' -and $_.result -eq 'succeeded' -and $jobs.id -contains $_.parentId })
+              if ($jobs.Count -eq $ids.Count -and $pushed.Count -eq $ids.Count) { break }
               Write-Host ($jobs | ForEach-Object { "$($_.identifier)=$($_.state)" })
               Start-Sleep 5
             }
