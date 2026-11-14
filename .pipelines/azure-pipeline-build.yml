@@ -1840,44 +1840,15 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
           condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        # The image build runs in the background while the host-built first-party binaries it copies in are signed.
         - powershell: |
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
+            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
+            Copy-Item opentelemetry-collector-builder/otelcollector.exe, main/main.exe, prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: build WS2019 image"
-          retryCountOnTaskFailure: 2
-        - task: PowerShell@2
-          displayName: Extract files to sign
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
-              echo "Creating fist party directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
-              cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract prometheusui"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
-              echo "Extract main"
-              docker cp signingContainer:C:\opt\microsoft\main.exe .
-              echo "Extract OtelCollector"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
-              echo "Creating OSS directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
-              cd $(Build.ArtifactStagingDirectory)/ossSigning
-              echo "Extract fluent-bit"
-              docker cp signingContainer:C:\opt\fluent-bit .
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
-              echo "Extract promconfigvalidator"
-              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
-              echo "Removing container"
-              docker rm signingContainer
-              echo "List ArtifactStagingDirectory"
-              ls $(Build.ArtifactStagingDirectory)
-              ls .       
-        - script: dir $(Build.ArtifactStagingDirectory)
-          displayName: 'List files in Staging Directory'
+          displayName: "Build: start WS2019 image build and stage first-party binaries"
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1918,6 +1889,42 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
+        - powershell: |
+            Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
+            function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
+            if ((Get-ExitCode) -ne '0') {
+              Get-Content $(Agent.TempDirectory)\image-build.log -ErrorAction Ignore
+              Write-Host 'Background image build failed; rebuilding'
+              cmd /c $(Agent.TempDirectory)\image-build.cmd
+            }
+            Get-Content $(Agent.TempDirectory)\image-build.log
+            if ((Get-ExitCode) -ne '0') { throw 'WS2019 image build failed' }
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: wait for WS2019 image build"
+          retryCountOnTaskFailure: 1
+        - task: PowerShell@2
+          displayName: Extract files to sign
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "Creating docker container"
+              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+              echo "Creating OSS directory"
+              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+              cd $(Build.ArtifactStagingDirectory)/ossSigning
+              echo "Extract fluent-bit"
+              docker cp signingContainer:C:\opt\fluent-bit .
+              echo "Extract Ruby"
+              docker cp signingContainer:C:\ruby26 .
+              echo "Extract promconfigvalidator"
+              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+              echo "Removing container"
+              docker rm signingContainer
+              echo "List ArtifactStagingDirectory"
+              ls $(Build.ArtifactStagingDirectory)
+              ls .       
+        - script: dir $(Build.ArtifactStagingDirectory)
+          displayName: 'List files in Staging Directory'
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -2034,44 +2041,15 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
           condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        # The image build runs in the background while the host-built first-party binaries it copies in are signed.
         - powershell: |
             Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' | Select-Object ProductName, CurrentBuild, UBR | Format-List
-            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
+            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
+            Copy-Item opentelemetry-collector-builder/otelcollector.exe, main/main.exe, prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: build WS2022 image"
-          retryCountOnTaskFailure: 2
-        - task: PowerShell@2
-          displayName: Extract files to sign
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
-              echo "Creating fist party directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
-              cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract prometheusui"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
-              echo "Extract main"
-              docker cp signingContainer:C:\opt\microsoft\main.exe .
-              echo "Extract OtelCollector"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
-              echo "Creating OSS directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
-              cd $(Build.ArtifactStagingDirectory)/ossSigning
-              echo "Extract fluent-bit"
-              docker cp signingContainer:C:\opt\fluent-bit .
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
-              echo "Extract promconfigvalidator"
-              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
-              echo "Removing container"
-              docker rm signingContainer
-              echo "List ArtifactStagingDirectory"
-              ls $(Build.ArtifactStagingDirectory)
-              ls .       
-        - script: dir $(Build.ArtifactStagingDirectory)
-          displayName: 'List files in Staging Directory'
+          displayName: "Build: start WS2022 image build and stage first-party binaries"
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -2112,6 +2090,42 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
+        - powershell: |
+            Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
+            function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
+            if ((Get-ExitCode) -ne '0') {
+              Get-Content $(Agent.TempDirectory)\image-build.log -ErrorAction Ignore
+              Write-Host 'Background image build failed; rebuilding'
+              cmd /c $(Agent.TempDirectory)\image-build.cmd
+            }
+            Get-Content $(Agent.TempDirectory)\image-build.log
+            if ((Get-ExitCode) -ne '0') { throw 'WS2022 image build failed' }
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: wait for WS2022 image build"
+          retryCountOnTaskFailure: 1
+        - task: PowerShell@2
+          displayName: Extract files to sign
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "Creating docker container"
+              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+              echo "Creating OSS directory"
+              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+              cd $(Build.ArtifactStagingDirectory)/ossSigning
+              echo "Extract fluent-bit"
+              docker cp signingContainer:C:\opt\fluent-bit .
+              echo "Extract Ruby"
+              docker cp signingContainer:C:\ruby26 .
+              echo "Extract promconfigvalidator"
+              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+              echo "Removing container"
+              docker rm signingContainer
+              echo "List ArtifactStagingDirectory"
+              ls $(Build.ArtifactStagingDirectory)
+              ls .       
+        - script: dir $(Build.ArtifactStagingDirectory)
+          displayName: 'List files in Staging Directory'
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
