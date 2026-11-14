@@ -4,86 +4,45 @@ param(
     [string]$PROMETHEUS_VERSION = ""  # Default value if not provided
 )
 
-# building otelcollector
-Write-Output "building otelcollector"
-if (Test-Path "otelcollector.exe") {
-    Remove-Item .\otelcollector.exe
+$ErrorActionPreference = "Stop"
+$otel = Split-Path -Parent $PSScriptRoot
+
+# The Go modules are independent, so build them concurrently. Each runs in its own Windows PowerShell because jobs
+# drop native stderr (the go errors), and via -File because -EncodedCommand writes errors to stderr as CLIXML.
+function Start-Build([string]$Name, [string]$Dir, [string]$Command) {
+    Set-Content "$env:TEMP\$Name.ps1" "`$ErrorActionPreference = 'Stop'`n$Command`nexit `$LASTEXITCODE"
+    $process = Start-Process powershell.exe -WorkingDirectory "$otel\$Dir" -NoNewWindow -PassThru `
+        -ArgumentList "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$env:TEMP\$Name.ps1`"" `
+        -RedirectStandardOutput "$env:TEMP\$Name.out" -RedirectStandardError "$env:TEMP\$Name.err"
+    $null = $process.Handle # ExitCode stays empty unless the handle is opened before the process exits
+    @{ Name = $Name; Process = $process }
 }
-go get
-go build -o otelcollector.exe .
 
-Write-Output "FINISHED building otelcollector"
-
-# building fluent-bit plugin
-
-Write-Output "building fluent-bit plugin"
-
-Set-Location ..
-Set-Location fluent-bit
-Set-Location src
-
-.\makefile_windows.ps1
-
-Set-Location ..
-Set-Location ..
-Set-Location opentelemetry-collector-builder
-
-Write-Output "FINISHED building fluent-bit plugin"
-
-Write-Output "building promconfigvalidator"
-
-Set-Location ..
-Set-Location prom-config-validator-builder
-
-.\makefile_windows.ps1
-
-Set-Location ..
-Set-Location opentelemetry-collector-builder
-
-Write-Output "FINISHED building promconfigvalidator"
-
-Set-Location ..
-Set-Location main
-
-# Create directories
-New-Item -Path "./shared/configmap/mp/" -ItemType Directory -Force
-New-Item -Path "./shared/configmap/ccp/" -ItemType Directory -Force
-# New-Item -Path "./main/" -ItemType Directory -Force
-
-# Copy shared Go files
-Copy-Item -Path "../shared/*.go" -Destination "./shared/"
-Copy-Item -Path "../shared/go.mod" -Destination "./shared/"
-Copy-Item -Path "../shared/go.sum" -Destination "./shared/"
-Copy-Item -Path "../shared/configmap/mp/*.go" -Destination "./shared/configmap/mp/"
-Copy-Item -Path "../shared/configmap/mp/go.mod" -Destination "./shared/configmap/mp/"
-Copy-Item -Path "../shared/configmap/mp/go.sum" -Destination "./shared/configmap/mp/"
-Copy-Item -Path "../shared/configmap/ccp/*.go" -Destination "./shared/configmap/ccp/"
-Copy-Item -Path "../shared/configmap/ccp/go.mod" -Destination "./shared/configmap/ccp/"
-Copy-Item -Path "../shared/configmap/ccp/go.sum" -Destination "./shared/configmap/ccp/"
-
-# # Copy main Go files
-# Copy-Item -Path "./main/*.go" -Destination "./main/"
-# Copy-Item -Path "./go.mod" -Destination "./main/"
-# Copy-Item -Path "./go.sum" -Destination "./main/"
-# Set-Location main
-
+$mainBuild = @'
+New-Item -Path ./shared/configmap/mp/, ./shared/configmap/ccp/ -ItemType Directory -Force | Out-Null
+foreach ($d in '', 'configmap/mp/', 'configmap/ccp/') {
+    Copy-Item -Path "../shared/$d*.go", "../shared/${d}go.mod", "../shared/${d}go.sum" -Destination "./shared/$d"
+}
 go version
 go mod tidy
-go build -buildmode=pie -o "main.exe" "./main.go"
+go build -buildmode=pie -o main.exe ./main.go
+'@
 
-Write-Output "Build main executable completed"
+$builds = @(
+    Start-Build otelcollector opentelemetry-collector-builder 'Remove-Item otelcollector.exe -ErrorAction Ignore; go get; go build -o otelcollector.exe .'
+    Start-Build fluent-bit-plugin fluent-bit\src '.\makefile_windows.ps1'
+    Start-Build promconfigvalidator prom-config-validator-builder '.\makefile_windows.ps1'
+    Start-Build main main $mainBuild
+    Start-Build prometheusui prometheus-ui ".\makefile_windows.ps1 -PROMETHEUS_VERSION '$PROMETHEUS_VERSION'"
+)
 
-Set-Location ..
-Set-Location opentelemetry-collector-builder
-
-Write-Output "building prometheusui"
-
-Set-Location ..
-Set-Location prometheus-ui
-.\makefile_windows.ps1 -PROMETHEUS_VERSION $PROMETHEUS_VERSION
-
-Set-Location ..
-Set-Location opentelemetry-collector-builder
-
-Write-Output "FINISHED building prometheusui"
+$failed = @()
+foreach ($build in $builds) {
+    $process = $build.Process
+    $process.WaitForExit()
+    Write-Output "========================= $($build.Name) exited $($process.ExitCode) after $([int]($process.ExitTime - $process.StartTime).TotalSeconds)s ========================="
+    Get-Content "$env:TEMP\$($build.Name).out", "$env:TEMP\$($build.Name).err"
+    if ($process.ExitCode -ne 0) { $failed += $build.Name }
+}
+if ($failed) { throw "Windows builds failed: $failed" }
 
