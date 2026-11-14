@@ -2255,7 +2255,7 @@ extends:
                 continue
               fi
 
-              echo "Failed to pull $acr_image. Waiting for $mcr_image."
+              echo "$acr_image not found. Waiting for $mcr_image."
               restored=0
               for attempt in {1..20}; do
                 if docker pull "$mcr_image"; then

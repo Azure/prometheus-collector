@@ -37,17 +37,17 @@ docker() {
             cat > /dev/null
             [[ "$SCENARIO" != login-failure ]]
             ;;
+        manifest)
+            [[ "$2" == inspect && "$3" == containerinsightsprod.azurecr.io/test/images:test-win-ltsc* ]] || return 1
+            case "$SCENARIO" in
+                existing|login-failure) return 0 ;;
+                restore-2019|tag-failure|push-failure) [[ "$3" != *-ltsc2019 ]] ;;
+                restore-2022|delayed|unavailable) [[ "$3" != *-ltsc2022 ]] ;;
+                *) return 1 ;;
+            esac
+            ;;
         pull)
             case "$2" in
-                containerinsightsprod.azurecr.io/test/images:test-win-ltsc*)
-                    case "$SCENARIO" in
-                        existing|login-failure) return 0 ;;
-                        restore-2019|tag-failure|push-failure) [[ "$2" != *-ltsc2019 ]] ;;
-                        restore-2022|delayed|unavailable) [[ "$2" != *-ltsc2022 ]] ;;
-                        restore-both) return 1 ;;
-                        *) return 1 ;;
-                    esac
-                    ;;
                 mcr.microsoft.com/test/images:test-win-ltsc*)
                     local count=0
                     local count_file="$CASE_DIR/${2##*-}-pulls"
