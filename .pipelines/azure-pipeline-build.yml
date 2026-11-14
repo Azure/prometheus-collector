@@ -1847,6 +1847,9 @@ extends:
         steps:
         - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
           displayName: "Build: test Windows runtime setup"
+        # The ltsc2019 base is not cached on the host; pulling it in docker build costs ~3.5m. docker build joins this pull.
+        - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
+          displayName: "Build: start WS2019 base image pull"
         - powershell: |
             $ErrorActionPreference = "Stop"
             Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
