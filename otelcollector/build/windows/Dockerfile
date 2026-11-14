@@ -26,8 +26,6 @@ ENV APPLICATIONINSIGHTS_AUTH_DELOS YTEwMDNhNTYtNDllZC1kNDFhLWFkYjUtMmQxMTVlMGI2Y
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
-RUN mkdir "C:\\opt\\microsoft\\configmapparser"
-RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/

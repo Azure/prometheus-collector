@@ -13,12 +13,20 @@ New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyC
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
 New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/microsoft/configmapparser -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/microsoft/scripts -ErrorAction SilentlyContinue
 ############################################################################################
 $ProgressPreference = 'SilentlyContinue'
+# tar.exe extracts these zips byte-identically to Expand-Archive, about 8x faster.
+function Expand-Zip($Path, $Destination) {
+    New-Item -Type Directory -Path $Destination -Force | Out-Null
+    tar.exe -xf $Path -C $Destination
+    if ($LASTEXITCODE -ne 0) { throw "Failed to extract $Path" }
+}
 Write-Host ('Installing Metrics Extension');
 try {
     Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.25.0-main-02-26-2026-12118731/MdmMetricsExtension.2.2026.227.1509.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2026.227.1509.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2026.227.1509.zip -Destination /installation/ME/
+    Expand-Zip /installation/ME/mdmmetricsextension.2.2026.227.1509.zip /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -35,7 +43,7 @@ try {
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
     $fluentBitUri = 'https://packages.fluentbit.io/windows/fluent-bit-3.0.7-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/fluent-bit.zip
-    Expand-Archive -Path /installation/fluent-bit.zip -Destination /installation/fluent-bit
+    Expand-Zip /installation/fluent-bit.zip /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue
 }
 catch {
@@ -118,7 +126,7 @@ try {
     # Keep version in sync with linux in setup.sh file
     $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.24.2_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
-    Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
+    Expand-Zip /installation/telegraf.zip /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
 }
 catch {
@@ -133,7 +141,7 @@ Write-Host ('Installing GenevaMonitoringAgent');
 try {
     $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MA-Windows-47-7-1/genevamonitoringagent.47.7.1.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
-    Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
+    Expand-Zip /installation/genevamonitoringagent.zip /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
 }
 catch {
