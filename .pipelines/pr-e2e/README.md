@@ -448,3 +448,16 @@ None of those deployment/permission changes is authorized merely by this runbook
 Full-matrix success remains required before advertising the PR as merge-ready.
 The release manifest and Monday consumer spec follow in Phase 3; no release
 orchestration is installed by Phase 1.
+
+### Native advisory log report
+
+The producer scan hook emits `SCAN_ADVISORY` and `NATIVE_ADVISORY_REPORT`
+rows using its existing Trivy result, without adding protected artifact files.
+Known shipped binaries have investigated embedded inventories; other image
+versions and failed advisory lookups remain BLOCKED rather than clear. Shared
+RPM findings are potential associations, and their fixed RPM versions are not
+ME or mdsd package upgrade recommendations. Advisory sources are incomplete.
+Confirmed byte-bound findings emit FAIL; incomplete inventory, applicability,
+backport evidence or lookup failures emit BLOCKED, never PASS. These diagnostic
+rows do not grant scan approval or replace the frozen-DB admission checks and
+authenticated complete Trivy report. No native-clearance path is implemented.

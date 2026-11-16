@@ -12,6 +12,9 @@ import unittest
 from unittest.mock import patch
 
 import producer_trivy
+import candidate_log
+import fetch_candidate
+from test_fetch_candidate import protected_scan_artifact
 from discovery_log import read_payload
 from candidate_log import FILES, MAX_BYTES, PREFIX
 import yaml
@@ -195,6 +198,59 @@ class ProducerTests(unittest.TestCase):
                                          set(provenance["files"]) | {"provenance.json"})
                         for name, sha in provenance["files"].items():
                             self.assertEqual(sha, hashlib.sha256((output / name).read_bytes()).hexdigest())
+
+    def test_native_log_preserves_snapshot_and_authenticated_envelope(self):
+        repository = "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"
+        image = {"name": "collector", "ref": repository + "@sha256:" + "b" * 64,
+                 "indexRef": repository + "@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        env = {"SYSTEM_DEFINITIONID": "440", "SYSTEM_JOBATTEMPT": "1", "SYSTEM_STAGEATTEMPT": "1",
+               "BUILD_SOURCEVERSION": source["commit"], "BUILD_BUILDID": "123"}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            metadata = root / "push.json"
+            metadata.write_text(json.dumps({"containerimage.digest": "sha256:" + "c" * 64}))
+            output = root / "scan"
+
+            def scan(ref, platform, destination):
+                self.assertEqual((ref, platform), (image["ref"], "linux/amd64"))
+                fetch_candidate.extract_scan_artifact(protected_scan_artifact(source, image, snapshot=True), destination)
+                (destination / "provenance.json").unlink()
+                path = destination / "trivy" / "result.json"
+                result = json.loads(path.read_text())
+                result["Results"].append({"Class": "os-pkgs", "Packages": [
+                    {"Name": name, "Version": "9.0", "Release": "1.azl3", "Arch": "x86_64"}
+                    for name in ("metricsext2", "azure-mdsd")],
+                    "Vulnerabilities": [{"PkgName": "boost", "InstalledVersion": "1.83.0-1.azl3",
+                                         "VulnerabilityID": "CVE-2026-1234"}]})
+                path.write_text(json.dumps(result))
+                path = destination / "trivy" / "metadata.json"
+                details = json.loads(path.read_text())
+                details["resultSha256"] = hashlib.sha256((destination / "trivy" / "result.json").read_bytes()).hexdigest()
+                path.write_text(json.dumps(details))
+
+            console = io.StringIO()
+            with patch.dict(os.environ, env), \
+                    patch.object(producer_trivy.subprocess, "run", return_value=subprocess.CompletedProcess(
+                        [], 0, stdout=source["commit"])), \
+                    patch.object(producer_trivy, "receipt", return_value={"indexRef": image["indexRef"],
+                                                                         "commit": source["commit"], "buildId": "123"}), \
+                    patch.object(producer_trivy, "resolve_images", return_value=[image]), \
+                    patch.object(producer_trivy, "scan", side_effect=scan) as called, \
+                    patch.object(producer_trivy.native_advisories, "versions", return_value={}), redirect_stdout(console):
+                producer_trivy.produce("test", metadata, output)
+            called.assert_called_once()
+            self.assertIn('"advisory":"CVE-2026-1234"', console.getvalue())
+            self.assertIn('"verdict":"BLOCKED"', console.getvalue())
+            expected = {"trivy/result.json", "trivy/metadata.json", "trivy/scan.log",
+                        "cache/db/trivy.db", "cache/db/metadata.json"}
+            provenance = json.loads((output / "provenance.json").read_text())
+            self.assertEqual(set(provenance["files"]), expected)
+            fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]},
+                                                   require_database=True)
+            decoded = candidate_log.read(console.getvalue(), 123, source["commit"], image["ref"],
+                                         image["indexRef"], root / "decoded.json")
+            self.assertEqual(decoded["result"], json.loads((output / "trivy" / "result.json").read_text()))
 
 
 if __name__ == "__main__":

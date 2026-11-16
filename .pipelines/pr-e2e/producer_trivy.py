@@ -9,6 +9,7 @@ import subprocess
 import time
 import urllib.error
 
+import native_advisories
 from build_receipt import resolve_images
 from candidate_log import emit
 from push_receipt import receipt
@@ -47,6 +48,8 @@ def produce(image, metadata_path, output):
     output.mkdir(parents=True, exist_ok=False)
     work = output / "scan-work"
     scan(selected["ref"], "linux/amd64", work)
+    native_advisories.emit(selected["ref"], "linux/amd64",
+                           json.loads((work / "trivy" / "result.json").read_text(encoding="utf-8-sig")))
     shutil.move(work / "trivy", output / "trivy")
     (output / "cache").mkdir()
     shutil.move(work / "cache" / "db", output / "cache" / "db")
