@@ -441,6 +441,36 @@ class Contracts(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 verify(log)
 
+    def test_wait_proxy_routes_retries_only_until_fresh_traffic_is_observed(self):
+        route = "101.000 10.244.0.2 CONNECT ingest.monitor.azure.com 200 HIER_DIRECT/1.2.3.4"
+        attempts = []
+
+        def read_log():
+            attempts.append(None)
+            return "" if len(attempts) == 1 else route
+
+        with patch.object(runner.time, "monotonic", side_effect=[0, 0]), patch.object(
+                runner.time, "sleep") as sleep:
+            result = runner.wait_for_proxy_routes(
+                read_log, 100, {"10.244.0.2"}, "ingest.monitor.azure.com", {"10.244.0.3"})
+        self.assertEqual(len(result), 1)
+        sleep.assert_called_once_with(5)
+
+        with patch.object(runner.time, "monotonic", side_effect=[0, 121]), patch.object(
+                runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "No matching fresh collector-to-ingestion route"):
+                runner.wait_for_proxy_routes(lambda: "", 100, {"10.244.0.2"},
+                                             "ingest.monitor.azure.com", {"10.244.0.3"})
+        sleep.assert_not_called()
+
+        bypass = route.replace("ingest.monitor.azure.com", "10.244.0.3")
+        with patch.object(runner.time, "monotonic", return_value=0), patch.object(
+                runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "NO_PROXY target appeared"):
+                runner.wait_for_proxy_routes(lambda: bypass, 100, {"10.244.0.2"},
+                                             "ingest.monitor.azure.com", {"10.244.0.3"})
+        sleep.assert_not_called()
+
     def test_command_failure_surfaces_only_fixed_stdout_markers_and_log_location(self):
         with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
             commands = runner.Commands(Path(temporary))

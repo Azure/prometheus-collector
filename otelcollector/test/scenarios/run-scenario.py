@@ -1218,6 +1218,22 @@ def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips,
     return routes
 
 
+def wait_for_proxy_routes(read_log, started, collector_ips, ingestion_hostname, bypass_ips,
+                          require_post=False, forbid_post=False):
+    deadline = time.monotonic() + 120
+    while True:
+        try:
+            return proxy_routes(read_log(), started, collector_ips, ingestion_hostname, bypass_ips,
+                                require_post=require_post, forbid_post=forbid_post)
+        except RuntimeError as error:
+            if str(error) != "No matching fresh collector-to-ingestion route in the owned proxy log":
+                raise
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(5, remaining))
+
+
 def network_probe_monitor(host, marker):
     monitor = {
         "apiVersion": "azmonitoring.coreos.com/v1", "kind": "ServiceMonitor",
@@ -1268,9 +1284,11 @@ def verify_proxy(host, outputs, started, phase="default"):
                   "direct-egress-denial", endpoint)
     require_post = phase in {"trusted-ca", "recovered-ca"}
     forbid_post = phase == "untrusted-ca"
-    script = ("python3 - <<'PY'\nimport json\n" + inspect.getsource(proxy_routes)
+    script = ("python3 - <<'PY'\nimport json, time\nfrom pathlib import Path\n"
+              + inspect.getsource(proxy_routes) + "\n" + inspect.getsource(wait_for_proxy_routes)
               + "\ntry:\n"
-              + f"    routes = proxy_routes(open('/var/log/squid/access.log').read(), {started!r}, "
+              + "    routes = wait_for_proxy_routes(lambda: Path('/var/log/squid/access.log').read_text(), "
+              + f"{started!r}, "
               + f"{sources!r}, {urlparse(endpoint).hostname!r}, {bypass!r}, "
               + f"require_post={require_post!r}, forbid_post={forbid_post!r})\n"
               + "    result = {'status': 'PASS', 'successfulRequests': len(routes), "
