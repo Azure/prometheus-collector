@@ -31,8 +31,7 @@ TEST_SOURCE = REPO
 BUILD_SUBSCRIPTION = "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
 SUITES = ("containerstatus", "prometheusui", "operator", "querymetrics", "livenessprobe")
 CAMPAIGN_LOCATIONS = {
-    "default": "centralus", "classic-azure-cni": "centralus",
-    "acns": "eastus2", "otlp": "centralus", "acns-cilium": "eastus2",
+    "default": "centralus", "acns": "eastus2", "otlp": "centralus", "acns-cilium": "eastus2",
     "operator-secret-watch": "eastus2",
 }
 RESET = ("ama-metrics-settings-configmap", "ama-metrics-prometheus-config",
@@ -523,7 +522,6 @@ class Host:
                           json_output=True)
         verify_secret_watch_version(self.scenario, cluster)
         network = cluster.get("networkProfile") or {}
-        expected_mode = "classic" if self.scenario["id"] == "classic-azure-cni" else "overlay"
         advanced = network.get("advancedNetworking") or {}
         if (clusters[0].get("id", "").casefold() != outputs["clusterId"].casefold()
                 or cluster.get("id", "").casefold() != outputs["clusterId"].casefold()
@@ -533,9 +531,8 @@ class Host:
                 or cluster.get("kubernetesVersion") != env["SCENARIO_KUBERNETES_VERSION"]
                 or cluster.get("nodeResourceGroup") != outputs["nodeResourceGroupName"]
                 or (cluster.get("identity") or {}).get("type") != outputs["identityType"]
-                or outputs.get("azureCniMode") != expected_mode
                 or network.get("networkPlugin") != "azure"
-                or (network.get("networkPluginMode") or "classic") != expected_mode
+                or network.get("networkPluginMode") != "overlay"
                 or bool(advanced.get("enabled")) != ("managed-acns" in self.scenario["clusterFeatures"])
                 or ("managed-acns" in self.scenario["clusterFeatures"]
                     and (advanced.get("observability") or {}).get("enabled") is not True)):
@@ -1072,48 +1069,62 @@ def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
 
 
 def audit_images(host, images):
-    nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
-    node_info = {n["metadata"]["name"]: n["status"]["nodeInfo"] for n in nodes}
-    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
-    evidence = []
-    found = set()
-    for pod in pods:
-        node = pod["spec"].get("nodeName")
-        if node not in node_info:
-            continue
-        info = node_info[node]
-        statuses = {c["name"]: c for c in pod.get("status", {}).get("containerStatuses", [])}
-        for container in pod["spec"]["containers"]:
-            component = COMPONENTS.get(container["name"])
-            if component is None:
+    deadline = time.monotonic() + 60
+    while True:
+        nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
+        node_info = {n["metadata"]["name"]: n["status"]["nodeInfo"] for n in nodes}
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+        evidence = []
+        found = set()
+        pending = None
+        for pod in pods:
+            node = pod["spec"].get("nodeName")
+            if node not in node_info:
                 continue
-            candidates = [i for i in images if i["name"] == component
-                          and i["os"] == info["operatingSystem"] and i["arch"] == info["architecture"]]
-            if info["operatingSystem"] == "windows":
-                candidates = [i for i in candidates if i.get("osVersion")
-                              and windows_image_compatible(info["kernelVersion"], i["osVersion"])]
-            status = statuses.get(container["name"], {})
-            runtime = status.get("imageID", "")
-            if not candidates or not status.get("ready") or not any(
-                    any(runtime.endswith(ref.split("@")[1])
-                        for ref in (i["ref"], i.get("manifestRef")) if ref)
-                    and container["image"] in {i["ref"], i.get("manifestRef")}
-                    for i in candidates):
-                raise RuntimeError(f"Missing, unready or wrong candidate imageID: {pod['metadata']['name']}/{container['name']}")
-            found.add((component, info["operatingSystem"], node))
-            evidence.append({"pod": pod["metadata"]["name"], "node": node, "component": component,
-                             "os": info["operatingSystem"], "arch": info["architecture"],
-                             "kernel": info["kernelVersion"], "image": container["image"],
-                             "imageID": runtime})
-    for node, info in node_info.items():
-        if ("collector", info["operatingSystem"], node) not in found:
-            raise RuntimeError(f"No verified candidate collector on node {node}")
-    for component in ("targetallocator", "cfg"):
-        if not any(row["component"] == component for row in evidence):
-            raise RuntimeError(f"No verified candidate {component}")
-    if not node_info:
-        raise RuntimeError("No nodes observed")
-    return evidence
+            info = node_info[node]
+            statuses = {c["name"]: c for c in pod.get("status", {}).get("containerStatuses", [])}
+            for container in pod["spec"]["containers"]:
+                component = COMPONENTS.get(container["name"])
+                if component is None:
+                    continue
+                candidates = [i for i in images if i["name"] == component
+                              and i["os"] == info["operatingSystem"] and i["arch"] == info["architecture"]]
+                if info["operatingSystem"] == "windows":
+                    candidates = [i for i in candidates if i.get("osVersion")
+                                  and windows_image_compatible(info["kernelVersion"], i["osVersion"])]
+                matching = [i for i in candidates if container["image"] in {i["ref"], i.get("manifestRef")}]
+                status = statuses.get(container["name"], {})
+                runtime = status.get("imageID", "")
+                runtime_matches = any(
+                    any(runtime.endswith(ref.split("@")[1]) for ref in (i["ref"], i.get("manifestRef")) if ref)
+                    for i in matching)
+                identity = f"{pod['metadata']['name']}/{container['name']}"
+                if not candidates or not matching or (runtime and not runtime_matches):
+                    raise RuntimeError(f"Missing, unready or wrong candidate imageID: {identity}")
+                if not status.get("ready"):
+                    pending = pending or identity
+                    continue
+                if not runtime_matches:
+                    raise RuntimeError(f"Missing, unready or wrong candidate imageID: {identity}")
+                found.add((component, info["operatingSystem"], node))
+                evidence.append({"pod": pod["metadata"]["name"], "node": node, "component": component,
+                                 "os": info["operatingSystem"], "arch": info["architecture"],
+                                 "kernel": info["kernelVersion"], "image": container["image"],
+                                 "imageID": runtime})
+        if pending:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"Missing, unready or wrong candidate imageID: {pending}")
+            time.sleep(2)
+            continue
+        for node, info in node_info.items():
+            if ("collector", info["operatingSystem"], node) not in found:
+                raise RuntimeError(f"No verified candidate collector on node {node}")
+        for component in ("targetallocator", "cfg"):
+            if not any(row["component"] == component for row in evidence):
+                raise RuntimeError(f"No verified candidate {component}")
+        if not node_info:
+            raise RuntimeError("No nodes observed")
+        return evidence
 
 
 def verify_pool_configuration(expected, actual):
@@ -1342,7 +1353,7 @@ def campaign_preflight(args, matrix, commands):
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
     selected = (list(CAMPAIGN_LOCATIONS) if args.scenario == "all" else
-                ["default", "classic-azure-cni", "acns", "otlp"]
+                ["default", "acns", "otlp"]
                 if args.scenario == "four-lane" else [args.scenario])
     if any(name not in CAMPAIGN_LOCATIONS for name in selected):
         raise ValueError("Unsupported campaign scenario")

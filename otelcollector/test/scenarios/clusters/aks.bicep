@@ -21,8 +21,6 @@ param windowsAdminUsername string = 'scenarioadmin'
 param nodePools nodePool[]
 @allowed(['azure', 'cilium', 'kubenet'])
 param dataplane string = 'azure'
-@allowed(['overlay', 'classic'])
-param azureCniMode string = 'overlay'
 param workloadIdentityEnabled bool = true
 param privateApi bool = false
 param userAssignedIdentity bool = false
@@ -69,7 +67,6 @@ module guards 'guards.bicep' = {
     proxyCaNeedsProxy: any(!proxyCustomCa || proxyEnabled)
     proxyNoProxyIsScoped: any(!proxyEnabled || (!contains(join(noProxy, ','), '*') && !contains(noProxy, '0.0.0.0/0') && !contains(noProxy, '::/0')))
     validPoolPlan: any(length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
-    classicNeedsAzure: any(azureCniMode != 'classic' || dataplane == 'azure')
     // Keep Windows FIPS on the declared SKU; expanding this coverage needs explicit regional image/SKU preflight.
     windowsFipsVmSupported: any(empty(filter(nodePools, pool => pool.osType == 'Windows' && pool.fips && pool.vmSize != 'Standard_D4s_v4')))
   }
@@ -275,13 +272,13 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
     } : null
     networkProfile: {
       networkPlugin: dataplane == 'kubenet' ? 'kubenet' : 'azure'
-      networkPluginMode: dataplane != 'kubenet' && azureCniMode == 'overlay' ? 'overlay' : null
+      networkPluginMode: dataplane != 'kubenet' ? 'overlay' : null
       networkDataplane: dataplane == 'kubenet' ? null : dataplane
       networkPolicy: dataplane == 'cilium' ? 'cilium' : null
       outboundType: 'loadBalancer'
       loadBalancerSku: 'standard'
       loadBalancerProfile: { managedOutboundIPs: { count: 1 } }
-      podCidr: dataplane == 'kubenet' || azureCniMode == 'overlay' ? '10.244.0.0/16' : null
+      podCidr: '10.244.0.0/16'
       serviceCidr: '10.0.0.0/16'
       dnsServiceIP: '10.0.0.10'
       advancedNetworking: {
@@ -303,7 +300,6 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
       osDiskType: 'Managed'
       osDiskSizeGB: 128
       enableNodePublicIP: false
-      maxPods: azureCniMode == 'classic' ? 30 : null
       enableAutoScaling: pool.autoscaling
       minCount: pool.autoscaling ? pool.minCount : null
       maxCount: pool.autoscaling ? pool.maxCount : null
@@ -536,7 +532,6 @@ output identityType string = useUai ? 'UserAssigned' : 'SystemAssigned'
 output oidcIssuerUrl string = workloadIdentityEnabled ? cluster.properties.oidcIssuerProfile!.issuerURL! : ''
 output workloadIdentityEnabled bool = workloadIdentityEnabled
 output oidcIssuerEnabled bool = workloadIdentityEnabled
-output azureCniMode string = dataplane == 'kubenet' ? '' : azureCniMode
 output resourceTags object = tags
 output privateApiEnabled bool = effectivePrivateApi
 output proxyVmId string = proxyEnabled ? proxyHost[0]!.outputs.vmId : ''

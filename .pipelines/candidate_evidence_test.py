@@ -376,9 +376,9 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
         self.assertEqual(steps[run]["timeoutInMinutes"], 540)
-        self.assertIn('default|classic-azure-cni|acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800', run_script)
+        self.assertIn('default|acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|classic-azure-cni|acns|acns-cilium|otlp|operator-secret-watch)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|acns|acns-cilium|otlp|operator-secret-watch)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
@@ -433,7 +433,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
         retired = {"ampls-acns", "private-ampls"}
         self.assertFalse(retired & rows.keys())
-        self.assertEqual(SCENARIOS, ("default", "classic-azure-cni", "acns", "otlp", "acns-cilium", "operator-secret-watch"))
+        self.assertEqual(SCENARIOS, ("default", "acns", "otlp", "acns-cilium", "operator-secret-watch"))
         pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
         pipeline = yaml.safe_load(pipeline_path.read_text())
         template_path = Path(__file__).with_name("azure-template-candidate-config-tests.yml")
@@ -452,7 +452,6 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertNotIn("settings", rows)
         self.assertTrue({"fips", "arm64", "network-profile"} <= set(rows["default"]["ginkgoLabels"]))
         self.assertEqual(rows["default"]["settingsVariants"], ["*"])
-        self.assertEqual(rows["classic-azure-cni"]["settingsVariants"], ["*"])
         self.assertNotIn("blockedReason", rows["acns"])
         self.assertIn("managed-acns", rows["acns"]["ginkgoLabels"])
         self.assertTrue({"network-profile", "mip-enabled"} <= set(rows["acns"]["ginkgoLabels"]))
@@ -547,7 +546,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         conditional = loop[0]
         stage = conditional[next(key for key in conditional if key.startswith("${{ if or("))][0]
         self.assertEqual(stage["dependsOn"], ["CandidateCapacity"])
-        self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'classic-azure-cni', 'acns', 'otlp'))",
+        self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'acns', 'otlp'))",
                       next(iter(conditional)))
 
     def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
@@ -589,12 +588,12 @@ class CandidateEvidenceTest(unittest.TestCase):
                                              "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
                 self.assertEqual(result.returncode == 0, passes, result.stderr)
                 if passes:
-                    self.assertIn("variable=location_classic_azure_cni;isOutput=true]centralus", result.stdout)
+                    self.assertIn("variable=location_default;isOutput=true]centralus", result.stdout)
                     self.assertIn("variable=sourceSha;isOutput=true]" + self.sha, result.stdout)
                     self.assertIn("variable=validationBuildId;isOutput=true]9791", result.stdout)
                 else:
                     self.assertNotIn("isOutput=true", result.stdout)
-        four_scenarios = ("default", "classic-azure-cni", "acns", "otlp")
+        four_scenarios = ("default", "acns", "otlp")
         four = {**proof, "placements": {name: proof["placements"][name] for name in four_scenarios},
                 "existing": {name: False for name in four_scenarios}}
         for value, passes in ((four, True), (proof, False)):

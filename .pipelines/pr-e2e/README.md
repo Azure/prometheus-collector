@@ -252,7 +252,7 @@ manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
 resource group and publish its inventory; the pipeline removes its local kubeconfig
 but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
-`default`, `linux`, `settings`, `classic-azure-cni`, `mixed`, `autoscaler`, `uai`,
+`default`, `linux`, `settings`, `mixed`, `autoscaler`, `uai`,
 `cilium` and `kubenet` in parallel stages after the aggregate capacity gate,
 even if an earlier row fails. Each row
 has its own UUID, checkout, evidence, retained resource group and bootstrap

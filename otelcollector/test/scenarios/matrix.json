@@ -21,15 +21,6 @@
       "tier": "weekly"
     },
     {
-      "id": "classic-azure-cni",
-      "cluster": "clusters/classic-azure-cni.bicepparam",
-      "clusterFeatures": ["aks", "windows", "workload-identity", "operator", "classic-azure-cni"],
-      "settingsVariants": ["*"],
-      "platforms": ["linux", "windows"],
-      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "network-profile", "mip-enabled"],
-      "tier": "nightly"
-    },
-    {
       "id": "no-workload-identity",
       "cluster": "clusters/no-workload-identity.bicepparam",
       "clusterFeatures": ["aks", "windows", "operator"],

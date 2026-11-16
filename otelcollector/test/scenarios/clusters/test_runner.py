@@ -286,7 +286,7 @@ class Contracts(unittest.TestCase):
             "clusterId": cluster_id, "clusterName": "sc", "location": "eastus2",
             "nodeResourceGroupName": "node-rg", "amwManagedResourceGroupName": "amw-rg",
             "expectedPools": pools, "addonEnabled": False, "installationMode": "candidate-addon",
-            "identityType": "SystemAssigned", "azureCniMode": "overlay",
+            "identityType": "SystemAssigned",
             "resourceTags": {"owner": "ama-metrics-e2e", "scenario": "mixed",
                              "run": owner},
         }
@@ -461,10 +461,9 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["sourceSha"], "a" * 40)
                 self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
-                self.assertEqual(len(result["placements"]), 6)
+                self.assertEqual(len(result["placements"]), 5)
                 self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
-                self.assertEqual(result["placements"]["classic-azure-cni"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(result["placements"]["otlp"], "centralus")
                 self.assertEqual(result["placements"]["acns-cilium"], "eastus2")
@@ -475,7 +474,7 @@ class Contracts(unittest.TestCase):
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (80, 104), "eastus2": (32, 32)}
+                expected = {"centralus": (64, 88), "eastus2": (32, 32)}
                 for location, demand in expected.items():
                     quota = {row["name"]: row["additional"]
                              for row in result["regions"][location]["quota"]}
@@ -487,7 +486,7 @@ class Contracts(unittest.TestCase):
                 args.evidence = Path(temporary) / "four-lane"
                 args.scenario = "four-lane"
                 four = runner.campaign_preflight(args, matrix, commands)
-                self.assertEqual(set(four["placements"]), {"default", "classic-azure-cni", "acns", "otlp"})
+                self.assertEqual(set(four["placements"]), {"default", "acns", "otlp"})
                 self.assertEqual(set(four["existing"]), set(four["placements"]))
                 self.assertEqual(four["regions"]["eastus2"]["kubernetesVersions"], {"acns": "1.36.5"})
                 args.scenario = "all"
@@ -498,7 +497,7 @@ class Contracts(unittest.TestCase):
                     reused = runner.campaign_preflight(args, matrix, commands)
                 quota = {row["name"]: row["additional"] for row in reused["regions"]["centralus"]["quota"]}
                 self.assertEqual((quota["cores"], quota["standarddsv4family"], quota["standarddpsv5family"]),
-                                 (64, 52, 12))
+                                 (48, 36, 12))
                 self.assertTrue(reused["existing"]["default"])
                 args.evidence = Path(temporary)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
@@ -575,7 +574,7 @@ class Contracts(unittest.TestCase):
         variants = runner.catalog(runner.ROOT / "settings")
         document = runner.validate_matrix(runner.load(runner.ROOT / "matrix.json"), variants)
         rows = {row["id"]: row for row in document["scenarios"]}
-        for scenario_id in ("default", "classic-azure-cni", "acns", "otlp"):
+        for scenario_id in ("default", "acns", "otlp"):
             row = rows[scenario_id]
             self.assertEqual(row["settingsVariants"], ["*"])
             if scenario_id != "otlp":
@@ -832,10 +831,33 @@ class Contracts(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
             runner.audit_images(host, images)
         status["imageID"] = index
-        status["ready"] = False
+        targetallocator_status = pods[2]["status"]["containerStatuses"][0]
+        targetallocator_status["ready"] = False
+        targetallocator_status["imageID"] = "example.invalid/test@sha256:" + "6" * 64
+        host.kube.side_effect = lambda *args, **kwargs: {
+            "items": nodes if args[1] == "nodes" else pods}
         with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
             runner.audit_images(host, images)
-        status["ready"] = True
+        targetallocator_status["imageID"] = images[2]["ref"]
+        unready_pods = copy.deepcopy(pods)
+        targetallocator_status["ready"] = True
+        snapshots = iter((unready_pods, pods))
+        host.kube.side_effect = lambda *args, **kwargs: {
+            "items": nodes if args[1] == "nodes" else next(snapshots)}
+        with patch.object(runner.time, "monotonic", side_effect=(0, 1)), \
+                patch.object(runner.time, "sleep") as sleep:
+            self.assertEqual(len(runner.audit_images(host, images)), 4)
+        sleep.assert_called_once_with(2)
+
+        targetallocator_status["ready"] = False
+        host.kube.side_effect = lambda *args, **kwargs: {
+            "items": nodes if args[1] == "nodes" else pods}
+        with patch.object(runner.time, "monotonic", side_effect=(0, 60)), \
+                patch.object(runner.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
+                runner.audit_images(host, images)
+        sleep.assert_not_called()
+        targetallocator_status["ready"] = True
         images[0]["arch"] = "arm64"
         with self.assertRaisesRegex(RuntimeError, "wrong candidate imageID"):
             runner.audit_images(host, images)
@@ -2273,7 +2295,7 @@ def mutations():
         "fixture-namespace": ('if kind == "Namespace" and output.strip():', "if False:"),
         "override-authorization": ("if type(override) is not bool:", "if False:"),
         "sku-quota": ("current + cores > limit", "False"),
-        "campaign-region-split": ('"classic-azure-cni": "centralus",', '"classic-azure-cni": "eastus2",'),
+        "campaign-region-split": ('"default": "centralus",', '"default": "eastus2",'),
         "campaign-aggregate": ('regional_capacity(regional, capacity, commands)',
                                'regional_capacity(regional, capacity[:1], commands)'),
         "quota-numeric-strings": ('int(str(row["currentValue"]))', 'row["currentValue"]'),

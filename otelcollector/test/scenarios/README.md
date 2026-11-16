@@ -99,14 +99,14 @@ admission once against its clean, exact-source checkout:
 python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
 ```
 
-`--scenario four-lane` selects default, classic Azure CNI, ACNS and OTLP without
-the isolated secret-watch and Cilium rows; it still checks their combined regional peak.
-`--scenario` also accepts one of the six runnable campaign rows. The
+`--scenario four-lane` retains its compatibility name but selects default, ACNS and
+OTLP without the isolated secret-watch and Cilium rows; it still checks their combined regional peak.
+`--scenario` also accepts one of the five runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
 producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
 The producer ID is a correlation field here; the existing authenticated candidate
 verifier remains mandatory before deployment. `acns` and `acns-cilium` run in `eastus2`;
-`default`, `classic-azure-cni` and `otlp` run in `centralus`.
+`default` and `otlp` run in `centralus`.
 `acns-cilium` is included in `all` after its successful live proof. Its resource group
 has a `CanNotDelete` lock and retains the same narrow bootstrap grants for reuse.
 The managed-addon handoff uses the AKS resource API, not the CLI disable path
@@ -367,7 +367,6 @@ rendered KSM arguments alone are not coverage.
 | Row | Executable assertions | Boundary |
 |---|---|---|
 | `default` | All 36 compatible settings variants; FIPS/ARM64 scheduling; common health, fresh Linux/Windows kubelet ingestion and node network-counter increases after DNS/service traffic. | Mixed-pool inventory alone is not proof; labeled scheduling and traffic assertions provide behavior evidence. |
-| `classic-azure-cni` | All 36 compatible settings variants; common health, per-node ingestion and node network-counter increases after DNS/service traffic. | Traffic traverses the actual profile; no claim is made about CNI-specific policy or flow records. |
 | `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
 | `acns-cilium` | Customer-settings v1/v2; independently verified managed ACNS/Cilium, fresh per-node `cilium_forward_bytes_total` and pod-level `hubble_dns_queries_total`, and positive traffic increases after controlled DNS/HTTP requests in both slots. | Retained Linux-only Cilium cluster; the real deletion lock and owned DCR association remain intact. |
 | `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |

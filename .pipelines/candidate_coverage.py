@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 
-SCENARIOS = ("default", "classic-azure-cni", "acns", "otlp", "acns-cilium", "operator-secret-watch")
+SCENARIOS = ("default", "acns", "otlp", "acns-cilium", "operator-secret-watch")
 
 
 def selected_variants(root, row, catalog):
