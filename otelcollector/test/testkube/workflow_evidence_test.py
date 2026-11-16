@@ -91,6 +91,33 @@ class WorkflowEvidenceTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             render_candidate(source + "\n---\n" + source, "operator", SHA, IMAGE)
 
+    def test_customer_settings_template_keeps_immutable_inputs_and_ginkgo_options(self):
+        source = (ROOT / "config-processing-test-crs" / "testkube-config-test-customer-settings-v1-crs.yaml").read_text(encoding="utf-8")
+        rendered = render_candidate(source, "customersettingsv1", SHA, IMAGE)
+        spec = rendered["spec"]
+        self.assertNotIn("use", spec)
+        self.assertEqual(spec["content"]["git"]["revision"], SHA)
+        step = spec["steps"][0]
+        self.assertEqual(step["container"]["image"], IMAGE)
+        self.assertEqual(step["container"]["workingDir"], "/data/repo/otelcollector/test/ginkgo-e2e/configprocessing")
+        self.assertIn("--label-filter config-processing-customer-settings-v1", step["shell"])
+        self.assertIn("--timeout=3h", step["shell"])
+        self.assertNotIn(" -p ", step["shell"].splitlines()[-1])
+        self.assertIn("--fail-on-empty", step["shell"])
+        self.assertIn("--junit-report=/data/reports/junit.xml", step["shell"])
+        self.assertEqual(spec["steps"][-1]["condition"], "always")
+        override = render_candidate(source, "customersettingsv1", SHA, IMAGE, "foo || bar")
+        self.assertIn("--label-filter 'foo || bar'", override["spec"]["steps"][0]["shell"])
+        parallel_source = (ROOT / "config-processing-test-crs" / "testkube-config-test-all-targets-enabled-crs.yaml").read_text(encoding="utf-8")
+        parallel = render_candidate(parallel_source, "alltargetsenabled", SHA, IMAGE)
+        self.assertIn(" -p ", parallel["spec"]["steps"][0]["shell"].splitlines()[-1])
+        for modified in (
+            source.replace("configprocessingginkgo", "unknown-template"),
+            source.replace("config-processing-customer-settings-v1", ""),
+        ):
+            with self.assertRaises(ValueError):
+                render_candidate(modified, "customersettingsv1", SHA, IMAGE)
+
     def test_passed_report_allows_selected_out_specs(self):
         self.assertEqual(report_counts(self.artifacts), {
             "specs": 2, "passed": 1, "skipped": 1, "failed": 0,
