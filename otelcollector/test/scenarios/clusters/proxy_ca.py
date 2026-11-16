@@ -15,10 +15,19 @@ DCE_CERTIFICATE_ERROR = re.compile(
     r'Error in SSL handshake)', re.IGNORECASE)
 
 
-def require_certificate_rejection(exit_code):
-    if str(exit_code).strip() != "60":
-        raise RuntimeError("Proxy CA distrust probe did not fail certificate verification")
-    return {"curlExitCode": 60, "certificateRejected": True}
+def require_certificate_rejection(result):
+    lines = str(result).splitlines()
+    match = re.fullmatch(r"CURL_EXIT_CODE=(\d+)", lines[-1]) if lines else None
+    if not match:
+        raise RuntimeError(
+            "Proxy CA distrust probe did not fail certificate verification (non-numeric curl result)")
+    code = match.group(1)
+    curl_stderr = "\n".join(lines[:-1]).strip()
+    if code != "60":
+        raise RuntimeError(
+            f"Proxy CA distrust probe did not fail certificate verification (curl exit code {code}): "
+            f"{curl_stderr or 'no curl stderr'}")
+    return {"curlExitCode": int(code), "certificateRejected": True, "curlStderr": curl_stderr}
 
 
 def failure_proof(scrapes, errors, observations, started):
@@ -98,6 +107,8 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
         # A new marker cannot be satisfied by samples queued before CA removal.
         started = time.time()
         ca_probes = []
+        trust_anchor = "/etc/pki/ca-trust/source/anchors/proxy-cert.crt"
+        trust_bundle = "/etc/pki/tls/certs/ca-bundle.crt"
         untrusted_pods = host.kube(
             "get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
         for pod in untrusted_pods:
@@ -108,18 +119,26 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
             if any(mount.get("name") == "scenario-proxy-ca"
                    for mount in collector.get("volumeMounts", [])):
                 raise RuntimeError("Collector still mounts the owned proxy CA during distrust")
+            host.kube(
+                "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
+                "--", "rm", "-f", "--", trust_anchor)
+            host.kube(
+                "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
+                "--", "update-ca-trust")
             result = host.kube(
                 "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
                 "--", "sh", "-c",
                 'set +e; curl --noproxy "" --proxy "$HTTPS_PROXY" --connect-timeout 10 --max-time 30 '
-                '--silent --output /dev/null "$1" 2>/dev/null; printf "%s" "$?"',
-                "scenario-ca-probe", outputs["dceMetricsIngestionEndpoint"], private=True)
+                f'--cacert {trust_bundle} --silent --show-error --output /dev/null "$1" 2>&1; '
+                'code=$?; printf "\\nCURL_EXIT_CODE=%s\\n" "$code"',
+                "scenario-ca-probe", outputs["dceMetricsIngestionEndpoint"])
             ca_probes.append({"pod": pod["metadata"]["name"],
-                              **require_certificate_rejection(result)})
+                              "trustAnchorCleared": True, **require_certificate_rejection(result)})
         if not ca_probes:
             raise RuntimeError("No collectors available for the proxy CA distrust probe")
         print("Proxy CA distrust probe: " + json.dumps({
-            "status": "PASS", "scope": "proxy-custom-ca", "collectors": ca_probes,
+            "status": "PASS", "scope": "proxy-custom-ca", "trustAnchor": trust_anchor,
+            "trustBundle": trust_bundle, "collectors": ca_probes,
         }), flush=True)
         mark_probe(host, marker)
         time.sleep(90)

@@ -244,10 +244,14 @@ Direct egress denial and temporary-access cleanup passed; its matrix blocker is
 removed. Independent vulnerability-scan and global coverage gates still failed.
 
 The custom-CA lane removes only its owned `/anchors/proxy` mount and restarts the
-collectors, retaining the distro trust anchors. It requires fresh successful
-scraping, curl exit 60 through the proxy, a matching DCE-specific MetricsExtension
-SSL-handshake error, and independent authenticated AMW queries with no samples
-for a new negative-phase marker. MetricsExtension errors are read privately from
+collectors, retaining the distro trust anchors. Since product startup copies that
+Secret into `/etc/pki/ca-trust/source/anchors/proxy-cert.crt`, the negative phase
+clears only that owned copied anchor, runs `update-ca-trust`, and probes against
+`/etc/pki/tls/certs/ca-bundle.crt`. It requires fresh successful scraping, curl
+exit 60 through the proxy, a matching DCE-specific MetricsExtension SSL-handshake
+error, and independent authenticated AMW queries with no samples for a new
+negative-phase marker. Curl stderr and its numeric exit result are retained in
+build evidence. MetricsExtension errors are read privately from
 `/MetricsExtensionConsoleDebugLog.log`;
 MetricsExtension uses file logging rather than container stdout. It restores and
 reads back the original mounts even after failure. Successful negative proof must
@@ -258,15 +262,12 @@ Its deployment first prepares the retained proxy, then reads only the public CA
 through authenticated VM run-command before creating AKS with that trust.
 No deployment-script container, storage account or CA-reader identity is needed.
 
-The custom-CA blocker remains after build 132185 (producer 131983, product source
-`d34c33d1`, test source `275c8684`): all nine native executions passed, but the
-collector certificate-error guard failed. An isolated retained-cluster diagnostic
-reproduced zero trust-anchor mounts and curl exit 60 in all three collectors while
-the ME debug files contained no matching certificate-validation errors and Squid
-recorded decrypted DCE POSTs with HTTP 200. Exact mount restoration/readback and
-subsequent fresh AMW samples passed.
-Curl-only distrust is not accepted as collector failure/recovery proof; the
-collector's behavior needs investigation before this lane can be unblocked.
+Build 132483 (producer 131983, product source `d34c33d1`, test source
+`f76b27cc`) passed trusted ingestion but failed the untrusted probe: the
+scenario-owned CA had already been copied into the generated distro trust bundle
+before its mount was removed. That run did not retain the curl exit code or
+stderr. The harness now clears the exact copied anchor and records both; this
+change still requires live pipeline proof before the blocker can be removed.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and

@@ -142,6 +142,8 @@ class Contracts(unittest.TestCase):
                 "queryEndpoint": "https://amw.example",
                 "dceMetricsIngestionEndpoint": "https://dce.example.metrics.ingest.monitor.azure.com",
             }
+            trust_anchor = "/etc/pki/ca-trust/source/anchors/proxy-cert.crt"
+            trust_bundle = "/etc/pki/tls/certs/ca-bundle.crt"
             document = {"spec": {"template": {"spec": {"containers": [{
                 "name": "prometheus-collector", "volumeMounts": [
                     {"name": "scenario-proxy-ca", "mountPath": "/anchors/proxy"},
@@ -162,7 +164,11 @@ class Contracts(unittest.TestCase):
                 if args[0] in ("patch", "rollout"):
                     return ""
                 if args[0] == "exec" and any("curl --noproxy" in str(arg) for arg in args):
-                    return "60"
+                    return "curl: (60) SSL certificate problem: self-signed certificate\nCURL_EXIT_CODE=60"
+                if args[0] == "exec" and args[-4:] == ("rm", "-f", "--", trust_anchor):
+                    return ""
+                if args[0] == "exec" and args[-1] == "update-ca-trust":
+                    return ""
                 if args[-2:] in (("cat", "/usr/sbin/me.config"), ("cat", "/usr/sbin/me_ds.config")):
                     return '{"proxyDefinitionMode":1,"validateCertificates":2}'
                 if args[0] == "logs":
@@ -214,11 +220,25 @@ class Contracts(unittest.TestCase):
                 self.assertNotIn("scenario-proxy-ca", names)
                 self.assertIn("anchors-mariner", names)
                 self.assertIn("anchors-ubuntu", names)
-            self.assertEqual(
-                len([call for call in host.kube.call_args_list
-                     if call.args[0] == "exec"
-                     and any("curl --noproxy" in str(arg) for arg in call.args)]),
-                2)
+            calls = host.kube.call_args_list
+            for pod in ("collector-replica", "collector-node"):
+                anchor_clear = next(
+                    index for index, call in enumerate(calls)
+                    if call.args[:2] == ("exec", pod)
+                    and call.args[-4:] == ("rm", "-f", "--", trust_anchor))
+                trust_refresh = next(
+                    index for index, call in enumerate(calls)
+                    if call.args[:2] == ("exec", pod)
+                    and call.args[-1] == "update-ca-trust")
+                curl_probe = next(
+                    index for index, call in enumerate(calls)
+                    if call.args[:2] == ("exec", pod)
+                    and any("curl --noproxy" in str(arg) for arg in call.args))
+                self.assertLess(anchor_clear, trust_refresh)
+                self.assertLess(trust_refresh, curl_probe)
+                command = next(arg for arg in calls[curl_probe].args
+                               if "curl --noproxy" in str(arg))
+                self.assertIn(f"--cacert {trust_bundle}", command)
 
     def test_ca_matches_only_dce_certificate_errors(self):
         adapter = sys.modules["clusters.proxy_ca"]
@@ -238,13 +258,15 @@ class Contracts(unittest.TestCase):
 
     def test_ca_probe_requires_curl_certificate_verification_failure(self):
         adapter = sys.modules["clusters.proxy_ca"]
-        self.assertEqual(adapter.require_certificate_rejection("60"), {
+        self.assertEqual(adapter.require_certificate_rejection(
+            "curl: (60) SSL certificate problem: self-signed certificate\nCURL_EXIT_CODE=60"), {
             "curlExitCode": 60, "certificateRejected": True,
+            "curlStderr": "curl: (60) SSL certificate problem: self-signed certificate",
         })
-        for exit_code in ("0", "7", "35", ""):
-            with self.subTest(exit_code=exit_code), self.assertRaisesRegex(
+        for result in ("CURL_EXIT_CODE=0", "CURL_EXIT_CODE=7", "CURL_EXIT_CODE=35", "", "60"):
+            with self.subTest(result=result), self.assertRaisesRegex(
                     RuntimeError, "did not fail certificate verification"):
-                adapter.require_certificate_rejection(exit_code)
+                adapter.require_certificate_rejection(result)
 
     def test_ca_requires_proxy_certificate_validation_override(self):
         adapter = sys.modules["clusters.proxy_ca"]
