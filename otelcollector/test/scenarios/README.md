@@ -236,12 +236,15 @@ reference samples, denied direct web egress, and complete Squid-log aggregation
 must agree. Proxy proof and per-execution JUnit counts are printed to build logs;
 configuration or successful infrastructure deployment alone is not lane coverage.
 
-The proxy lane's functional proof passed in pipeline 979 build 132171
-(producer 131983, product source `d34c33d1`, test source `aa9d2052`): all nine
-native executions passed, fresh AMW ingestion was verified, and 54 successful
-collector-to-DCE proxy requests accompanied zero proxy routes to bypass targets.
-Direct egress denial and temporary-access cleanup passed; its matrix blocker is
-removed. Independent vulnerability-scan and global coverage gates still failed.
+The proxy lane's latest functional proof passed in pipeline 979 build 132488
+(producer 131983, product source `d34c33d1`, test source `8d7ed5b7`): all nine
+selected JUnit suites had zero failures (62 executed, 294 skipped), fresh marked
+AMW ingestion succeeded, and Squid recorded fresh DCE `CONNECT 200` requests
+with zero NO_PROXY bypass routes. Direct web egress denial and private-API
+cleanup passed; its matrix blocker remains removed. The overall build failed
+separately at the Trivy comparison and global coverage gate. The
+`CVE-2026-63209` comparison row is `CLOSED` (`finding absent from covered
+package`); other candidate findings remain `OPEN`.
 
 The custom-CA lane removes only its owned `/anchors/proxy` mount and restarts the
 collectors, retaining the distro trust anchors. Since product startup copies that
