@@ -1222,7 +1222,13 @@ fi
                 f"AMPLS_ME_CONFIGURATION stage=collector-exec pod={pod['metadata']['name']}: {failure}"
             ) from failure
         if len(lines) != 3 or lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]:
-            raise RuntimeError("AMPLS-proxy requires OTLP enabled and ME-only AMCS configuration")
+            mode = (re.fullmatch(r"mdsd=(\d+) me=(\d+) localControl=(\d+)", lines[1])
+                    if len(lines) > 1 and lines[0] in {"true", "false"} else None)
+            detail = (f"otlpEnabled={lines[0]} mdsd={mode[1]} me={mode[2]} localControl={mode[3]}"
+                      if mode else f"malformed proof output lines={len(lines)}")
+            raise RuntimeError(
+                f"AMPLS_ME_CONFIGURATION stage=mode-check pod={pod['metadata']['name']}: {detail}"
+            )
         if lines[2] == "configuration-missing":
             raise RuntimeError("ME did not download the owned DCR configuration within five minutes")
         modified, size = map(int, lines[2].split())

@@ -142,8 +142,11 @@ class Contracts(unittest.TestCase):
                     self.assertIn('"$proc/environ"', command)
                     self.assertEqual(host.kube.call_args.args[-1], proof["immutableDcrId"])
                 else:
-                    with self.assertRaises(RuntimeError):
+                    with self.assertRaises(RuntimeError) as failure:
                         runner.verify_me_configuration(host, proof, window)
+                    if case == "disabled":
+                        self.assertIn("AMPLS_ME_CONFIGURATION stage=mode-check pod=collector", str(failure.exception))
+                        self.assertIn("otlpEnabled=false mdsd=0 me=1 localControl=0", str(failure.exception))
 
     def test_failed_ampls_and_private_hosts_remain_deletion_protected(self):
         for feature in ("ampls", "private-api"):
