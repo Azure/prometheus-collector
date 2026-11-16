@@ -1172,7 +1172,10 @@ def verify_me_configuration(host, proof, started):
     immutable_id = proof["immutableDcrId"]
     if not re.fullmatch(r"dcr-[0-9a-f]{32}", immutable_id):
         raise RuntimeError("ME configuration proof requires the independently verified immutable DCR ID")
-    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    try:
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    except RuntimeError as failure:
+        raise RuntimeError(f"AMPLS_ME_CONFIGURATION stage=pod-inventory: {failure}") from failure
     observed = []
     for pod in pods:
         if not any(c["name"] == "prometheus-collector" for c in pod["spec"]["containers"]):
@@ -1210,9 +1213,14 @@ else
   printf 'configuration-missing\n'
 fi
 '''
-        lines = host.kube("exec", pod["metadata"]["name"], "-n", "kube-system",
-                          "-c", "prometheus-collector", "--", "sh", "-c", command,
-                          "me-configuration-proof", immutable_id, private=True).splitlines()
+        try:
+            lines = host.kube("exec", pod["metadata"]["name"], "-n", "kube-system",
+                              "-c", "prometheus-collector", "--", "sh", "-c", command,
+                              "me-configuration-proof", immutable_id, private=True).splitlines()
+        except RuntimeError as failure:
+            raise RuntimeError(
+                f"AMPLS_ME_CONFIGURATION stage=collector-exec pod={pod['metadata']['name']}: {failure}"
+            ) from failure
         if len(lines) != 3 or lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]:
             raise RuntimeError("AMPLS-proxy requires OTLP enabled and ME-only AMCS configuration")
         if lines[2] == "configuration-missing":

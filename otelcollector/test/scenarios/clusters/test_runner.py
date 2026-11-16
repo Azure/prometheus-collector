@@ -98,18 +98,25 @@ class Contracts(unittest.TestCase):
 
     def test_me_configuration_rejects_native_mode_stale_cache_and_old_collectors(self):
         started = 1767225600
+        pod = {
+            "metadata": {"name": "collector", "uid": "new-pod"},
+            "spec": {"containers": [{"name": "prometheus-collector"}]},
+            "status": {"containerStatuses": [{
+                "name": "prometheus-collector", "ready": True,
+                "state": {"running": {"startedAt": "2026-01-01T00:00:00Z"}},
+            }]},
+        }
+        for stage, side_effect in (
+                ("pod-inventory", [RuntimeError("Command failed (137): kubectl")]),
+                ("collector-exec", [{"items": [pod]}, RuntimeError("Command failed (137): kubectl")])):
+            host = Mock()
+            host.kube.side_effect = side_effect
+            with self.subTest(stage=stage), self.assertRaisesRegex(RuntimeError, f"stage={stage}"):
+                runner.verify_me_configuration(host, {"immutableDcrId": "dcr-" + "a" * 32}, started)
         for case in ("fresh", "mdsd", "local-control", "disabled", "stale-cache", "empty-cache",
                      "missing-cache", "old-pod"):
             with self.subTest(case=case):
                 host = Mock()
-                pod = {
-                    "metadata": {"name": "collector", "uid": "new-pod"},
-                    "spec": {"containers": [{"name": "prometheus-collector"}]},
-                    "status": {"containerStatuses": [{
-                        "name": "prometheus-collector", "ready": True,
-                        "state": {"running": {"startedAt": "2026-01-01T00:00:00Z"}},
-                    }]},
-                }
                 flags = "mdsd=0 me=1 localControl=0"
                 enabled = "false" if case == "disabled" else "true"
                 if case == "mdsd":
@@ -120,7 +127,7 @@ class Contracts(unittest.TestCase):
                 cache_size = 0 if case == "empty-cache" else 100
                 cache = "configuration-missing" if case == "missing-cache" else f"{cache_time} {cache_size}"
                 host.kube.side_effect = [
-                    {"items": [pod, copy.deepcopy(pod)]},
+                    {"items": [copy.deepcopy(pod), copy.deepcopy(pod)]},
                     f"{enabled}\n{flags}\n{cache}\n",
                     f"{enabled}\n{flags}\n{cache}\n",
                 ]
