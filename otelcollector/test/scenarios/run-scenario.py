@@ -1158,7 +1158,10 @@ def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
         if float(timestamp) < started or source not in collector_ips:
             continue
         if destination in bypass_ips:
-            raise RuntimeError("NO_PROXY target appeared in the collector's proxy route log")
+            raise RuntimeError(
+                "NO_PROXY target appeared in the collector's proxy route log: "
+                f"timestamp={timestamp} source={source} method={method} "
+                f"destination={destination} status={status} route={hierarchy}")
         if (destination == ingestion_hostname and method in {"CONNECT", "POST"}
                 and status == "200" and hierarchy.startswith("HIER_DIRECT/")):
             routes.append({"timestamp": float(timestamp), "source": source,

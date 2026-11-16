@@ -465,11 +465,14 @@ class Contracts(unittest.TestCase):
             return runner.proxy_routes(log, 100, {"10.244.0.2"}, "ingest.monitor.azure.com",
                                        {"10.244.0.3"})
         self.assertEqual(len(verify(route)), 1)
+        bypass_route = route + "\n101.100 10.244.0.2 GET 10.244.0.3 200 HIER_DIRECT/10.244.0.3"
+        with self.assertRaisesRegex(RuntimeError, r"destination=10\.244\.0\.3"):
+            verify(bypass_route)
         for log in ("", route.replace("101.000", "99.000"),
                     route.replace("10.244.0.2", "10.244.0.9"),
                     route.replace(" 200 ", " 403 "),
                     route.replace("ingest.monitor.azure.com", "query.monitor.azure.com"),
-                    route + "\n101.100 10.244.0.2 GET 10.244.0.3 200 HIER_DIRECT/10.244.0.3"):
+                    bypass_route):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 verify(log)
 
