@@ -1,10 +1,12 @@
-"""Scan an authenticated candidate and released baseline with one private Trivy DB."""
+"""Reuse the producer candidate scan and compare one baseline scan with its frozen DB."""
 import argparse
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sys
+from datetime import datetime, timezone
 
 import compare_trivy
 import fetch_candidate
@@ -35,8 +37,13 @@ def run(build_id, commit, baseline, platform, requested, output, verified_candid
               if image["name"] == "collector" and image["os"] == system and image["arch"] == arch]
     if len(images) != 1:
         raise ValueError("Expected exactly one protected candidate collector child for the platform")
+    producer_scan = verified_candidate / fetch_candidate.SCAN_ARTIFACT
+    fetch_candidate.validate_scan_artifact(producer_scan, receipt, require_database=True)
+    metadata, _, _ = compare_trivy.load(producer_scan, datetime.now(timezone.utc))
+    if metadata["requestedRef"] != images[0]["ref"] or metadata["platform"] != platform:
+        raise ValueError("Producer scan does not cover the selected candidate platform")
     candidate_scan = output / "candidate"
-    scan_trivy.scan(images[0]["ref"], platform, candidate_scan)
+    shutil.copytree(producer_scan, candidate_scan)
     scan_trivy.scan(baseline, platform, output / "baseline", candidate_scan)
     result = compare_trivy.compare(output / "baseline", candidate_scan, receipt, requested)
     with (output / "comparison.json").open("x", encoding="utf-8") as file:

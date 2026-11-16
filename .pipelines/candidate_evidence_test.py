@@ -254,9 +254,12 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load((directory / "azure-pipeline-config-tests.yml").read_text())
         jobs = pipeline["stages"][0]["jobs"]
         self.assertEqual(len(jobs), 1)
-        capacity = pipeline["stages"][1]
+        capacity = next(stage for stage in pipeline["stages"]
+                        if stage.get("stage") == "CandidateCapacity")
         self.assertEqual(capacity["stage"], "CandidateCapacity")
-        candidate_stage = next(iter(pipeline["stages"][2].values()))[0]
+        candidate_loop = next(stage for stage in pipeline["stages"]
+                              if any("each scenario" in key for key in stage))
+        candidate_stage = next(iter(candidate_loop.values()))[0]
         candidate_stage = next(iter(candidate_stage.values()))[0]
         jobs.append(candidate_stage["jobs"][0])
         self.assertIn("'False'", jobs[0]["condition"])
@@ -273,10 +276,10 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(pipeline["pr"]["branches"]["include"], ["main"])
         self.assertNotIn("paths", pipeline["pr"])
         self.assertIn("startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/')", capacity["condition"])
-        loop = next(iter(pipeline["stages"][2]))
+        loop = next(iter(candidate_loop))
         self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", loop)
         self.assertIn("replace(scenario, '-', '_')", candidate_stage["stage"])
-        selection = next(iter(next(iter(pipeline["stages"][2].values()))[0]))
+        selection = next(iter(next(iter(candidate_loop.values()))[0]))
         self.assertIn("eq(parameters.candidateScenario, 'all')", selection)
         self.assertIn("eq(parameters.candidateScenario, scenario)", selection)
         self.assertNotIn("ne(scenario,", selection)
@@ -331,10 +334,15 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertNotIn("Candidate execution requires a trusted pipeline branch", input_validation["bash"])
         self.assertLess(input_validation["bash"].index("git fetch"), input_validation["bash"].index("git worktree add"))
         capacity_steps = capacity["jobs"][0]["steps"]
-        scan = next(step for step in capacity_steps
-                    if "one fresh baseline/candidate comparison" in step.get("displayName", ""))
-        self.assertIn('--cve "$cve"', scan["bash"])
-        self.assertEqual(scan["env"]["CANDIDATE_CVE"], "$(candidateCve)")
+        producer_check = next(step for step in capacity_steps
+                              if "Verify exact producer receipts" in step.get("displayName", ""))
+        self.assertIn("fetch_candidate.py", producer_check["bash"])
+        self.assertIn("require_database=True", producer_check["bash"])
+        self.assertIn("set -euo pipefail", producer_check["bash"])
+        self.assertIsNone(producer_check.get("continueOnError"))
+        self.assertEqual(producer_check["env"]["PRODUCER_BUILD_ID"], "$(capacityProducerBuildId)")
+        admit = next(step for step in capacity_steps if step.get("name") == "admit")
+        self.assertIn("variable=producerBuildId;isOutput=true", admit["inputs"]["inlineScript"])
         prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
         helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
         self.assertEqual(steps[helm]["inputs"]["helmVersionToInstall"], "3.19.0")
@@ -393,25 +401,47 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertTrue(junit["failTaskOnFailedTests"])
         self.assertTrue(junit["failTaskOnMissingResultsFile"])
 
-    def test_candidate_scan_runs_once_before_scenarios_not_per_lane(self):
+    def test_candidate_scan_is_required_but_does_not_gate_functional_lanes(self):
         directory = Path(__file__).parent
         pipeline = yaml.safe_load((directory / "azure-pipeline-config-tests.yml").read_text())
         capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
         capacity_steps = capacity["jobs"][0]["steps"]
-        scan_steps = [step for step in capacity_steps if "scan_candidate.py" in step.get("bash", "")]
+        self.assertFalse(any("scan_candidate.py" in step.get("bash", "") for step in capacity_steps))
+        scan_stage = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateScan")
+        self.assertEqual(scan_stage["dependsOn"], ["CandidateCapacity"])
+        self.assertEqual(scan_stage["condition"],
+                         "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
+        self.assertIsNone(scan_stage.get("continueOnError"))
+        self.assertIsNone(scan_stage["jobs"][0].get("continueOnError"))
+        scan_steps = [step for step in scan_stage["jobs"][0]["steps"]
+                      if "scan_candidate.py" in step.get("bash", "")]
         self.assertEqual(len(scan_steps), 1)
-        scan = next(step for step in capacity_steps
+        scan = next(step for step in scan_stage["jobs"][0]["steps"]
                     if step.get("displayName") ==
-                    "Verify exact producer scan and run one fresh baseline/candidate comparison")
+                    "Reuse exact producer scan and run one matching baseline comparison")
         scan_script = scan["bash"]
+        self.assertIn("set -euo pipefail", scan_script)
+        self.assertIsNone(scan.get("continueOnError"))
+        self.assertIsNone(scan.get("condition"))
+        self.assertIn('PATH="$SCAN_TOOLS:$PATH" "$PYTHON"', scan_script)
+        self.assertIn("--verified-candidate", scan_script.splitlines()[-1])
+        self.assertNotIn("||", scan_script.splitlines()[-1])
         self.assertLess(scan_script.index("fetch_candidate.py"), scan_script.index("scan_candidate.py"))
         self.assertIn('--verified-candidate "$SCAN_EVIDENCE/verified"', scan_script)
         self.assertIn("--baseline-image", scan_script)
         self.assertIn("--build-id \"$PRODUCER_BUILD_ID\"", scan_script)
         self.assertIn("--source-commit \"$CANDIDATE_SOURCE_SHA\"", scan_script)
         self.assertIn("campaign.json", scan_script)
-        self.assertEqual(scan["env"]["PRODUCER_BUILD_ID"], "$(capacityProducerBuildId)")
-        self.assertEqual(scan["env"]["CANDIDATE_SOURCE_SHA"], "$(capacitySourceSha)")
+        self.assertEqual(scan["env"]["PRODUCER_BUILD_ID"], "$(candidateScanProducerBuildId)")
+        self.assertEqual(scan["env"]["CANDIDATE_SOURCE_SHA"], "$(candidateScanSourceSha)")
+        candidate_loop = next(stage for stage in pipeline["stages"]
+                              if any("each scenario" in key for key in stage))
+        candidate_stage = next(iter(candidate_loop.values()))[0]
+        candidate_stage = next(iter(candidate_stage.values()))[0]
+        self.assertEqual(candidate_stage["dependsOn"], ["CandidateCapacity"])
+        self.assertEqual(candidate_stage["condition"],
+                         "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
+        self.assertNotIn("CandidateScan", str(candidate_stage["dependsOn"]) + candidate_stage["condition"])
 
         scenario = yaml.safe_load(
             (directory / "azure-template-candidate-config-tests.yml").read_text()

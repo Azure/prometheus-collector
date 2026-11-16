@@ -236,7 +236,17 @@ also runs 979 directly and binds its run to the source head's successful 440
 build. The candidate run validates the source, CVE and protected receipts before
 provisioning. The push-receipt and candidate-build validators accept both SRE
 branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
-`sre-trivy-collector` evidence; its other console scans remain report-only. The
+`sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
+and raw scan log; its other console scans remain report-only. CandidateCapacity
+validates those exact receipts and the frozen DB, then checks aggregate
+regional capacity before admitting lanes. CandidateScan reuses the candidate
+findings and scans only the released baseline with the producer's scanner
+version, frozen DB and canonical configuration, then compares all findings
+once. Its FAIL/BLOCKED result does not skip functional lanes, but its failed
+stage still gates approval. Missing snapshots or stale evidence fail closed;
+legacy report-only artifacts remain readable but cannot drive this comparison.
+Full candidate findings remain in the authenticated log payload; the binary DB
+is retained only in the protected artifact. The
 producer signs only `payload.json` in the collector and allocator signing folders;
 the original Buildx `push-metadata.json` remains readable JSON for immutable
 push receipts and the collector scanner. No mutable-tag lookup replaces that binding.

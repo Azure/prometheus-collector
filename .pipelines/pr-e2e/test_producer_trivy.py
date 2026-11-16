@@ -149,7 +149,9 @@ class ProducerTests(unittest.TestCase):
                                               "exitCode": 0, "dbSha256": hashlib.sha256(b"database").hexdigest(),
                                               "version": "0.76.1"}).encode()),
                                           ("trivy/scan.log", b"scanner diagnostics"),
-                                          ("cache/db/trivy.db", b"database"), ("empty.ignore", b""),
+                                          ("cache/db/trivy.db", b"database"),
+                                          ("cache/db/metadata.json", b'{"UpdatedAt":"test"}'),
+                                          ("empty.ignore", b""),
                                           ("empty.yaml", b"{}\n")):
                         path = destination / name
                         path.parent.mkdir(parents=True, exist_ok=True)
@@ -186,10 +188,11 @@ class ProducerTests(unittest.TestCase):
                         self.assertEqual(json.loads((output / "trivy" / "metadata.json").read_text())["dbSha256"],
                                          hashlib.sha256(b"database").hexdigest())
                         self.assertEqual(set(provenance["files"]),
-                                         {"trivy/result.json", "trivy/metadata.json"})
+                                         {"trivy/result.json", "trivy/metadata.json", "trivy/scan.log",
+                                          "cache/db/trivy.db", "cache/db/metadata.json"})
                         self.assertEqual({path.relative_to(output).as_posix()
                                           for path in output.rglob("*") if path.is_file()},
-                                         {"trivy/result.json", "trivy/metadata.json", "provenance.json"})
+                                         set(provenance["files"]) | {"provenance.json"})
                         for name, sha in provenance["files"].items():
                             self.assertEqual(sha, hashlib.sha256((output / name).read_bytes()).hexdigest())
 

@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from contextlib import redirect_stdout
 import hashlib
 import io
@@ -20,8 +19,9 @@ class CampaignScanTests(unittest.TestCase):
         self.image = {
             "name": "collector", "os": "linux", "arch": "amd64",
             "ref": "candidate@sha256:" + "b" * 64,
+            "indexRef": "candidate@sha256:" + "d" * 64,
         }
-        self.source = {"commit": "c" * 40, "buildId": "123"}
+        self.source = {"repo": "Azure/prometheus-collector", "commit": "c" * 40, "buildId": "123"}
         self.receipt = {"source": self.source, "images": [self.image]}
 
     def test_cli_logs_each_comparison_and_failure_reason_without_secrets(self):
@@ -67,11 +67,14 @@ class CampaignScanTests(unittest.TestCase):
         self.assertNotIn("must-not-appear", text)
         self.assertNotIn("private-token-value", text)
 
-    def test_validates_producer_then_scans_local_pair_with_one_database(self):
+    def test_validates_producer_then_scans_only_baseline_with_producer_database(self):
         comparison = {"source": self.source, "verdict": "PASS"}
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "evidence"
             verified = Path(directory) / "verified"
+            scan_candidate.fetch_candidate.extract_scan_artifact(
+                protected_scan_artifact(self.source, self.image, snapshot=True),
+                verified / scan_candidate.fetch_candidate.SCAN_ARTIFACT)
             with patch.object(scan_candidate.fetch_candidate, "load_verified",
                               return_value=self.receipt) as load_verified, \
                     patch.object(scan_candidate.fetch_candidate, "fetch") as fetch, \
@@ -84,7 +87,6 @@ class CampaignScanTests(unittest.TestCase):
                 load_verified.assert_called_once_with(verified.resolve(), 123, self.source["commit"])
                 fetch.assert_not_called()
                 self.assertEqual(scan.call_args_list, [
-                    call(self.image["ref"], "linux/amd64", output / "candidate"),
                     call(self.baseline, "linux/amd64", output / "baseline", output / "candidate"),
                 ])
                 compare.assert_called_once_with(
@@ -98,12 +100,19 @@ class CampaignScanTests(unittest.TestCase):
                         ["CVE-2026-63209"], output, verified,
                     )
 
-    def test_legacy_fetch_path_also_scans_local_pair(self):
+    def test_fetch_path_also_reuses_producer_scan(self):
         comparison = {"source": self.source, "verdict": "BLOCKED"}
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "evidence"
             verified = output / "verified-candidate"
-            with patch.object(scan_candidate.fetch_candidate, "fetch", return_value=self.receipt) as fetch, \
+
+            def fetch_scan(build_id, commit, destination):
+                scan_candidate.fetch_candidate.extract_scan_artifact(
+                    protected_scan_artifact(self.source, self.image, snapshot=True),
+                    destination / scan_candidate.fetch_candidate.SCAN_ARTIFACT)
+                return self.receipt
+
+            with patch.object(scan_candidate.fetch_candidate, "fetch", side_effect=fetch_scan) as fetch, \
                     patch.object(scan_candidate.fetch_candidate, "load_verified") as load_verified, \
                     patch.object(scan_candidate.scan_trivy, "scan") as scan, \
                     patch.object(scan_candidate.compare_trivy, "compare",
@@ -115,13 +124,12 @@ class CampaignScanTests(unittest.TestCase):
                 fetch.assert_called_once_with(123, self.source["commit"], verified)
                 load_verified.assert_not_called()
                 self.assertEqual(scan.call_args_list, [
-                    call(self.image["ref"], "linux/amd64", output / "candidate"),
                     call(self.baseline, "linux/amd64", output / "baseline", output / "candidate"),
                 ])
 
-    def test_report_only_evidence_runs_real_local_scanners_and_strict_comparison_offline(self):
-        source = dict(self.source, repo="Azure/prometheus-collector")
-        image = dict(self.image, indexRef="candidate@sha256:" + "d" * 64)
+    def test_producer_snapshot_runs_only_baseline_and_strict_comparison_offline(self):
+        source = self.source
+        image = self.image
         cve = "CVE-2026-63209"
         receipt = {"source": source, "images": [image], "product": "ama-metrics",
                    "buildResult": "succeeded", "requestedQids": [], "requestedCves": [cve]}
@@ -130,27 +138,38 @@ class CampaignScanTests(unittest.TestCase):
                  "repository": {"id": source["repo"], "type": "GitHub"},
                  "sourceBranch": "refs/heads/bot/ama-metrics-sre-test",
                  "url": scan_candidate.fetch_candidate.ADO_PROJECT + "/_apis/build/builds/123"}
-        for failure in (None, "producer", "db", "version", "coverage", "digest"):
+        for failure in (None, "producer", "missing-db", "stale", "db", "version", "coverage", "digest"):
             with self.subTest(failure=failure), \
                     tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
                 root = Path(directory).resolve()
                 verified, output = root / "verified", root / "comparison"
                 scan_candidate.fetch_candidate.extract_scan_artifact(
-                    protected_scan_artifact(source, image),
+                    protected_scan_artifact(source, image, snapshot=failure != "missing-db"),
                     verified / scan_candidate.fetch_candidate.SCAN_ARTIFACT)
                 (verified / "build.json").write_text(json.dumps(build))
                 (verified / "candidate-build.json").write_text(json.dumps(receipt))
                 producer_report = verified / scan_candidate.fetch_candidate.SCAN_ARTIFACT / "trivy" / "result.json"
                 if failure == "producer":
                     producer_report.write_text("tampered")
+                if failure == "stale":
+                    scan_directory = producer_report.parent.parent
+                    metadata_path = scan_directory / "trivy" / "metadata.json"
+                    metadata = json.loads(metadata_path.read_text())
+                    metadata["finishedUtc"] = "2020-01-01T00:00:00+00:00"
+                    metadata_path.write_text(json.dumps(metadata))
+                    provenance_path = scan_directory / "provenance.json"
+                    provenance = json.loads(provenance_path.read_text())
+                    provenance["files"]["trivy/metadata.json"] = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+                    provenance_path.write_text(json.dumps(provenance))
                 producer_bytes = producer_report.read_bytes()
-                timestamp = datetime.now(timezone.utc).isoformat()
+                timestamp = json.loads((producer_report.parent / "metadata.json").read_text())["dbUpdatedAt"]
                 commands = []
 
                 def invoke(command, **kwargs):
                     commands.append(command)
                     cache = Path(command[command.index("--cache-dir") + 1])
                     is_baseline = cache.parent.name == "baseline"
+                    self.assertTrue(is_baseline, "the producer candidate must never be rescanned")
                     if "--version" in command:
                         return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
                             "Version": "0.76.2" if failure == "version" and is_baseline else "0.76.1",
@@ -158,14 +177,9 @@ class CampaignScanTests(unittest.TestCase):
                     # Model the Linux scan host's config bytes even when tests run on Windows.
                     Path(command[command.index("--config") + 1]).write_bytes(b"{}\n")
                     database = cache / "db" / "trivy.db"
-                    if is_baseline:
-                        self.assertIn("--skip-db-update", command)
-                        self.assertEqual(database.read_bytes(), b"local frozen database")
-                    else:
-                        self.assertNotIn("--skip-db-update", command)
-                        database.parent.mkdir(parents=True)
-                        database.write_bytes(b"local frozen database")
-                    if failure == "db" and is_baseline:
+                    self.assertIn("--skip-db-update", command)
+                    self.assertEqual(database.read_bytes(), b"trivy database")
+                    if failure == "db":
                         database.write_bytes(b"unexpected database")
                     requested = command[-1]
                     result = {"Metadata": {
@@ -187,7 +201,7 @@ class CampaignScanTests(unittest.TestCase):
                             scan_candidate.run(123, source["commit"], self.baseline, "linux/amd64",
                                                [cve], output, verified)
                         self.assertFalse((output / "comparison.json").exists())
-                        if failure == "producer":
+                        if failure in ("producer", "missing-db", "stale"):
                             self.assertFalse(commands)
                     else:
                         result = scan_candidate.run(123, source["commit"], self.baseline, "linux/amd64",
@@ -196,11 +210,14 @@ class CampaignScanTests(unittest.TestCase):
                         self.assertEqual(result["source"], source)
                         self.assertEqual(result["candidate"]["requestedRef"], image["ref"])
                         self.assertEqual(result["candidate"]["dbSha256"],
-                                         hashlib.sha256(b"local frozen database").hexdigest())
+                                         hashlib.sha256(b"trivy database").hexdigest())
                         self.assertEqual(result["candidate"]["dbSha256"], result["baseline"]["dbSha256"])
-                        self.assertEqual(len(commands), 4)
+                        self.assertEqual(len(commands), 2)
+                        self.assertEqual((output / "candidate" / "trivy" / "result.json").read_bytes(),
+                                         producer_bytes)
+                        self.assertEqual((output / "candidate" / "trivy" / "scan.log").read_bytes(),
+                                         b"scanner diagnostics")
                 self.assertEqual(producer_report.read_bytes(), producer_bytes)
-                self.assertFalse((verified / scan_candidate.fetch_candidate.SCAN_ARTIFACT / "cache").exists())
 
     def test_untrusted_or_ambiguous_candidate_evidence_never_scans(self):
         cases = [

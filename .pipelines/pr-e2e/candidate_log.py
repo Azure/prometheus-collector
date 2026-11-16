@@ -41,7 +41,8 @@ def read(text, build_id, source_sha, image_ref, index_ref, output):
             path = directory / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(base64.b64decode(value["files"][name], validate=True))
-        metadata = validate_scan_artifact(directory, {"source": expected_source, "images": [image]})
+        metadata = validate_scan_artifact(
+            directory, {"source": expected_source, "images": [image]}, report_only=True)
         result = json.loads((directory / "trivy/result.json").read_text(encoding="utf-8-sig"))
         if not isinstance(result.get("Results"), list):
             raise ValueError("Candidate scan result has no results array")
