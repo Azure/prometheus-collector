@@ -23,6 +23,7 @@ ARTIFACTS = ("sre-push-linux", "sre-push-windows2022", "sre-push-targetallocator
              "sre-push-cfg", "sre-testkube-runner")
 SCAN_ARTIFACT = "sre-trivy-collector"
 MAX_SCAN_ARTIFACT_BYTES = 512 * 1024 * 1024
+MAX_SCAN_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024
 SCAN_COVERAGE = (
     "collector/linux/amd64 Trivy vulnerability discovery only; "
     "not Windows/arm64/other images/Qualys clearance"
@@ -95,7 +96,7 @@ def extract_scan_artifact(raw, output):
                 raise ValueError("Scan artifact contains duplicate paths")
             names.add(relative.as_posix())
             total_size += entry.file_size
-            if entry.file_size < 0 or total_size > MAX_SCAN_ARTIFACT_BYTES:
+            if entry.file_size < 0 or total_size > MAX_SCAN_UNCOMPRESSED_BYTES:
                 raise ValueError("Scan artifact exceeds the allowed uncompressed size")
             target = output.joinpath(*relative.parts)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -146,9 +147,13 @@ def validate_scan_artifact(directory, receipt, require_database=False, report_on
                 or any(part in ("", ".", "..") for part in name.split("/"))
                 or not re.fullmatch(r"[0-9a-f]{64}", digest)):
             raise ValueError("Collector scan provenance contains an invalid file hash")
-        if (name in actual
-                and hashlib.sha256((directory / Path(*relative.parts)).read_bytes()).hexdigest() != digest):
-            raise ValueError("Collector scan file hash mismatch")
+        if name in actual:
+            hasher = hashlib.sha256()
+            with (directory / Path(*relative.parts)).open("rb") as file:
+                for block in iter(lambda: file.read(1024 * 1024), b""):
+                    hasher.update(block)
+            if hasher.hexdigest() != digest:
+                raise ValueError("Collector scan file hash mismatch")
 
     metadata = json.loads((directory / "trivy" / "metadata.json").read_text(encoding="utf-8-sig"))
     image = provenance["image"]
@@ -171,7 +176,7 @@ def validate_scan_artifact(directory, receipt, require_database=False, report_on
         raise ValueError("Collector scan uses an unexpected Trivy configuration")
     if not report_only and expected != reports:
         database = directory / "cache" / "db"
-        if hashlib.sha256((database / "trivy.db").read_bytes()).hexdigest() != metadata["dbSha256"]:
+        if files["cache/db/trivy.db"] != metadata["dbSha256"]:
             raise ValueError("Collector scan database snapshot identity mismatch")
         db_metadata = json.loads((database / "metadata.json").read_text(encoding="utf-8-sig"))
         if db_metadata.get("UpdatedAt") != metadata.get("dbUpdatedAt"):

@@ -156,11 +156,22 @@ class FetchTests(unittest.TestCase):
                         archive.writestr("same", b"a")
                         archive.writestr(fetch_candidate.SCAN_ARTIFACT + "/same", b"b")
                 output = Path(directory) / "scan"
-                with patch.object(fetch_candidate, "MAX_SCAN_ARTIFACT_BYTES", 10), \
+                with patch.object(fetch_candidate, "MAX_SCAN_UNCOMPRESSED_BYTES", 10), \
                         self.assertRaises(ValueError):
                     fetch_candidate.extract_scan_artifact(raw.getvalue(), output)
                 if kind in ("total", "entry"):
                     self.assertFalse((output / ("second" if kind == "total" else "oversized")).exists())
+
+    def test_compressed_download_and_uncompressed_extraction_have_independent_bounds(self):
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("database", b"a" * 12)
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(fetch_candidate, "MAX_SCAN_ARTIFACT_BYTES", 10), \
+                patch.object(fetch_candidate, "MAX_SCAN_UNCOMPRESSED_BYTES", 12):
+            output = Path(directory) / "scan"
+            fetch_candidate.extract_scan_artifact(raw.getvalue(), output)
+            self.assertEqual((output / "database").read_bytes(), b"a" * 12)
 
     def test_download_rejects_oversize_response_with_bounded_read(self):
         response = io.BytesIO(b"a" * 11)
