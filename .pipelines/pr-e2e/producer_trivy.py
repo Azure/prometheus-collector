@@ -47,9 +47,9 @@ def produce(image, metadata_path, output):
     output.mkdir(parents=True, exist_ok=False)
     work = output / "scan-work"
     scan(selected["ref"], "linux/amd64", work)
-    (output / "trivy").mkdir()
-    for name in ("result.json", "metadata.json"):
-        shutil.move(work / "trivy" / name, output / "trivy" / name)
+    shutil.move(work / "trivy", output / "trivy")
+    (output / "cache").mkdir()
+    shutil.move(work / "cache" / "db", output / "cache" / "db")
     shutil.rmtree(work)
     provenance = {
         "schemaVersion": 1,

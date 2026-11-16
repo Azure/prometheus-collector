@@ -20,7 +20,7 @@ class CandidateLogTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             directory = root / "scan"
-            extract_scan_artifact(protected_scan_artifact(source, image), directory)
+            extract_scan_artifact(protected_scan_artifact(source, image, snapshot=True), directory)
             text = candidate_log.emit(directory)
             expected = (123, source["commit"], image["ref"], image["indexRef"])
             output = root / "decoded.json"
@@ -63,9 +63,10 @@ class CandidateLogTests(unittest.TestCase):
     def test_binding_guard_is_exercised(self):
         original = candidate_log.validate_scan_artifact
 
-        def ignore_binding(directory, expected):
+        def ignore_binding(directory, expected, **kwargs):
             provenance = json.loads((directory / "provenance.json").read_text())
-            return original(directory, {"source": provenance["source"], "images": [provenance["image"]]})
+            return original(directory, {"source": provenance["source"], "images": [provenance["image"]]},
+                            **kwargs)
 
         with patch.object(candidate_log, "validate_scan_artifact", side_effect=ignore_binding):
             result = unittest.TestResult()
