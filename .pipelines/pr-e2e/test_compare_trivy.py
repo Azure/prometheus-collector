@@ -214,8 +214,8 @@ class ComparisonTests(unittest.TestCase):
             self.assertFalse(result.errors)
 
     def test_existing_findings_in_exact_deferred_targets_are_reported_not_gated(self):
-        targets = ("opt/microsoft/otelcollector/otelcollector", "opt/promconfigvalidator")
-        self.assertEqual(compare_trivy.DEFERRED_TARGETS, frozenset(targets))
+        targets = ("opt/microsoft/otelcollector/otelcollector", "opt/promconfigvalidator",
+                   "opt/microsoft/otelcollector/prometheusui")
         for target in targets:
             with self.subTest(target=target):
                 result = self.binary(target, ["CVE-2026-1234"])
@@ -232,21 +232,24 @@ class ComparisonTests(unittest.TestCase):
 
     def test_same_cve_in_an_in_scope_target_still_blocks(self):
         cve = "CVE-2026-1234"
-        baseline = [self.binary("opt/microsoft/otelcollector/otelcollector", [cve]),
-                    self.binary("opt/microsoft/otelcollector/prometheusui", [cve])]
-        comparison = self.compare_fixture(baseline, baseline, [cve])
-        self.assertEqual(comparison["verdict"], "FAIL")
-        self.assertEqual([row["status"] for row in comparison["baselineFindings"]],
-                         ["DEFERRED", "OPEN"])
-        self.assertEqual(comparison["smokeTests"], [{"id": cve, "status": "OPEN"}])
+        for target in ("opt/main", "opt/microsoft/otelcollector/prometheusui-helper"):
+            with self.subTest(target=target):
+                baseline = [self.binary("opt/microsoft/otelcollector/prometheusui", [cve]),
+                            self.binary(target, [cve])]
+                comparison = self.compare_fixture(baseline, baseline, [cve])
+                self.assertEqual(comparison["verdict"], "FAIL")
+                self.assertEqual([row["status"] for row in comparison["baselineFindings"]],
+                                 ["DEFERRED", "OPEN"])
+                self.assertEqual(comparison["smokeTests"], [{"id": cve, "status": "OPEN"}])
 
     def test_new_findings_in_deferred_targets_still_block(self):
-        target = "opt/promconfigvalidator"
-        baseline = [self.binary("opt/main", ["CVE-2026-1234"]), self.binary(target, [])]
-        candidate = [self.binary("opt/main", []), self.binary(target, ["CVE-2026-9999"])]
-        comparison = self.compare_fixture(baseline, candidate, ["CVE-2026-1234"])
-        self.assertEqual(comparison["verdict"], "FAIL")
-        self.assertEqual([finding["id"] for finding in comparison["newFindings"]], ["CVE-2026-9999"])
+        for target in ("opt/promconfigvalidator", "opt/microsoft/otelcollector/prometheusui"):
+            with self.subTest(target=target):
+                baseline = [self.binary("opt/main", ["CVE-2026-1234"]), self.binary(target, [])]
+                candidate = [self.binary("opt/main", []), self.binary(target, ["CVE-2026-9999"])]
+                comparison = self.compare_fixture(baseline, candidate, ["CVE-2026-1234"])
+                self.assertEqual(comparison["verdict"], "FAIL")
+                self.assertEqual([finding["id"] for finding in comparison["newFindings"]], ["CVE-2026-9999"])
 
 
 if __name__ == "__main__":

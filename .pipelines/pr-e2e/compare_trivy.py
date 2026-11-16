@@ -10,6 +10,7 @@ import normalize
 
 DEFERRED_TARGETS = frozenset({
     "opt/microsoft/otelcollector/otelcollector",
+    "opt/microsoft/otelcollector/prometheusui",
     "opt/promconfigvalidator",
 })
 

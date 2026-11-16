@@ -27,8 +27,9 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
 - `compare_trivy.py`: baseline Linux CVE and no-new-findings comparison for
   matched scanner/configuration/DB hashes, complete target/package inventory
   and a candidate bound to the successful build receipt. Still-present baseline
-  findings in the exact targets `opt/microsoft/otelcollector/otelcollector` and
-  `opt/promconfigvalidator` are reported as deferred to the separate Collector
+  findings in the exact targets `opt/microsoft/otelcollector/otelcollector`,
+  `opt/microsoft/otelcollector/prometheusui` and `opt/promconfigvalidator`
+  are reported as deferred to the separate Collector
   upgrade; missing target/package evidence and new findings in any target still
   block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
   must match the scan's exact image ref and OS metadata; binary paths remain exact.
@@ -253,7 +254,8 @@ push receipts and the collector scanner. No mutable-tag lookup replaces that bin
 This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
 the scanner evaluates every baseline finding without severity or fixability
 filters. Still-present baseline findings in the exact
-`opt/microsoft/otelcollector/otelcollector` and `opt/promconfigvalidator` targets
+`opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
+and `opt/promconfigvalidator` targets
 are reported unresolved/deferred to the
 separate Collector upgrade, not treated as fixed. New findings in those targets
 and the same CVE in any other target still block; missing evidence also blocks.
