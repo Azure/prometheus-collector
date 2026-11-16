@@ -1838,21 +1838,50 @@ class Contracts(unittest.TestCase):
             self.assertEqual(deletes, 4)
             self.assertEqual(restored_configmaps, 1)
 
-    def test_existing_fixture_namespace_is_refused_before_any_mutation(self):
+    def test_existing_fixture_namespace_is_preserved_while_fixture_is_restored(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "namespace.yaml"
-            path.write_text("apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ama-settings-auth\n")
+            path.write_text(
+                "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ama-settings-auth\n"
+                "---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: annotation-target\n"
+                "  namespace: ama-settings-auth\nspec:\n  containers:\n  - name: reference-app\n"
+                "    image: example.invalid/reference-app\n")
             host = Mock()
             host.scenario = scenario()
             host.args.evidence = Path(temporary)
             host.args.settle_seconds = 0
-            host.kube.return_value = '{"kind":"Namespace","metadata":{"name":"ama-settings-auth"}}'
+            existing_namespace = {"kind": "Namespace", "metadata": {
+                "name": "ama-settings-auth", "annotations": {"preserve": "true"}}}
+            existing_pod = {"kind": "Pod", "metadata": {
+                "name": "annotation-target", "namespace": "ama-settings-auth",
+                "annotations": {"preserve": "true"}},
+                "spec": {"containers": [{"name": "reference-app", "image": "example.invalid/original"}]}}
+            restored_pod = None
+
+            def kube(*args, **kwargs):
+                nonlocal restored_pod
+                if args[0] == "get" and args[1:3] == ("Namespace", "ama-settings-auth"):
+                    return json.dumps(existing_namespace)
+                if args[0] == "get" and args[1:3] == ("Pod", "annotation-target"):
+                    return json.dumps(restored_pod or existing_pod)
+                if args[0] == "apply":
+                    self.assertIn("name: annotation-target", kwargs["data"])
+                    self.assertNotIn("kind: Namespace", kwargs["data"])
+                if args[0] == "replace":
+                    restored_pod = json.loads(kwargs["data"])
+                return ""
+
+            host.kube.side_effect = kube
             manifest = dict(variant(), customResources=[path])
             with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
-                    runner, "run_suite", return_value={"executed": 1}):
-                with self.assertRaisesRegex(ValueError, "already exists"):
-                    runner.settings_slot(host, manifest)
-            self.assertTrue(all(call.args[0] == "get" for call in host.kube.call_args_list))
+                    runner, "label_filter", return_value="case-label"), patch.object(
+                    runner, "run_suite", return_value={"executed": 1}), patch.object(runner.time, "sleep"):
+                runner.settings_slot(host, manifest)
+            namespace_mutations = [call.args for call in host.kube.call_args_list
+                                   if call.args[0] in {"delete", "replace"}
+                                   and len(call.args) > 1 and call.args[1] == "Namespace"]
+            self.assertEqual(namespace_mutations, [])
+            self.assertEqual(restored_pod, existing_pod)
 
     def test_alias_ingestion_runs_only_identity_case_before_restoring_slot(self):
         with tempfile.TemporaryDirectory() as temporary:

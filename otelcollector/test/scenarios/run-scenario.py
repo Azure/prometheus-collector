@@ -1010,15 +1010,20 @@ def settings_slot(host, variant):
     for kind, name, namespace in identities:
         output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
                            private=True)
-        if kind == "Namespace" and output.strip():
-            raise ValueError(f"Fixture namespace already exists; refusing mutation: {name}")
         originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
     error = None
     try:
         for name in RESET:
             host.kube("delete", "configmap", name, "-n", "kube-system", "--ignore-not-found")
         for text in sources.values():
-            host.kube("apply", "-f", "-", data=text, private=True)
+            resources = [
+                doc for doc in yaml.safe_load_all(text) if doc and not (
+                    doc["kind"] == "Namespace"
+                    and originals[("Namespace", doc["metadata"]["name"], "default")] is not None
+                )
+            ]
+            if resources:
+                host.kube("apply", "-f", "-", data=yaml.safe_dump_all(resources, sort_keys=False), private=True)
         time.sleep(host.args.settle_seconds)
         result = run_suite(host, "configprocessing",
                            host.args.evidence / variant["id"] / "configprocessing",
@@ -1051,6 +1056,8 @@ def settings_slot(host, variant):
     finally:
         restore_failures = []
         for (kind, name, namespace), original in reversed(list(originals.items())):
+            if kind == "Namespace" and original is not None:
+                continue
             try:
                 if original is None:
                     for attempt in range(4):
