@@ -126,11 +126,9 @@ class Contracts(unittest.TestCase):
                 cache_time = started - 1 if case == "stale-cache" else started + 5
                 cache_size = 0 if case == "empty-cache" else 100
                 cache = "configuration-missing" if case == "missing-cache" else f"{cache_time} {cache_size}"
-                host.kube.side_effect = [
-                    {"items": [copy.deepcopy(pod), copy.deepcopy(pod)]},
-                    f"{enabled}\n{flags}\n{cache}\n",
-                    f"{enabled}\n{flags}\n{cache}\n",
-                ]
+                output = f"{enabled}\n{flags}\n{cache}\n"
+                host.kube.side_effect = [{"items": [copy.deepcopy(pod), copy.deepcopy(pod)]}] + (
+                    [output] * 60 if case == "missing-cache" else [output, output])
                 window = started + 1 if case == "old-pod" else started
                 proof = {"immutableDcrId": "dcr-" + "a" * 32}
                 if case == "fresh":
@@ -142,11 +140,35 @@ class Contracts(unittest.TestCase):
                     self.assertIn('"$proc/environ"', command)
                     self.assertEqual(host.kube.call_args.args[-1], proof["immutableDcrId"])
                 else:
-                    with self.assertRaises(RuntimeError) as failure:
-                        runner.verify_me_configuration(host, proof, window)
+                    with patch.object(runner.time, "sleep"):
+                        with self.assertRaises(RuntimeError) as failure:
+                            runner.verify_me_configuration(host, proof, window)
                     if case == "disabled":
                         self.assertIn("AMPLS_ME_CONFIGURATION stage=mode-check pod=collector", str(failure.exception))
                         self.assertIn("otlpEnabled=false mdsd=0 me=1 localControl=0", str(failure.exception))
+
+    def test_me_configuration_waits_for_collector_startup(self):
+        started = 1767225600
+        pod = {
+            "metadata": {"name": "collector", "uid": "new-pod"},
+            "spec": {"containers": [{"name": "prometheus-collector"}]},
+            "status": {"containerStatuses": [{
+                "name": "prometheus-collector", "ready": True,
+                "state": {"running": {"startedAt": "2026-01-01T00:00:00Z"}},
+            }]},
+        }
+        host = Mock()
+        starting = "false\nmdsd=0 me=0 localControl=0\nconfiguration-missing\n"
+        ready = "true\nmdsd=0 me=1 localControl=0\n1767225605 100\n"
+        host.kube.side_effect = [
+            {"items": [copy.deepcopy(pod), copy.deepcopy(pod)]},
+            starting, ready, ready,
+        ]
+        with patch.object(runner.time, "sleep"), patch("sys.stdout", new_callable=io.StringIO):
+            result = runner.verify_me_configuration(
+                host, {"immutableDcrId": "dcr-" + "a" * 32}, started)
+        self.assertEqual(len(result["collectors"]), 2)
+        self.assertEqual(host.kube.call_count, 4)
 
     def test_failed_ampls_and_private_hosts_remain_deletion_protected(self):
         for feature in ("ampls", "private-api"):

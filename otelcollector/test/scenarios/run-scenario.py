@@ -1203,27 +1203,36 @@ for proc in /proc/[0-9]*; do
 done
 printf '%s\n' "$enabled"
 printf 'mdsd=%s me=%s localControl=%s\n' "$mdsd" "$me" "$localControl"
-for attempt in $(seq 1 60); do
-  if test -s "/etc/mdsd.d/config-cache/me/dcrs/$1"; then break; fi
-  sleep 5
-done
 if test -s "/etc/mdsd.d/config-cache/me/dcrs/$1"; then
   stat -c '%Y %s' "/etc/mdsd.d/config-cache/me/dcrs/$1"
 else
   printf 'configuration-missing\n'
 fi
 '''
-        try:
-            lines = host.kube("exec", pod["metadata"]["name"], "-n", "kube-system",
-                              "-c", "prometheus-collector", "--", "sh", "-c", command,
-                              "me-configuration-proof", immutable_id, private=True).splitlines()
-        except RuntimeError as failure:
-            raise RuntimeError(
-                f"AMPLS_ME_CONFIGURATION stage=collector-exec pod={pod['metadata']['name']}: {failure}"
-            ) from failure
-        if len(lines) != 3 or lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]:
+        for attempt in range(60):
+            try:
+                lines = host.kube("exec", pod["metadata"]["name"], "-n", "kube-system",
+                                  "-c", "prometheus-collector", "--", "sh", "-c", command,
+                                  "me-configuration-proof", immutable_id, private=True).splitlines()
+            except RuntimeError as failure:
+                raise RuntimeError(
+                    f"AMPLS_ME_CONFIGURATION stage=collector-exec pod={pod['metadata']['name']}: {failure}"
+                ) from failure
             mode = (re.fullmatch(r"mdsd=(\d+) me=(\d+) localControl=(\d+)", lines[1])
                     if len(lines) > 1 and lines[0] in {"true", "false"} else None)
+            if len(lines) != 3 or not mode:
+                break
+            if lines[0] == "true" and mode.groups() == ("0", "1", "0") \
+                    and lines[2] != "configuration-missing":
+                break
+            starting = mode.groups() == ("0", "0", "0")
+            waiting_for_configuration = (lines[0] == "true" and mode.groups() == ("0", "1", "0")
+                                         and lines[2] == "configuration-missing")
+            if not starting and not waiting_for_configuration:
+                break
+            if attempt < 59:
+                time.sleep(5)
+        if len(lines) != 3 or lines[:2] != ["true", "mdsd=0 me=1 localControl=0"]:
             detail = (f"otlpEnabled={lines[0]} mdsd={mode[1]} me={mode[2]} localControl={mode[3]}"
                       if mode else f"malformed proof output lines={len(lines)}")
             raise RuntimeError(
