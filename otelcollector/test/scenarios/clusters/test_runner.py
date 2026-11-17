@@ -502,6 +502,48 @@ class Contracts(unittest.TestCase):
                                              "ingest.monitor.azure.com", {"10.244.0.3"})
         sleep.assert_not_called()
 
+    def test_direct_egress_denial_retries_only_interrupted_exec_with_a_bound(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            outputs = {"proxyEndpoint": "http://10.226.0.4:3128", "proxyNoProxyCsv": "10.244.0.3",
+                       "proxyVmName": "proxy", "dceMetricsIngestionEndpoint": "https://ingest.example"}
+            for exits in ([137, 0], [137, 137, 137], [1]):
+                host = Mock()
+                host.args.evidence = Path(temporary)
+                failures = iter(exits)
+
+                def kube(*args, **kwargs):
+                    if args[:2] == ("get", "pods"):
+                        if args[3] == "default":
+                            return {"items": [{"status": {"podIP": "10.244.0.3"}}]}
+                        return {"items": [{
+                            "metadata": {"name": "collector"},
+                            "spec": {"containers": [{"name": "prometheus-collector"}]},
+                            "status": {"podIP": "10.244.0.2", "hostIP": "10.224.0.5"},
+                        }]}
+                    if "direct-egress-denial" in args:
+                        code = next(failures)
+                        if code:
+                            raise RuntimeError(f"Command failed ({code}): kubectl exec")
+                        return ""
+                    return "\n".join([outputs["proxyEndpoint"]] * 2 + [outputs["proxyNoProxyCsv"]])
+
+                host.kube.side_effect = kube
+                route = {"status": "PASS", "successfulRequests": 1}
+                with self.subTest(exits=exits), patch.object(runner.time, "sleep") as sleep, patch.object(
+                        runner, "vm_script", return_value=route) as proxy:
+                    if exits[-1] == 0:
+                        self.assertEqual(runner.verify_proxy(host, outputs, 100)["status"], "PASS")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, f"Command failed \\({exits[-1]}\\)"):
+                            runner.verify_proxy(host, outputs, 100)
+                        proxy.assert_not_called()
+                    self.assertEqual(sleep.call_count, len(exits) - 1)
+                    probes = [call for call in host.kube.call_args_list
+                              if "direct-egress-denial" in call.args]
+                    self.assertEqual(len(probes), len(exits))
+                    self.assertTrue(all('test "$result" -eq 7 || test "$result" -eq 28' in call.args[-3]
+                                        for call in probes))
+
     def test_command_failure_surfaces_only_fixed_stdout_markers_and_log_location(self):
         with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
             commands = runner.Commands(Path(temporary))

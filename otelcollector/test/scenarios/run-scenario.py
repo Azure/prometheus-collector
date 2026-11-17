@@ -1277,11 +1277,19 @@ def verify_proxy(host, outputs, started, phase="default"):
         raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
     endpoint = outputs["dceMetricsIngestionEndpoint"]
     if phase in {"default", "trusted-ca"}:
-        host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
-                  "--", "sh", "-c",
-                  'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
-                  'result=$?; test "$result" -eq 7 || test "$result" -eq 28',
-                  "direct-egress-denial", endpoint)
+        for attempt in range(3):
+            try:
+                host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
+                          "--", "sh", "-c",
+                          'set +e; curl --noproxy "*" --connect-timeout 10 --max-time 15 -sS -o /dev/null "$1"; '
+                          'result=$?; test "$result" -eq 7 || test "$result" -eq 28',
+                          "direct-egress-denial", endpoint)
+                break
+            except RuntimeError as error:
+                if not str(error).startswith("Command failed (137):") or attempt == 2:
+                    raise
+                print("Retrying interrupted direct-egress denial probe after exec exit 137 in 5s", flush=True)
+                time.sleep(5)
     require_post = phase in {"trusted-ca", "recovered-ca"}
     forbid_post = phase == "untrusted-ca"
     script = ("python3 - <<'PY'\nimport json, time\nfrom pathlib import Path\n"

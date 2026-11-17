@@ -284,6 +284,12 @@ remained present, so the negative phase now excludes both node-anchor mounts.
 The negative curl, ingestion absence, and recovery remain unverified; keep the
 matrix blocker until a live run proves them.
 
+Custom-CA build 132618 (producer 132516, product source `fe28fdfc`, test source
+`3a0af100f`) passed all nine selected JUnit executions, then the direct-egress
+denial exec was killed with exit 137 before trusted routing or CA distrust was
+tested. This probe now retries exit 137 twice, while unexpected curl outcomes
+and persistent exec failures still fail. The CA blocker remains unchanged.
+
 Custom-CA build 132495 (producer 131983, product source `d34c33d1`, test source
 `61394955`) passed all nine selected JUnit suites and the trusted proxy/ingestion
 proof, but failed because the negative curl still returned 0 after the mount was
