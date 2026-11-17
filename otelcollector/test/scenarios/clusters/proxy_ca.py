@@ -109,6 +109,10 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
                       "-p", json.dumps([dict(patch, value=untrusted)]), private=True)
         for resource, _ in originals:
             host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=5m")
+        # Rollout completion can leave old trusted pods terminating.
+        for pod in collectors:
+            host.kube("wait", "--for=delete", "pod/" + pod["metadata"]["name"],
+                      "-n", "kube-system", "--timeout=5m")
         # A new marker cannot be satisfied by samples queued before CA removal.
         started = time.time()
         ca_probes = []

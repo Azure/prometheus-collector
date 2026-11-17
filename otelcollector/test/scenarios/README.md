@@ -284,6 +284,14 @@ remained present, so the negative phase now excludes both node-anchor mounts.
 The negative curl, ingestion absence, and recovery remain unverified; keep the
 matrix blocker until a live run proves them.
 
+Custom-CA replay 132643 (producer 132516, product source `fe28fdfc`, test source
+`132157d22`) passed all nine selected JUnit executions, trusted proxy routing and
+fresh ingestion. The negative phase stopped on an old trusted pod still
+terminating after rollout; all three replacement collectors had no trust mounts.
+The adapter now waits for the original collector pods to be deleted before
+probing distrust. CA rejection, absent ingestion and recovery remain unverified;
+this older-product replay is not current-candidate clearance.
+
 Custom-CA build 132618 (producer 132516, product source `fe28fdfc`, test source
 `3a0af100f`) passed all nine selected JUnit executions, then the direct-egress
 denial exec was killed with exit 137 before trusted routing or CA distrust was

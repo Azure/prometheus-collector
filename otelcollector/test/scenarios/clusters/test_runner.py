@@ -163,7 +163,7 @@ class Contracts(unittest.TestCase):
                                        "spec": {"containers": [{"name": "prometheus-collector"}]}}]}
                 if args[0] == "get":
                     return copy.deepcopy(document)
-                if args[0] in ("patch", "rollout"):
+                if args[0] in ("patch", "rollout", "wait"):
                     return ""
                 if args[0] == "exec" and any("curl --noproxy" in str(arg) for arg in args):
                     return "curl: (60) SSL certificate problem: self-signed certificate\nCURL_EXIT_CODE=60"
@@ -221,6 +221,11 @@ class Contracts(unittest.TestCase):
                 self.assertNotIn("anchors-mariner", names)
                 self.assertNotIn("anchors-ubuntu", names)
             calls = host.kube.call_args_list
+            waits = [index for index, call in enumerate(calls) if call.args[0] == "wait"]
+            self.assertEqual(
+                [calls[index].args for index in waits],
+                [("wait", "--for=delete", f"pod/{pod}", "-n", "kube-system", "--timeout=5m")
+                 for pod in ("collector-replica", "collector-node")])
             for pod in ("collector-replica", "collector-node"):
                 trust_reset = next(
                     index for index, call in enumerate(calls)
@@ -233,6 +238,7 @@ class Contracts(unittest.TestCase):
                 reset_command = next(arg for arg in calls[trust_reset].args
                                      if "update-ca-trust" in str(arg))
                 self.assertLess(trust_reset, curl_probe)
+                self.assertLess(max(waits), trust_reset)
                 self.assertTrue(reset_command.startswith("set -e;"))
                 self.assertIn(f"rm -f -- {trust_anchor}", reset_command)
                 self.assertNotIn("trust anchor --remove", reset_command)
