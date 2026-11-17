@@ -205,6 +205,12 @@ propagation, runs its OR-combined existing configprocessing labels, and restores
 and reads back the baseline even after failure. Restoration failure aborts the
 batch. Negative config cases run their existing expected-error assertions; a
 generic unhealthy cluster does not count as success.
+After verifying cluster ownership, the runner deletes its shared health reference
+app Deployment/Service and `referenceapp` PodMonitor/ServiceMonitor before settings
+variants, including leftovers from older runs. It deletes them again on exit,
+including the Windows reference app when applicable and the OTLP probe Service.
+Deletion waits for completion; failure fails the run but still retains the cluster
+inventory and removes the local kubeconfig. Unrelated workloads and RBAC are untouched.
 The six default/custom-config combinations in
 `internal/docs/CONFIGPROCESSINGTESTS.md` now have settings-catalog variants,
 including custom valid/invalid configs with default targets disabled. The full

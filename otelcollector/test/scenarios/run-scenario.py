@@ -1603,6 +1603,22 @@ def verified_candidate(args, commands):
     return candidate, runner
 
 
+def cleanup_reference_apps(host):
+    host.assert_owned()
+    fixtures = [
+        "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml",
+        "internal/referenceapp/prometheus-reference-app.yaml",
+    ]
+    if "windows" in host.scenario["platforms"]:
+        fixtures.append("internal/referenceapp/win-prometheus-reference-app.yaml")
+    for fixture in fixtures:
+        host.kube("delete", "-f", str(TEST_SOURCE / fixture), "-n", "default",
+                  "--ignore-not-found", "--wait=true", "--timeout=5m")
+    if host.scenario["id"] == "otlp":
+        host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
+                  "--ignore-not-found", "--wait=true", "--timeout=5m")
+
+
 def execute(args, scenario, variants, commands):
     candidate, runner_receipt = verified_candidate(args, commands)
     selected_settings = scenario_settings(scenario, variants)
@@ -1633,6 +1649,7 @@ def execute(args, scenario, variants, commands):
     host.runner_receipt = runner_receipt
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
                "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
+    reference_apps_ready = False
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
@@ -1724,6 +1741,8 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
+        reference_apps_ready = True
+        cleanup_reference_apps(host)
         save(args.evidence / "images-before.json", audit_images(host, images))
         if scenario["id"] == "acns-cilium":
             host.kube("apply", "-f", str(TEST_SOURCE / "internal/referenceapp/prometheus-reference-app.yaml"))
@@ -1774,16 +1793,23 @@ def execute(args, scenario, variants, commands):
     finally:
         commands.deadline = None
         try:
-            outcome["resources"] = host.retain()
-            if outcome["status"] == "TESTS_PASSED":
-                if not outcome["resources"].get("retained"):
-                    raise RuntimeError("Successful tests but retained resource inventory is incomplete")
-                outcome["status"] = "PASS"
+            if reference_apps_ready:
+                cleanup_reference_apps(host)
         except (RuntimeError, ValueError, OSError, KeyError) as failure:
-            outcome.update(status="FAIL", retentionError=str(failure))
+            outcome.update(status="FAIL", fixtureCleanupError=str(failure))
             raise
         finally:
-            save(args.evidence / "result.json", outcome)
+            try:
+                outcome["resources"] = host.retain()
+                if outcome["status"] == "TESTS_PASSED":
+                    if not outcome["resources"].get("retained"):
+                        raise RuntimeError("Successful tests but retained resource inventory is incomplete")
+                    outcome["status"] = "PASS"
+            except (RuntimeError, ValueError, OSError, KeyError) as failure:
+                outcome.update(status="FAIL", retentionError=str(failure))
+                raise
+            finally:
+                save(args.evidence / "result.json", outcome)
     return outcome
 
 

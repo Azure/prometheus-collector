@@ -1343,6 +1343,109 @@ class Contracts(unittest.TestCase):
             cleanup.assert_not_called()
             self.assertTrue(runner.load(evidence / "result.json")["resources"]["retained"])
 
+    def test_reference_app_cleanup_requires_owner_and_preserves_unrelated_resources(self):
+        for platforms in (["linux"], ["linux", "windows"]):
+            with self.subTest(platforms=platforms):
+                host = Mock(spec=runner.Host, scenario=dict(scenario(), id="otlp", platforms=platforms))
+                runner.cleanup_reference_apps(host)
+                self.assertEqual(host.method_calls[0], unittest.mock.call.assert_owned())
+                deleted = set()
+                for call in host.kube.call_args_list:
+                    self.assertIn("--ignore-not-found", call.args)
+                    self.assertIn("--wait=true", call.args)
+                    if "-f" in call.args:
+                        documents = runner.yaml.safe_load_all(Path(call.args[2]).read_text())
+                        deleted.update((doc["kind"], doc["metadata"]["name"]) for doc in documents)
+                expected = {("Deployment", "prometheus-reference-app"),
+                            ("Service", "prometheus-reference-service"),
+                            ("PodMonitor", "referenceapp"), ("ServiceMonitor", "referenceapp")}
+                if "windows" in platforms:
+                    expected.update({("Deployment", "win-prometheus-reference-app"),
+                                     ("Service", "win-prometheus-reference-service")})
+                self.assertEqual(deleted, expected)
+                host.kube.assert_any_call("delete", "service", "candidate-otlp", "-n", "kube-system",
+                                          "--ignore-not-found", "--wait=true", "--timeout=5m")
+                host.kube.reset_mock()
+                host.assert_owned.side_effect = ValueError("ownership changed")
+                with self.assertRaisesRegex(ValueError, "ownership changed"):
+                    runner.cleanup_reference_apps(host)
+                host.kube.assert_not_called()
+
+    def test_reused_reference_apps_are_isolated_and_cleaned_even_after_failure(self):
+        for failure in (None, "tests", "cleanup"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                args = types.SimpleNamespace(evidence=Path(temporary), run_id="run", max_run_seconds=60,
+                                             admitted_existing=True, test_source_sha="b" * 40, settle_seconds=0)
+                row = dict(scenario(), id="otlp", platforms=["linux"], clusterFeatures=[],
+                           settingsVariants=["custom"])
+                selected = dict(variant(), id="custom", _manifestSha256="manifest")
+                host = Mock(spec=runner.Host, args=args, scenario=row, reused=True)
+                host.receipt = {"resourceGroup": "owned"}
+                host.kubeconfig = args.evidence / "kubeconfig"
+                host.provision.return_value = {"clusterName": "cluster"}
+                host.az.return_value = {"kubernetesVersion": "1.36.5"}
+                host.retain.return_value = {"retained": True}
+                leftovers = {("Deployment", "prometheus-reference-app"), ("Service", "prometheus-reference-service"),
+                             ("PodMonitor", "referenceapp"), ("ServiceMonitor", "referenceapp"),
+                             ("Service", "candidate-otlp")}
+                resources = set(leftovers) | {("Service", "unrelated")}
+                health_applied = False
+
+                def kube(*command, **kwargs):
+                    nonlocal health_applied
+                    if command[:2] == ("get", "nodes"):
+                        return {"items": []}
+                    if command[0] in ("apply", "delete") and "-f" in command:
+                        path = command[command.index("-f") + 1]
+                        documents = list(runner.yaml.safe_load_all(
+                            kwargs["data"] if path == "-" else Path(path).read_text()))
+                        for doc in documents:
+                            identity = (doc["kind"], doc["metadata"]["name"])
+                            if identity not in leftovers:
+                                continue
+                            if command[0] == "apply":
+                                resources.add(identity)
+                                health_applied = True
+                            else:
+                                if failure == "cleanup" and health_applied:
+                                    raise RuntimeError("fixture deletion failed")
+                                resources.discard(identity)
+                    if command[:3] == ("delete", "service", "candidate-otlp"):
+                        resources.discard(("Service", "candidate-otlp"))
+                    return ""
+
+                def settings(*unused):
+                    self.assertEqual(resources, {("Service", "unrelated")})
+                    if failure == "tests":
+                        raise RuntimeError("settings failed")
+                    return {"status": "passed"}
+
+                host.kube.side_effect = kube
+                with patch.multiple(runner,
+                        verified_candidate=Mock(return_value=({"source": {"commit": "a" * 40}}, {})),
+                        label_filter=Mock(return_value=""),
+                        preflight=Mock(return_value={"expectedPools": [], "kubernetesVersion": "1.36.5", "existing": True}),
+                        candidate_receipt=Mock(return_value=([], {})),
+                        prepare_testkube=Mock(return_value=("chart", "principal", "User")),
+                        deployment_env=Mock(return_value={}), Host=Mock(return_value=host),
+                        bootstrap_testkube=Mock(return_value={"agentPoolProfiles": []}),
+                        verify_pool_inventory=Mock(return_value={}), render_chart=Mock(return_value="chart"),
+                        audit_images=Mock(return_value=[]), settings_slot=Mock(side_effect=settings),
+                        run_suite=Mock(return_value={}), verify_ingestion=Mock(return_value={})), \
+                        patch.object(runner.time, "sleep"):
+                    if failure:
+                        with self.assertRaisesRegex(RuntimeError, "settings failed" if failure == "tests"
+                                                    else "fixture deletion failed"):
+                            runner.execute(args, row, {"custom": selected}, Mock())
+                    else:
+                        runner.execute(args, row, {"custom": selected}, Mock())
+                result = runner.load(args.evidence / "result.json")
+                self.assertEqual(result["status"], "FAIL" if failure else "PASS")
+                self.assertEqual("fixtureCleanupError" in result, failure == "cleanup")
+                if failure != "cleanup":
+                    self.assertEqual(resources, {("Service", "unrelated")})
+                host.retain.assert_called_once()
+
     def test_secret_watch_requires_effective_locks_before_cluster_access(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(
