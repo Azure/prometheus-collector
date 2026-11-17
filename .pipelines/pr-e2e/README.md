@@ -76,6 +76,10 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   published file's SHA256. Database identity remains in metadata; database bytes,
   cache and temporary scanner configuration are not published. Both download and
   downloads retain a 512 MiB limit; uncompressed extraction is capped at 2 GiB.
+  The consumer also recognizes the exact five-file layout emitted by source 6c
+  (adding `trivy/scan.log` and the two `cache/db` files); it verifies every
+  provenance hash and binds `trivy.db` to the metadata database hash. Other paths
+  remain rejected.
   Only successful first-attempt SRE branch
   jobs/stages publish it.
   MCR lag retries the immutable digest, never a tag. Filtered console findings and existing

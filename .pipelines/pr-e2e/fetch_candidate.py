@@ -134,7 +134,11 @@ def validate_scan_artifact(directory, receipt):
             raise ValueError("Collector scan contains a linked or escaped file")
         if path.is_file() and path.name != "provenance.json":
             actual.add(path.relative_to(directory).as_posix())
-    if actual != set(files) or actual != {"trivy/result.json", "trivy/metadata.json"}:
+    report_files = {"trivy/result.json", "trivy/metadata.json"}
+    producer_files = report_files | {
+        "trivy/scan.log", "cache/db/metadata.json", "cache/db/trivy.db",
+    }
+    if actual != set(files) or actual not in (report_files, producer_files):
         details = {
             "actualCount": len(actual), "declaredCount": len(files),
             "actualPaths": sorted(path[:200] for path in actual)[:20],
@@ -142,13 +146,19 @@ def validate_scan_artifact(directory, receipt):
         }
         raise ValueError("Collector scan files do not match the protected provenance: "
                          + json.dumps(details, ensure_ascii=True))
+    verified_files = {}
     for name, digest in files.items():
         relative = PurePosixPath(name)
         if (not name or "\\" in name or relative.is_absolute()
                 or any(part in ("", ".", "..") for part in name.split("/"))
                 or not re.fullmatch(r"[0-9a-f]{64}", digest)):
             raise ValueError("Collector scan provenance contains an invalid file hash")
-        if hashlib.sha256((directory / Path(*relative.parts)).read_bytes()).hexdigest() != digest:
+        file_hash = hashlib.sha256()
+        with (directory / Path(*relative.parts)).open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                file_hash.update(block)
+        verified_files[name] = file_hash.hexdigest()
+        if verified_files[name] != digest:
             raise ValueError("Collector scan file hash mismatch")
 
     metadata = json.loads((directory / "trivy" / "metadata.json").read_text(encoding="utf-8-sig"))
@@ -158,11 +168,13 @@ def validate_scan_artifact(directory, receipt):
             or not isinstance(metadata.get("version"), str)
             or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", metadata["version"])):
         raise ValueError("Collector scan metadata does not match the protected image/platform")
-    if (hashlib.sha256((directory / "trivy" / "result.json").read_bytes()).hexdigest()
-            != metadata.get("resultSha256")
+    if (verified_files["trivy/result.json"] != metadata.get("resultSha256")
             or not isinstance(metadata.get("dbSha256"), str)
             or not re.fullmatch(r"[0-9a-f]{64}", metadata["dbSha256"])):
         raise ValueError("Collector scan result hash or database identity mismatch")
+    if ("cache/db/trivy.db" in verified_files
+            and verified_files["cache/db/trivy.db"] != metadata["dbSha256"]):
+        raise ValueError("Collector scan database hash does not match metadata")
     configuration = {
         "scanners": ["vuln"], "listAllPkgs": True,
         "ignoreSha256": hashlib.sha256(b"").hexdigest(),

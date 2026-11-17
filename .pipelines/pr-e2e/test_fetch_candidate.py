@@ -17,7 +17,7 @@ import zipfile
 import fetch_candidate
 
 
-def protected_scan_artifact(source, image):
+def protected_scan_artifact(source, image, include_cache=False):
     database = b"trivy database"
     result = json.dumps({"Metadata": {"RepoDigests": [image["ref"]],
                                       "ImageConfig": {"os": "linux", "architecture": "amd64"}},
@@ -45,6 +45,12 @@ def protected_scan_artifact(source, image):
         },
     }
     files["trivy/metadata.json"] = json.dumps(metadata).encode()
+    if include_cache:
+        files.update({
+            "trivy/scan.log": b"scanner diagnostics",
+            "cache/db/metadata.json": b'{"Version":2}',
+            "cache/db/trivy.db": database,
+        })
     provenance = {
         "schemaVersion": 1,
         "producerDefinitionId": 440,
@@ -75,22 +81,33 @@ class FetchTests(unittest.TestCase):
                               for path in output.rglob("*") if path.is_file()},
                              {"trivy/result.json", "trivy/metadata.json", "provenance.json"})
 
-    def test_report_only_artifact_rejects_invalid_database_identity_and_hidden_cache(self):
+    def test_report_only_artifact_accepts_exact_pinned_producer_layout(self):
         source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
         image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
                  "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
-        for invalid in (None, "", "not-a-hash", "A" * 64, 42, "cache"):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            output = Path(directory) / "scan"
+            fetch_candidate.extract_scan_artifact(
+                protected_scan_artifact(source, image, include_cache=True), output)
+            metadata = fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
+            self.assertEqual(metadata["dbSha256"], hashlib.sha256(b"trivy database").hexdigest())
+
+    def test_report_only_artifact_rejects_database_mismatch_and_unexpected_files(self):
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
+                 "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        for invalid in (None, "", "not-a-hash", "A" * 64, 42, "extra"):
             with self.subTest(invalid=invalid), \
                     tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
                 output = Path(directory) / "scan"
                 fetch_candidate.extract_scan_artifact(protected_scan_artifact(source, image), output)
                 provenance_path = output / "provenance.json"
                 provenance = json.loads(provenance_path.read_text())
-                if invalid == "cache":
-                    path = output / "cache" / "db" / "trivy.db"
+                if invalid == "extra":
+                    path = output / "cache" / "unexpected.txt"
                     path.parent.mkdir(parents=True)
-                    path.write_bytes(b"database")
-                    provenance["files"]["cache/db/trivy.db"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    path.write_bytes(b"unexpected")
+                    provenance["files"]["cache/unexpected.txt"] = hashlib.sha256(path.read_bytes()).hexdigest()
                 else:
                     path = output / "trivy" / "metadata.json"
                     metadata = json.loads(path.read_text())
@@ -100,8 +117,25 @@ class FetchTests(unittest.TestCase):
                 provenance_path.write_text(json.dumps(provenance))
                 with self.assertRaises(ValueError) as failure:
                     fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
-                if invalid == "cache":
-                    self.assertIn("cache/db/trivy.db", str(failure.exception))
+                if invalid == "extra":
+                    self.assertIn("cache/unexpected.txt", str(failure.exception))
+
+    def test_report_only_artifact_binds_published_database_to_metadata(self):
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
+                 "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            output = Path(directory) / "scan"
+            fetch_candidate.extract_scan_artifact(
+                protected_scan_artifact(source, image, include_cache=True), output)
+            database = output / "cache" / "db" / "trivy.db"
+            database.write_bytes(b"tampered database")
+            provenance_path = output / "provenance.json"
+            provenance = json.loads(provenance_path.read_text())
+            provenance["files"]["cache/db/trivy.db"] = hashlib.sha256(database.read_bytes()).hexdigest()
+            provenance_path.write_text(json.dumps(provenance))
+            with self.assertRaisesRegex(ValueError, "database hash does not match metadata"):
+                fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
 
     def test_scan_extraction_keeps_bounded_total_and_rejects_unsafe_members(self):
         for kind in ("total", "entry", "traversal", "symlink", "duplicate"):
