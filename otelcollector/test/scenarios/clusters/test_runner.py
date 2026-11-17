@@ -64,6 +64,27 @@ def pool_parameters():
 
 
 class Contracts(unittest.TestCase):
+    def test_v2_otlp_settings_use_product_literal_section_format(self):
+        fixture = SOURCE.parent / "settings" / "customer-settings-v2" / "settings.yaml"
+        document = runner.yaml.safe_load(runner.enable_otlp_settings(fixture.read_text()))
+        sections = {}
+        current = "prometheus-collector-settings"
+        for line in document["data"]["cluster-metrics"].splitlines():
+            line = line.strip()
+            if line.endswith(": |-"):
+                current = line[:-4]
+                sections.setdefault(current, {})
+            elif "=" in line:
+                key, value = line.split("=", 1)
+                sections.setdefault(current, {})[key.strip()] = value.strip().strip('"')
+        self.assertEqual(sections, {
+            "pod-annotation-based-scraping": {
+                "podannotationnamespaceregex": "^ama-settings-included$"},
+            "default-targets-scrape-interval-settings": {"podannotations": "45s"},
+            "default-targets-metrics-keep-list": {"podannotations": "weather_.*"},
+            "opentelemetry-metrics": {"enabled": "true"},
+        })
+
     def test_ampls_proxy_otlp_settings_preserve_customer_resources_and_other_lanes(self):
         original = {
             "apiVersion": "v1", "kind": "ConfigMap",
@@ -97,7 +118,9 @@ class Contracts(unittest.TestCase):
                     expected["metadata"]["resourceVersion"] = "current"
                     cluster = runner.yaml.safe_load(expected["data"]["cluster-metrics"])
                     cluster["opentelemetry-metrics"] = "enabled = true"
-                    expected["data"]["cluster-metrics"] = runner.yaml.safe_dump(cluster)
+                    expected["data"]["cluster-metrics"] = cluster
+                    actual["data"]["cluster-metrics"] = runner.yaml.safe_load(
+                        actual["data"]["cluster-metrics"])
                 self.assertEqual(actual, expected)
                 self.assertEqual(other, unrelated)
                 self.assertNotIn("opentelemetry-metrics", original["data"])

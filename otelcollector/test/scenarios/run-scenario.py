@@ -977,7 +977,10 @@ def enable_otlp_settings(text):
             if data.get("schema-version") == "v2":
                 cluster = yaml.safe_load(data.get("cluster-metrics", "")) or {}
                 cluster["opentelemetry-metrics"] = "enabled = true"
-                data["cluster-metrics"] = yaml.safe_dump(cluster)
+                # The product parser recognizes only literal section headers ending in ": |-".
+                data["cluster-metrics"] = "\n".join(
+                    f"{name}: |-\n" + "\n".join(f"  {line}" for line in value.splitlines())
+                    for name, value in cluster.items())
             else:
                 data["opentelemetry-metrics"] = "enabled = true"
     return yaml.safe_dump_all(documents)
