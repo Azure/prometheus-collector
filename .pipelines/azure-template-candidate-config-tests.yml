@@ -65,7 +65,7 @@ steps:
     fi
     [[ "$SYSTEM_JOBATTEMPT" =~ ^[1-9][0-9]*$ && "$SYSTEM_STAGEATTEMPT" =~ ^[1-9][0-9]*$ ]] || { echo "Candidate attempt counters are invalid" >&2; exit 1; }
     [[ "$PRODUCER_BUILD_ID" =~ ^[1-9][0-9]*$ && "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Require positive producer build ID and full lowercase source SHA" >&2; exit 1; }
-    [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched regional capacity admission" >&2; exit 1; }
+    [[ "$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA" && "$CAPACITY_BUILD_ID" == "$BUILD_BUILDID" ]] || { echo "Missing or mismatched campaign admission" >&2; exit 1; }
     [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$CAPACITY_TEST_SOURCE_SHA" == "$TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Missing or mismatched test-source admission" >&2; exit 1; }
     case "$CANDIDATE_SCENARIO" in default|acns|acns-cilium|otlp|operator-secret-watch) ;; *) echo "Unsupported candidate scenario" >&2; exit 1 ;; esac
     [[ ! -e "$CANDIDATE_ROOT" && ! -e "$CANDIDATE_EVIDENCE" ]] || { echo "Candidate checkout and evidence must be new" >&2; exit 1; }
@@ -160,7 +160,7 @@ steps:
       [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Service connection must target the approved build subscription" >&2; exit 1; }
       [[ "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
       [[ "$TEST_SOURCE_SHA" == "$CAPACITY_TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Candidate test-source admission mismatch" >&2; exit 1; }
-      [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Regional capacity admission has no approved placement" >&2; exit 1; }
+      [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Campaign admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
         default|acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800 ;;
         *) echo "Unsupported candidate scenario" >&2; exit 1 ;;

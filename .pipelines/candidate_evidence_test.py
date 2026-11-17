@@ -21,7 +21,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load((root / "azure-pipeline-config-tests.yml").read_text())
         capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
         prepare = next(step["bash"] for step in capacity["jobs"][0]["steps"]
-                       if step.get("displayName") == "Prepare exact-source read-only capacity tools")
+                       if step.get("displayName") == "Prepare exact-source read-only admission tools")
         template = yaml.safe_load((root / "azure-template-candidate-config-tests.yml").read_text())
         install = next(step["bash"] for step in template["steps"]
                        if step.get("displayName") == "Install candidate host prerequisites")
@@ -33,16 +33,16 @@ class CandidateEvidenceTest(unittest.TestCase):
                 if "sudo apt-get" in script:
                     self.assertLess(config, script.index("sudo apt-get"))
 
-    def test_capacity_failure_retains_diagnostic_without_admission_claim(self):
+    def test_admission_failure_retains_diagnostic_without_admission_claim(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
         steps = capacity["jobs"][0]["steps"]
         diagnostic = next(step for step in steps
-                          if step.get("displayName") == "Retain capacity job diagnostic even when setup fails")
+                          if step.get("displayName") == "Retain admission job diagnostic even when setup fails")
         self.assertEqual(diagnostic["condition"], "always()")
         publish = next(step for step in steps
                        if step.get("displayName") ==
-                       "Retain point-in-time aggregate capacity admission, not a reservation")
+                       "Retain source-bound campaign admission")
         self.assertLess(steps.index(diagnostic), steps.index(publish))
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory) / "not-created-by-failed-setup"
@@ -51,7 +51,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                                          "AGENT_JOBSTATUS": "Failed"})
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Failed", (evidence / "job-status.txt").read_text())
-            self.assertIn("not capacity admission proof", (evidence / "job-status.txt").read_text())
+            self.assertIn("not campaign admission proof", (evidence / "job-status.txt").read_text())
             self.assertFalse((evidence / "campaign-preflight.json").exists())
             self.assertNotIn("task.setvariable", result.stdout)
 
@@ -568,7 +568,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn(".pipelines/candidate_coverage.py", steps[gate]["bash"])
         self.assertEqual(steps[gate]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
 
-    def test_candidate_scenarios_depend_only_on_aggregate_capacity(self):
+    def test_candidate_scenarios_depend_only_on_campaign_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         expansion = next(stage for stage in pipeline["stages"]
                          if any(key.startswith("${{ each scenario") for key in stage))
@@ -579,7 +579,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'acns', 'otlp'))",
                       next(iter(conditional)))
 
-    def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
+    def test_admission_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         capacity = pipeline["stages"][1]
         task = next(step for step in capacity["jobs"][0]["steps"] if step.get("name") == "admit")
@@ -591,7 +591,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         parser = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         proof = {
             "status": "PASS", "sourceSha": self.sha, "testSourceSha": "c" * 40,
-            "buildId": 4401, "capacityReserved": False,
+            "buildId": 4401,
             "placements": {
                 name: ("eastus2" if name in {"acns", "acns-cilium", "operator-secret-watch"} else "centralus")
                 for name in SCENARIOS
@@ -602,7 +602,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),
                  ("source", {"sourceSha": "b" * 40}, False), ("build", {"buildId": 4402}, False),
                  ("test-source", {"testSourceSha": "d" * 40}, False),
-                 ("missing", {"placements": {}}, False), ("reservation", {"capacityReserved": True}, False),
+                 ("missing", {"placements": {}}, False),
                  ("missing-existing", {"existing": {}}, False),
                  ("unapproved", {"placements": {name: "eastus" for name in SCENARIOS}}, False),
                  ("missing-region", {"regions": {}}, False)]

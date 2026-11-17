@@ -96,14 +96,14 @@ Before provisioning any host in a full campaign, run the read-only aggregate
 admission once against its clean, exact-source checkout:
 
 ```powershell
-python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-capacity
+python otelcollector\test\scenarios\run-scenario.py campaign-preflight --scenario all --build-id 4401 --source-root C:\path\to\candidate-checkout --test-source-sha <test-commit> --evidence C:\temp\ama-campaign-admission
 ```
 
 `--scenario four-lane` retains its compatibility name but selects default, ACNS and
-OTLP without the isolated secret-watch and Cilium rows; it still checks their combined regional peak.
+OTLP without the isolated secret-watch and Cilium rows.
 `--scenario` also accepts one of the five runnable campaign rows. The
 `campaign-preflight.json` success receipt binds `sourceSha`, `testSourceSha` and the supplied
-producer `buildId` to a `placements` map and regional `compute`/`quota` evidence.
+producer `buildId` to a `placements` map, per-row Kubernetes versions and retained-host state.
 The producer ID is a correlation field here; the existing authenticated candidate
 verifier remains mandatory before deployment. `acns` and `acns-cilium` run in `eastus2`;
 `default` and `otlp` run in `centralus`.
@@ -118,21 +118,17 @@ the TestKube namespace's workload-identity pods. DNS requests are inspected with
 a wildcard allow rule; all non-DNS ports remain allowed. Cilium requires this
 policy to emit DNS metrics, as documented in the
 [ACNS metrics prerequisites](https://learn.microsoft.com/azure/aks/container-network-observability-how-to#prerequisites).
-New pools' autoscaler maximum **and** declared surge count toward the simultaneous
-regional and VM-family peak. Verified existing nodes and proxy VMs are already in
-current usage; reuse checks only autoscaler growth above the pool minimum,
-not upgrade surge. When no additional nodes are needed, SKU/quota calls are skipped.
-Automatic cluster upgrades remain enabled; this foreground test admission does not
-reserve or guarantee headroom for future background upgrades.
+There is no capacity admission: preflight makes no SKU availability or regional/VM-family
+quota queries, including for new clusters and autoscaler growth. Provisioning or scale-out
+can fail if Azure lacks capacity or quota. Automatic cluster upgrades remain enabled.
 An admitted existing host that disappears fails closed rather than being recreated
 without admission.
 
 The pipeline must require successful admission and use its per-row location
-outputs. Failure emits no success receipt. This is a point-in-time check, not a
-quota/capacity reservation: other workloads can consume quota afterward. Existing
-per-row version/ownership checks still run; SKU/quota checks run only for additional
-capacity. Do not repeat full-campaign admission after creating its hosts and count those hosts
-twice, lower pool/surge limits, or delete retained hosts to fit quota.
+outputs. Failure emits no success receipt. Source/build bindings, per-row
+version/ownership checks, exclusive fixture locks and retention protections remain
+mandatory. The legacy `CandidateCapacity` stage and `candidate-capacity` artifact
+names remain compatible identifiers; neither represents capacity validation.
 
 ## Candidate receipt and execution
 
@@ -335,11 +331,8 @@ pinning older Kubernetes or opting into LTS/preview.
 
 Preflight compiles the chosen parameters and uses their literal `nodePools`
 inventory, including explicit `maxSurge`, not a duplicate topology in Python.
-It checks each exact SKU's regional subscription restrictions, advertised CPU
-architecture, regional/family vCPU quota at autoscaler maximum **plus surge**, and
-the separately declared proxy VM count for new hosts. Retained hosts require only
-autoscaler growth headroom; reuse without growth makes no SKU/quota calls.
-Capacity is checked, not reserved.
+It validates platform/features, positive counts and Kubernetes/Windows compatibility,
+but does not perform capacity or quota admission.
 Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.

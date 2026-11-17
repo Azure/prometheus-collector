@@ -239,8 +239,8 @@ provisioning. The push-receipt and candidate-build validators accept both SRE
 branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
 `sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
 and raw scan log; its other console scans remain report-only. CandidateCapacity
-validates those exact receipts and the frozen DB, then checks aggregate
-regional capacity before admitting lanes. CandidateScan reuses the candidate
+validates those exact receipts and the frozen DB, then verifies source-bound
+placements and retained-host state before admitting lanes. CandidateScan reuses the candidate
 findings and scans only the released baseline with the producer's scanner
 version, frozen DB and canonical configuration, then compares all findings
 once. Its FAIL/BLOCKED result does not skip functional lanes, but its failed
@@ -265,17 +265,18 @@ manually queued 979 candidate run can instead supply `candidateBuildId`,
 resource group and publish its inventory; the pipeline removes its local kubeconfig
 but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
 `default`, `linux`, `settings`, `mixed`, `autoscaler`, `uai`,
-`cilium` and `kubenet` in parallel stages after the aggregate capacity gate,
+`cilium` and `kubenet` in parallel stages after campaign admission,
 even if an earlier row fails. Each row
 has its own UUID, checkout, evidence, retained resource group and bootstrap
 artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
 in the approved build subscription. A named selector runs just that row.
 Before any provisioning, a read-only admission stage compiles the selected rows
-and checks each region's total simultaneous max-count-plus-surge against live
-regional and VM-family quotas, SKU restrictions and the stable Kubernetes version.
+and checks pool/version compatibility, source bindings and retained fixture ownership.
 Every row requires that stage's successful, source/build-bound placement output,
 and still performs its existing live per-row preflight.
-Admission is a point-in-time check, not a capacity reservation. Retention and
+No capacity or quota admission runs, including for new hosts and autoscaler growth;
+Azure provisioning or scale-out can fail if capacity or quota is insufficient.
+`CandidateCapacity` remains the stage's compatibility identifier. Retention and
 auto-upgrade channels remain unchanged; serial test stages do not serialize
 later retained-cluster upgrades.
 After a successful

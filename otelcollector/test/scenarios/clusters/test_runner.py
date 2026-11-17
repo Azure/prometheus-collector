@@ -376,7 +376,7 @@ class Contracts(unittest.TestCase):
         template = (runner.REPO / ".pipelines/azure-template-candidate-config-tests.yml").read_text(
             encoding="utf-8")
         guard = next(line for line in template.splitlines()
-                     if "Regional capacity admission has no approved placement" in line)
+                     if "Campaign admission has no approved placement" in line)
         allowed = {clause.rsplit("==", 1)[1].strip()
                    for clause in guard.split("]]", 1)[0].split("||") if "==" in clause}
         self.assertEqual(allowed, {"centralus", "eastus2", "westcentralus"})
@@ -398,19 +398,8 @@ class Contracts(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "scenarioId"):
                     runner.compiled_parameters(args, row, commands, "1.37.1")
 
-    def test_campaign_admission_checks_only_new_capacity_by_region(self):
+    def test_campaign_admission_preserves_source_and_placement_without_capacity_checks(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
-        skus = [
-            {"name": name, "family": family, "locations": ["centralus", "eastus2", "westcentralus"],
-             "capabilities": [{"name": "CpuArchitectureType", "value": architecture},
-                              {"name": "vCPUs", "value": "4"}], "restrictions": []}
-            for name, family, architecture in (
-                ("Standard_D4s_v4", "standardDSv4Family", "x64"),
-                ("Standard_D4ps_v5", "standardDPSv5Family", "arm64"))
-        ]
-        usage = [{"name": {"value": name}, "currentValue": 0, "limit": limit}
-                 for name, limit in (("cores", 300), ("standardDSv4Family", 100),
-                                     ("standardDPSv5Family", 100))]
 
         def compiled(args, row, commands, version):
             parameters = pool_parameters()
@@ -418,12 +407,9 @@ class Contracts(unittest.TestCase):
                 parameters["nodePools"] = parameters["nodePools"][:1]
             if row["id"] == "default":
                 parameters["nodePools"].extend([
-                    dict(parameters["nodePools"][0], name=str(index), fips=True)
-                    for index in range(5)])
-                parameters["nodePools"].extend([
-                    dict(parameters["nodePools"][0], name="arm" + str(index),
-                         architecture="arm64", vmSize="Standard_D4ps_v5")
-                    for index in range(3)])
+                    dict(parameters["nodePools"][0], name="fips", fips=True),
+                    dict(parameters["nodePools"][0], name="arm",
+                         architecture="arm64", vmSize="Standard_D4ps_v5")])
             return parameters
 
         def command(args, **kwargs):
@@ -435,10 +421,6 @@ class Contracts(unittest.TestCase):
                     {"isPreview": None, "capabilities": {"supportPlan": ["KubernetesOfficial"]},
                      "patchVersions": {"1.37.0": {}, "1.37.1": {}}},
                 ]}
-            if args[:3] == ["az", "vm", "list-skus"]:
-                return copy.deepcopy(skus)
-            if args[:3] == ["az", "vm", "list-usage"]:
-                return copy.deepcopy(usage)
             raise AssertionError(f"Unexpected or mutating command: {args}")
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -462,7 +444,6 @@ class Contracts(unittest.TestCase):
                 self.assertEqual(result["testSourceSha"], "b" * 40)
                 self.assertEqual(result["buildId"], 4401)
                 self.assertEqual(len(result["placements"]), 5)
-                self.assertFalse(result["capacityReserved"])
                 self.assertEqual(result["placements"]["default"], "centralus")
                 self.assertEqual(result["placements"]["acns"], "eastus2")
                 self.assertEqual(result["placements"]["otlp"], "centralus")
@@ -474,15 +455,6 @@ class Contracts(unittest.TestCase):
                     (runner.REPO / ".pipelines/azure-pipeline-config-tests.yml")
                     .read_text(encoding="utf-8").count(
                         'region not in ("centralus", "eastus2", "westcentralus")'), 1)
-                expected = {"centralus": (64, 88), "eastus2": (32, 32)}
-                for location, demand in expected.items():
-                    quota = {row["name"]: row["additional"]
-                             for row in result["regions"][location]["quota"]}
-                    self.assertEqual((quota["standarddsv4family"], quota["cores"]), demand)
-                self.assertEqual(
-                    {row["name"]: row["additional"]
-                     for row in result["regions"]["centralus"]["quota"]}
-                    ["standarddpsv5family"], 24)
                 args.evidence = Path(temporary) / "four-lane"
                 args.scenario = "four-lane"
                 four = runner.campaign_preflight(args, matrix, commands)
@@ -495,31 +467,15 @@ class Contracts(unittest.TestCase):
                                   side_effect=lambda host, env, pools: {"clusterName": "existing"}
                                   if host.scenario["id"] == "default" else None):
                     reused = runner.campaign_preflight(args, matrix, commands)
-                quota = {row["name"]: row["additional"] for row in reused["regions"]["centralus"]["quota"]}
-                self.assertEqual(quota, {"cores": 8, "standarddsv4family": 8})
                 self.assertTrue(reused["existing"]["default"])
                 args.evidence = Path(temporary) / "all-existing"
-                commands.run.reset_mock()
                 with patch.object(runner.Host, "persistent_state", return_value={"clusterName": "existing"}):
                     retained = runner.campaign_preflight(args, matrix, commands)
                 self.assertTrue(all(retained["existing"].values()))
-                self.assertTrue(all(region["compute"] == [] and region["quota"] == []
-                                    for region in retained["regions"].values()))
-                self.assertFalse(any(call.args[0][:2] == ["az", "vm"]
-                                     for call in commands.run.call_args_list))
                 args.evidence = Path(temporary)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
                 (args.evidence / "campaign-preflight.json").unlink()
-                for row in usage:
-                    row["limit"] = 100
-                with patch.object(runner, "CAMPAIGN_LOCATIONS",
-                                  dict.fromkeys(result["placements"], "eastus2")):
-                    with self.assertRaisesRegex(ValueError, "quota"):
-                        runner.campaign_preflight(args, matrix, commands)
-                self.assertFalse((args.evidence / "campaign-preflight.json").exists())
-                for row in usage:
-                    row["limit"] = 300
                 args.scenario = "default"
                 selected = runner.campaign_preflight(args, matrix, commands)
                 self.assertEqual(selected["placements"], {"default": "centralus"})
@@ -654,8 +610,7 @@ class Contracts(unittest.TestCase):
                 if selected["platforms"] == ["linux"]:
                     parameters["nodePools"] = parameters["nodePools"][:1]
                 with patch.object(runner, "compiled_parameters", return_value=parameters) as compiled, \
-                        patch.object(runner.Host, "persistent_state", return_value=None), \
-                        patch.object(runner, "regional_capacity", return_value={}):
+                        patch.object(runner.Host, "persistent_state", return_value=None):
                     result = runner.preflight(args, selected, commands)
                 self.assertEqual(result["kubernetesVersion"], expected)
                 self.assertEqual(compiled.call_args.args[-1], expected)
@@ -670,69 +625,44 @@ class Contracts(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Unsupported scenario"):
                     runner.preflight(args, row, commands)
 
-    def test_capacity_includes_autoscaler_surge_and_explicit_proxy_count(self):
+    def test_compiled_pool_parameters_reject_invalid_counts_and_incompatible_windows(self):
         parameters = pool_parameters()
         parameters["nodePools"][0].update(autoscaling=True, maxCount=3)
         parameters.update(proxyEnabled=True, proxyVmSize="Standard_D2s_v4", proxyVmCount=1)
-        plan = runner.capacity_plan(parameters, scenario(), "1.36.5")
-        self.assertEqual((plan[0]["nodes"], plan[0]["surge"]), (3, 1))
-        self.assertEqual((plan[-1]["name"], plan[-1]["nodes"], plan[-1]["surge"]), ("proxy", 1, 0))
-        retained = runner.capacity_plan(parameters, scenario(), "1.36.5", existing=True)
-        self.assertEqual([(pool["nodes"], pool["surge"]) for pool in retained],
-                         [(2, 0), (0, 0), (0, 0)])
+        runner.verify_pool_parameters(parameters, scenario(), "1.36.5")
         for field, invalid in (("maxSurge", "0"), ("maxCount", 0)):
             broken = copy.deepcopy(parameters)
             broken["nodePools"][0][field] = invalid
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "positive"):
-                runner.capacity_plan(broken, scenario(), "1.36.5")
+                runner.verify_pool_parameters(broken, scenario(), "1.36.5")
         with self.assertRaisesRegex(ValueError, "Windows2022 unsupported"):
-            runner.capacity_plan(parameters, scenario(), "1.37.1")
+            runner.verify_pool_parameters(parameters, scenario(), "1.37.1")
 
-    def test_capacity_rejects_restricted_architecture_and_quota_before_provisioning(self):
-        plan = runner.capacity_plan(pool_parameters(), scenario(), "1.36.5")
-        skus = [{"name": "Standard_D4s_v4", "family": "standardDSv4Family", "locations": ["eastus2"],
-                 "capabilities": [{"name": "CpuArchitectureType", "value": "x64"},
-                                  {"name": "vCPUs", "value": "4"}], "restrictions": []}]
-        usage = [{"name": {"value": name}, "currentValue": 0, "limit": 64}
-                 for name in ("cores", "standardDSv4Family")]
-        result = runner.verify_capacity(plan, skus, usage, "eastus2")
-        self.assertEqual(result["quota"][0]["additional"], 16)
-        self.assertFalse(result["capacityReserved"])
-        usage = [{**row, "currentValue": str(row["currentValue"]), "limit": str(row["limit"])} for row in usage]
-        self.assertEqual(runner.verify_capacity(plan, skus, usage, "eastus2")["quota"], result["quota"])
-        parameters = pool_parameters()
-        parameters["nodePools"][0].update(autoscaling=True, count=2, maxCount=3)
-        retained = runner.capacity_plan(parameters, scenario(), "1.36.5", existing=True)
-        self.assertEqual(runner.verify_capacity(retained, skus, usage, "eastus2")["quota"][0]["additional"], 8)
-        with self.assertRaisesRegex(ValueError, "quota"):
-            runner.verify_capacity(retained, skus, [{**row, "currentValue": 60} for row in usage], "eastus2")
-        skus[0]["restrictions"] = [{"type": "Location", "values": ["eastus2"]}]
-        with self.assertRaisesRegex(ValueError, "subscription restriction"):
-            runner.verify_capacity(plan, skus, usage, "eastus2")
-        skus[0]["restrictions"] = []
-        plan[0]["architecture"] = "arm64"
-        with self.assertRaisesRegex(ValueError, "architecture mismatch"):
-            runner.verify_capacity(plan, skus, usage, "eastus2")
-        plan[0]["architecture"] = "amd64"
-        usage[1]["limit"] = 15
-        with self.assertRaisesRegex(ValueError, "quota"):
-            runner.verify_capacity(plan, skus, usage, "eastus2")
-
-    def test_retained_preflight_skips_capacity_calls_but_rejects_disappeared_host(self):
+    def test_preflight_never_checks_capacity_but_rejects_disappeared_host(self):
         with tempfile.TemporaryDirectory() as temporary:
             args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION, location="eastus2",
                                          evidence=Path(temporary), admitted_existing=True)
             commands = Mock()
-            commands.run.return_value = {"values": [
-                {"isDefault": True, "patchVersions": {"1.36.5": {}}},
-            ]}
-            with patch.object(runner, "compiled_parameters", return_value=pool_parameters()), \
+
+            def command(args, **kwargs):
+                self.assertEqual(args[:3], ["az", "aks", "get-versions"])
+                return {"values": [{"isDefault": True, "patchVersions": {"1.36.5": {}}}]}
+
+            commands.run.side_effect = command
+            parameters = pool_parameters()
+            with patch.object(runner, "compiled_parameters", return_value=parameters), \
                     patch.object(runner.Host, "persistent_state", return_value={"clusterName": "existing"}) as state:
-                result = runner.preflight(args, scenario(), commands)
-                self.assertTrue(result["existing"])
-                self.assertEqual(result["compute"], [])
-                self.assertEqual(result["quota"], [])
-                self.assertEqual(commands.run.call_count, 1)
+                for existing in (False, True):
+                    for autoscaling in (False, True):
+                        with self.subTest(existing=existing, autoscaling=autoscaling):
+                            args.admitted_existing = existing
+                            state.return_value = {"clusterName": "existing"} if existing else None
+                            parameters["nodePools"][0].update(autoscaling=autoscaling,
+                                                             maxCount=3 if autoscaling else 1)
+                            commands.run.reset_mock()
+                            result = runner.preflight(args, scenario(), commands)
+                            self.assertEqual(result["existing"], existing)
+                            self.assertEqual(commands.run.call_count, 1)
                 state.return_value = None
                 with self.assertRaisesRegex(ValueError, "disappeared"):
                     runner.preflight(args, scenario(), commands)
@@ -2330,13 +2260,7 @@ def mutations():
         "producer-index": ('image["manifestRef"] = image["indexRef"]', "pass"),
         "fixture-namespace": ('if kind == "Namespace" and output.strip():', "if False:"),
         "override-authorization": ("if type(override) is not bool:", "if False:"),
-        "sku-quota": ("current + cores > limit", "False"),
         "campaign-region-split": ('"default": "centralus",', '"default": "eastus2",'),
-        "campaign-aggregate": ('regional_capacity(regional, capacity, commands)',
-                               'regional_capacity(regional, capacity[:1], commands)'),
-        "quota-numeric-strings": ('int(str(row["currentValue"]))', 'row["currentValue"]'),
-        "sku-architecture": ('entry["architecture"] != architecture', "False"),
-        "sku-restrictions": ('restriction["type"] == "Location"', "False"),
         "explicit-surge": ('or not re.fullmatch(r"[1-9][0-9]*", surge)', "or False"),
         "pool-properties": ('any(row.get(key) != value for key, value in fields.items())', "False"),
         "pool-node-presence": ('not minimum <= len(members) <= maximum', "False"),
