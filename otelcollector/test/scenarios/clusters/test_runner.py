@@ -167,8 +167,8 @@ class Contracts(unittest.TestCase):
                     return ""
                 if args[0] == "exec" and any("curl --noproxy" in str(arg) for arg in args):
                     return "curl: (60) SSL certificate problem: self-signed certificate\nCURL_EXIT_CODE=60"
-                if args[0] == "exec" and "trust anchor --remove" in str(args):
-                    return ""
+                if args[0] == "exec" and "update-ca-trust" in str(args):
+                    return "PROXY_CA_TRUST_RESET_PASS"
                 if args[-2:] in (("cat", "/usr/sbin/me.config"), ("cat", "/usr/sbin/me_ds.config")):
                     return '{"proxyDefinitionMode":1,"validateCertificates":2}'
                 if args[0] == "logs":
@@ -225,18 +225,22 @@ class Contracts(unittest.TestCase):
                 trust_reset = next(
                     index for index, call in enumerate(calls)
                     if call.args[:2] == ("exec", pod)
-                    and "trust anchor --remove" in str(call.args))
+                    and "update-ca-trust" in str(call.args))
                 curl_probe = next(
                     index for index, call in enumerate(calls)
                     if call.args[:2] == ("exec", pod)
                     and any("curl --noproxy" in str(arg) for arg in call.args))
                 reset_command = next(arg for arg in calls[trust_reset].args
-                                     if "trust anchor --remove" in str(arg))
+                                     if "update-ca-trust" in str(arg))
                 self.assertLess(trust_reset, curl_probe)
+                self.assertTrue(reset_command.startswith("set -e;"))
                 self.assertIn(f"rm -f -- {trust_anchor}", reset_command)
+                self.assertNotIn("trust anchor --remove", reset_command)
                 self.assertIn("trust list --filter=ca-anchors", reset_command)
+                self.assertIn("PROXY_CA_ANCHOR_REMAINS", reset_command)
                 self.assertIn("PROXY_CA_STILL_TRUSTED", reset_command)
-                self.assertEqual(calls[trust_reset].args[-1], outputs["proxyTrustedCa"])
+                self.assertIn("PROXY_CA_TRUST_RESET_PASS", reset_command)
+                self.assertEqual(calls[trust_reset].args[-1], "scenario-ca-trust-reset")
                 command = next(arg for arg in calls[curl_probe].args
                                if "curl --noproxy" in str(arg))
                 self.assertIn('--proxy "$1"', command)

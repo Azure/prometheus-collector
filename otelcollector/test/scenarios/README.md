@@ -249,8 +249,8 @@ package`); other candidate findings remain `OPEN`.
 The custom-CA lane removes only its owned `/anchors/proxy` mount and restarts the
 collectors, retaining the distro trust anchors. Since product startup copies that
 Secret into `/etc/pki/ca-trust/source/anchors/proxy-cert.crt`, the negative phase
-removes that exact CA from the collector trust store, runs `update-ca-trust`, and
-verifies it is absent from `trust list` before probing against
+removes that copied anchor file, regenerates distro trust with `update-ca-trust`,
+and verifies the file and anchor are absent before probing against
 `/etc/pki/tls/certs/ca-bundle.crt` through the owned proxy endpoint. It requires
 fresh successful scraping, curl exit 60, a matching DCE-specific MetricsExtension
 SSL-handshake error, and independent authenticated AMW queries with no samples
@@ -261,14 +261,18 @@ MetricsExtension uses file logging rather than container stdout. It restores and
 reads back the original mounts even after failure. Successful negative proof must
 then be followed by fresh ingestion after recovery.
 
+Custom-CA build 132521 (producer 132516, product source `fe28fdfc`, test source
+`d4d4fb66`) passed all nine selected JUnit suites and the trusted proxy/ingestion
+proof, but `trust anchor --remove` failed because p11-kit could not remove a
+read-only certificate. The negative curl and recovery phases did not run. The
+adapter now removes the exact copied anchor file directly; live validation is
+still required before removing the lane blocker.
+
 Custom-CA build 132495 (producer 131983, product source `d34c33d1`, test source
 `61394955`) passed all nine selected JUnit suites and the trusted proxy/ingestion
 proof, but failed because the negative curl still returned 0 after the mount was
 removed. A read-only probe against the retained Squid VM confirmed the DCE
-hostname is TLS-bumped and requires its generated CA. The harness now removes
-the exact generated certificate from the trust store and checks its absence;
-this change still needs live pipeline validation before the lane blocker can be
-removed.
+hostname is TLS-bumped and requires its generated CA.
 TLS interception is limited to AMW ingestion; public registry and test-source
 connections retain their public certificates so the harness can initialize.
 Its deployment first prepares the retained proxy, then reads only the public CA

@@ -88,9 +88,6 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
     proxy_endpoint = outputs.get("proxyEndpoint")
     if not proxy_endpoint:
         raise RuntimeError("CA negative probe requires the owned proxy endpoint")
-    proxy_ca = outputs.get("proxyTrustedCa")
-    if not proxy_ca:
-        raise RuntimeError("CA negative probe requires the owned proxy CA certificate")
     query = outputs["queryEndpoint"].rstrip("/") + "/api/v1/query?" + urlencode({
         "query": f'myapp_temperature{{scenario_run="{marker}"}}',
     })
@@ -126,18 +123,15 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
                    for mount in collector.get("volumeMounts", [])):
                 raise RuntimeError("Collector still mounts the owned proxy CA during distrust")
             reset_trust = (
-                'set -e; ca_file=$(mktemp); trap \'rm -f -- "$ca_file"\' EXIT; '
-                'printf "%s" "$1" | base64 -d > "$ca_file"; '
+                f'set -e; rm -f -- {trust_anchor}; update-ca-trust; '
+                f'if [ -e {trust_anchor} ]; then echo PROXY_CA_ANCHOR_REMAINS; exit 1; fi; '
                 'anchors=$(trust list --filter=ca-anchors); '
                 'if printf "%s\\n" "$anchors" | grep -Fq "Retained AKS scenario proxy CA"; then '
-                'trust anchor --remove "$ca_file"; fi; '
-                f'rm -f -- {trust_anchor}; update-ca-trust; '
-                'anchors=$(trust list --filter=ca-anchors); '
-                'if printf "%s\\n" "$anchors" | grep -Fq "Retained AKS scenario proxy CA"; then '
-                'echo PROXY_CA_STILL_TRUSTED; exit 1; fi')
+                'echo PROXY_CA_STILL_TRUSTED; exit 1; fi; '
+                'echo PROXY_CA_TRUST_RESET_PASS')
             host.kube(
                 "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
-                "--", "sh", "-c", reset_trust, "scenario-ca-trust-reset", proxy_ca)
+                "--", "sh", "-c", reset_trust, "scenario-ca-trust-reset")
             result = host.kube(
                 "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
                 "--", "sh", "-c",
