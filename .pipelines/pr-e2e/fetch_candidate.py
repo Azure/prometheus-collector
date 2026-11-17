@@ -135,7 +135,13 @@ def validate_scan_artifact(directory, receipt):
         if path.is_file() and path.name != "provenance.json":
             actual.add(path.relative_to(directory).as_posix())
     if actual != set(files) or actual != {"trivy/result.json", "trivy/metadata.json"}:
-        raise ValueError("Collector scan files do not match the protected provenance")
+        details = {
+            "actualCount": len(actual), "declaredCount": len(files),
+            "actualPaths": sorted(path[:200] for path in actual)[:20],
+            "declaredPaths": sorted(path[:200] for path in files)[:20],
+        }
+        raise ValueError("Collector scan files do not match the protected provenance: "
+                         + json.dumps(details, ensure_ascii=True))
     for name, digest in files.items():
         relative = PurePosixPath(name)
         if (not name or "\\" in name or relative.is_absolute()

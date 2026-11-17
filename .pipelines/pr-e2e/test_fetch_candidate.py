@@ -98,8 +98,10 @@ class FetchTests(unittest.TestCase):
                     path.write_text(json.dumps(metadata))
                     provenance["files"]["trivy/metadata.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
                 provenance_path.write_text(json.dumps(provenance))
-                with self.assertRaises(ValueError):
+                with self.assertRaises(ValueError) as failure:
                     fetch_candidate.validate_scan_artifact(output, {"source": source, "images": [image]})
+                if invalid == "cache":
+                    self.assertIn("cache/db/trivy.db", str(failure.exception))
 
     def test_scan_extraction_keeps_bounded_total_and_rejects_unsafe_members(self):
         for kind in ("total", "entry", "traversal", "symlink", "duplicate"):
