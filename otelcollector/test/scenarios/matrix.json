@@ -84,7 +84,7 @@
       "id": "acns",
       "cluster": "clusters/acns.bicepparam",
       "clusterFeatures": ["aks", "windows", "managed-acns", "workload-identity", "operator"],
-      "settingsVariants": ["*"],
+      "settingsVariants": [],
       "platforms": ["linux", "windows"],
       "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns", "network-profile", "mip-enabled"],
       "tier": "weekly"

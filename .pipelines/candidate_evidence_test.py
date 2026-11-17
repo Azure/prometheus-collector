@@ -485,7 +485,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertNotIn("blockedReason", rows["acns"])
         self.assertIn("managed-acns", rows["acns"]["ginkgoLabels"])
         self.assertTrue({"network-profile", "mip-enabled"} <= set(rows["acns"]["ginkgoLabels"]))
-        self.assertEqual(rows["acns"]["settingsVariants"], ["*"])
+        self.assertEqual(rows["acns"]["settingsVariants"], [])
         self.assertEqual(rows["otlp"]["settingsVariants"], ["*"])
         self.assertEqual(rows["otlp"]["platforms"], ["linux"])
         self.assertEqual(set(rows["operator-secret-watch"]["settingsVariants"]), {

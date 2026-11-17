@@ -534,20 +534,22 @@ class Contracts(unittest.TestCase):
         self.assertEqual(len(checked["scenarios"]), 1)
         self.assertEqual(checked["scenarios"][0]["settingsVariants"], ["linux", "windows"])
 
-    def test_all_compatible_settings_expand_for_every_runnable_profile(self):
+    def test_candidate_settings_selection(self):
         variants = runner.catalog(runner.ROOT / "settings")
         document = runner.validate_matrix(runner.load(runner.ROOT / "matrix.json"), variants)
         rows = {row["id"]: row for row in document["scenarios"]}
-        for scenario_id in ("default", "acns", "otlp"):
+        for scenario_id in ("default", "otlp"):
             row = rows[scenario_id]
             self.assertEqual(row["settingsVariants"], ["*"])
-            if scenario_id != "otlp":
-                self.assertNotIn("mip-enabled", runner.label_filter(row))
             selected = runner.scenario_settings(row, variants)
             expected = [name for name, item in variants.items()
                         if runner.compatible(row, item) and not item.get("helmValues")
                         and not item.get("addonParams")]
             self.assertEqual(selected, expected)
+        self.assertNotIn("mip-enabled", runner.label_filter(rows["default"]))
+        self.assertEqual(len(runner.scenario_settings(rows["default"], variants)), 36)
+        self.assertEqual(runner.scenario_settings(rows["acns"], variants), [])
+        self.assertIn("managed-acns", runner.label_filter(rows["acns"]))
         self.assertIn("collector-controls", runner.scenario_settings(rows["default"], variants))
         self.assertNotIn("empty-secret-namespaces-v1",
                          runner.scenario_settings(rows["default"], variants))

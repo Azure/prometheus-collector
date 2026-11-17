@@ -343,11 +343,12 @@ Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.
 
-The runnable candidate matrix has five rows. Four rows use `settingsVariants: ["*"]` to
+The runnable candidate matrix has five rows. `default` and `otlp` use `settingsVariants: ["*"]` to
 select every catalog variant compatible with its declared cluster features and
 platforms. The mixed `default` profile runs all 36 supported variants and the
 FIPS/ARM64 scheduling assertions; the duplicate settings-only cluster is removed.
-Classic CNI and managed non-Cilium ACNS also run all 36 compatible variants.
+Managed non-Cilium ACNS runs the common TestKube workflows with its managed-ACNS
+`querymetrics` checks, without any settings variants.
 The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
 shared metric assertions remain, but the autoscaler scale-up spec is no longer
 selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
@@ -372,7 +373,7 @@ rendered KSM arguments alone are not coverage.
 | Row | Executable assertions | Boundary |
 |---|---|---|
 | `default` | All 36 compatible settings variants; FIPS/ARM64 scheduling; common health, fresh Linux/Windows kubelet ingestion and node network-counter increases after DNS/service traffic. | Mixed-pool inventory alone is not proof; labeled scheduling and traffic assertions provide behavior evidence. |
-| `acns` | All 36 compatible settings variants; `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
+| `acns` | Common TestKube workflows; no settings variants. `querymetrics` requires healthy managed Retina/Hubble scrape targets, fresh `networkobservability_forward_bytes` from every Linux collector node, a positive five-minute increase after generated DNS requests, and fresh Linux `hubble_dns_queries_total` with source/destination pod labels and a positive increase. | This verifies managed non-Cilium basic node and advanced Linux pod-level ingestion; the standalone Retina Helm release is not used. |
 | `acns-cilium` | Customer-settings v1/v2; independently verified managed ACNS/Cilium, fresh per-node `cilium_forward_bytes_total` and pod-level `hubble_dns_queries_total`, and positive traffic increases after controlled DNS/HTTP requests in both slots. | Retained Linux-only Cilium cluster; the real deletion lock and owned DCR association remain intact. |
 | `otlp` | All compatible settings variants; candidate chart enables the node OTLP receiver, an owned DCR routes OTLP metrics to AMW, and TestKube sends a run-unique metric and queries it from AMW. | Linux-only OTLP/HTTP POC; gRPC and delta-temporality behavior are not asserted, and live candidate execution remains required. |
 | `operator-secret-watch` | Four empty/omitted v1/v2 inputs keep secret-backed ServiceMonitor and PodMonitor credentials unchanged after a secret update, then verify updates when the namespace is allowlisted. SubjectAccessReview confirms the fixture grants secret get/list/watch. | The allowlist scopes watches, not direct secret GETs. Requires Kubernetes 1.37 and real passing TestKube cases; unsupported/skipped is not coverage. No live candidate result is recorded. |
