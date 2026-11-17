@@ -247,19 +247,20 @@ separately at the Trivy comparison and global coverage gate. The
 package`); other candidate findings remain `OPEN`.
 
 The custom-CA lane temporarily removes its owned `/anchors/proxy` Secret mount and
-the AKS node-anchor mount at `/anchors/mariner`, then restarts the collectors.
-AKS also installs `httpProxyConfig.trustedCa` in the node trust store, which the
-collector copies at startup. The negative phase removes the copied anchor,
-regenerates distro trust with `update-ca-trust`, and verifies the file and anchor
-are absent before probing against `/etc/pki/tls/certs/ca-bundle.crt` through the
-owned proxy endpoint. It requires fresh successful scraping, curl exit 60, a
-matching DCE-specific MetricsExtension SSL-handshake error, and independent
-authenticated AMW queries with no samples for a new negative-phase marker. Curl
-stderr and its numeric exit result are retained in build evidence. MetricsExtension
-errors are read privately from `/MetricsExtensionConsoleDebugLog.log`; it uses
-file logging rather than container stdout. The adapter restores and reads back
-the original mounts even after failure. Successful negative proof must then be
-followed by fresh ingestion after recovery.
+the AKS node-anchor mounts at `/anchors/mariner` and `/anchors/ubuntu`, then
+restarts the collectors. AKS also installs `httpProxyConfig.trustedCa` in the
+node trust store, which product startup copies from those mounts. The negative
+phase removes the copied anchor, regenerates distro trust with `update-ca-trust`,
+and verifies the file and anchor are absent before probing against
+`/etc/pki/tls/certs/ca-bundle.crt` through the owned proxy endpoint. It requires
+fresh successful scraping, curl exit 60, a matching DCE-specific MetricsExtension
+SSL-handshake error, and independent authenticated AMW queries with no samples
+for a new negative-phase marker. Curl stderr and its numeric exit result are
+retained in build evidence. MetricsExtension errors are read privately from
+`/MetricsExtensionConsoleDebugLog.log`; it uses file logging rather than
+container stdout. The adapter restores and reads back the original mounts even
+after failure. Successful negative proof must then be followed by fresh
+ingestion after recovery.
 
 Custom-CA build 132521 (producer 132516, product source `fe28fdfc`, test source
 `d4d4fb66`) passed all nine selected JUnit suites and the trusted proxy/ingestion
@@ -272,6 +273,14 @@ Custom-CA build 132536 (producer 132516, product source `fe28fdfc`, test source
 proof, but `trust list` still reported the CA after the copied file was removed.
 The node's Mariner trust anchors are also mounted at `/anchors/mariner` and copied
 by product startup, so the negative phase now removes that source mount as well.
+The negative curl, ingestion absence, and recovery remain unverified; keep the
+matrix blocker until a live run proves them.
+
+Custom-CA build 132547 (producer 132516, product source `fe28fdfc`, test source
+`997d1579`) passed all nine selected JUnit suites and the trusted proxy/ingestion
+proof, but `trust list` still reported the CA after the copied file was removed
+and `/anchors/mariner` was excluded. The `/anchors/ubuntu` host trust mount
+remained present, so the negative phase now excludes both node-anchor mounts.
 The negative curl, ingestion absence, and recovery remain unverified; keep the
 matrix blocker until a live run proves them.
 

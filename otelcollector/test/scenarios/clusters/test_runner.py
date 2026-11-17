@@ -219,7 +219,7 @@ class Contracts(unittest.TestCase):
                 names = {mount["name"] for mount in mounts}
                 self.assertNotIn("scenario-proxy-ca", names)
                 self.assertNotIn("anchors-mariner", names)
-                self.assertIn("anchors-ubuntu", names)
+                self.assertNotIn("anchors-ubuntu", names)
             calls = host.kube.call_args_list
             for pod in ("collector-replica", "collector-node"):
                 trust_reset = next(
