@@ -398,7 +398,7 @@ class Contracts(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "scenarioId"):
                     runner.compiled_parameters(args, row, commands, "1.37.1")
 
-    def test_campaign_admission_sums_retained_maximum_and_surge_by_region(self):
+    def test_campaign_admission_checks_only_new_capacity_by_region(self):
         matrix = runner.load(SOURCE.parent / "matrix.json")
         skus = [
             {"name": name, "family": family, "locations": ["centralus", "eastus2", "westcentralus"],
@@ -496,9 +496,17 @@ class Contracts(unittest.TestCase):
                                   if host.scenario["id"] == "default" else None):
                     reused = runner.campaign_preflight(args, matrix, commands)
                 quota = {row["name"]: row["additional"] for row in reused["regions"]["centralus"]["quota"]}
-                self.assertEqual((quota["cores"], quota["standarddsv4family"], quota["standarddpsv5family"]),
-                                 (48, 36, 12))
+                self.assertEqual(quota, {"cores": 8, "standarddsv4family": 8})
                 self.assertTrue(reused["existing"]["default"])
+                args.evidence = Path(temporary) / "all-existing"
+                commands.run.reset_mock()
+                with patch.object(runner.Host, "persistent_state", return_value={"clusterName": "existing"}):
+                    retained = runner.campaign_preflight(args, matrix, commands)
+                self.assertTrue(all(retained["existing"].values()))
+                self.assertTrue(all(region["compute"] == [] and region["quota"] == []
+                                    for region in retained["regions"].values()))
+                self.assertFalse(any(call.args[0][:2] == ["az", "vm"]
+                                     for call in commands.run.call_args_list))
                 args.evidence = Path(temporary)
                 with self.assertRaisesRegex(ValueError, "new evidence"):
                     runner.campaign_preflight(args, matrix, commands)
@@ -669,6 +677,9 @@ class Contracts(unittest.TestCase):
         plan = runner.capacity_plan(parameters, scenario(), "1.36.5")
         self.assertEqual((plan[0]["nodes"], plan[0]["surge"]), (3, 1))
         self.assertEqual((plan[-1]["name"], plan[-1]["nodes"], plan[-1]["surge"]), ("proxy", 1, 0))
+        retained = runner.capacity_plan(parameters, scenario(), "1.36.5", existing=True)
+        self.assertEqual([(pool["nodes"], pool["surge"]) for pool in retained],
+                         [(2, 0), (0, 0), (0, 0)])
         for field, invalid in (("maxSurge", "0"), ("maxCount", 0)):
             broken = copy.deepcopy(parameters)
             broken["nodePools"][0][field] = invalid
@@ -689,6 +700,12 @@ class Contracts(unittest.TestCase):
         self.assertFalse(result["capacityReserved"])
         usage = [{**row, "currentValue": str(row["currentValue"]), "limit": str(row["limit"])} for row in usage]
         self.assertEqual(runner.verify_capacity(plan, skus, usage, "eastus2")["quota"], result["quota"])
+        parameters = pool_parameters()
+        parameters["nodePools"][0].update(autoscaling=True, count=2, maxCount=3)
+        retained = runner.capacity_plan(parameters, scenario(), "1.36.5", existing=True)
+        self.assertEqual(runner.verify_capacity(retained, skus, usage, "eastus2")["quota"][0]["additional"], 8)
+        with self.assertRaisesRegex(ValueError, "quota"):
+            runner.verify_capacity(retained, skus, [{**row, "currentValue": 60} for row in usage], "eastus2")
         skus[0]["restrictions"] = [{"type": "Location", "values": ["eastus2"]}]
         with self.assertRaisesRegex(ValueError, "subscription restriction"):
             runner.verify_capacity(plan, skus, usage, "eastus2")
@@ -700,6 +717,25 @@ class Contracts(unittest.TestCase):
         usage[1]["limit"] = 15
         with self.assertRaisesRegex(ValueError, "quota"):
             runner.verify_capacity(plan, skus, usage, "eastus2")
+
+    def test_retained_preflight_skips_capacity_calls_but_rejects_disappeared_host(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION, location="eastus2",
+                                         evidence=Path(temporary), admitted_existing=True)
+            commands = Mock()
+            commands.run.return_value = {"values": [
+                {"isDefault": True, "patchVersions": {"1.36.5": {}}},
+            ]}
+            with patch.object(runner, "compiled_parameters", return_value=pool_parameters()), \
+                    patch.object(runner.Host, "persistent_state", return_value={"clusterName": "existing"}) as state:
+                result = runner.preflight(args, scenario(), commands)
+                self.assertTrue(result["existing"])
+                self.assertEqual(result["compute"], [])
+                self.assertEqual(result["quota"], [])
+                self.assertEqual(commands.run.call_count, 1)
+                state.return_value = None
+                with self.assertRaisesRegex(ValueError, "disappeared"):
+                    runner.preflight(args, scenario(), commands)
 
     def test_unsupported_watch_enforcement_never_compiles_or_provisions(self):
         commands = Mock()

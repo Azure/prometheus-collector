@@ -119,15 +119,19 @@ a wildcard allow rule; all non-DNS ports remain allowed. Cilium requires this
 policy to emit DNS metrics, as documented in the
 [ACNS metrics prerequisites](https://learn.microsoft.com/azure/aks/container-network-observability-how-to#prerequisites).
 New pools' autoscaler maximum **and** declared surge count toward the simultaneous
-regional and VM-family peak. Verified existing pools are already in current usage;
-only their declared surge is added. An admitted existing host that disappears fails
-closed rather than being recreated without admission.
+regional and VM-family peak. Verified existing nodes and proxy VMs are already in
+current usage; reuse checks only autoscaler growth above the pool minimum,
+not upgrade surge. When no additional nodes are needed, SKU/quota calls are skipped.
+Automatic cluster upgrades remain enabled; this foreground test admission does not
+reserve or guarantee headroom for future background upgrades.
+An admitted existing host that disappears fails closed rather than being recreated
+without admission.
 
 The pipeline must require successful admission and use its per-row location
 outputs. Failure emits no success receipt. This is a point-in-time check, not a
 quota/capacity reservation: other workloads can consume quota afterward. Existing
-per-row live SKU/version/quota checks still run before each deployment. Do not
-repeat full-campaign admission after creating its hosts and count those hosts
+per-row version/ownership checks still run; SKU/quota checks run only for additional
+capacity. Do not repeat full-campaign admission after creating its hosts and count those hosts
 twice, lower pool/surge limits, or delete retained hosts to fit quota.
 
 ## Candidate receipt and execution
@@ -333,7 +337,9 @@ Preflight compiles the chosen parameters and uses their literal `nodePools`
 inventory, including explicit `maxSurge`, not a duplicate topology in Python.
 It checks each exact SKU's regional subscription restrictions, advertised CPU
 architecture, regional/family vCPU quota at autoscaler maximum **plus surge**, and
-the separately declared proxy VM count. Capacity is checked, not reserved.
+the separately declared proxy VM count for new hosts. Retained hosts require only
+autoscaler growth headroom; reuse without growth makes no SKU/quota calls.
+Capacity is checked, not reserved.
 Actual pool properties and node OS/architecture are checked after provisioning.
 The mixed profile additionally requires both Windows build families and ARM64
 candidate images before any resource creation.

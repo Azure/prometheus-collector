@@ -1244,7 +1244,7 @@ def verify_secret_watch_version(scenario, cluster):
         raise ValueError("Secret-watch cluster must run Kubernetes 1.37")
 
 
-def capacity_plan(parameters, scenario, version):
+def capacity_plan(parameters, scenario, version, existing=False):
     pools = parameters["nodePools"]
     if not pools or {pool["osType"].lower() for pool in pools} != set(scenario["platforms"]):
         raise ValueError("Compiled pool platforms do not match the scenario")
@@ -1264,12 +1264,16 @@ def capacity_plan(parameters, scenario, version):
         if type(count) is not int or count < 1 or not re.fullmatch(r"[1-9][0-9]*", surge):
             raise ValueError("Compiled pools require positive counts and explicit integer maxSurge")
         capacity.append({"name": pool["name"], "vmSize": pool["vmSize"],
-                         "architecture": pool["architecture"], "nodes": count, "surge": int(surge)})
+                         "architecture": pool["architecture"],
+                         "nodes": count - (pool["minCount"] if pool["autoscaling"] else pool["count"])
+                         if existing else count,
+                         "surge": 0 if existing else int(surge)})
     if parameters["proxyEnabled"]:
         count = parameters["proxyVmCount"]
         if type(count) is not int or count < 1:
             raise ValueError("Proxy capacity must be explicit in compiled parameters")
-        capacity.append({"name": "proxy", "vmSize": parameters["proxyVmSize"], "nodes": count, "surge": 0})
+        capacity.append({"name": "proxy", "vmSize": parameters["proxyVmSize"],
+                         "nodes": 0 if existing else count, "surge": 0})
     return capacity
 
 
@@ -1309,6 +1313,9 @@ def verify_capacity(capacity, skus, usage, location):
 
 
 def regional_capacity(args, capacity, commands):
+    capacity = [entry for entry in capacity if entry["nodes"] or entry["surge"]]
+    if not capacity:
+        return {"compute": [], "quota": [], "capacityReserved": False}
     names = sorted({entry["vmSize"] for entry in capacity})
     if any(not re.fullmatch(r"[A-Za-z0-9_]+", name) for name in names):
         raise ValueError("Unsupported VM SKU name in compiled capacity plan")
@@ -1331,13 +1338,11 @@ def preflight(args, scenario, commands):
                             json_output=True)
     version = select_version(versions, scenario)
     parameters = compiled_parameters(args, scenario, commands, version)
-    capacity = capacity_plan(parameters, scenario, version)
     existing = bool(Host(args, scenario, commands).persistent_state(
         {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
     if getattr(args, "admitted_existing", False) and not existing:
         raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
-    if existing:
-        capacity = [dict(pool, nodes=0) for pool in capacity]
+    capacity = capacity_plan(parameters, scenario, version, existing=existing)
     result = {"scenario": scenario["id"], "subscription": args.subscription, "location": args.location,
               "kubernetesVersion": version, "upgradeChannel": "stable", "expectedPools": parameters["nodePools"],
               "existing": existing,
@@ -1385,8 +1390,8 @@ def campaign_preflight(args, matrix, commands):
             parameters = compiled_parameters(regional, row, commands, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
                 {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
-            capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
-                            for pool in capacity_plan(parameters, row, version))
+            capacity.extend({**pool, "scenario": name}
+                            for pool in capacity_plan(parameters, row, version, existing=existing[name]))
         regions[location] = {"kubernetesVersions": selected_versions,
                              **regional_capacity(regional, capacity, commands)}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
