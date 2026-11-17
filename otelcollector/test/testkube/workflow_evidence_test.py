@@ -118,6 +118,19 @@ class WorkflowEvidenceTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 render_candidate(modified, "customersettingsv1", SHA, IMAGE)
 
+    def test_probe_cleanup_permissions_are_limited_to_pods_and_namespaces(self):
+        role, binding = yaml.safe_load_all((ROOT / "api-server-permissions.yaml").read_text(encoding="utf-8"))
+        cleanup = [rule for rule in role["rules"]
+                   if "delete" in rule["verbs"] and not rule.get("resourceNames")
+                   and "" in rule["apiGroups"]]
+        self.assertEqual(len(cleanup), 1)
+        self.assertEqual(cleanup[0]["apiGroups"], [""])
+        self.assertEqual(set(cleanup[0]["resources"]), {"pods", "namespaces"})
+        self.assertEqual(cleanup[0]["verbs"], ["delete"])
+        self.assertEqual(binding["roleRef"]["name"], role["metadata"]["name"])
+        self.assertIn({"kind": "ServiceAccount", "name": "testkube-api-server-tests-job",
+                       "namespace": "testkube"}, binding["subjects"])
+
     def test_passed_report_allows_selected_out_specs(self):
         self.assertEqual(report_counts(self.artifacts), {
             "specs": 2, "passed": 1, "skipped": 1, "failed": 0,
