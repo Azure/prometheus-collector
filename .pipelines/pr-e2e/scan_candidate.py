@@ -1,4 +1,4 @@
-"""Reuse the producer candidate scan and compare one baseline scan with its frozen DB."""
+"""Compare receipt-bound candidate and baseline scans using the same fresh Trivy DB."""
 import argparse
 import json
 import os
@@ -38,12 +38,21 @@ def run(build_id, commit, baseline, platform, requested, output, verified_candid
     if len(images) != 1:
         raise ValueError("Expected exactly one protected candidate collector child for the platform")
     producer_scan = verified_candidate / fetch_candidate.SCAN_ARTIFACT
-    fetch_candidate.validate_scan_artifact(producer_scan, receipt, require_database=True)
-    metadata, _, _ = compare_trivy.load(producer_scan, datetime.now(timezone.utc))
-    if metadata["requestedRef"] != images[0]["ref"] or metadata["platform"] != platform:
+    producer_metadata = fetch_candidate.validate_scan_artifact(producer_scan, receipt, require_database=True)
+    image = images[0]["ref"]
+    if producer_metadata["requestedRef"] != image or producer_metadata["platform"] != platform:
         raise ValueError("Producer scan does not cover the selected candidate platform")
     candidate_scan = output / "candidate"
-    shutil.copytree(producer_scan, candidate_scan)
+    try:
+        compare_trivy.load(producer_scan, datetime.now(timezone.utc))
+    except compare_trivy.StaleScanError:
+        print("Producer Trivy evidence expired; rescanning the receipt-bound candidate with a fresh DB.", flush=True)
+        scan_trivy.scan(image, platform, candidate_scan)
+        metadata, _, _ = compare_trivy.load(candidate_scan, datetime.now(timezone.utc))
+        if metadata["version"] != producer_metadata["version"]:
+            raise ValueError("Refreshed Trivy version does not match producer scan")
+    else:
+        shutil.copytree(producer_scan, candidate_scan)
     scan_trivy.scan(baseline, platform, output / "baseline", candidate_scan)
     result = compare_trivy.compare(output / "baseline", candidate_scan, receipt, requested)
     with (output / "comparison.json").open("x", encoding="utf-8") as file:

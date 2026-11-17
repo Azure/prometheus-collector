@@ -87,12 +87,11 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   Published prod-vs-main discovery
   needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
-  child, scans that exact candidate locally with the producer's scanner version,
-  then scans the released baseline with the same frozen local database. The
-  producer's report remains authenticated evidence, not the local comparison's
-  candidate scan. It retains raw scans plus `comparison.json`, including
-  failed/blocked verdicts. A local report does not acquire a protected pipeline
-  producer by being copied.
+  child, reuses its fresh scan or rescans that exact digest if the report expired,
+  then scans the released baseline with the same scanner version and frozen DB.
+  It leaves the authenticated producer report untouched and retains raw scans
+  and `comparison.json`, including failed/blocked verdicts. A local report does
+  not acquire a protected pipeline producer by being copied.
 
 These are executable repository components, **not a deployed Azure SRE Agent
 integration or an end-to-end passing campaign**.
@@ -240,11 +239,14 @@ branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
 `sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
 and raw scan log; its other console scans remain report-only. CandidateCapacity
 validates those exact receipts and the frozen DB, then verifies source-bound
-placements and retained-host state before admitting lanes. CandidateScan reuses the candidate
-findings and scans only the released baseline with the producer's scanner
-version, frozen DB and canonical configuration, then compares all findings
-once. Its FAIL/BLOCKED result does not skip functional lanes, but its failed
-stage still gates approval. Missing snapshots or stale evidence fail closed;
+placements and retained-host state before admitting lanes. CandidateScan reuses
+fresh producer findings and scans only the released baseline against their frozen DB.
+If the authenticated scan or DB is older than 24 hours, it rescans the exact
+receipt-bound candidate digest and uses that fresh frozen DB for the baseline.
+Both paths use the producer's scanner version and canonical configuration, then
+compare all findings once. Its FAIL/BLOCKED result does not skip functional lanes, but its failed
+stage still gates approval. Missing or invalid snapshots, or a refresh that does
+not produce fresh comparable evidence, fail closed;
 legacy report-only artifacts remain readable but cannot drive this comparison.
 Full candidate findings remain in the authenticated log payload; the binary DB
 is retained only in the protected artifact. The
@@ -300,8 +302,9 @@ those exact image digests. The 979 PR run is linked to the PR and auto-cancels
 when its head changes; only results for the latest head count. The separate 440
 push-triggered run remains the producer and is not itself e2e evidence.
 The fetch CLI's `trivyVersion` comes from the verified producer scan metadata.
-The pipeline installs that version, acquires a fresh local database, and reuses
-that database for both comparison scans. Host prerequisites precede producer
+The pipeline installs that version and uses one fresh database for the
+comparison, reusing the producer DB when its evidence is still fresh.
+Host prerequisites precede producer
 fetching; comparison runs only after scanner/Python preparation succeeds.
 
 Published discovery also emits its full JSON through the private ADO scan log,

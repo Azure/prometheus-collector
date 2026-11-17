@@ -418,7 +418,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(len(scan_steps), 1)
         scan = next(step for step in scan_stage["jobs"][0]["steps"]
                     if step.get("displayName") ==
-                    "Reuse exact producer scan and run one matching baseline comparison")
+                    "Compare receipt-bound candidate and baseline with a fresh shared Trivy DB")
         scan_script = scan["bash"]
         self.assertIn("set -euo pipefail", scan_script)
         self.assertIsNone(scan.get("continueOnError"))

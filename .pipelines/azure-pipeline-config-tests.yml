@@ -1416,7 +1416,7 @@ stages:
           --baseline-image 'mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324' \
           --platform linux/amd64 --cve "$cve" \
           --verified-candidate "$SCAN_EVIDENCE/verified" --output "$SCAN_EVIDENCE/scans"
-      displayName: Reuse exact producer scan and run one matching baseline comparison
+      displayName: Compare receipt-bound candidate and baseline with a fresh shared Trivy DB
       env:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         PRODUCER_BUILD_ID: $(candidateScanProducerBuildId)

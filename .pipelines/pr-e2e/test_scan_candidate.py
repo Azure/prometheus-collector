@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import call, patch
+from datetime import datetime, timezone
 
 import scan_candidate
 from test_fetch_candidate import protected_scan_artifact
@@ -127,7 +128,7 @@ class CampaignScanTests(unittest.TestCase):
                     call(self.baseline, "linux/amd64", output / "baseline", output / "candidate"),
                 ])
 
-    def test_producer_snapshot_runs_only_baseline_and_strict_comparison_offline(self):
+    def test_fresh_snapshot_is_reused_and_expired_snapshot_is_refreshed(self):
         source = self.source
         image = self.image
         cve = "CVE-2026-63209"
@@ -138,9 +139,11 @@ class CampaignScanTests(unittest.TestCase):
                  "repository": {"id": source["repo"], "type": "GitHub"},
                  "sourceBranch": "refs/heads/bot/ama-metrics-sre-test",
                  "url": scan_candidate.fetch_candidate.ADO_PROJECT + "/_apis/build/builds/123"}
-        for failure in (None, "producer", "missing-db", "stale", "db", "version", "coverage", "digest"):
+        for failure in (None, "producer", "missing-db", "stale", "stale-refresh", "future",
+                        "db", "version", "coverage", "digest"):
             with self.subTest(failure=failure), \
                     tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+                expired = failure in ("stale", "stale-refresh")
                 root = Path(directory).resolve()
                 verified, output = root / "verified", root / "comparison"
                 scan_candidate.fetch_candidate.extract_scan_artifact(
@@ -151,25 +154,37 @@ class CampaignScanTests(unittest.TestCase):
                 producer_report = verified / scan_candidate.fetch_candidate.SCAN_ARTIFACT / "trivy" / "result.json"
                 if failure == "producer":
                     producer_report.write_text("tampered")
-                if failure == "stale":
+                if expired or failure == "future":
                     scan_directory = producer_report.parent.parent
                     metadata_path = scan_directory / "trivy" / "metadata.json"
                     metadata = json.loads(metadata_path.read_text())
-                    metadata["finishedUtc"] = "2020-01-01T00:00:00+00:00"
+                    if expired:
+                        database_metadata = scan_directory / "cache/db/metadata.json"
+                        db = json.loads(database_metadata.read_text())
+                        db["UpdatedAt"] = metadata["dbUpdatedAt"] = "2020-01-01T00:00:00+00:00"
+                        database_metadata.write_text(json.dumps(db))
+                    else:
+                        metadata["finishedUtc"] = "2099-01-01T00:00:00+00:00"
                     metadata_path.write_text(json.dumps(metadata))
                     provenance_path = scan_directory / "provenance.json"
                     provenance = json.loads(provenance_path.read_text())
                     provenance["files"]["trivy/metadata.json"] = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+                    if expired:
+                        provenance["files"]["cache/db/metadata.json"] = hashlib.sha256(database_metadata.read_bytes()).hexdigest()
                     provenance_path.write_text(json.dumps(provenance))
                 producer_bytes = producer_report.read_bytes()
                 timestamp = json.loads((producer_report.parent / "metadata.json").read_text())["dbUpdatedAt"]
+                database_bytes = b"trivy database"
+                if expired:
+                    database_bytes = b"fresh trivy database"
+                    if failure == "stale":
+                        timestamp = datetime.now(timezone.utc).isoformat()
                 commands = []
 
                 def invoke(command, **kwargs):
                     commands.append(command)
                     cache = Path(command[command.index("--cache-dir") + 1])
                     is_baseline = cache.parent.name == "baseline"
-                    self.assertTrue(is_baseline, "the producer candidate must never be rescanned")
                     if "--version" in command:
                         return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
                             "Version": "0.76.2" if failure == "version" and is_baseline else "0.76.1",
@@ -177,8 +192,16 @@ class CampaignScanTests(unittest.TestCase):
                     # Model the Linux scan host's config bytes even when tests run on Windows.
                     Path(command[command.index("--config") + 1]).write_bytes(b"{}\n")
                     database = cache / "db" / "trivy.db"
-                    self.assertIn("--skip-db-update", command)
-                    self.assertEqual(database.read_bytes(), b"trivy database")
+                    self.assertEqual(command[-1], self.baseline if is_baseline else image["ref"])
+                    if is_baseline:
+                        self.assertIn("--skip-db-update", command)
+                        self.assertEqual(database.read_bytes(), database_bytes)
+                    else:
+                        self.assertTrue(expired)
+                        self.assertNotIn("--skip-db-update", command)
+                        database.parent.mkdir(parents=True)
+                        database.write_bytes(database_bytes)
+                        (database.parent / "metadata.json").write_text(json.dumps({"UpdatedAt": timestamp}))
                     if failure == "db":
                         database.write_bytes(b"unexpected database")
                     requested = command[-1]
@@ -196,13 +219,15 @@ class CampaignScanTests(unittest.TestCase):
                     return subprocess.CompletedProcess(command, 0)
 
                 with patch.object(scan_candidate.scan_trivy.subprocess, "run", side_effect=invoke):
-                    if failure:
+                    if failure not in (None, "stale"):
                         with self.assertRaises(ValueError):
                             scan_candidate.run(123, source["commit"], self.baseline, "linux/amd64",
                                                [cve], output, verified)
                         self.assertFalse((output / "comparison.json").exists())
-                        if failure in ("producer", "missing-db", "stale"):
+                        if failure in ("producer", "missing-db", "future"):
                             self.assertFalse(commands)
+                        if failure == "stale-refresh":
+                            self.assertEqual(len(commands), 2)
                     else:
                         result = scan_candidate.run(123, source["commit"], self.baseline, "linux/amd64",
                                                     [cve], output, verified)
@@ -210,13 +235,14 @@ class CampaignScanTests(unittest.TestCase):
                         self.assertEqual(result["source"], source)
                         self.assertEqual(result["candidate"]["requestedRef"], image["ref"])
                         self.assertEqual(result["candidate"]["dbSha256"],
-                                         hashlib.sha256(b"trivy database").hexdigest())
+                                         hashlib.sha256(database_bytes).hexdigest())
                         self.assertEqual(result["candidate"]["dbSha256"], result["baseline"]["dbSha256"])
-                        self.assertEqual(len(commands), 2)
-                        self.assertEqual((output / "candidate" / "trivy" / "result.json").read_bytes(),
-                                         producer_bytes)
-                        self.assertEqual((output / "candidate" / "trivy" / "scan.log").read_bytes(),
-                                         b"scanner diagnostics")
+                        self.assertEqual(len(commands), 4 if failure == "stale" else 2)
+                        if failure is None:
+                            self.assertEqual((output / "candidate" / "trivy" / "result.json").read_bytes(),
+                                             producer_bytes)
+                            self.assertEqual((output / "candidate" / "trivy" / "scan.log").read_bytes(),
+                                             b"scanner diagnostics")
                 self.assertEqual(producer_report.read_bytes(), producer_bytes)
 
     def test_untrusted_or_ambiguous_candidate_evidence_never_scans(self):

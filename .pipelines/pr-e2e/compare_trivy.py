@@ -15,6 +15,10 @@ DEFERRED_TARGETS = frozenset({
 })
 
 
+class StaleScanError(ValueError):
+    pass
+
+
 def load(directory, now):
     metadata = normalize.read_json(directory / "trivy" / "metadata.json")
     raw = (directory / "trivy" / "result.json").read_bytes()
@@ -28,9 +32,6 @@ def load(directory, now):
     config = data["Metadata"]["ImageConfig"]
     if metadata["platform"] not in ("linux/amd64", "linux/arm64") or metadata["platform"] != config["os"] + "/" + config["architecture"]:
         raise ValueError("Linux scan platform mismatch")
-    for field in ("dbUpdatedAt", "finishedUtc"):
-        if not now - timedelta(hours=24) <= normalize.utc(metadata[field]) <= now + timedelta(minutes=5):
-            raise ValueError("Stale database or scan")
     if not metadata["version"] or not re.fullmatch(r"[0-9a-f]{64}", metadata["dbSha256"]):
         raise ValueError("Missing scanner/database identity")
     expected_config = {
@@ -51,8 +52,14 @@ def load(directory, now):
             result["Target"] = "os:" + target
     lane = {"name": metadata["platform"], "scanner": "trivy", "status": "COMPLETE",
             "version": metadata["version"], "dbUpdatedAt": metadata["dbUpdatedAt"]}
+    findings = normalize.trivy_findings(data, metadata["platform"], metadata["requestedRef"].split("@")[1])
+    timestamps = [normalize.utc(metadata[field]) for field in ("dbUpdatedAt", "finishedUtc")]
+    if any(timestamp > now + timedelta(minutes=5) for timestamp in timestamps):
+        raise ValueError("Future database or scan timestamp")
+    if min(timestamps) < now - timedelta(hours=24):
+        raise StaleScanError("Stale database or scan")
     return metadata, data, {"lanes": [lane], "scanVerdict": "PASS", "verdict": "PASS",
-                           "findings": normalize.trivy_findings(data, metadata["platform"], metadata["requestedRef"].split("@")[1])}
+                           "findings": findings}
 
 
 def compare(baseline, candidate, receipt, requested, now=None):
