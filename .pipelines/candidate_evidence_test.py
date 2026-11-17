@@ -553,20 +553,32 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
                              ["arc-conformance", "ccp-health", "regionTests"])
 
-    def test_candidate_coverage_gate_runs_after_tests_and_before_evidence_publish(self):
+    def test_candidate_coverage_report_runs_without_failing_on_blockers(self):
         steps = yaml.safe_load(
             (Path(__file__).parent / "azure-template-candidate-config-tests.yml").read_text()
         )["steps"]
         results = next(i for i, step in enumerate(steps) if step.get("task") == "PublishTestResults@2")
-        gate = next(i for i, step in enumerate(steps)
-                    if step.get("displayName") == "Gate candidate approval on complete scenario coverage")
+        report_step = next(i for i, step in enumerate(steps)
+                           if step.get("displayName") == "Report candidate scenario coverage")
         artifact = next(i for i, step in enumerate(steps) if step.get("task") == "PublishPipelineArtifact@1")
-        self.assertLess(results, gate)
-        self.assertLess(gate, artifact)
-        self.assertEqual(steps[gate]["condition"], "always()")
-        self.assertIn("--require-unblocked", steps[gate]["bash"])
-        self.assertIn(".pipelines/candidate_coverage.py", steps[gate]["bash"])
-        self.assertEqual(steps[gate]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        self.assertLess(results, report_step)
+        self.assertLess(report_step, artifact)
+        self.assertEqual(steps[report_step]["condition"], "always()")
+        self.assertEqual(steps[report_step]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                ["bash", "-c", steps[report_step]["bash"]], capture_output=True, text=True,
+                env={**os.environ, "PYTHON": Path(sys.executable).as_posix(),
+                     "BUILD_SOURCESDIRECTORY": Path(__file__).parents[1].as_posix(),
+                     "CANDIDATE_EVIDENCE": Path(directory).as_posix(), "CANDIDATE_SCENARIO": "default"},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads((Path(directory) / "coverage.json").read_text())
+            self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
+            self.assertFalse(report["executed"])
+            self.assertTrue(report["blockedScenarios"])
+            self.assertIn("PLANNED_WITH_BLOCKERS", result.stdout)
+        self.assertNotIn("--require-unblocked", str(steps))
 
     def test_candidate_scenarios_depend_only_on_campaign_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())

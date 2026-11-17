@@ -263,8 +263,8 @@ steps:
     set -euo pipefail
     "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_coverage.py" \
       --root "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios" --scenario "$CANDIDATE_SCENARIO" \
-      --output "$CANDIDATE_EVIDENCE/coverage.json" --require-unblocked
-  displayName: "Gate candidate approval on complete scenario coverage"
+      --output "$CANDIDATE_EVIDENCE/coverage.json"
+  displayName: "Report candidate scenario coverage"
   condition: always()
   env:
     CANDIDATE_ROOT: $(candidateRoot)

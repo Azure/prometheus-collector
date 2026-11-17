@@ -327,8 +327,16 @@ and digest binding, source-preserving reconciliation and fix-or-blocker contract
 Do not substitute workstation results for agent consumption. Keep the existing
 Trivy all-findings gate unchanged; absent or stale Kusto rows are not closure.
 
-Each row publishes `coverage.json` as a plan, never as proof of execution. It
-explicitly lists blocked matrix rows and the five uncovered settings variants:
+Each row publishes and logs `coverage.json` as a report-only plan, never as proof of
+execution. Known coverage blockers do not fail individual scenario runs.
+Functional, scan and cleanup failures remain failures.
+Cross-run merge-approval enforcement is not yet implemented. Before approval,
+every required scenario must have a passing result and non-empty executed JUnit
+for the same source SHA, producer build and candidate digests. Missing, skipped,
+failed or mismatched-candidate results cannot count as passing.
+The strict `candidate_coverage.py --require-unblocked` mode still enforces global
+plan blockers when explicitly requested; it is not wired to a merge-approval step.
+The report explicitly lists blocked matrix rows and the five uncovered settings variants:
 `helm-customer-values` (no isolated customer Helm adapter), and
 `empty-secret-namespaces-v1`, `empty-secret-namespaces-v2`,
 `omitted-secret-namespaces-v1`, `omitted-secret-namespaces-v2` (no enforcement on
