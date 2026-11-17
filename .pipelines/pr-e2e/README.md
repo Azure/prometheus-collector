@@ -71,11 +71,13 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
 - `producer_trivy.py`: on SRE candidate branches, pipeline 440 replaces its collector
   vulnerability console scan with full, unfiltered JSON for the exact pushed Linux
   amd64 child. The protected `sre-trivy-collector` artifact contains
-  only `trivy/{result.json,metadata.json}` and `provenance.json`
-  binding source repo/commit/build, definition 440, index/child/platform and every
-  published file's SHA256. Database identity remains in metadata; database bytes,
-  cache and temporary scanner configuration are not published. Both download and
-  extraction retain the 512 MiB limit. Only successful first-attempt SRE branch
+  `trivy/{result.json,metadata.json}` and `provenance.json` binding source
+  repo/commit/build, definition 440, index/child/platform and every published
+  file's SHA256. Newer producers also include `trivy/scan.log` and the frozen
+  database snapshot (`cache/db/trivy.db`, `cache/db/metadata.json`); the consumer
+  verifies their hashes, database identity and freshness. Downloads remain capped
+  at 512 MiB compressed; extraction has a separate 2 GiB uncompressed bound and
+  hashes large files incrementally. Only successful first-attempt SRE branch
   jobs/stages publish it.
   MCR lag retries the immutable digest, never a tag. Filtered console findings and existing
   secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.

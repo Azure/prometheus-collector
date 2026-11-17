@@ -17,12 +17,13 @@ import zipfile
 import fetch_candidate
 
 
-def protected_scan_artifact(source, image):
+def protected_scan_artifact(source, image, snapshot=False):
     database = b"trivy database"
     result = json.dumps({"Metadata": {"RepoDigests": [image["ref"]],
                                       "ImageConfig": {"os": "linux", "architecture": "amd64"}},
-                         "Results": [{"Target": "Debian 12", "Class": "os-pkgs", "Type": "debian",
-                                      "Packages": [], "Vulnerabilities": []}]}).encode()
+                         "Results": [{"Target": "opt/app", "Class": "lang-pkgs", "Type": "gobinary",
+                                      "Packages": [{"Name": "example/package", "Version": "2"}],
+                                      "Vulnerabilities": []}]}).encode()
     empty_ignore = b""
     empty_config = b"{}\n"
     files = {
@@ -45,6 +46,12 @@ def protected_scan_artifact(source, image):
         },
     }
     files["trivy/metadata.json"] = json.dumps(metadata).encode()
+    if snapshot:
+        files.update({
+            "trivy/scan.log": b"scanner diagnostics",
+            "cache/db/trivy.db": database,
+            "cache/db/metadata.json": json.dumps({"UpdatedAt": metadata["dbUpdatedAt"]}).encode(),
+        })
     provenance = {
         "schemaVersion": 1,
         "producerDefinitionId": 440,
@@ -62,6 +69,33 @@ def protected_scan_artifact(source, image):
 
 
 class FetchTests(unittest.TestCase):
+    def test_snapshot_is_required_for_reuse_and_hashes_are_checked(self):
+        source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
+        image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
+                 "indexRef": "image@sha256:" + "c" * 64, "os": "linux", "arch": "amd64"}
+        for damage in (None, "legacy", "db", "db-time", "log"):
+            with self.subTest(damage=damage), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "scan"
+                fetch_candidate.extract_scan_artifact(
+                    protected_scan_artifact(source, image, snapshot=damage != "legacy"), output)
+                if damage in ("db", "db-time", "log"):
+                    name = {"db": "cache/db/trivy.db", "db-time": "cache/db/metadata.json",
+                            "log": "trivy/scan.log"}[damage]
+                    (output / name).write_bytes(b'{"UpdatedAt":"2020-01-01T00:00:00Z"}'
+                                               if damage == "db-time" else b"tampered")
+                    if damage != "log":
+                        provenance_path = output / "provenance.json"
+                        provenance = json.loads(provenance_path.read_text())
+                        provenance["files"][name] = hashlib.sha256((output / name).read_bytes()).hexdigest()
+                        provenance_path.write_text(json.dumps(provenance))
+                if damage:
+                    with self.assertRaises(ValueError):
+                        fetch_candidate.validate_scan_artifact(
+                            output, {"source": source, "images": [image]}, require_database=True)
+                else:
+                    fetch_candidate.validate_scan_artifact(
+                        output, {"source": source, "images": [image]}, require_database=True)
+
     def test_report_only_artifact_preserves_database_identity_without_bytes(self):
         source = {"repo": "Azure/prometheus-collector", "commit": "a" * 40, "buildId": "123"}
         image = {"name": "collector", "ref": "image@sha256:" + "b" * 64,
@@ -122,11 +156,22 @@ class FetchTests(unittest.TestCase):
                         archive.writestr("same", b"a")
                         archive.writestr(fetch_candidate.SCAN_ARTIFACT + "/same", b"b")
                 output = Path(directory) / "scan"
-                with patch.object(fetch_candidate, "MAX_SCAN_ARTIFACT_BYTES", 10), \
+                with patch.object(fetch_candidate, "MAX_SCAN_UNCOMPRESSED_BYTES", 10), \
                         self.assertRaises(ValueError):
                     fetch_candidate.extract_scan_artifact(raw.getvalue(), output)
                 if kind in ("total", "entry"):
                     self.assertFalse((output / ("second" if kind == "total" else "oversized")).exists())
+
+    def test_compressed_download_and_uncompressed_extraction_have_independent_bounds(self):
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("database", b"a" * 12)
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(fetch_candidate, "MAX_SCAN_ARTIFACT_BYTES", 10), \
+                patch.object(fetch_candidate, "MAX_SCAN_UNCOMPRESSED_BYTES", 12):
+            output = Path(directory) / "scan"
+            fetch_candidate.extract_scan_artifact(raw.getvalue(), output)
+            self.assertEqual((output / "database").read_bytes(), b"a" * 12)
 
     def test_download_rejects_oversize_response_with_bounded_read(self):
         response = io.BytesIO(b"a" * 11)

@@ -23,6 +23,7 @@ ARTIFACTS = ("sre-push-linux", "sre-push-windows2022", "sre-push-targetallocator
              "sre-push-cfg", "sre-testkube-runner")
 SCAN_ARTIFACT = "sre-trivy-collector"
 MAX_SCAN_ARTIFACT_BYTES = 512 * 1024 * 1024
+MAX_SCAN_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024
 SCAN_COVERAGE = (
     "collector/linux/amd64 Trivy vulnerability discovery only; "
     "not Windows/arm64/other images/Qualys clearance"
@@ -95,7 +96,7 @@ def extract_scan_artifact(raw, output):
                 raise ValueError("Scan artifact contains duplicate paths")
             names.add(relative.as_posix())
             total_size += entry.file_size
-            if entry.file_size < 0 or total_size > MAX_SCAN_ARTIFACT_BYTES:
+            if entry.file_size < 0 or total_size > MAX_SCAN_UNCOMPRESSED_BYTES:
                 raise ValueError("Scan artifact exceeds the allowed uncompressed size")
             target = output.joinpath(*relative.parts)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -110,7 +111,7 @@ def extract_scan_artifact(raw, output):
                 raise ValueError("Scan artifact entry size does not match its declaration")
 
 
-def validate_scan_artifact(directory, receipt):
+def validate_scan_artifact(directory, receipt, require_database=False, report_only=False):
     provenance = json.loads((directory / "provenance.json").read_text(encoding="utf-8-sig"))
     if (provenance.get("schemaVersion") != 1
             or provenance.get("producerDefinitionId") != 440
@@ -133,16 +134,26 @@ def validate_scan_artifact(directory, receipt):
             raise ValueError("Collector scan contains a linked or escaped file")
         if path.is_file() and path.name != "provenance.json":
             actual.add(path.relative_to(directory).as_posix())
-    if actual != set(files) or actual != {"trivy/result.json", "trivy/metadata.json"}:
+    reports = {"trivy/result.json", "trivy/metadata.json"}
+    snapshot = {"trivy/scan.log", "cache/db/trivy.db", "cache/db/metadata.json"}
+    expected = reports | snapshot if set(files) == reports | snapshot else reports
+    if set(files) != expected or actual != (reports if report_only else expected):
         raise ValueError("Collector scan files do not match the protected provenance")
+    if require_database and expected == reports:
+        raise ValueError("Producer scan has no frozen database snapshot; new producer evidence is required")
     for name, digest in files.items():
         relative = PurePosixPath(name)
         if (not name or "\\" in name or relative.is_absolute()
                 or any(part in ("", ".", "..") for part in name.split("/"))
                 or not re.fullmatch(r"[0-9a-f]{64}", digest)):
             raise ValueError("Collector scan provenance contains an invalid file hash")
-        if hashlib.sha256((directory / Path(*relative.parts)).read_bytes()).hexdigest() != digest:
-            raise ValueError("Collector scan file hash mismatch")
+        if name in actual:
+            hasher = hashlib.sha256()
+            with (directory / Path(*relative.parts)).open("rb") as file:
+                for block in iter(lambda: file.read(1024 * 1024), b""):
+                    hasher.update(block)
+            if hasher.hexdigest() != digest:
+                raise ValueError("Collector scan file hash mismatch")
 
     metadata = json.loads((directory / "trivy" / "metadata.json").read_text(encoding="utf-8-sig"))
     image = provenance["image"]
@@ -163,6 +174,13 @@ def validate_scan_artifact(directory, receipt):
     }
     if metadata.get("configuration") != configuration:
         raise ValueError("Collector scan uses an unexpected Trivy configuration")
+    if not report_only and expected != reports:
+        database = directory / "cache" / "db"
+        if files["cache/db/trivy.db"] != metadata["dbSha256"]:
+            raise ValueError("Collector scan database snapshot identity mismatch")
+        db_metadata = json.loads((database / "metadata.json").read_text(encoding="utf-8-sig"))
+        if db_metadata.get("UpdatedAt") != metadata.get("dbUpdatedAt"):
+            raise ValueError("Collector scan database snapshot timestamp mismatch")
     return metadata
 
 
