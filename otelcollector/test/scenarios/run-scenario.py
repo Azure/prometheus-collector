@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from urllib.parse import urlsplit
 import uuid
@@ -1172,7 +1173,7 @@ def proxy_routes(log, started, collector_ips, ingestion_hostname, bypass_ips):
     return routes
 
 
-def verify_me_configuration(host, proof, started):
+def verify_me_configuration(host, proof, started, capture_process=False):
     immutable_id = proof["immutableDcrId"]
     if not re.fullmatch(r"dcr-[0-9a-f]{32}", immutable_id):
         raise RuntimeError("ME configuration proof requires the independently verified immutable DCR ID")
@@ -1247,14 +1248,48 @@ fi
         modified, size = map(int, lines[2].split())
         if modified < int(container_started) or size <= 0:
             raise RuntimeError("ME configuration cache must be freshly downloaded, not inherited")
-        observed.append({"pod": pod["metadata"]["name"], "uid": pod["metadata"]["uid"],
-                         "containerStarted": container_started, "configurationModified": modified,
-                         "configurationBytes": size, "mdsdRunning": False, "meLocalControl": False})
+        item = {"pod": pod["metadata"]["name"], "uid": pod["metadata"]["uid"],
+                "configurationContainerId": status.get("containerID"), "containerStarted": container_started,
+                "configurationModified": modified, "configurationBytes": size,
+                "mdsdRunning": False, "meLocalControl": False}
+        if capture_process:
+            item["processContainerId"], item["processSnapshot"], item["processSnapshotError"] = (
+                capture_proxy_process_snapshot(host, pod["metadata"]["name"]))
+        observed.append(item)
     if len(observed) < 2:
         raise RuntimeError("ME configuration proof requires replica and node collectors")
     result = {"status": "PASS", "immutableDcrId": immutable_id, "collectors": observed}
     print("AMPLS_ME_CONFIGURATION " + json.dumps(result), flush=True)
     return result
+
+
+def capture_proxy_process_snapshot(host, pod_name, attempts=3):
+    for _ in range(attempts):
+        try:
+            before = host.kube("get", "pod", pod_name, "-n", "kube-system", "-o", "json",
+                               json_output=True, private=True)
+            before_status = next(item for item in before["status"]["containerStatuses"]
+                                 if item["name"] == "prometheus-collector")
+            before_id = before_status.get("containerID")
+            if not before_id or not before_status.get("ready"):
+                continue
+            output = host.kube(
+                "exec", pod_name, "-n", "kube-system", "-c", "prometheus-collector",
+                "--", "sh", "-c", proxy_process_snapshot_script(), private=True)
+            after = host.kube("get", "pod", pod_name, "-n", "kube-system", "-o", "json",
+                              json_output=True, private=True)
+            after_status = next(item for item in after["status"]["containerStatuses"]
+                                if item["name"] == "prometheus-collector")
+        except (RuntimeError, KeyError, StopIteration) as failure:
+            return None, [], str(failure)
+        if (before_id != after_status.get("containerID")
+                or not after_status.get("ready")):
+            continue
+        snapshot = sanitize_proxy_diagnostic_lines(output, 40)
+        error = None if any(line.startswith("PROCESS\t") for line in snapshot) \
+            else "No ME or mdsd process was visible"
+        return before_id, snapshot, error
+    return None, [], "Collector container changed during every process snapshot attempt"
 
 
 def network_probe_monitor(host, marker):
@@ -1331,12 +1366,12 @@ def verify_proxy(host, outputs, started, ampls_proof=None):
 
 
 PROXY_DIAGNOSTIC_ENV = {"HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy", "NO_PROXY", "no_proxy"}
-PROXY_DIAGNOSTIC_MAX_SECONDS = 1800
+PROXY_DIAGNOSTIC_MAX_SECONDS = 3000
 PROXY_DIAGNOSTIC_MAX_LINES = 80
 
 
 def sanitize_proxy_diagnostic_lines(output, limit=PROXY_DIAGNOSTIC_MAX_LINES, keep_last=False):
-    allowed_prefixes = ("PROCESS\t", "ENV\t", "CMDLINE\t", "SOCKET ", "SOCKET_SNAPSHOT ",
+    allowed_prefixes = ("PROCESS\t", "ENV\t", "CMDLINE\t", "CONTAINER\t", "SOCKET ", "SOCKET_SNAPSHOT ",
                         "CONNTRACK ", "CONNTRACK_ROW ", "LOG\t", "SAMPLER ")
     lines = []
     for line in output.splitlines():
@@ -1346,7 +1381,7 @@ def sanitize_proxy_diagnostic_lines(output, limit=PROXY_DIAGNOSTIC_MAX_LINES, ke
             fields = line.split("\t", 2)
             if len(fields) != 3 or fields[2].split("=", 1)[0] not in PROXY_DIAGNOSTIC_ENV:
                 continue
-        line = re.sub(r"(?i)(https?://)[^/@\s]+:[^/@\s]+@", r"\1[REDACTED]@", line)
+        line = re.sub(r"(?i)(https?://)[^/@\s]+@", r"\1[REDACTED]@", line)
         line = re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,;]+",
                       r"\1[REDACTED]", line)
         line = re.sub(
@@ -1461,6 +1496,69 @@ printf 'SAMPLER stopped=%s samples=%s events=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%S
     return script.replace("__MAX_SECONDS__", str(max_seconds))
 
 
+def proxy_sampler_worker(command, status_command, sampler, max_seconds=PROXY_DIAGNOSTIC_MAX_SECONDS,
+                         retry_interval=1):
+    deadline = time.monotonic() + max_seconds
+    collector = sampler["collector"]
+    handle = sampler["handle"]
+    while not sampler["stop"].is_set() and time.monotonic() < deadline:
+        try:
+            status = subprocess.run(status_command, capture_output=True, text=True, timeout=10)
+            if status.returncode:
+                sampler["statusError"] = f"Pod status read failed with exit code {status.returncode}"
+            else:
+                pod = json.loads(status.stdout)
+                container = next((item for item in pod.get("status", {}).get("containerStatuses", [])
+                                  if item["name"] == "prometheus-collector"), None)
+                container_id = container.get("containerID") if container else None
+                if not container_id:
+                    sampler["statusError"] = "Collector container ID missing from pod readback"
+                else:
+                    sampler["statusError"] = None
+                if container_id and container_id not in collector["containerIds"]:
+                    collector["containerIds"].append(container_id)
+                    handle.write(f"CONTAINER\t{time.time():.3f}\t{container_id}\n")
+                    handle.flush()
+        except (OSError, subprocess.SubprocessError, ValueError) as failure:
+            sampler["statusError"] = f"Pod status read failed: {type(failure).__name__}"
+        if sampler["stop"].is_set():
+            return
+        try:
+            process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=handle,
+                                       stderr=subprocess.STDOUT, text=True)
+        except OSError as failure:
+            sampler["error"] = type(failure).__name__
+            return
+        sampler["process"] = process
+        while process.poll() is None:
+            if sampler["stop"].wait(1) or time.monotonic() >= deadline:
+                sampler["stoppedByHarness"] = sampler["stop"].is_set()
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    try:
+                        process.kill()
+                    except ProcessLookupError:
+                        pass
+                    process.wait(timeout=10)
+                break
+        if sampler["stop"].is_set():
+            return
+        exit_code = process.returncode
+        sampler["exitCodes"].append(exit_code)
+        if exit_code == 0:
+            return
+        sampler["reconnects"] += 1
+        handle.write(f"SAMPLER reconnect={sampler['reconnects']} exit={exit_code}\n")
+        handle.flush()
+        if sampler["stop"].wait(retry_interval):
+            return
+
+
 def proxy_route_diagnostic_script(started, source_attribution, destinations,
                                   max_lines=PROXY_DIAGNOSTIC_MAX_LINES):
     return """python3 - <<'PY'
@@ -1549,14 +1647,15 @@ def start_proxy_diagnostics(host, outputs, proof, started):
         collector = {"pod": name, "podIP": pod["status"].get("podIP"),
                      "hostIP": pod["status"].get("hostIP"), "node": pod["spec"].get("nodeName"),
                      "container": "prometheus-collector",
-                     "containerId": status.get("containerID")}
+                     "containerId": status.get("containerID"),
+                     "containerIds": [status["containerID"]] if status.get("containerID") else []}
         state["collectors"].append(collector)
         try:
             snapshot = host.kube("exec", name, "-n", "kube-system", "-c", "prometheus-collector",
                                  "--", "sh", "-c", proxy_process_snapshot_script(), private=True)
             collector["processSnapshot"] = sanitize_proxy_diagnostic_lines(snapshot, 40)
             if not any(line.startswith("PROCESS\t") for line in collector["processSnapshot"]):
-                collector["snapshotError"] = "No ME or mdsd process was visible"
+                collector["snapshotStatus"] = "No ME or mdsd process was visible at sampler attach"
         except RuntimeError as failure:
             collector["snapshotError"] = str(failure)
         if not re.fullmatch(r"[a-z0-9-]+", name):
@@ -1564,21 +1663,26 @@ def start_proxy_diagnostics(host, outputs, proof, started):
             continue
         path = host.args.evidence / "proxy-diagnostics" / f"{name}.log"
         command = [kubectl, "--kubeconfig", str(host.kubeconfig), "--request-timeout=31m",
-                   "exec", name, "-n", "kube-system", "-c", "prometheus-collector", "--",
-                   "sh", "-c", sampler_script, "proxy-socket-sampler", ",".join(endpoint_ids),
-                   ",".join(target_ips)]
+                   "exec", name, "-n", "kube-system", "-c", "prometheus-collector", "--", "sh", "-c",
+                   sampler_script, "proxy-socket-sampler", ",".join(endpoint_ids), ",".join(target_ips)]
+        status_command = [kubectl, "--kubeconfig", str(host.kubeconfig), "get", "pod", name,
+                          "-n", "kube-system", "-o", "json"]
         try:
             handle = None
             path.parent.mkdir(parents=True, exist_ok=True)
             handle = path.open("w", encoding="utf-8")
-            process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=handle,
-                                       stderr=subprocess.STDOUT, text=True)
+            sampler = {"pod": name, "path": path, "handle": handle, "collector": collector,
+                       "stop": threading.Event(), "process": None,
+                       "thread": None, "exitCodes": [], "reconnects": 0}
+            sampler["thread"] = threading.Thread(
+                target=proxy_sampler_worker, args=(command, status_command, sampler), daemon=True)
+            state["samplers"].append(sampler)
+            sampler["thread"].start()
         except OSError as failure:
             if handle is not None:
                 handle.close()
             collector["samplerError"] = str(failure)
             continue
-        state["samplers"].append({"pod": name, "path": path, "handle": handle, "process": process})
     if not state["collectors"]:
         state["inventoryError"] = "No collector pods were available for diagnostics"
     public = {key: value for key, value in state.items() if key != "samplers"}
@@ -1589,9 +1693,10 @@ def start_proxy_diagnostics(host, outputs, proof, started):
 def finish_proxy_diagnostics(host, state):
     errors = []
     for sampler in state["samplers"]:
-        process, handle = sampler["process"], sampler["handle"]
+        process, handle = sampler.get("process"), sampler["handle"]
+        sampler["stop"].set()
         try:
-            if process.poll() is None:
+            if process is not None and process.poll() is None:
                 sampler["stoppedByHarness"] = True
                 process.terminate()
                 try:
@@ -1602,6 +1707,7 @@ def finish_proxy_diagnostics(host, state):
         except OSError as failure:
             errors.append(f"{sampler['pod']} sampler stop: {failure}")
         finally:
+            sampler["thread"].join(timeout=15)
             handle.close()
     log_script = r'''set +e
 for path in /MetricsExtensionConsoleDebugLog.log \
@@ -1625,9 +1731,17 @@ done
                 path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
                 item["socketEvidence"] = str(path.relative_to(host.args.evidence))
                 item["socketSamples"] = lines
-                item["samplerExitCode"] = sampler["process"].returncode
-                if sampler["process"].returncode not in (0, None) and not sampler.get("stoppedByHarness"):
-                    item["samplerError"] = f"sampler exited with code {sampler['process'].returncode}"
+                item["samplerExitCodes"] = sampler["exitCodes"]
+                item["samplerReconnects"] = sampler["reconnects"]
+                if sampler.get("error"):
+                    item["samplerError"] = sampler["error"]
+                    errors.append(f"{item['pod']} {item['samplerError']}")
+                elif sampler.get("statusError"):
+                    item["samplerError"] = sampler["statusError"]
+                    errors.append(f"{item['pod']} {item['samplerError']}")
+                elif not any(line.startswith(("SOCKET_SNAPSHOT ", "CONNTRACK "))
+                             for line in lines):
+                    item["samplerError"] = "No socket or conntrack samples were captured"
                     errors.append(f"{item['pod']} {item['samplerError']}")
             except OSError as failure:
                 item["samplerError"] = str(failure)
@@ -2297,13 +2411,14 @@ def execute(args, scenario, variants, commands):
             outcome["ampls"] = ampls_proofs.verify(host, outputs)
         if scenario["id"] == "ampls-proxy":
             verify_me_configuration(host, outcome["ampls"], 0)
-            # Start the route window after legacy mdsd pods leave, then prove a cold ME config fetch.
+            # Capture routes and sockets across restart, then prove a cold ME config fetch.
             proxy_started = time.time()
+            proxy_diagnostics = start_proxy_diagnostics(host, outputs, outcome["ampls"], proxy_started)
             for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
                 host.kube("rollout", "restart", resource, "-n", "kube-system")
                 host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
-            proxy_diagnostics = start_proxy_diagnostics(host, outputs, outcome["ampls"], proxy_started)
-            outcome["meConfiguration"] = verify_me_configuration(host, outcome["ampls"], proxy_started)
+            outcome["meConfiguration"] = verify_me_configuration(
+                host, outcome["ampls"], proxy_started, capture_process=True)
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
         # Health suites depend on the repository's existing reference-app scrape fixtures.

@@ -479,7 +479,9 @@ class Contracts(unittest.TestCase):
     def test_proxy_diagnostics_keep_only_proxy_environment_and_redact_secrets(self):
         raw = (
             "PROCESS\t71\tmdsd\n"
+            "CONTAINER\t1794896668.334\tcontainerd://collector-id\n"
             "ENV\t71\tNO_PROXY=.monitor.azure.com\n"
+            "ENV\t71\tHTTP_PROXY=http://user:password@proxy.example:3128\n"
             "ENV\t71\tAWS_SECRET_ACCESS_KEY=never-print\n"
             "CMDLINE\t71\tmdsd --client-secret=never-print --connection-string=never-print --config dce\n"
             "LOG\tmdsd.err\tAuthorization: Bearer never-print\n"
@@ -487,17 +489,145 @@ class Contracts(unittest.TestCase):
             "SOCKET pid=71/mdsd remote=0400E20A:0C38 state=01\n"
             "unrelated output\n"
         )
-        lines = runner.sanitize_proxy_diagnostic_lines(raw, limit=6)
+        lines = runner.sanitize_proxy_diagnostic_lines(raw, limit=8)
         output = "\n".join(lines)
         self.assertIn("ENV\t71\tNO_PROXY=.monitor.azure.com", output)
+        self.assertIn("ENV\t71\tHTTP_PROXY=http://[REDACTED]@proxy.example:3128", output)
+        self.assertIn("CONTAINER\t1794896668.334\tcontainerd://collector-id", output)
         self.assertIn("CONNTRACK_ROW src=10.224.0.5 dst=10.225.0.5", output)
         self.assertIn("SOCKET pid=71/mdsd", output)
         self.assertNotIn("AWS_SECRET_ACCESS_KEY", output)
+        self.assertNotIn("password", output)
         self.assertNotIn("never-print", output)
-        self.assertEqual(len(lines), 6)
+        self.assertEqual(len(lines), 8)
         tail = runner.sanitize_proxy_diagnostic_lines(raw, limit=2, keep_last=True)
         self.assertEqual(len(tail), 2)
         self.assertIn("SOCKET pid=71/mdsd", "\n".join(tail))
+
+    def test_proxy_diagnostic_window_covers_restart_and_cold_config_waits(self):
+        self.assertGreater(runner.PROXY_DIAGNOSTIC_MAX_SECONDS, 2 * 15 * 60 + 2 * 5 * 60 + 5 * 60)
+
+    def test_proxy_sampler_reattaches_after_collector_container_restart(self):
+        collector = {"pod": "ama-metrics-test", "containerIds": ["containerd://old"]}
+        output = io.StringIO()
+        sampler = {"collector": collector, "handle": output, "stop": runner.threading.Event(),
+                   "process": None, "exitCodes": [], "reconnects": 0}
+        status = lambda container_id: types.SimpleNamespace(
+            returncode=0,
+            stdout=runner.json.dumps({"status": {"containerStatuses": [{
+                "name": "prometheus-collector", "containerID": container_id}]}},
+            ),
+        )
+        exited = Mock(returncode=137)
+        exited.poll.return_value = 137
+        recovered = Mock(returncode=0)
+        recovered.poll.return_value = 0
+        with patch.object(runner.subprocess, "run", side_effect=[
+                status("containerd://old"), status("containerd://new")]) as read_status, \
+             patch.object(runner.subprocess, "Popen", side_effect=[exited, recovered]) as start_sampler:
+            runner.proxy_sampler_worker(["kubectl"], ["kubectl", "get", "pod"],
+                                        sampler, max_seconds=5, retry_interval=0)
+        self.assertEqual(read_status.call_count, 2)
+        self.assertEqual(start_sampler.call_count, 2)
+        self.assertEqual(sampler["exitCodes"], [137, 0])
+        self.assertEqual(sampler["reconnects"], 1)
+        self.assertEqual(collector["containerIds"], ["containerd://old", "containerd://new"])
+        self.assertIn("CONTAINER\t", output.getvalue())
+        self.assertIn("SAMPLER reconnect=1 exit=137", output.getvalue())
+
+    def test_proxy_sampler_does_not_stream_unsanitized_process_environment(self):
+        host = Mock()
+        host.kubeconfig = "kubeconfig"
+        def kube(*args, **kwargs):
+            if args[0] == "get":
+                return {"items": [{
+                    "metadata": {"name": "ama-metrics-test"},
+                    "spec": {"containers": [{"name": "prometheus-collector"}]},
+                    "status": {"containerStatuses": [{
+                        "name": "prometheus-collector", "containerID": "containerd://id",
+                    }]},
+                }]}
+            return "PROCESS\t71\tMetricsExtensio\nENV\t71\tNO_PROXY=.monitor.azure.com\n"
+        host.kube.side_effect = kube
+        thread = Mock()
+        with tempfile.TemporaryDirectory() as directory:
+            host.args.evidence = Path(directory)
+            with patch.object(runner.shutil, "which", return_value="kubectl"), \
+                 patch.object(runner.threading, "Thread", return_value=thread) as make_thread, \
+                 patch("sys.stdout", new_callable=io.StringIO):
+                state = runner.start_proxy_diagnostics(
+                    host, {"proxyEndpoint": "http://10.225.0.5:3128",
+                           "dceMetricsIngestionEndpoint": "https://ingest.monitor.azure.com"},
+                    {"endpointAddresses": {}, "hosts": {}}, 0)
+            try:
+                command = make_thread.call_args.kwargs["args"][0]
+                sampler_script = command[command.index("-c") + 1]
+                self.assertNotIn("NO_PROXY=*", sampler_script)
+                self.assertNotIn("ENV\\t", sampler_script)
+            finally:
+                state["samplers"][0]["handle"].close()
+
+    def test_me_configuration_captures_filtered_process_environment_per_container(self):
+        pods = []
+        for index in range(2):
+            pods.append({
+                "metadata": {"name": f"ama-metrics-{index}", "uid": f"uid-{index}"},
+                "spec": {"containers": [{"name": "prometheus-collector"}]},
+                "status": {
+                    "podIP": f"10.244.0.{index + 2}", "hostIP": "10.224.0.5",
+                    "containerStatuses": [{
+                        "name": "prometheus-collector", "containerID": f"containerd://id-{index}",
+                        "ready": True, "state": {"running": {"startedAt": "1970-01-01T00:00:00Z"}},
+                    }],
+                },
+            })
+
+        def kube(*args, **kwargs):
+            if args[0] == "get":
+                if "pods" in args:
+                    return {"items": pods}
+                return next(pod for pod in pods if pod["metadata"]["name"] == args[2])
+            if "me-configuration-proof" in args:
+                return "true\nmdsd=0 me=1 localControl=0\n2000000000 128\n"
+            return (
+                "PROCESS\t71\tMetricsExtensio\n"
+                "ENV\t71\tNO_PROXY=.monitor.azure.com\n"
+                "ENV\t71\tAWS_SECRET_ACCESS_KEY=never-print\n"
+                "CMDLINE\t71\tMetricsExtensio --config dce\n"
+            )
+
+        host = Mock()
+        host.kube.side_effect = kube
+        result = runner.verify_me_configuration(
+            host, {"immutableDcrId": "dcr-" + "a" * 32}, 0, capture_process=True)
+        self.assertEqual(len(result["collectors"]), 2)
+        for index, collector in enumerate(result["collectors"]):
+            self.assertEqual(collector["configurationContainerId"], f"containerd://id-{index}")
+            self.assertEqual(collector["processContainerId"], f"containerd://id-{index}")
+            self.assertIn("ENV\t71\tNO_PROXY=.monitor.azure.com", collector["processSnapshot"])
+            self.assertNotIn("AWS_SECRET_ACCESS_KEY", "\n".join(collector["processSnapshot"]))
+            self.assertIsNone(collector["processSnapshotError"])
+
+    def test_process_snapshot_retries_when_container_changes(self):
+        def pod(container_id):
+            return {"status": {"containerStatuses": [{
+                "name": "prometheus-collector", "containerID": container_id, "ready": True,
+            }]}}
+
+        host = Mock()
+        host.kube.side_effect = [
+            pod("containerd://old"),
+            "PROCESS\t71\tMetricsExtensio\nENV\t71\tNO_PROXY=old\n",
+            pod("containerd://new"),
+            pod("containerd://new"),
+            "PROCESS\t72\tMetricsExtensio\nENV\t72\tNO_PROXY=new\n",
+            pod("containerd://new"),
+        ]
+        container_id, snapshot, error = runner.capture_proxy_process_snapshot(host, "ama-metrics-test")
+        self.assertEqual(container_id, "containerd://new")
+        self.assertIn("ENV\t72\tNO_PROXY=new", snapshot)
+        self.assertNotIn("NO_PROXY=old", "\n".join(snapshot))
+        self.assertIsNone(error)
 
     def test_proxy_route_diagnostics_bound_and_filter_the_startup_window(self):
         log = (
@@ -508,7 +638,8 @@ class Contracts(unittest.TestCase):
             "104.000 10.224.0.5 CONNECT management.azure.com 200 HIER_DIRECT/1.2.3.4\n"
             "105.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
             "106.000 10.244.0.2 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
-            "1901.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            f"{runner.PROXY_DIAGNOSTIC_MAX_SECONDS + 101}.000 "
+            "10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
         )
         sources = {
             "10.224.0.5": {"scope": "node-ip-snat-ambiguous", "node": "node-a",
