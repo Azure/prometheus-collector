@@ -476,6 +476,76 @@ class Contracts(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 verify(log)
 
+    def test_proxy_diagnostics_keep_only_proxy_environment_and_redact_secrets(self):
+        raw = (
+            "PROCESS\t71\tmdsd\n"
+            "ENV\t71\tNO_PROXY=.monitor.azure.com\n"
+            "ENV\t71\tAWS_SECRET_ACCESS_KEY=never-print\n"
+            "CMDLINE\t71\tmdsd --client-secret=never-print --connection-string=never-print --config dce\n"
+            "LOG\tmdsd.err\tAuthorization: Bearer never-print\n"
+            "CONNTRACK_ROW src=10.224.0.5 dst=10.225.0.5\n"
+            "SOCKET pid=71/mdsd remote=0400E20A:0C38 state=01\n"
+            "unrelated output\n"
+        )
+        lines = runner.sanitize_proxy_diagnostic_lines(raw, limit=6)
+        output = "\n".join(lines)
+        self.assertIn("ENV\t71\tNO_PROXY=.monitor.azure.com", output)
+        self.assertIn("CONNTRACK_ROW src=10.224.0.5 dst=10.225.0.5", output)
+        self.assertIn("SOCKET pid=71/mdsd", output)
+        self.assertNotIn("AWS_SECRET_ACCESS_KEY", output)
+        self.assertNotIn("never-print", output)
+        self.assertEqual(len(lines), 6)
+        tail = runner.sanitize_proxy_diagnostic_lines(raw, limit=2, keep_last=True)
+        self.assertEqual(len(tail), 2)
+        self.assertIn("SOCKET pid=71/mdsd", "\n".join(tail))
+
+    def test_proxy_route_diagnostics_bound_and_filter_the_startup_window(self):
+        log = (
+            "99.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            "101.000 10.224.0.8 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            "102.000 10.224.0.5 CONNECT unrelated.example.com 200 HIER_DIRECT/1.2.3.4\n"
+            "103.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            "104.000 10.224.0.5 CONNECT management.azure.com 200 HIER_DIRECT/1.2.3.4\n"
+            "105.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            "106.000 10.244.0.2 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+            "1901.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5\n"
+        )
+        sources = {
+            "10.224.0.5": {"scope": "node-ip-snat-ambiguous", "node": "node-a",
+                           "collectorPods": ["ama-metrics-a", "ama-metrics-b"]},
+            "10.244.0.2": {"scope": "pod-ip", "collectorPods": ["ama-metrics-a"]},
+        }
+        script = runner.proxy_route_diagnostic_script(
+            100, sources, {"config.monitor.azure.com", "management.azure.com"}, max_lines=1)
+        with patch.object(runner.subprocess, "run", return_value=Mock(stdout=log)) as run, \
+                patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            exec(script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0], {})
+        result = runner.json.loads(stdout.getvalue().split("SCENARIO_RESULT=", 1)[1])
+        self.assertEqual(result["lineCount"], 1)
+        self.assertEqual(
+            result["lines"],
+            [{"line": "103.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5",
+              "sourceAttribution": sources["10.224.0.5"]}])
+        script = runner.proxy_route_diagnostic_script(
+            100, sources, {"config.monitor.azure.com", "management.azure.com"})
+        with patch.object(runner.subprocess, "run", return_value=Mock(stdout=log)), \
+                patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            exec(script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0], {})
+        result = runner.json.loads(stdout.getvalue().split("SCENARIO_RESULT=", 1)[1])
+        self.assertEqual(result["lines"], [
+            {"line": "103.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5",
+             "sourceAttribution": sources["10.224.0.5"]},
+            {"line": "104.000 10.224.0.5 CONNECT management.azure.com 200 HIER_DIRECT/1.2.3.4",
+             "sourceAttribution": sources["10.224.0.5"]},
+            {"line": "105.000 10.224.0.5 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5",
+             "sourceAttribution": sources["10.224.0.5"]},
+            {"line": "106.000 10.244.0.2 CONNECT config.monitor.azure.com 200 HIER_DIRECT/10.225.0.5",
+             "sourceAttribution": sources["10.244.0.2"]},
+        ])
+        run.assert_called_once_with(
+            ["tail", "-n", "5000", "/var/log/squid/access.log"],
+            capture_output=True, text=True, timeout=15, check=True)
+
     def test_command_failure_surfaces_only_fixed_stdout_markers_and_log_location(self):
         with tempfile.TemporaryDirectory(dir=SOURCE.parent) as temporary:
             commands = runner.Commands(Path(temporary))

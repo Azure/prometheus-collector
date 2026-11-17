@@ -8,6 +8,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime
 from functools import cache
 import hashlib
+import ipaddress
 import inspect
 import json
 import math
@@ -1329,6 +1330,362 @@ def verify_proxy(host, outputs, started, ampls_proof=None):
     return result
 
 
+PROXY_DIAGNOSTIC_ENV = {"HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy", "NO_PROXY", "no_proxy"}
+PROXY_DIAGNOSTIC_MAX_SECONDS = 1800
+PROXY_DIAGNOSTIC_MAX_LINES = 80
+
+
+def sanitize_proxy_diagnostic_lines(output, limit=PROXY_DIAGNOSTIC_MAX_LINES, keep_last=False):
+    allowed_prefixes = ("PROCESS\t", "ENV\t", "CMDLINE\t", "SOCKET ", "SOCKET_SNAPSHOT ",
+                        "CONNTRACK ", "CONNTRACK_ROW ", "LOG\t", "SAMPLER ")
+    lines = []
+    for line in output.splitlines():
+        if not line.startswith(allowed_prefixes):
+            continue
+        if line.startswith("ENV\t"):
+            fields = line.split("\t", 2)
+            if len(fields) != 3 or fields[2].split("=", 1)[0] not in PROXY_DIAGNOSTIC_ENV:
+                continue
+        line = re.sub(r"(?i)(https?://)[^/@\s]+:[^/@\s]+@", r"\1[REDACTED]@", line)
+        line = re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,;]+",
+                      r"\1[REDACTED]", line)
+        line = re.sub(
+            r"(?i)(--[\w-]*(?:token|secret|password|credential|authorization|api[-_]?key|connection[-_]?string|key)[\w-]*)(=|\s+)"
+            r"(?:\"[^\"]*\"|'[^']*'|\S+)", r"\1\2[REDACTED]", line)
+        line = re.sub(
+            r"(?i)\b(access[_-]?token|client[_-]?secret|password|secret|api[_-]?key|connection[_-]?string)(\s*[:=]\s*)"
+            r"(?:\"[^\"]*\"|'[^']*'|\S+)", r"\1\2[REDACTED]", line)
+        lines.append(line[:1000])
+        if len(lines) > limit:
+            if not keep_last:
+                break
+            lines.pop(0)
+        elif len(lines) == limit and not keep_last:
+            break
+    return lines
+
+
+def proxy_process_snapshot_script():
+    return r'''set +e
+for proc in /proc/[0-9]*; do
+  pid=${proc##*/}
+  name=$(cat "$proc/comm" 2>/dev/null) || continue
+  case "$name" in mdsd|MetricsExtensio*) ;; *) continue ;; esac
+  printf 'PROCESS\t%s\t%s\n' "$pid" "$name"
+  tr '\000' '\n' < "$proc/environ" 2>/dev/null |
+    while IFS= read -r entry; do
+      case "$entry" in HTTP_PROXY=*|http_proxy=*|HTTPS_PROXY=*|https_proxy=*|NO_PROXY=*|no_proxy=*)
+        printf 'ENV\t%s\t%s\n' "$pid" "$entry";;
+      esac
+    done
+  printf 'CMDLINE\t%s\t' "$pid"
+  tr '\000' ' ' < "$proc/cmdline" 2>/dev/null
+  printf '\n'
+done
+'''
+
+
+def proxy_socket_sampler_script(max_seconds=PROXY_DIAGNOSTIC_MAX_SECONDS):
+    script = r'''set +e
+allowed="$1"
+ips="$2"
+end=$(( $(date +%s) + __MAX_SECONDS__ ))
+previous_sockets="__initial__"
+previous_conntrack="__initial__"
+sample=0
+events=0
+while [ "$(date +%s)" -lt "$end" ]; do
+  fdmap=$(
+    for proc in /proc/[0-9]*; do
+      pid=${proc##*/}
+      name=$(cat "$proc/comm" 2>/dev/null) || continue
+      case "$name" in mdsd|MetricsExtensio*) ;; *) continue ;; esac
+      for fd in "$proc"/fd/*; do
+        target=$(readlink "$fd" 2>/dev/null) || continue
+        case "$target" in socket:\[*\])
+          inode=${target#socket:[}; inode=${inode%]}
+          printf '%s:%s:%s,' "$pid" "$name" "$inode";;
+        esac
+      done
+    done
+  )
+  sockets=$(awk -v fdmap="$fdmap" -v allowed="$allowed" '
+    BEGIN {
+      count = split(fdmap, records, ",")
+      for (i = 1; i <= count; i++) {
+        split(records[i], fields, ":")
+        if (fields[3] != "") process[fields[3]] = fields[1] "/" fields[2]
+      }
+      count = split(allowed, endpoints, ",")
+      for (i = 1; i <= count; i++) endpoint[endpoints[i]] = 1
+    }
+    NR > 1 && ($3 in endpoint) && ($10 in process) {
+      print "SOCKET pid=" process[$10] " inode=" $10 " local=" $2 " remote=" $3 " state=" $4
+    }
+  ' /proc/net/tcp /proc/net/tcp6 2>/dev/null | sort -u)
+  if [ "$sockets" != "$previous_sockets" ]; then
+    if [ "$events" -lt 500 ]; then
+      printf 'SOCKET_SNAPSHOT %s\n%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${sockets:-none}"
+      events=$((events + 1))
+    fi
+    previous_sockets=$sockets
+  fi
+  if [ $((sample % 5)) -eq 0 ]; then
+    if [ -r /proc/net/nf_conntrack ]; then
+      conntrack=$(
+        for ip in $(printf '%s' "$ips" | tr ',' ' '); do
+          grep -F -m 20 -- "$ip" /proc/net/nf_conntrack 2>/dev/null
+        done | sed -E 's/ packets=[0-9]+ bytes=[0-9]+//g' | sort -u | head -n 30
+      )
+    else
+      conntrack=unavailable
+    fi
+    if [ "$conntrack" != "$previous_conntrack" ]; then
+      if [ "$events" -lt 500 ]; then
+        printf 'CONNTRACK %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        if [ -n "$conntrack" ]; then
+          printf '%s\n' "$conntrack" | sed 's/^/CONNTRACK_ROW /'
+        else
+          printf 'CONNTRACK_ROW none\n'
+        fi
+        events=$((events + 1))
+      fi
+      previous_conntrack=$conntrack
+    fi
+  fi
+  sample=$((sample + 1))
+  sleep 1
+done
+printf 'SAMPLER stopped=%s samples=%s events=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sample" "$events"
+'''
+    return script.replace("__MAX_SECONDS__", str(max_seconds))
+
+
+def proxy_route_diagnostic_script(started, source_attribution, destinations,
+                                  max_lines=PROXY_DIAGNOSTIC_MAX_LINES):
+    return """python3 - <<'PY'
+import json
+import subprocess
+import time
+
+started = %r
+source_attribution = %r
+destinations = set(%r)
+result = subprocess.run(
+    ["tail", "-n", "5000", "/var/log/squid/access.log"],
+    capture_output=True, text=True, timeout=15, check=True)
+input_lines = result.stdout.splitlines()
+lines = []
+for line in input_lines:
+    fields = line.split()
+    if len(fields) != 6:
+        continue
+    try:
+        timestamp = float(fields[0])
+    except ValueError:
+        continue
+    if timestamp < started or fields[1] not in source_attribution or fields[3] not in destinations:
+        continue
+    if timestamp > started + %s:
+        break
+    lines.append({"line": " ".join(fields)[:1000],
+                  "sourceAttribution": source_attribution[fields[1]]})
+    if len(lines) == %s:
+        break
+print("SCENARIO_RESULT=" + json.dumps({
+    "windowStarted": started, "windowSeconds": %s, "capturedAt": time.time(),
+    "inputLineCount": len(input_lines), "inputLimitLines": 5000,
+    "inputMayBeTruncated": len(input_lines) == 5000,
+    "outputLimitLines": %s, "lineCount": len(lines), "lines": lines}))
+PY""" % (started, source_attribution, sorted(destinations), PROXY_DIAGNOSTIC_MAX_SECONDS,
+        max_lines, PROXY_DIAGNOSTIC_MAX_SECONDS, max_lines)
+
+
+def start_proxy_diagnostics(host, outputs, proof, started):
+    state = {"windowStarted": started, "samplerStarted": time.time(), "collectors": [], "samplers": [],
+             "proxyVmName": outputs.get("proxyVmName")}
+    try:
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                         json_output=True, private=True)["items"]
+    except RuntimeError as failure:
+        state["inventoryError"] = str(failure)
+        print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(state), flush=True)
+        return state
+    try:
+        proxy_ip = urlparse(outputs["proxyEndpoint"]).hostname
+        if not proxy_ip or ipaddress.ip_address(proxy_ip).version != 4:
+            raise ValueError("Proxy diagnostics require the owned IPv4 proxy endpoint")
+        targets = {ipaddress.IPv4Address(proxy_ip)}
+        for addresses in proof.get("endpointAddresses", {}).values():
+            targets.update(ipaddress.IPv4Address(address) for address in addresses)
+        endpoint_ids = [f"{ipaddress.IPv4Address(proxy_ip).packed[::-1].hex().upper()}:0C38"]
+        endpoint_ids.extend(
+            f"{ipaddress.IPv4Address(address).packed[::-1].hex().upper()}:01BB"
+            for addresses in proof.get("endpointAddresses", {}).values() for address in addresses)
+    except (TypeError, ValueError) as failure:
+        state["samplerError"] = str(failure)
+        print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(state), flush=True)
+        return state
+    endpoint_ids = sorted(set(endpoint_ids))
+    target_ips = sorted({str(address) for address in targets})
+    state["targets"] = target_ips
+    endpoint_hosts = {urlparse(outputs[key]).hostname for key in
+                      ("dceMetricsIngestionEndpoint", "proxyEndpoint")} - {None}
+    state["routeTargets"] = sorted(
+        set(target_ips) | {host for host in proof.get("hosts", {}).values() if host}
+        | endpoint_hosts | {"management.azure.com"})
+    sampler_script = proxy_socket_sampler_script()
+    kubectl = shutil.which(getattr(host.args, "kubectl", "kubectl"))
+    if not kubectl:
+        state["samplerError"] = "kubectl executable is unavailable"
+        print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(state), flush=True)
+        return state
+    for pod in pods:
+        if not any(container["name"] == "prometheus-collector" for container in pod["spec"]["containers"]):
+            continue
+        name = pod["metadata"]["name"]
+        statuses = pod["status"].get("containerStatuses", [])
+        status = next((item for item in statuses if item["name"] == "prometheus-collector"), {})
+        collector = {"pod": name, "podIP": pod["status"].get("podIP"),
+                     "hostIP": pod["status"].get("hostIP"), "node": pod["spec"].get("nodeName"),
+                     "container": "prometheus-collector",
+                     "containerId": status.get("containerID")}
+        state["collectors"].append(collector)
+        try:
+            snapshot = host.kube("exec", name, "-n", "kube-system", "-c", "prometheus-collector",
+                                 "--", "sh", "-c", proxy_process_snapshot_script(), private=True)
+            collector["processSnapshot"] = sanitize_proxy_diagnostic_lines(snapshot, 40)
+            if not any(line.startswith("PROCESS\t") for line in collector["processSnapshot"]):
+                collector["snapshotError"] = "No ME or mdsd process was visible"
+        except RuntimeError as failure:
+            collector["snapshotError"] = str(failure)
+        if not re.fullmatch(r"[a-z0-9-]+", name):
+            collector["samplerError"] = "Unexpected collector pod name"
+            continue
+        path = host.args.evidence / "proxy-diagnostics" / f"{name}.log"
+        command = [kubectl, "--kubeconfig", str(host.kubeconfig), "--request-timeout=31m",
+                   "exec", name, "-n", "kube-system", "-c", "prometheus-collector", "--",
+                   "sh", "-c", sampler_script, "proxy-socket-sampler", ",".join(endpoint_ids),
+                   ",".join(target_ips)]
+        try:
+            handle = None
+            path.parent.mkdir(parents=True, exist_ok=True)
+            handle = path.open("w", encoding="utf-8")
+            process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=handle,
+                                       stderr=subprocess.STDOUT, text=True)
+        except OSError as failure:
+            if handle is not None:
+                handle.close()
+            collector["samplerError"] = str(failure)
+            continue
+        state["samplers"].append({"pod": name, "path": path, "handle": handle, "process": process})
+    if not state["collectors"]:
+        state["inventoryError"] = "No collector pods were available for diagnostics"
+    public = {key: value for key, value in state.items() if key != "samplers"}
+    print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(public), flush=True)
+    return state
+
+
+def finish_proxy_diagnostics(host, state):
+    errors = []
+    for sampler in state["samplers"]:
+        process, handle = sampler["process"], sampler["handle"]
+        try:
+            if process.poll() is None:
+                sampler["stoppedByHarness"] = True
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=10)
+        except OSError as failure:
+            errors.append(f"{sampler['pod']} sampler stop: {failure}")
+        finally:
+            handle.close()
+    log_script = r'''set +e
+for path in /MetricsExtensionConsoleDebugLog.log \
+  /opt/microsoft/linuxmonagent/mdsd.err /opt/microsoft/linuxmonagent/mdsd.warn \
+  /opt/microsoft/linuxmonagent/mdsd.info; do
+  [ -r "$path" ] || continue
+  tail -n 2000 "$path" | grep -iE 'proxy|endpoint|dce|config|bypass|msprom|handler\.control' |
+    tail -n 20 | cut -c1-1000 | while IFS= read -r line; do printf 'LOG\t%s\t%s\n' "$path" "$line"; done
+done
+'''
+    collectors = []
+    sampler_by_pod = {item["pod"]: item for item in state["samplers"]}
+    for collector in state["collectors"]:
+        item = dict(collector)
+        sampler = sampler_by_pod.get(item["pod"])
+        if sampler:
+            path = sampler["path"]
+            try:
+                raw = path.read_text(encoding="utf-8", errors="replace")
+                lines = sanitize_proxy_diagnostic_lines(raw, keep_last=True)
+                path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+                item["socketEvidence"] = str(path.relative_to(host.args.evidence))
+                item["socketSamples"] = lines
+                item["samplerExitCode"] = sampler["process"].returncode
+                if sampler["process"].returncode not in (0, None) and not sampler.get("stoppedByHarness"):
+                    item["samplerError"] = f"sampler exited with code {sampler['process'].returncode}"
+                    errors.append(f"{item['pod']} {item['samplerError']}")
+            except OSError as failure:
+                item["samplerError"] = str(failure)
+                errors.append(f"{item['pod']} sampler output: {failure}")
+        try:
+            logs = host.kube("exec", item["pod"], "-n", "kube-system", "-c", "prometheus-collector",
+                             "--", "sh", "-c", log_script, private=True)
+            item["endpointLogs"] = sanitize_proxy_diagnostic_lines(logs)
+        except RuntimeError as failure:
+            item["logError"] = str(failure)
+            errors.append(f"{item['pod']}: {failure}")
+        collectors.append(item)
+    if state.get("proxyVmName") and state.get("routeTargets"):
+        source_attribution = {
+            item["podIP"]: {"scope": "pod-ip", "collectorPods": [item["pod"]]}
+            for item in state["collectors"] if item.get("podIP")
+        }
+        node_sources = {}
+        for item in state["collectors"]:
+            if item.get("hostIP"):
+                node = node_sources.setdefault(item["hostIP"], {"node": item.get("node"), "collectorPods": []})
+                node["collectorPods"].append(item["pod"])
+        for node in node_sources.values():
+            node["collectorPods"].sort()
+        source_attribution.update({
+            address: {"scope": "node-ip-snat-ambiguous", **details}
+            for address, details in node_sources.items()
+        })
+        try:
+            script = proxy_route_diagnostic_script(
+                state["windowStarted"], source_attribution, state["routeTargets"])
+            route_capture = vm_script(host, state["proxyVmName"], script)
+            result = {"status": "CAPTURED" if route_capture["lineCount"] else "EMPTY",
+                      "windowStarted": route_capture["windowStarted"],
+                      "windowSeconds": route_capture["windowSeconds"],
+                      "inputLineCount": route_capture["inputLineCount"],
+                      "inputLimitLines": route_capture["inputLimitLines"],
+                      "inputMayBeTruncated": route_capture["inputMayBeTruncated"],
+                      "outputLimitLines": route_capture["outputLimitLines"],
+                      "capturedAt": route_capture["capturedAt"], "lineCount": route_capture["lineCount"],
+                      "lines": route_capture["lines"]}
+            state["proxyRoutes"] = result
+        except (RuntimeError, ValueError, KeyError, OSError, subprocess.SubprocessError) as failure:
+            state["proxyLogError"] = str(failure)
+            errors.append(f"owned proxy log: {failure}")
+    partial = (errors or state.get("inventoryError") or state.get("samplerError")
+               or any(item.get("snapshotError") or item.get("samplerError") for item in collectors))
+    result = {"status": "PARTIAL" if partial else "CAPTURED", "windowStarted": state["windowStarted"],
+              "samplerStarted": state["samplerStarted"], "capturedAt": time.time(),
+              "targets": state.get("targets", []),
+              "inventoryError": state.get("inventoryError"), "samplerError": state.get("samplerError"),
+              "proxyRoutes": state.get("proxyRoutes"), "proxyLogError": state.get("proxyLogError"),
+              "errors": errors, "collectors": collectors}
+    save(host.args.evidence / "proxy-diagnostics.json", result)
+    print("AMPLS_PROXY_DIAGNOSTICS " + json.dumps(result), flush=True)
+    return result
+
+
 def audit_images(host, images):
     nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
     node_info = {n["metadata"]["name"]: n["status"]["nodeInfo"] for n in nodes}
@@ -1864,6 +2221,7 @@ def execute(args, scenario, variants, commands):
     env = deployment_env(args, resolved["kubernetesVersion"], proxy="private-api" in scenario["clusterFeatures"])
     host = Host(args, scenario, commands)
     transport = ExitStack()
+    proxy_diagnostics = None
     host.runner_receipt = runner_receipt
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
                "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
@@ -1944,6 +2302,7 @@ def execute(args, scenario, variants, commands):
             for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
                 host.kube("rollout", "restart", resource, "-n", "kube-system")
                 host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
+            proxy_diagnostics = start_proxy_diagnostics(host, outputs, outcome["ampls"], proxy_started)
             outcome["meConfiguration"] = verify_me_configuration(host, outcome["ampls"], proxy_started)
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
@@ -2013,9 +2372,18 @@ def execute(args, scenario, variants, commands):
         commands.deadline = None
         try:
             try:
-                transport.close()
+                if proxy_diagnostics is not None:
+                    try:
+                        outcome["proxyDiagnostics"] = finish_proxy_diagnostics(host, proxy_diagnostics)
+                    except (RuntimeError, ValueError, OSError, KeyError) as failure:
+                        outcome["proxyDiagnostics"] = {"status": "ERROR", "error": str(failure)}
+                        print("AMPLS_PROXY_DIAGNOSTICS_ERROR " + json.dumps(outcome["proxyDiagnostics"]),
+                              flush=True)
             finally:
-                outcome["resources"] = host.retain()
+                try:
+                    transport.close()
+                finally:
+                    outcome["resources"] = host.retain()
             if outcome["status"] == "TESTS_PASSED":
                 if not outcome["resources"].get("retained"):
                     raise RuntimeError("Successful tests but retained resource inventory is incomplete")
