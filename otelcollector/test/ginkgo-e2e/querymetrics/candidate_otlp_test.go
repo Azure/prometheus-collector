@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,14 +17,37 @@ import (
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	collectormetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	common "go.opentelemetry.io/proto/otlp/common/v1"
+	metrics "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/proto"
 
 	"prometheus-collector/otelcollector/test/utils"
 )
 
 func sendCandidateOTLP(client *http.Client, endpoint, marker string, now time.Time) error {
-	body := fmt.Sprintf(`{"resourceMetrics":[{"scopeMetrics":[{"metrics":[{"name":"otlpapp.intgauge","gauge":{"dataPoints":[{"attributes":[{"key":"scenario_run","value":{"stringValue":%q}}],"timeUnixNano":"%d","asDouble":1}]}}]}]}]}`,
-		marker, now.UnixNano())
-	resp, err := client.Post(endpoint, "application/json", strings.NewReader(body))
+	body, err := proto.Marshal(&collectormetrics.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metrics.ResourceMetrics{{
+			ScopeMetrics: []*metrics.ScopeMetrics{{
+				Metrics: []*metrics.Metric{{
+					Name: "otlpapp.intgauge",
+					Data: &metrics.Metric_Gauge{Gauge: &metrics.Gauge{
+						DataPoints: []*metrics.NumberDataPoint{{
+							Attributes: []*common.KeyValue{{
+								Key: "scenario_run", Value: &common.AnyValue{Value: &common.AnyValue_StringValue{StringValue: marker}},
+							}},
+							TimeUnixNano: uint64(now.UnixNano()),
+							Value:        &metrics.NumberDataPoint_AsDouble{AsDouble: 1},
+						}},
+					}},
+				}},
+			}},
+		}},
+	})
+	if err != nil {
+		return err
+	}
+	resp, err := client.Post(endpoint, "application/x-protobuf", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -37,16 +59,12 @@ func sendCandidateOTLP(client *http.Client, endpoint, marker string, now time.Ti
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("OTLP HTTP status %d: %s", resp.StatusCode, response)
 	}
-	var result struct {
-		PartialSuccess struct {
-			Rejected json.Number `json:"rejectedDataPoints"`
-		} `json:"partialSuccess"`
-	}
-	if err := json.Unmarshal(response, &result); err != nil {
+	var result collectormetrics.ExportMetricsServiceResponse
+	if err := proto.Unmarshal(response, &result); err != nil {
 		return err
 	}
-	if result.PartialSuccess.Rejected != "" && result.PartialSuccess.Rejected != "0" {
-		return fmt.Errorf("OTLP rejected data points: %s", result.PartialSuccess.Rejected)
+	if rejected := result.GetPartialSuccess().GetRejectedDataPoints(); rejected != 0 {
+		return fmt.Errorf("OTLP rejected data points: %d", rejected)
 	}
 	return nil
 }
@@ -83,17 +101,37 @@ var _ = Describe("Candidate OTLP ingestion", Label("candidate-otlp"), func() {
 })
 
 func TestSendCandidateOTLP(t *testing.T) {
-	status, response := http.StatusOK, `{}`
+	status, response := http.StatusOK, []byte{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
-		if err != nil || r.URL.Path != "/v1/metrics" || r.Header.Get("Content-Type") != "application/json" ||
-			!json.Valid(body) || !bytes.Contains(body, []byte(`"stringValue":"run123"`)) ||
-			!bytes.Contains(body, []byte(`"timeUnixNano":"1000000000"`)) {
-			t.Errorf("invalid OTLP request: %s", body)
+		var request collectormetrics.ExportMetricsServiceRequest
+		if err != nil || r.Method != http.MethodPost || r.URL.Path != "/v1/metrics" ||
+			r.Header.Get("Content-Type") != "application/x-protobuf" || proto.Unmarshal(body, &request) != nil {
+			t.Error("invalid OTLP protobuf request")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if len(request.ResourceMetrics) != 1 || len(request.ResourceMetrics[0].ScopeMetrics) != 1 ||
+			len(request.ResourceMetrics[0].ScopeMetrics[0].Metrics) != 1 {
+			t.Error("expected exactly one OTLP metric")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		metric := request.ResourceMetrics[0].ScopeMetrics[0].Metrics[0]
+		if metric.Name != "otlpapp.intgauge" || len(metric.GetGauge().GetDataPoints()) != 1 {
+			t.Error("expected one otlpapp.intgauge gauge point")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		point := metric.GetGauge().DataPoints[0]
+		if point.TimeUnixNano != 1000000000 || point.GetAsDouble() != 1 || len(point.Attributes) != 1 ||
+			point.Attributes[0].Key != "scenario_run" || point.Attributes[0].Value.GetStringValue() != "run123" {
+			t.Errorf("invalid OTLP point: %v", point)
 		}
 
+		w.Header().Set("Content-Type", "application/x-protobuf")
 		w.WriteHeader(status)
-		fmt.Fprint(w, response)
+		w.Write(response)
 	}))
 	defer server.Close()
 	send := func() error {
@@ -106,9 +144,16 @@ func TestSendCandidateOTLP(t *testing.T) {
 	if err := send(); err == nil {
 		t.Fatal("HTTP failure passed")
 	}
-	status, response = http.StatusOK, `{"partialSuccess":{"rejectedDataPoints":"1"}}`
+	status = http.StatusOK
+	response, _ = proto.Marshal(&collectormetrics.ExportMetricsServiceResponse{
+		PartialSuccess: &collectormetrics.ExportMetricsPartialSuccess{RejectedDataPoints: 1},
+	})
 	if err := send(); err == nil {
 		t.Fatal("partial rejection passed")
+	}
+	response = []byte{0xff}
+	if err := send(); err == nil {
+		t.Fatal("malformed protobuf response passed")
 	}
 }
 
@@ -116,7 +161,7 @@ func TestProbeCandidateOTLP(t *testing.T) {
 	samples := `[]`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/metrics" {
-			fmt.Fprint(w, `{}`)
+			w.Header().Set("Content-Type", "application/x-protobuf")
 			return
 		}
 		query := r.FormValue("query")
