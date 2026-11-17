@@ -204,7 +204,7 @@ class ComparisonTests(unittest.TestCase):
             current["newFindings"] = []
         with patch.object(normalize, "compare_findings", side_effect=broken):
             result = unittest.TestResult()
-            ComparisonTests("test_new_findings_in_deferred_targets_still_block").run(result)
+            ComparisonTests("test_new_findings_outside_deferred_targets_still_block").run(result)
             self.assertTrue(result.failures, result.errors)
             self.assertFalse(result.errors)
         with patch.object(compare_trivy, "DEFERRED_TARGETS", frozenset()):
@@ -242,14 +242,36 @@ class ComparisonTests(unittest.TestCase):
                                  ["DEFERRED", "OPEN"])
                 self.assertEqual(comparison["smokeTests"], [{"id": cve, "status": "OPEN"}])
 
-    def test_new_findings_in_deferred_targets_still_block(self):
-        for target in ("opt/promconfigvalidator", "opt/microsoft/otelcollector/prometheusui"):
+    def test_new_findings_outside_deferred_targets_still_block(self):
+        for target in ("opt/main-helper", "opt/microsoft/otelcollector/prometheusui-helper"):
             with self.subTest(target=target):
                 baseline = [self.binary("opt/main", ["CVE-2026-1234"]), self.binary(target, [])]
                 candidate = [self.binary("opt/main", []), self.binary(target, ["CVE-2026-9999"])]
+                candidate[1]["Vulnerabilities"][0]["PkgPath"] = "opt/promconfigvalidator"
                 comparison = self.compare_fixture(baseline, candidate, ["CVE-2026-1234"])
                 self.assertEqual(comparison["verdict"], "FAIL")
                 self.assertEqual([finding["id"] for finding in comparison["newFindings"]], ["CVE-2026-9999"])
+                self.assertEqual(comparison["newFindings"][0]["status"], "NEW")
+
+    def test_new_findings_in_exact_deferred_binaries_are_reported_not_gated(self):
+        for target in ("opt/microsoft/otelcollector/otelcollector", "opt/promconfigvalidator",
+                       "opt/microsoft/otelcollector/prometheusui"):
+            with self.subTest(target=target):
+                smoke, new = "CVE-2026-1234", "CVE-2026-9999"
+                binary = self.binary(target, [new])
+                binary["Packages"] = [{"Name": "stdlib", "Version": "1"}]
+                binary["Vulnerabilities"][0].update(PkgName="stdlib", PkgPath="runtime")
+                baseline = [self.binary("opt/main", [smoke]), self.binary(target, [])]
+                candidate = [self.binary("opt/main", []), binary]
+                result = self.compare_fixture(baseline, candidate, [smoke, new])
+                self.assertEqual(result["verdict"], "PASS")
+                self.assertEqual(result["smokeTests"], [
+                    {"id": smoke, "status": "CLOSED"}, {"id": new, "status": "DEFERRED"}])
+                self.assertEqual([(finding["id"], finding["path"], finding["status"])
+                                  for finding in result["newFindings"]], [(new, target, "DEFERRED")])
+                missing = dict(candidate[0], Packages=[])
+                self.assertEqual(self.compare_fixture(baseline, [missing, binary], [smoke, new])["verdict"],
+                                 "BLOCKED")
 
 
 if __name__ == "__main__":

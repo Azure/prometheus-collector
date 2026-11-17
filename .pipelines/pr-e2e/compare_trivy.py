@@ -19,7 +19,7 @@ class StaleScanError(ValueError):
     pass
 
 
-def load(directory, now):
+def load(directory, now, *, binary_targets=False):
     metadata = normalize.read_json(directory / "trivy" / "metadata.json")
     raw = (directory / "trivy" / "result.json").read_bytes()
     data = json.loads(raw)
@@ -52,7 +52,9 @@ def load(directory, now):
             result["Target"] = "os:" + target
     lane = {"name": metadata["platform"], "scanner": "trivy", "status": "COMPLETE",
             "version": metadata["version"], "dbUpdatedAt": metadata["dbUpdatedAt"]}
-    findings = normalize.trivy_findings(data, metadata["platform"], metadata["requestedRef"].split("@")[1])
+    findings = normalize.trivy_findings(
+        data, metadata["platform"], metadata["requestedRef"].split("@")[1],
+        binary_targets=binary_targets)
     timestamps = [normalize.utc(metadata[field]) for field in ("dbUpdatedAt", "finishedUtc")]
     if any(timestamp > now + timedelta(minutes=5) for timestamp in timestamps):
         raise ValueError("Future database or scan timestamp")
@@ -67,8 +69,8 @@ def compare(baseline, candidate, receipt, requested, now=None):
     if not requested or any(not re.fullmatch(r"CVE-[0-9]{4}-[0-9]+", cve) for cve in requested):
         raise ValueError("Explicit selected CVEs required")
     now = now or datetime.now(timezone.utc)
-    before_meta, before, previous = load(baseline, now)
-    after_meta, after, current = load(candidate, now)
+    before_meta, before, previous = load(baseline, now, binary_targets=True)
+    after_meta, after, current = load(candidate, now, binary_targets=True)
     if receipt["buildResult"] != "succeeded" or not any(
             image["ref"] == after_meta["requestedRef"]
             and image["os"] + "/" + image["arch"] == after_meta["platform"] for image in receipt["images"]):
@@ -82,7 +84,10 @@ def compare(baseline, candidate, receipt, requested, now=None):
     normalize.compare_findings(current, previous)
     inventory = {(r["Target"], p["Name"]) for r in after["Results"] for p in r.get("Packages", [])}
     def identity(finding):
-        return tuple(finding[field] for field in ("lane", "scanner", "id", "package", "path"))
+        return tuple(finding.get(field) for field in ("lane", "scanner", "id", "package", "path", "binaryTarget"))
+
+    def deferred(finding):
+        return finding.get("binaryTarget") in DEFERRED_TARGETS
 
     candidate_by_identity = {identity(finding): finding for finding in current["findings"]}
     baseline_findings = []
@@ -90,7 +95,7 @@ def compare(baseline, candidate, receipt, requested, now=None):
         candidate_finding = candidate_by_identity.get(identity(finding))
         covered = (finding["path"], finding["package"]) in inventory
         status = "OPEN" if candidate_finding else "CLOSED" if covered else "NOT_REPORTED"
-        if status == "OPEN" and finding["path"] in DEFERRED_TARGETS:
+        if status == "OPEN" and deferred(candidate_finding):
             status = "DEFERRED"
         baseline_findings.append({
             "finding": finding,
@@ -101,27 +106,28 @@ def compare(baseline, candidate, receipt, requested, now=None):
     smoke_tests = []
     for cve in sorted(set(requested)):
         prior = [f for f in previous["findings"] if f["id"] == cve]
-        present = any(f["id"] == cve and f["path"] not in DEFERRED_TARGETS
-                      for f in current["findings"])
+        present = [f for f in current["findings"] if f["id"] == cve]
         statuses = [row["status"] for row in baseline_findings
                     if row["finding"]["id"] == cve]
-        if present:
+        if any(not deferred(f) for f in present):
             status = "OPEN"
         elif "NOT_REPORTED" in statuses:
             status = "NOT_REPORTED"
-        elif "DEFERRED" in statuses:
+        elif present:
             status = "DEFERRED"
         else:
             status = "CLOSED" if prior else "NOT_REPORTED"
         smoke_tests.append({"id": cve, "status": status})
-    statuses = [row["status"] for row in baseline_findings + smoke_tests if row["status"] != "DEFERRED"]
+    new_findings = [dict(finding, status="DEFERRED" if deferred(finding) else "NEW")
+                    for finding in current["newFindings"]]
+    statuses = {row["status"] for row in baseline_findings + smoke_tests + new_findings}
     verdict = ("BLOCKED" if "NOT_REPORTED" in statuses
-               else "FAIL" if current["newFindings"] or "OPEN" in statuses else "PASS")
+               else "FAIL" if statuses & {"NEW", "OPEN"} else "PASS")
     return {
         "schemaVersion": 1,
-        "scope": "Linux/amd64 collector Trivy findings; still-present baseline findings in exact deferred targets are reported but not readiness-gated; not full image clearance",
+        "scope": "Linux/amd64 collector Trivy findings; not full image clearance",
         "source": receipt["source"], "baseline": before_meta, "candidate": after_meta,
-        "findingPolicy": "No severity or fixability filters; still-present baseline findings in exact deferred targets are deferred; missing evidence and all new findings block",
+        "findingPolicy": "No severity or fixability filters; open and new findings in exact deferred targets are reported but not gated; other open/new findings and missing evidence block",
         "deferredTargets": sorted(DEFERRED_TARGETS),
         "baselineFindingCount": len(baseline_findings),
         "baselineFindings": baseline_findings,
@@ -133,7 +139,7 @@ def compare(baseline, candidate, receipt, requested, now=None):
             "Qualys/CoMET scans and QID closure",
         ],
         "verdict": verdict,
-        "newFindings": current["newFindings"],
+        "newFindings": new_findings,
         "unresolvedFindings": [row for row in baseline_findings if row["status"] != "CLOSED"],
         "remainingFindings": current["findings"],
     }

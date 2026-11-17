@@ -35,12 +35,14 @@ def finding_key(finding):
     location = finding["path"] or hashlib.sha256((finding["evidence"] or "").encode()).hexdigest()
     return (finding["scanner"], finding["id"], finding["package"], finding["installed"], location)
 
-def trivy_findings(data, name, digest):
+def trivy_findings(data, name, digest, *, binary_targets=False):
     return [
         {"lane": name, "digest": digest, "scanner": "trivy",
          "id": vuln["VulnerabilityID"], "package": vuln["PkgName"],
          "installed": vuln["InstalledVersion"], "fixed": vuln.get("FixedVersion") or None,
-         "path": vuln.get("PkgPath") or item["Target"], "evidence": None,
+         "path": (item["Target"] if binary_targets and item.get("Type") == "gobinary"
+                  else vuln.get("PkgPath") or item["Target"]), "evidence": None,
+         **({"binaryTarget": item["Target"]} if binary_targets and item.get("Type") == "gobinary" else {}),
          "severity": vuln["Severity"], "cves": None, "enrichment": "supplemental",
          "fixAvailable": bool(vuln.get("FixedVersion"))}
         for item in data["Results"] for vuln in item.get("Vulnerabilities") or []
@@ -315,7 +317,7 @@ def compare_baseline(candidate, baseline):
 
 def compare_findings(candidate, baseline):
     def identity(finding):
-        return tuple(finding.get(field) for field in ("lane", "scanner", "id", "package", "path"))
+        return tuple(finding.get(field) for field in ("lane", "scanner", "id", "package", "path", "binaryTarget"))
 
     before = {identity(finding) for finding in baseline["findings"]}
     candidate["newFindings"] = [finding for finding in candidate["findings"]

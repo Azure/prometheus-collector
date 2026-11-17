@@ -83,7 +83,7 @@ def main():
     fields = ("id", "package", "path", "digest", "installed", "fixed", "severity")
     reasons = {"OPEN": "finding remains in candidate", "CLOSED": "finding absent from covered package",
                "NOT_REPORTED": "baseline finding or package not reported",
-               "DEFERRED": "existing finding deferred to the separately managed Collector upgrade",
+               "DEFERRED": "finding deferred to the separately managed Collector upgrade",
                "NEW": "new candidate finding"}
 
     def public_finding(finding):
@@ -108,7 +108,8 @@ def main():
                   "baseline": public_finding(row["finding"]), "candidate": public_finding(row["candidateFinding"])}
         log_row("SCAN_COMPARISON", public)
     for finding in result["newFindings"]:
-        public = {"status": "NEW", "reason": reasons["NEW"], "candidate": public_finding(finding)}
+        status = finding["status"]
+        public = {"status": status, "reason": reasons[status], "candidate": public_finding(finding)}
         log_row("SCAN_COMPARISON", public)
     for row in result["smokeTests"]:
         log_row("SCAN_SMOKE", {"id": row["id"], "status": row["status"], "reason": reasons[row["status"]]})

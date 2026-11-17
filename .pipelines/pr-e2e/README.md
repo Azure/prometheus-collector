@@ -26,12 +26,12 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   not that vulnerabilities are absent.
 - `compare_trivy.py`: baseline Linux CVE and no-new-findings comparison for
   matched scanner/configuration/DB hashes, complete target/package inventory
-  and a candidate bound to the successful build receipt. Still-present baseline
+  and a candidate bound to the successful build receipt. Open and new
   findings in the exact targets `opt/microsoft/otelcollector/otelcollector`,
   `opt/microsoft/otelcollector/prometheusui` and `opt/promconfigvalidator`
   are reported as deferred to the separate Collector
-  upgrade; missing target/package evidence and new findings in any target still
-  block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
+  upgrade; missing target/package evidence and open or new findings in other
+  targets still block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
   must match the scan's exact image ref and OS metadata; binary paths remain exact.
 - `published_discovery.py` and `published-images.json`: compare the pinned
   production and latest-main collector `linux/amd64` child digests with Trivy
@@ -255,12 +255,12 @@ the original Buildx `push-metadata.json` remains readable JSON for immutable
 push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
 This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
 the scanner evaluates every baseline finding without severity or fixability
-filters. Still-present baseline findings in the exact
+filters. Open and new findings (including Go standard library findings) in the exact
 `opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
 and `opt/promconfigvalidator` targets
 are reported unresolved/deferred to the
-separate Collector upgrade, not treated as fixed. New findings in those targets
-and the same CVE in any other target still block; missing evidence also blocks.
+separate Collector upgrade, not treated as fixed. The same CVE in any other
+target still fails; missing evidence still blocks.
 All raw findings remain in the comparison evidence. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
@@ -327,8 +327,8 @@ alongside Trivy, for both Linux and Windows ama-metrics images. Load the
 during setup and each campaign's baseline/candidate evaluation. It defines the
 exact query, actual-agent execution proof, complete private snapshot, native OS
 and digest binding, source-preserving reconciliation and fix-or-blocker contract.
-Do not substitute workstation results for agent consumption. Keep the existing
-Trivy all-findings gate unchanged; absent or stale Kusto rows are not closure.
+Do not substitute workstation results for agent consumption. Trivy deferrals
+do not establish Kusto closure; absent or stale Kusto rows are not closure.
 
 Each row publishes and logs `coverage.json` as a report-only plan, never as proof of
 execution. Known coverage blockers do not fail individual scenario runs.

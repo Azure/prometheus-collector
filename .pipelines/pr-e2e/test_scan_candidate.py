@@ -29,7 +29,8 @@ class CampaignScanTests(unittest.TestCase):
         baseline = {"id": "CVE-2026-63209", "package": "example/pkg/private-token-value", "path": "opt/main",
                     "digest": "sha256:" + "a" * 64, "installed": "1", "fixed": "2",
                     "evidence": "must-not-appear"}
-        new = dict(baseline, id="CVE-2026-99999", digest="sha256:" + "b" * 64, package="p" * 4000)
+        new = dict(baseline, id="CVE-2026-99999", digest="sha256:" + "b" * 64, package="p" * 4000, status="NEW")
+        deferred_new = dict(baseline, id="CVE-2026-88888", path="opt/promconfigvalidator", status="DEFERRED")
         result = {"source": self.source, "verdict": "FAIL",
                   "scope": "Linux/amd64 collector Trivy findings; existing deferred findings are reported",
                   "findingPolicy": "No severity or fixability filters; new findings block",
@@ -39,7 +40,7 @@ class CampaignScanTests(unittest.TestCase):
             {"finding": dict(baseline, id="CVE-2026-11111"), "candidateFinding": None, "status": "CLOSED"},
             {"finding": dict(baseline, path="opt/promconfigvalidator"),
              "candidateFinding": dict(baseline, path="opt/promconfigvalidator"), "status": "DEFERRED"},
-        ], "newFindings": [new], "smokeTests": [{"id": baseline["id"], "status": "OPEN"}]}
+        ], "newFindings": [deferred_new, new], "smokeTests": [{"id": baseline["id"], "status": "OPEN"}]}
         args = ["scan_candidate.py", "--build-id", "123", "--source-commit", self.source["commit"],
                 "--baseline-image", self.baseline, "--platform", "linux/amd64",
                 "--cve", baseline["id"], "--output", "evidence"]
@@ -63,7 +64,8 @@ class CampaignScanTests(unittest.TestCase):
         self.assertEqual([part["part"] for part in parts], list(range(1, len(parts) + 1)))
         self.assertTrue(all(part["parts"] == len(parts) for part in parts))
         rows.append(json.loads("".join(part["data"] for part in parts)))
-        self.assertEqual([row["status"] for row in rows], ["OPEN", "CLOSED", "DEFERRED", "NEW"])
+        self.assertEqual([row["status"] for row in rows], ["OPEN", "CLOSED", "DEFERRED", "DEFERRED", "NEW"])
+        self.assertEqual(rows[-2]["candidate"]["id"], deferred_new["id"])
         self.assertEqual(rows[-1]["candidate"]["package"], "p" * 4000)
         self.assertNotIn("must-not-appear", text)
         self.assertNotIn("private-token-value", text)
