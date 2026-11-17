@@ -139,6 +139,8 @@ class Contracts(unittest.TestCase):
             host.args.run_id = "ca-run"
             host.commands.run.return_value = "test-token"
             outputs = {
+                "proxyEndpoint": "http://10.226.0.4:3128",
+                "proxyTrustedCa": "cHJveHktY2E=",
                 "queryEndpoint": "https://amw.example",
                 "dceMetricsIngestionEndpoint": "https://dce.example.metrics.ingest.monitor.azure.com",
             }
@@ -165,9 +167,7 @@ class Contracts(unittest.TestCase):
                     return ""
                 if args[0] == "exec" and any("curl --noproxy" in str(arg) for arg in args):
                     return "curl: (60) SSL certificate problem: self-signed certificate\nCURL_EXIT_CODE=60"
-                if args[0] == "exec" and args[-4:] == ("rm", "-f", "--", trust_anchor):
-                    return ""
-                if args[0] == "exec" and args[-1] == "update-ca-trust":
+                if args[0] == "exec" and "trust anchor --remove" in str(args):
                     return ""
                 if args[-2:] in (("cat", "/usr/sbin/me.config"), ("cat", "/usr/sbin/me_ds.config")):
                     return '{"proxyDefinitionMode":1,"validateCertificates":2}'
@@ -222,22 +222,27 @@ class Contracts(unittest.TestCase):
                 self.assertIn("anchors-ubuntu", names)
             calls = host.kube.call_args_list
             for pod in ("collector-replica", "collector-node"):
-                anchor_clear = next(
+                trust_reset = next(
                     index for index, call in enumerate(calls)
                     if call.args[:2] == ("exec", pod)
-                    and call.args[-4:] == ("rm", "-f", "--", trust_anchor))
-                trust_refresh = next(
-                    index for index, call in enumerate(calls)
-                    if call.args[:2] == ("exec", pod)
-                    and call.args[-1] == "update-ca-trust")
+                    and "trust anchor --remove" in str(call.args))
                 curl_probe = next(
                     index for index, call in enumerate(calls)
                     if call.args[:2] == ("exec", pod)
                     and any("curl --noproxy" in str(arg) for arg in call.args))
-                self.assertLess(anchor_clear, trust_refresh)
-                self.assertLess(trust_refresh, curl_probe)
+                reset_command = next(arg for arg in calls[trust_reset].args
+                                     if "trust anchor --remove" in str(arg))
+                self.assertLess(trust_reset, curl_probe)
+                self.assertIn(f"rm -f -- {trust_anchor}", reset_command)
+                self.assertIn("trust list --filter=ca-anchors", reset_command)
+                self.assertIn("PROXY_CA_STILL_TRUSTED", reset_command)
+                self.assertEqual(calls[trust_reset].args[-1], outputs["proxyTrustedCa"])
                 command = next(arg for arg in calls[curl_probe].args
                                if "curl --noproxy" in str(arg))
+                self.assertIn('--proxy "$1"', command)
+                self.assertEqual(calls[curl_probe].args[-3:],
+                                 ("scenario-ca-probe", outputs["proxyEndpoint"],
+                                  outputs["dceMetricsIngestionEndpoint"]))
                 self.assertIn(f"--cacert {trust_bundle}", command)
 
     def test_ca_matches_only_dce_certificate_errors(self):

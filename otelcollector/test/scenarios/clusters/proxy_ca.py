@@ -85,6 +85,12 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
         "--query", "accessToken", "-o", "tsv"], private=True).strip()
     if not token:
         raise RuntimeError("CA negative probe requires an authenticated independent AMW reader")
+    proxy_endpoint = outputs.get("proxyEndpoint")
+    if not proxy_endpoint:
+        raise RuntimeError("CA negative probe requires the owned proxy endpoint")
+    proxy_ca = outputs.get("proxyTrustedCa")
+    if not proxy_ca:
+        raise RuntimeError("CA negative probe requires the owned proxy CA certificate")
     query = outputs["queryEndpoint"].rstrip("/") + "/api/v1/query?" + urlencode({
         "query": f'myapp_temperature{{scenario_run="{marker}"}}',
     })
@@ -119,21 +125,29 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
             if any(mount.get("name") == "scenario-proxy-ca"
                    for mount in collector.get("volumeMounts", [])):
                 raise RuntimeError("Collector still mounts the owned proxy CA during distrust")
+            reset_trust = (
+                'set -e; ca_file=$(mktemp); trap \'rm -f -- "$ca_file"\' EXIT; '
+                'printf "%s" "$1" | base64 -d > "$ca_file"; '
+                'anchors=$(trust list --filter=ca-anchors); '
+                'if printf "%s\\n" "$anchors" | grep -Fq "Retained AKS scenario proxy CA"; then '
+                'trust anchor --remove "$ca_file"; fi; '
+                f'rm -f -- {trust_anchor}; update-ca-trust; '
+                'anchors=$(trust list --filter=ca-anchors); '
+                'if printf "%s\\n" "$anchors" | grep -Fq "Retained AKS scenario proxy CA"; then '
+                'echo PROXY_CA_STILL_TRUSTED; exit 1; fi')
             host.kube(
                 "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
-                "--", "rm", "-f", "--", trust_anchor)
-            host.kube(
-                "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
-                "--", "update-ca-trust")
+                "--", "sh", "-c", reset_trust, "scenario-ca-trust-reset", proxy_ca)
             result = host.kube(
                 "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
                 "--", "sh", "-c",
-                'set +e; curl --noproxy "" --proxy "$HTTPS_PROXY" --connect-timeout 10 --max-time 30 '
-                f'--cacert {trust_bundle} --silent --show-error --output /dev/null "$1" 2>&1; '
+                'set +e; curl --noproxy "" --proxy "$1" --connect-timeout 10 --max-time 30 '
+                f'--cacert {trust_bundle} --silent --show-error --output /dev/null "$2" 2>&1; '
                 'code=$?; printf "\\nCURL_EXIT_CODE=%s\\n" "$code"',
-                "scenario-ca-probe", outputs["dceMetricsIngestionEndpoint"])
+                "scenario-ca-probe", proxy_endpoint, outputs["dceMetricsIngestionEndpoint"])
             ca_probes.append({"pod": pod["metadata"]["name"],
-                              "trustAnchorCleared": True, **require_certificate_rejection(result)})
+                              "trustAnchorCleared": True, "proxyCaAbsentFromTrustList": True,
+                              **require_certificate_rejection(result)})
         if not ca_probes:
             raise RuntimeError("No collectors available for the proxy CA distrust probe")
         print("Proxy CA distrust probe: " + json.dumps({
