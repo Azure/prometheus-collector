@@ -135,6 +135,7 @@ def select_version(document, scenario=None):
             and "KubernetesOfficial" in r.get("capabilities", {}).get(
                 "supportPlan", [] if scoped_secrets else ["KubernetesOfficial"]))]
     eligible = []
+    previews = []
     for row in rows:
         if not scoped_secrets and not (row.get("isDefault") or row.get("default")):
             continue
@@ -146,13 +147,15 @@ def select_version(document, scenario=None):
                 key = tuple(map(int, version.split(".")))
                 if not scoped_secrets or key >= (1, 37, 0):
                     eligible.append(key)
+                    if latest_secrets and row.get("isPreview") is True:
+                        previews.append(key)
     if not eligible:
         if scoped_secrets:
             requirement = ">=1.37" if latest_secrets else "stable official >=1.37"
             raise ValueError("Unsupported scenario: secret watch enforcement requires an explicitly supported "
                              f"regional Kubernetes {requirement} version")
         raise ValueError("Region returned no stable official default Kubernetes version")
-    return ".".join(map(str, max(eligible)))
+    return ".".join(map(str, max(previews or eligible)))
 
 
 def version_key(version):

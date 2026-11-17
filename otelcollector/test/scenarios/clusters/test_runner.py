@@ -664,7 +664,7 @@ class Contracts(unittest.TestCase):
         ]}
         rows = runner.load(runner.ROOT / "matrix.json")["scenarios"]
         row = next(row for row in rows if row["id"] == "operator-secret-watch")
-        for selected, expected in ((scenario(), "1.36.5"), (row, "1.40.0")):
+        for selected, expected in ((scenario(), "1.36.5"), (row, "1.38.2")):
             with self.subTest(scenario=selected["id"]), tempfile.TemporaryDirectory() as directory:
                 args = types.SimpleNamespace(subscription=runner.BUILD_SUBSCRIPTION,
                                              location="eastus2", evidence=Path(directory))
@@ -689,6 +689,8 @@ class Contracts(unittest.TestCase):
         for offered, expected in (
                 ([versions["values"][1]], "1.37.1"),
                 ([versions["values"][1], versions["values"][3]], "1.38.2"),
+                ([versions["values"][1], versions["values"][5]], "1.37.1"),
+                ([versions["values"][1], versions["values"][7]], "1.40.0"),
                 ([{"orchestratorVersion": "1.37.1"}], "1.37.1")):
             self.assertEqual(runner.select_version({"values": offered}, row), expected)
         self.assertEqual(runner.select_version({"values": [{
@@ -2716,8 +2718,9 @@ def mutations():
         "non-operator-secret-watch-minor": (
             'if not scoped_secrets or key >= (1, 37, 0):',
             'if not scoped_secrets or (key >= (1, 37, 0) and key[:2] == (1, 37)):'),
-        "preview-highest-version": ('return ".".join(map(str, max(eligible)))',
-                                    'return ".".join(map(str, min(eligible)))'),
+        "preview-highest-version": ('return ".".join(map(str, max(previews or eligible)))',
+                                    'return ".".join(map(str, min(previews or eligible)))'),
+        "preview-priority": ('max(previews or eligible)', 'max(eligible)'),
         "retained-preview-upgrade-plan": (
             'if (existing and scenario["id"] == "operator-secret-watch"\n'
             '            and retained.current_kubernetes_version != version):',

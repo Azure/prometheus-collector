@@ -368,9 +368,9 @@ The standalone autoscaler, Cilium and kubenet candidate profiles are removed;
 shared metric assertions remain, but the autoscaler scale-up spec is no longer
 selected by this campaign. Four empty/omitted-secret inputs share a Linux-only
 `operator-secret-watch` lane in eastus2: only this row selects the highest explicitly
-advertised AKS Kubernetes patch at or above 1.37, even when it is not the
-regional default. Stable and preview versions are eligible; 1.38 is selected when
-AKS advertises it in this region. Availability is resolved at execution, not pinned.
+advertised AKS Kubernetes preview patch at or above 1.37, or the latest advertised
+version at or above 1.37 when no qualifying preview exists, regardless of the
+regional default. Availability is resolved at execution, not pinned.
 If no eligible version exists, preflight fails before provisioning.
 The retained cluster is upgraded
 with `az aks upgrade` in place when it is behind the selected version; the runner
