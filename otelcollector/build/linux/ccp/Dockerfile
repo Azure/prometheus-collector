@@ -69,31 +69,41 @@ RUN mkdir -p $tmpdir/microsoft/configmapparser/
 RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/ccp-collector-config-default.yml ./opentelemetry-collector-builder/ccp-collector-config-template.yml ./opentelemetry-collector-builder/ccp-collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_setdim.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_setdim.config /usr/sbin/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 
 ARG TARGETARCH
+# A /tmp repo copy that skips the unused filelists/changelog metadata, which cost the emulated arm64 build ~5m.
+# The final image doesn't copy /tmp, so its /etc/yum.repos.d is unchanged.
+RUN mkdir /tmp/repos && cp /etc/yum.repos.d/*.repo /tmp/repos/ && sed -i '/^\[/a skip_md_filelists=1\nskip_md_other=1' /tmp/repos/*.repo
 RUN tdnf clean all
-RUN tdnf repolist --refresh
-RUN tdnf update -y
-# RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
-RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
+RUN tdnf --setopt=reposdir=/tmp/repos repolist --refresh
+RUN tdnf --setopt=reposdir=/tmp/repos update -y
+# One install transaction: in the emulated arm64 build each tdnf call reloads repo metadata.
+# inotify-tools watches configmap changes.
+RUN tdnf --setopt=reposdir=/tmp/repos install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl \
+    ca-certificates-microsoft inotify-tools azure-mdsd-1.40.2 metricsext2-2.2026.227.1509
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
 
-FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
+# Build outputs last so the emulated arm64 package installs above run while the Go stages build.
+COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
+COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
+
+FROM mcr.microsoft.com/azurelinux/distroless/base:3.0 AS runtime-base
+FROM builder AS native-capture
+COPY --from=runtime-base /var/lib/rpmmanifest/container-manifest-2 /tmp/native-base-manifest
+RUN bash /opt/capture-native-packages.sh
+
+FROM runtime-base
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
@@ -109,25 +119,16 @@ ENV MDSD_USE_LOCAL_PERSISTENCY="false"
 ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 
 # files
-COPY --from=builder /opt /opt
+COPY --from=native-capture /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 
-# executables
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 # inotifywait dependencies
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
-# metricsextension dependencies
-# boost and cpprest have no stable SONAME symlink: the full version is the SONAME, and the
-# file name changes whenever those packages are refreshed. Glob the version so base image
-# rebuilds don't break this COPY.
-COPY --from=builder /usr/lib/libboost_filesystem.so.* /usr/lib/libcpprest.so.* /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.* /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
-# mdsd dependencies
-COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
-COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
-COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
+# ME/mdsd runtimes and their copied dependencies
+COPY --from=native-capture /native-rootfs/ /
 
 # debug image
 # COPY --from=builder /busybin /busybin

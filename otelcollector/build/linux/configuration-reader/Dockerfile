@@ -67,23 +67,28 @@ COPY ./logrotate/crontab /etc/crontab
 RUN mkdir -p $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 COPY ./scripts/*.sh $tmpdir/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 
-RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install -y \
-    wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl && \
+# One install transaction, using a /tmp repo copy that skips the unused filelists/changelog metadata, which
+# cost the emulated arm64 build ~5m. The final image doesn't copy /tmp, so its /etc/yum.repos.d is unchanged.
+RUN mkdir /tmp/repos && cp /etc/yum.repos.d/*.repo /tmp/repos/ && sed -i '/^\[/a skip_md_filelists=1\nskip_md_other=1' /tmp/repos/*.repo && \
+    tdnf clean all && tdnf --setopt=reposdir=/tmp/repos repolist --refresh && tdnf --setopt=reposdir=/tmp/repos update -y && \
+    tdnf --setopt=reposdir=/tmp/repos install -y \
+    wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl ca-certificates-microsoft inotify-tools && \
     mkdir /busybin && busybox --install /busybin && \
     chmod 775 /etc/cron.daily/logrotate && \
     chmod 775 $tmpdir/*.sh && \
     sync && \
     $tmpdir/setup-configreader.sh ${TARGETARCH}
+
+# Build outputs last so the emulated arm64 package installs above run while the Go stages build.
+COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 
 # Stage 4: final
 FROM mcr.microsoft.com/azurelinux/distroless/base:3.0

@@ -21,6 +21,17 @@ import yaml
 
 
 class ProducerTests(unittest.TestCase):
+    def test_chart_publish_waits_for_collector(self):
+        pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
+        jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]
+        steps = next(job["steps"] for job in jobs if job["job"] == "DevClusterHelmChartFiles")
+        wait = next(i for i, step in enumerate(steps)
+                    if step.get("bash") == "bash .pipelines/wait-for-jobs.sh Linux_Prometheus_Collector")
+        publish = next(i for i, step in enumerate(steps)
+                       if step.get("displayName") == "Build: push helm chart to dev ACR (aks + arc tags)")
+        self.assertLess(wait, publish)
+        self.assertEqual(steps[wait]["env"]["SYSTEM_ACCESSTOKEN"], "$(System.AccessToken)")
+
     def test_signing_keeps_buildx_push_metadata_readable(self):
         pipeline = yaml.safe_load((Path(__file__).parents[1] / "azure-pipeline-build.yml").read_text())
         jobs = pipeline["extends"]["parameters"]["stages"][0]["jobs"]

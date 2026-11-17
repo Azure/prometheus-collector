@@ -51,6 +51,20 @@ class NativeAdvisoryTest(unittest.TestCase):
         self.assertIn("OSV down", report["packages"]["azure-mdsd"]["queryErrors"][0])
         self.assertIn("feed down", report["feedGap"])
 
+    def test_missing_rpm_inventory_is_explicitly_blocked(self):
+        scan = {"Metadata": METADATA, "Results": [{"Class": "os-pkgs", "Packages": []}]}
+        with patch.object(native, "versions", return_value={}), \
+                patch.object(native, "advisories") as advisories, \
+                patch.object(native, "nvd_advisories") as nvd:
+            report = native.evaluate(IMAGE, "linux/amd64", scan)
+        self.assertEqual(report["verdict"], "BLOCKED")
+        for package in report["packages"].values():
+            self.assertIsNone(package["version"])
+            self.assertEqual(package["needsNewVersion"], "unknown")
+            self.assertIn("Trivy did not enumerate this RPM", package["gap"])
+        advisories.assert_not_called()
+        nvd.assert_not_called()
+
     def test_malformed_lookup_responses_are_explicitly_blocked(self):
         packages = [{"Name": name, "Version": spec["version"].rsplit("-", 1)[0],
                      "Release": spec["version"].rsplit("-", 1)[1], "Arch": "x86_64"}

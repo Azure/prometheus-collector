@@ -287,6 +287,10 @@ def evaluate(image, platform, scan):
                 if finding.get("FixedVersion"):
                     row["fixedComponentVersion"] = finding["FixedVersion"]
                 result["candidates"].append(row)
+        if not identity["version"]:
+            result["gap"] = ("Trivy did not enumerate this RPM in the image OS-package inventory; "
+                             "shipped package version and binary hash are unknown")
+            continue
         if identity["version"] != spec["version"]:
             result["gap"] = "No embedded inventory for this RPM version"
             continue

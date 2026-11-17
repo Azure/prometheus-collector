@@ -118,7 +118,7 @@ RUN cmake \
 -DFLB_LOG_NO_CONTROL_CHARS=On \
 -DFLB_CHUNK_TRACE=On ../
 
-RUN make
+RUN make -j"$(nproc)"
 RUN make install
 
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
@@ -151,23 +151,13 @@ RUN mkdir -p $tmpdir/microsoft/configmapparser/
 RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
-COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=prometheus-ui /src/prometheus-ui/prometheusui $tmpdir/microsoft/otelcollector/
-COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config  ./metricextension/me_ds_setdim.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_setdim.config /usr/sbin/
 COPY ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.yaml ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
-COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
-COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
-COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -179,10 +169,25 @@ RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
+
+# Build outputs last so the package installs above run while the Go and fluent-bit stages build.
+COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
+COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=prometheus-ui /src/prometheus-ui/prometheusui $tmpdir/microsoft/otelcollector/
+COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
+COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
 # If wanting to run without distroless, uncomment this line and comment everything after
 # ENTRYPOINT ["./opt/main"]
 
-FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
+FROM mcr.microsoft.com/azurelinux/distroless/base:3.0 AS runtime-base
+FROM builder AS native-capture
+COPY --from=runtime-base /var/lib/rpmmanifest/container-manifest-2 /tmp/native-base-manifest
+RUN bash /opt/capture-native-packages.sh
+
+FROM runtime-base
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
@@ -211,7 +216,7 @@ ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
 
 # files
-COPY --from=builder /opt /opt
+COPY --from=native-capture /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /busybin /busybin
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
@@ -224,14 +229,12 @@ COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
 COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # executables
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim
-COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
@@ -251,18 +254,9 @@ COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/l
 COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/
 # vim dependencies
 COPY --from=builder /usr/lib/libm.so.6 /usr/lib/libtinfo.so.6 /usr/lib/libc.so.6 /usr/lib/
-# metricsextension dependencies
-# libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-# boost and cpprest have no stable SONAME symlink: the full version is the SONAME, and the
-# file name changes whenever those packages are refreshed. Glob the version so base image
-# rebuilds don't break this COPY.
-COPY --from=builder /usr/lib/libboost_filesystem.so.* /usr/lib/libcpprest.so.* /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.* /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
 # fluent-bit dependencies
 # libssl.so.3 & libcrypto.so.3 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=fluent-bit-binary-builder /usr/lib/libluajit-5.1.so.2 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libpq.so.5 /usr/lib/libldap.so.2 /usr/lib/liblber.so.2 /usr/lib/libgnutls.so.30 /usr/lib/libidn2.so.0 /usr/lib/libunistring.so.5 /usr/lib/libnettle.so.8 /usr/lib/libhogweed.so.6 /usr/lib/
-# mdsd dependencies
-COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
-COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
 # logrotate dependencies
 COPY --from=builder /usr/lib/libpopt.so.0 /usr/lib/libc.so.6 /usr/lib/
 # curl dependencies
@@ -281,6 +275,9 @@ COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/
 # rebuilt, which breaks this COPY.
 COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0* /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
+
+# Keep captured native bytes last; other runtime COPYs share these library paths.
+COPY --from=native-capture /native-rootfs/ /
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
