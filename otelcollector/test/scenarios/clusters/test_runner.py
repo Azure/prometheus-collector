@@ -68,7 +68,8 @@ class Contracts(unittest.TestCase):
         original = {
             "apiVersion": "v1", "kind": "ConfigMap",
             "metadata": {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"},
-            "data": {"schema-version": "v2", "cluster-metrics": 'cluster_alias = "Customer Config POC"'},
+            "data": {"schema-version": "v2", "cluster-metrics": runner.yaml.safe_dump(
+                {"prometheus-collector-settings": 'cluster_alias = "Customer Config POC"'})},
         }
         unrelated = {"apiVersion": "v1", "kind": "ConfigMap",
                      "metadata": {"name": "unrelated", "namespace": "kube-system"},
@@ -81,20 +82,60 @@ class Contracts(unittest.TestCase):
                 host.scenario = dict(scenario(), id=lane)
                 host.args.evidence = Path(temporary)
                 host.args.settle_seconds = 0
-                host.kube.return_value = ""
+                host.kube.side_effect = lambda *args, **kwargs: (
+                    {"metadata": {"resourceVersion": "current"}} if kwargs.get("json_output") else "")
                 manifest = dict(variant(), configmaps=[path])
                 with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), \
                         patch.object(runner, "run_suite", return_value={"executed": 1}):
                     runner.settings_slot(host, manifest)
-                applied = next(call.kwargs["data"] for call in host.kube.call_args_list
-                               if call.args[:2] == ("apply", "-f"))
-                actual, other = list(runner.yaml.safe_load_all(applied))
+                submitted = [doc for call in host.kube.call_args_list
+                             if call.args[:2] in {("apply", "-f"), ("replace", "-f")}
+                             for doc in runner.yaml.safe_load_all(call.kwargs["data"])]
+                actual, other = submitted
                 expected = copy.deepcopy(original)
                 if lane == "ampls-proxy":
-                    expected["data"]["opentelemetry-metrics"] = "enabled = true"
+                    expected["metadata"]["resourceVersion"] = "current"
+                    cluster = runner.yaml.safe_load(expected["data"]["cluster-metrics"])
+                    cluster["opentelemetry-metrics"] = "enabled = true"
+                    expected["data"]["cluster-metrics"] = runner.yaml.safe_dump(cluster)
                 self.assertEqual(actual, expected)
                 self.assertEqual(other, unrelated)
                 self.assertNotIn("opentelemetry-metrics", original["data"])
+
+    def test_ampls_proxy_settings_remain_present_during_apply_and_restore(self):
+        baseline = {"apiVersion": "v1", "kind": "ConfigMap",
+                    "metadata": {"name": "ama-metrics-settings-configmap", "namespace": "kube-system"},
+                    "data": {"schema-version": "v1", "opentelemetry-metrics": "enabled = true",
+                             "stale-baseline-key": "must not enter the test slot"}}
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "settings.yaml"
+            fixture = copy.deepcopy(baseline)
+            fixture["data"].pop("stale-baseline-key")
+            path.write_text(runner.yaml.safe_dump(fixture))
+            host = Mock()
+            host.scenario = dict(scenario(), id="ampls-proxy")
+            host.args.evidence = Path(temporary)
+            host.args.settle_seconds = 0
+            def kube(*args, **kwargs):
+                if kwargs.get("json_output"):
+                    return {"metadata": {"resourceVersion": "current"}}
+                if args[:2] == ("get", "ConfigMap") and args[2] == baseline["metadata"]["name"]:
+                    return runner.json.dumps(baseline)
+                return ""
+            host.kube.side_effect = kube
+            with patch.object(runner, "settings_workflow", return_value=("case.yaml", "case")), \
+                    patch.object(runner, "run_suite", return_value={"executed": 1}):
+                runner.settings_slot(host, dict(variant(), configmaps=[path]))
+            calls = host.kube.call_args_list
+            submitted = next(c for c in calls if c.args[:2] == ("replace", "-f"))
+            fixture["metadata"]["resourceVersion"] = "current"
+            self.assertEqual(runner.yaml.safe_load(submitted.kwargs["data"]), fixture)
+            self.assertFalse(any(c.args[:3] == ("delete", "configmap", baseline["metadata"]["name"])
+                                 for c in calls))
+            restore = next(c for c in reversed(calls) if c.args[0] == "replace"
+                           and runner.json.loads(c.kwargs["data"])["metadata"]["name"] == baseline["metadata"]["name"])
+            self.assertNotIn("--force", restore.args)
+            self.assertEqual(runner.json.loads(restore.kwargs["data"])["metadata"]["resourceVersion"], "current")
 
     def test_me_configuration_rejects_native_mode_stale_cache_and_old_collectors(self):
         started = 1767225600

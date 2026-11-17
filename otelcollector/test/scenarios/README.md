@@ -76,7 +76,10 @@ identify the process responsible for the offending short-lived connections.
 The AMPLS-proxy validation path now enables `opentelemetry-metrics` with
 `enabled = true` in the baseline and each settings slot, matching the
 proxy-authenticated TSG on `grwehner/tsg-tooling-and-devbox`. The existing chart
-OTLP flag keeps this mode active during ConfigMap resets. This skips mdsd and
+OTLP flag selects this mode at installation. Schema v2 places the setting inside
+`cluster-metrics`; settings slots replace and restore that ConfigMap without
+deleting it, so neither an ignored setting nor a missing ConfigMap starts mdsd.
+This skips mdsd and
 lets MetricsExtension fetch AMCS configuration without `-LocalControlChannel`;
 it does not disable the proxy globally or change the candidate image.
 After legacy pods leave, the route window includes a cold collector rollout.

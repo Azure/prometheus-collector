@@ -973,7 +973,13 @@ def enable_otlp_settings(text):
         if (document and document.get("kind") == "ConfigMap"
                 and document["metadata"]["name"] == "ama-metrics-settings-configmap"
                 and document["metadata"].get("namespace") == "kube-system"):
-            document.setdefault("data", {})["opentelemetry-metrics"] = "enabled = true"
+            data = document.setdefault("data", {})
+            if data.get("schema-version") == "v2":
+                cluster = yaml.safe_load(data.get("cluster-metrics", "")) or {}
+                cluster["opentelemetry-metrics"] = "enabled = true"
+                data["cluster-metrics"] = yaml.safe_dump(cluster)
+            else:
+                data["opentelemetry-metrics"] = "enabled = true"
     return yaml.safe_dump_all(documents)
 
 
@@ -1016,9 +1022,25 @@ def settings_slot(host, variant):
     error = None
     try:
         for name in RESET:
+            if host.scenario["id"] == "ampls-proxy" and name == "ama-metrics-settings-configmap":
+                continue
             host.kube("delete", "configmap", name, "-n", "kube-system", "--ignore-not-found")
         for text in sources.values():
-            host.kube("apply", "-f", "-", data=text, private=True)
+            if host.scenario["id"] == "ampls-proxy":
+                for document in yaml.safe_load_all(text):
+                    if not document:
+                        continue
+                    is_settings = (document.get("kind") == "ConfigMap"
+                                   and document["metadata"]["name"] == "ama-metrics-settings-configmap"
+                                   and document["metadata"].get("namespace") == "kube-system")
+                    if is_settings:
+                        current = host.kube("get", "configmap", "ama-metrics-settings-configmap",
+                                            "-n", "kube-system", "-o", "json", json_output=True, private=True)
+                        document["metadata"]["resourceVersion"] = current["metadata"]["resourceVersion"]
+                    host.kube("replace" if is_settings else "apply", "-f", "-",
+                              data=yaml.safe_dump(document), private=True)
+            else:
+                host.kube("apply", "-f", "-", data=text, private=True)
         time.sleep(host.args.settle_seconds)
         result = run_suite(host, "configprocessing",
                            host.args.evidence / variant["id"] / "configprocessing",
@@ -1054,7 +1076,14 @@ def settings_slot(host, variant):
                 if original is None:
                     host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
                 else:
-                    host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
+                    flags = [] if (host.scenario["id"] == "ampls-proxy"
+                                   and name == "ama-metrics-settings-configmap") else ["--force"]
+                    restored = copy.deepcopy(original)
+                    if not flags:
+                        current = host.kube("get", kind, name, "-n", namespace, "-o", "json",
+                                            json_output=True, private=True)
+                        restored["metadata"]["resourceVersion"] = current["metadata"]["resourceVersion"]
+                    host.kube("replace", *flags, "-f", "-", data=json.dumps(restored), private=True)
                 readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",
                                      "-o", "json", private=True)
                 actual = clean_resource(json.loads(readback)) if readback.strip() else None
