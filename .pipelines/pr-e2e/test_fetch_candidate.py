@@ -136,7 +136,8 @@ class FetchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exceeds the allowed size"):
                 fetch_candidate.download(fetch_candidate.ADO_PROJECT + "/_apis/build/test", "test-token", 10)
             read.assert_called_once_with(11)
-        self.assertEqual(fetch_candidate.MAX_SCAN_ARTIFACT_BYTES, 512 * 1024 * 1024)
+        self.assertEqual(fetch_candidate.MAX_SCAN_ARTIFACT_BYTES, 2 * 1024 * 1024 * 1024)
+        self.assertEqual(fetch_candidate.MAX_SCAN_DOWNLOAD_BYTES, 512 * 1024 * 1024)
 
     def test_resolves_successful_producer_for_exact_pr_head(self):
         commit = "a" * 40
@@ -201,6 +202,7 @@ class FetchTests(unittest.TestCase):
                 if field:
                     candidate_build[field] = value
                 received = []
+                artifact_limits = []
                 raw_runner = b'{"imageRef":"immutable-runner"}\n'
 
                 def download(url, token, max_bytes=16 * 1024 * 1024):
@@ -210,6 +212,7 @@ class FetchTests(unittest.TestCase):
                     if "artifacts?" not in url:
                         return json.dumps(candidate_build).encode()
                     name = url.split("artifactName=")[1].split("&")[0]
+                    artifact_limits.append((name, max_bytes))
                     if name == fetch_candidate.SCAN_ARTIFACT:
                         return protected_scan_artifact(source, image)
                     archive = io.BytesIO()
@@ -234,6 +237,8 @@ class FetchTests(unittest.TestCase):
                         receipt = fetch_candidate.fetch(123, source["commit"], output)
                         self.assertEqual(receipt["source"], source)
                         self.assertEqual(len(received), 7)
+                        self.assertEqual(artifact_limits[-1],
+                                         (fetch_candidate.SCAN_ARTIFACT, fetch_candidate.MAX_SCAN_DOWNLOAD_BYTES))
                         self.assertEqual(emit.call_args.args[3], hashlib.sha256(raw_runner).hexdigest())
                         self.assertEqual((output / "sre-testkube-runner" / "runner.json").read_bytes(), raw_runner)
                         self.assertEqual(json.loads((output / "candidate-build.json").read_text()), receipt)

@@ -22,7 +22,8 @@ ADO_ARTIFACT_HOST = "artprodcus3.artifacts.visualstudio.com"
 ARTIFACTS = ("sre-push-linux", "sre-push-windows2022", "sre-push-targetallocator",
              "sre-push-cfg", "sre-testkube-runner")
 SCAN_ARTIFACT = "sre-trivy-collector"
-MAX_SCAN_ARTIFACT_BYTES = 512 * 1024 * 1024
+MAX_SCAN_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024
+MAX_SCAN_DOWNLOAD_BYTES = 512 * 1024 * 1024
 SCAN_COVERAGE = (
     "collector/linux/amd64 Trivy vulnerability discovery only; "
     "not Windows/arm64/other images/Qualys clearance"
@@ -236,7 +237,7 @@ def fetch(build_id, commit, output):
         file.write("\n")
     scan_archive = download(
         build_url + "/artifacts?artifactName=" + SCAN_ARTIFACT + "&api-version=7.1&%24format=zip",
-        token, MAX_SCAN_ARTIFACT_BYTES,
+        token, MAX_SCAN_DOWNLOAD_BYTES,
     )
     scan_directory = output / SCAN_ARTIFACT
     extract_scan_artifact(scan_archive, scan_directory)

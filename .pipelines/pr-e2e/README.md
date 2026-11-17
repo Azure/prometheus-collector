@@ -75,7 +75,8 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   binding source repo/commit/build, definition 440, index/child/platform and every
   published file's SHA256. Database identity remains in metadata; database bytes,
   cache and temporary scanner configuration are not published. Both download and
-  extraction retain the 512 MiB limit. Only successful first-attempt SRE branch
+  downloads retain a 512 MiB limit; uncompressed extraction is capped at 2 GiB.
+  Only successful first-attempt SRE branch
   jobs/stages publish it.
   MCR lag retries the immutable digest, never a tag. Filtered console findings and existing
   secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
