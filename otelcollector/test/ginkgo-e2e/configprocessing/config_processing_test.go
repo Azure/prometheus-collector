@@ -803,7 +803,7 @@ var _ = DescribeTable("The Prometheus UI API should respect dcgm-exporter custom
 		}
 	},
 	Entry("when dcgm-exporter has custom 60s interval and specific metric regex",
-		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m0s",
+		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "1m",
 		[]string{"DCGM_FI_DEV_GPU_UTIL", "DCGM_FI_DEV_MEM_COPY_UTIL", "DCGM_FI_DEV_POWER_USAGE"},
 		Label(utils.ConfigProcessingDcgmExporterEnabled)),
 )
