@@ -256,12 +256,12 @@ but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
 has its own UUID, checkout, evidence, retained resource group and bootstrap
 artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
 in the approved build subscription. A named selector runs just that row.
-Before any provisioning, a read-only admission stage compiles the selected rows
-and checks each region's total simultaneous max-count-plus-surge against live
-regional and VM-family quotas, SKU restrictions and the stable Kubernetes version.
+Before any provisioning, a read-only admission stage compiles the selected rows,
+checks stable Kubernetes versions and pool parameters, and verifies retained fixtures.
 Every row requires that stage's successful, source/build-bound placement output,
 and still performs its existing live per-row preflight.
-Admission is a point-in-time check, not a capacity reservation. Retention and
+Admission does not query SKU availability or regional/family quota; Azure provisioning
+or scaling reports unavailable capacity directly. Retention and
 auto-upgrade channels remain unchanged; serial test stages do not serialize
 later retained-cluster upgrades.
 After a successful

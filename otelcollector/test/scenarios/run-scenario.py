@@ -2011,7 +2011,7 @@ def compiled_parameters(args, scenario, commands, version):
     return values
 
 
-def capacity_plan(parameters, scenario, version):
+def verify_pool_parameters(parameters, scenario, version):
     pools = parameters["nodePools"]
     if not pools or {pool["osType"].lower() for pool in pools} != set(scenario["platforms"]):
         raise ValueError("Compiled pool platforms do not match the scenario")
@@ -2019,7 +2019,6 @@ def capacity_plan(parameters, scenario, version):
                               ("fips", any(p["fips"] for p in pools))):
         if (feature in scenario["clusterFeatures"]) != observed:
             raise ValueError(f"Compiled pools disagree with scenario feature: {feature}")
-    capacity = []
     for pool in pools:
         sku = pool["osSKU"]
         minor = tuple(map(int, version.split(".")[:2]))
@@ -2030,66 +2029,10 @@ def capacity_plan(parameters, scenario, version):
         surge = str(pool.get("maxSurge", ""))
         if type(count) is not int or count < 1 or not re.fullmatch(r"[1-9][0-9]*", surge):
             raise ValueError("Compiled pools require positive counts and explicit integer maxSurge")
-        capacity.append({"name": pool["name"], "vmSize": pool["vmSize"],
-                         "architecture": pool["architecture"], "nodes": count, "surge": int(surge)})
     if parameters["proxyEnabled"]:
         count = parameters["proxyVmCount"]
         if type(count) is not int or count < 1:
-            raise ValueError("Proxy capacity must be explicit in compiled parameters")
-        capacity.append({"name": "proxy", "vmSize": parameters["proxyVmSize"], "nodes": count, "surge": 0})
-    if "private-api" in scenario["clusterFeatures"]:
-        capacity.append({"name": "orchestrator", "vmSize": "Standard_D2s_v4", "nodes": 1, "surge": 0})
-    return capacity
-
-
-def verify_capacity(capacity, skus, usage, location):
-    by_name = {sku["name"]: sku for sku in skus}
-    required = {"cores": 0}
-    observed = []
-    for entry in capacity:
-        sku = by_name.get(entry["vmSize"])
-        if not sku or location.casefold() not in {v.casefold() for v in sku["locations"]}:
-            raise ValueError(f"SKU unavailable in {location}: {entry['vmSize']}")
-        for restriction in sku.get("restrictions", []):
-            locations = restriction.get("values", []) + restriction.get("restrictionInfo", {}).get("locations", [])
-            if restriction["type"] == "Location" and (not locations or location.casefold() in
-                                                     {v.casefold() for v in locations}):
-                raise ValueError(f"SKU subscription restriction: {entry['vmSize']}/{location}")
-        capabilities = {c["name"]: c["value"] for c in sku["capabilities"]}
-        architecture = {"x64": "amd64", "arm64": "arm64"}[capabilities["CpuArchitectureType"].casefold()]
-        if entry.get("architecture") and entry["architecture"] != architecture:
-            raise ValueError(f"SKU architecture mismatch: {entry['name']}/{entry['vmSize']}")
-        cores = int(capabilities["vCPUs"]) * (entry["nodes"] + entry["surge"])
-        family = sku["family"].casefold()
-        required[family] = required.get(family, 0) + cores
-        required["cores"] += cores
-        observed.append({**entry, "architecture": architecture, "family": sku["family"], "peakVcpus": cores})
-    limits = {row["name"]["value"].casefold(): row for row in usage}
-    quota = []
-    for name, cores in required.items():
-        row = limits.get(name)
-        if not row:
-            raise ValueError(f"Missing regional/family quota: {name}")
-        current, limit = int(str(row["currentValue"])), int(str(row["limit"]))
-        if current < 0 or limit < 0 or current + cores > limit:
-            raise ValueError(f"Insufficient regional/family quota: {name}, requested additional {cores} vCPUs")
-        quota.append({"name": name, "current": current, "limit": limit, "additional": cores})
-    return {"compute": observed, "quota": quota, "capacityReserved": False}
-
-
-def regional_capacity(args, capacity, commands):
-    names = sorted({entry["vmSize"] for entry in capacity})
-    if any(not re.fullmatch(r"[A-Za-z0-9_]+", name) for name in names):
-        raise ValueError("Unsupported VM SKU name in compiled capacity plan")
-    query = "[?contains([" + ",".join("'" + name + "'" for name in names) + "], name)]"
-    skus = commands.run(["az", "vm", "list-skus", "--subscription", args.subscription, "--location",
-                         args.location, "--resource-type", "virtualMachines", "--all", "--query", query,
-                         "--only-show-errors", "-o", "json"], json_output=True, private=True)
-    usage = commands.run(["az", "vm", "list-usage", "--subscription", args.subscription,
-                          "--location", args.location, "--only-show-errors", "-o", "json"],
-                         json_output=True, private=True)
-    save(args.evidence / "capacity-inputs.json", {"skus": skus, "usage": usage})
-    return verify_capacity(capacity, skus, usage, args.location)
+            raise ValueError("Proxy count must be explicit in compiled parameters")
 
 
 def preflight(args, scenario, commands):
@@ -2102,17 +2045,14 @@ def preflight(args, scenario, commands):
     if "secrets-watch-enforcement" in scenario["clusterFeatures"] and tuple(map(int, version.split(".")[:2])) < (1, 37):
         raise ValueError("Unsupported scenario: secret watch enforcement requires Kubernetes>=1.37; no version override")
     parameters = compiled_parameters(args, scenario, commands, version)
-    capacity = capacity_plan(parameters, scenario, version)
+    verify_pool_parameters(parameters, scenario, version)
     existing = bool(Host(args, scenario, commands).persistent_state(
         {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
     if getattr(args, "admitted_existing", False) and not existing:
         raise ValueError("An admitted persistent cluster disappeared; refusing new provisioning")
-    if existing:
-        capacity = [dict(pool, nodes=0) for pool in capacity]
     result = {"scenario": scenario["id"], "subscription": args.subscription, "location": args.location,
               "kubernetesVersion": version, "upgradeChannel": "stable", "expectedPools": parameters["nodePools"],
-              "existing": existing,
-              **regional_capacity(args, capacity, commands)}
+              "existing": existing}
     save(args.evidence / "preflight.json", result)
     return result
 
@@ -2120,7 +2060,7 @@ def preflight(args, scenario, commands):
 def campaign_preflight(args, matrix, commands):
     output = args.evidence / "campaign-preflight.json"
     if output.exists():
-        raise ValueError("Campaign admission requires new evidence; do not reuse a capacity snapshot")
+        raise ValueError("Campaign admission requires new evidence; do not reuse a preflight receipt")
     if args.subscription != BUILD_SUBSCRIPTION or type(args.build_id) is not int or args.build_id <= 0:
         raise ValueError("Campaign admission requires the approved subscription and positive producer --build-id")
     selected = ([name for name in CAMPAIGN_LOCATIONS if name not in VALIDATION_LANES]
@@ -2145,7 +2085,6 @@ def campaign_preflight(args, matrix, commands):
                                  "--location", location, "--only-show-errors", "-o", "json"],
                                 json_output=True)
         version = select_version(versions)
-        capacity = []
         for name in selected:
             if placements[name] != location:
                 continue
@@ -2154,15 +2093,13 @@ def campaign_preflight(args, matrix, commands):
                     getattr(args, "validation_lane", False) and name in VALIDATION_LANES)):
                 raise ValueError(f"Campaign scenario is missing or blocked: {name}")
             parameters = compiled_parameters(regional, row, commands, version)
+            verify_pool_parameters(parameters, row, version)
             existing[name] = bool(Host(regional, row, commands).persistent_state(
                 {"SCENARIO_KUBERNETES_VERSION": version}, parameters["nodePools"]))
-            capacity.extend({**pool, "nodes": 0 if existing[name] else pool["nodes"], "scenario": name}
-                            for pool in capacity_plan(parameters, row, version))
-        regions[location] = {"kubernetesVersion": version,
-                             **regional_capacity(regional, capacity, commands)}
+        regions[location] = {"kubernetesVersion": version}
     result = {"status": "PASS", "sourceSha": source, "testSourceSha": test_source, "buildId": args.build_id,
               "subscription": args.subscription, "placements": placements, "existing": existing,
-              "regions": regions, "capacityReserved": False}
+              "regions": regions}
     save(output, result)
     print("CAMPAIGN_ADMISSION " + json.dumps(result), flush=True)
     return result

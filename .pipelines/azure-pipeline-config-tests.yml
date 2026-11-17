@@ -1219,7 +1219,7 @@ stages:
             sleep 60
           done
         fi
-        [[ "$sha" =~ ^[0-9a-f]{40}$ && "$producer" =~ ^[1-9][0-9]*$ && ! -e "$CAPACITY_ROOT" ]] || { echo "Capacity admission requires a producer and new exact-source checkout" >&2; exit 1; }
+        [[ "$sha" =~ ^[0-9a-f]{40}$ && "$producer" =~ ^[1-9][0-9]*$ && ! -e "$CAPACITY_ROOT" ]] || { echo "Campaign admission requires a producer and new exact-source checkout" >&2; exit 1; }
         git fetch --no-tags origin "$sha"
         git worktree add --detach "$CAPACITY_ROOT" "$sha"
         [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$sha" && -z "$(git -C "$CAPACITY_ROOT" status --porcelain)" ]]
@@ -1233,7 +1233,7 @@ stages:
         echo "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true"
         python3 -m venv "$CAPACITY_PYTHON"
         "$CAPACITY_PYTHON/bin/python" -m pip install -r "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/clusters/requirements.txt"
-      displayName: Prepare exact-source read-only capacity tools
+      displayName: Prepare exact-source read-only admission tools
       env:
         BUILD_REASON: $(Build.Reason)
         PR_SOURCE_BRANCH: $(System.PullRequest.SourceBranch)
@@ -1245,16 +1245,16 @@ stages:
         CAPACITY_PYTHON: $(capacityPython)
     - task: AzureCLI@2
       name: admit
-      displayName: Check aggregate regional peaks before any provisioning
+      displayName: Verify source-bound placements and retained fixtures before provisioning
       inputs:
         azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
           set -euo pipefail
-          [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Capacity admission requires the approved build subscription" >&2; exit 1; }
+          [[ "$(az account show --query id -o tsv)" == 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb ]] || { echo "Campaign admission requires the approved build subscription" >&2; exit 1; }
           [[ "$(git -C "$CAPACITY_ROOT" rev-parse HEAD)" == "$CANDIDATE_SOURCE_SHA" ]]
-          [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Capacity test source does not match this pipeline revision" >&2; exit 1; }
+          [[ "$TEST_SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Admission test source does not match this pipeline revision" >&2; exit 1; }
           validation_args=()
           case "$CANDIDATE_SCENARIO" in private|proxy|proxy-custom-ca|ampls|ampls-proxy) validation_args=(--validation-lane) ;; esac
           "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" campaign-preflight \
@@ -1271,14 +1271,13 @@ stages:
           if (value.get("status") != "PASS" or value.get("sourceSha") != os.environ["CANDIDATE_SOURCE_SHA"]
                   or value.get("testSourceSha") != os.environ["TEST_SOURCE_SHA"]
                   or value.get("buildId") != int(os.environ["PRODUCER_BUILD_ID"])
-                  or value.get("capacityReserved") is not False
                   or set(value.get("placements", {})) != set(selected)
                   or set(value.get("existing", {})) != set(selected)
                   or any(type(value["existing"][name]) is not bool for name in selected)):
-              raise ValueError("Aggregate capacity admission source/build/placement contract mismatch")
+              raise ValueError("Campaign admission source/build/placement contract mismatch")
           for scenario, region in value["placements"].items():
               if region not in ("centralus", "eastus2", "westcentralus") or region not in value.get("regions", {}):
-                  raise ValueError("Aggregate capacity admission has no approved regional proof")
+                  raise ValueError("Campaign admission has no approved regional proof")
           for scenario, region in value["placements"].items():
               key = scenario.replace("-", "_")
               print(f"##vso[task.setvariable variable=location_{key};isOutput=true]{region}")
@@ -1298,14 +1297,14 @@ stages:
     - bash: |
         set -euo pipefail
         mkdir -p "$CAPACITY_EVIDENCE"
-        printf 'Job status: %s\nThis diagnostic is not capacity admission proof; require the source-bound campaign-preflight.json PASS.\n' \
+        printf 'Job status: %s\nThis diagnostic is not campaign admission proof; require the source-bound campaign-preflight.json PASS.\n' \
           "$AGENT_JOBSTATUS" > "$CAPACITY_EVIDENCE/job-status.txt"
-      displayName: Retain capacity job diagnostic even when setup fails
+      displayName: Retain admission job diagnostic even when setup fails
       condition: always()
       env:
         CAPACITY_EVIDENCE: $(capacityEvidence)
     - task: PublishPipelineArtifact@1
-      displayName: Retain point-in-time aggregate capacity admission, not a reservation
+      displayName: Retain source-bound campaign admission
       condition: always()
       inputs:
         targetPath: $(capacityEvidence)
