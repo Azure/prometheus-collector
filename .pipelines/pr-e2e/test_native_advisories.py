@@ -3,14 +3,22 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from contextlib import redirect_stdout
 from io import StringIO
+from http.client import IncompleteRead
 
 import native_advisories as native
+import native_image
 
 IMAGE = "example.invalid/image@sha256:" + "1" * 64
 METADATA = {"RepoDigests": [IMAGE], "ImageConfig": {"os": "linux", "architecture": "amd64"}}
 
 
 class NativeAdvisoryTest(unittest.TestCase):
+    def setUp(self):
+        image_lookup = patch.object(native_image, "binary_hashes",
+                                    side_effect=ValueError("test image bytes unavailable"))
+        image_lookup.start()
+        self.addCleanup(image_lookup.stop)
+
     def test_confirmed_failure_precedes_unresolved_coverage(self):
         hashes = {name: spec["sha256"] for name, spec in native.BINARIES.items()}
         identities = {name: {"sha256": hashes[name], "version": spec["version"]}
@@ -134,6 +142,71 @@ class NativeAdvisoryTest(unittest.TestCase):
         packages[0]["Version"] = "different"
         with self.assertRaises(ValueError):
             native.package_identities(native.KNOWN_IMAGE, "linux/amd64", scan)
+
+    def test_scanned_rpm_versions_use_historical_inventory_without_binary_hashes(self):
+        packages = [
+            {"Name": "metricsext2", "Version": "2.2026.227.1509", "Release": "1.azl3", "Arch": "x86_64"},
+            {"Name": "azure-mdsd", "Version": "1.40.3", "Release": "1349", "Arch": "x86_64"},
+        ]
+        scan = {"Metadata": METADATA, "Results": [{"Class": "os-pkgs", "Packages": packages}]}
+        with patch.object(native, "versions", return_value={}), \
+                patch.object(native, "advisories", return_value=[{"id": "CVE-2026-1234"}]), \
+                patch.object(native, "nvd_advisories", return_value=[]):
+            report = native.evaluate(IMAGE, "linux/amd64", scan)
+        for package in report["packages"].values():
+            self.assertTrue(package["componentChecks"])
+            self.assertTrue(package["candidates"])
+            self.assertTrue(all(row["classification"] == "POTENTIAL_ASSOCIATION"
+                                for row in package["candidates"]))
+            self.assertIsNone(package["sha256"])
+            self.assertEqual(package["verdict"], "BLOCKED")
+            self.assertEqual(package["needsNewVersion"], "unknown")
+            self.assertIn("historical component inventory", package["gap"])
+
+    def test_digest_verified_bytes_enable_only_previously_confirmed_findings(self):
+        packages = [{"Name": name, "Version": spec["version"].rsplit("-", 1)[0],
+                     "Release": spec["version"].rsplit("-", 1)[1], "Arch": "x86_64"}
+                    for name, spec in native.BINARIES.items()]
+        scan = {"Metadata": METADATA, "Results": [{"Class": "os-pkgs", "Packages": packages}]}
+        hashes = {name: spec["sha256"] for name, spec in native.BINARIES.items()}
+        with patch.object(native_image, "binary_hashes", return_value=hashes), \
+                patch.object(native, "versions", return_value={}), \
+                patch.object(native, "advisories", return_value=[]), \
+                patch.object(native, "nvd_advisories", side_effect=lambda vendor, product, version: (
+                    ["CVE-2024-9143", "CVE-2026-1234"] if product == "openssl" else [])), \
+                redirect_stdout(StringIO()):
+            report = native.emit(IMAGE, "linux/amd64", scan)
+        mdsd = report["packages"]["azure-mdsd"]
+        self.assertEqual(mdsd["sha256"], hashes["azure-mdsd"])
+        self.assertEqual(mdsd["verdict"], "FAIL")
+        self.assertEqual({row["advisory"] for row in mdsd["candidates"]
+                          if row["classification"] == "CONFIRMED"}, {"CVE-2024-9143"})
+        with patch.object(native, "versions", return_value={}), \
+                patch.object(native, "advisories", return_value=[]), \
+                patch.object(native, "nvd_advisories", return_value=[]), \
+                redirect_stdout(StringIO()):
+            blocked = native.emit(IMAGE, "linux/amd64", scan)
+        self.assertEqual(blocked["verdict"], "BLOCKED")
+        self.assertIn("test image bytes unavailable", blocked["binaryIdentityError"])
+        self.assertIsNone(blocked["packages"]["azure-mdsd"]["sha256"])
+
+    def test_hash_failure_clears_known_image_hashes_and_reports_incomplete_read(self):
+        scan = {"Metadata": {"RepoDigests": [native.KNOWN_IMAGE],
+                             "ImageConfig": {"os": "linux", "architecture": "amd64"}}, "Results": []}
+        for error in (ValueError("digest mismatch"), IncompleteRead(b"partial")):
+            with self.subTest(error=error), \
+                    patch.object(native_image, "binary_hashes", side_effect=error), \
+                    patch.object(native, "versions", return_value={}), \
+                    patch.object(native, "advisories", return_value=[]), \
+                    patch.object(native, "nvd_advisories", side_effect=lambda vendor, product, version: (
+                        ["CVE-2024-9143"] if product == "openssl" else [])), \
+                    redirect_stdout(StringIO()):
+                report = native.emit(native.KNOWN_IMAGE, "linux/amd64", scan)
+                self.assertIn(str(error), report["binaryIdentityError"])
+                self.assertEqual(report["verdict"], "BLOCKED")
+                for package in report["packages"].values():
+                    self.assertIsNone(package["sha256"])
+                    self.assertTrue(all(row["classification"] != "CONFIRMED" for row in package["candidates"]))
 
     def test_nvd_retries_throttling(self):
         limited = HTTPError("https://example.invalid", 429, "throttled", {}, None)

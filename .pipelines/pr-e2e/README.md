@@ -453,6 +453,11 @@ orchestration is installed by Phase 1.
 
 The producer scan hook emits `SCAN_ADVISORY` and `NATIVE_ADVISORY_REPORT`
 rows using its existing Trivy result, without adding protected artifact files.
+The reporter hashes the actual executables from digest-verified image layers
+without executing the image or scanning again. Only hashes with existing
+code-level evidence can confirm a finding; version matches alone remain
+potential associations. Missing files, unsupported links or registry failures
+are reported as `binaryIdentityError`, not clearance.
 Known shipped binaries have investigated embedded inventories; other image
 versions and failed advisory lookups remain BLOCKED rather than clear. Shared
 RPM findings are potential associations, and their fixed RPM versions are not

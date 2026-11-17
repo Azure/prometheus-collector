@@ -2038,6 +2038,22 @@ extends:
           parameters:
             folderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
             displayName: 'EsrpCodeSigning for OSS binaries'
+        - powershell: ./.pipelines/tests/windows-tag-gate-test.ps1
+          displayName: "Build: test Windows tag gate"
+        # The Windows jobs don't depend on the tag job; WS2022 pushes only after downloading the artifact below, so this
+        # keeps both Windows images out of ACR unless the tag job succeeded, as the Linux jobs' tag wait does.
+        - powershell: |
+            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
+            while ($true) {
+              $tag = (Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Job' -and $_.identifier -eq 'Build.Image_Tags_and_Ev2_Artifacts.__default' }
+              if ($tag.state -eq 'completed') { break }
+              Start-Sleep 5
+            }
+            if ($tag.result -notin 'succeeded', 'succeededWithIssues') { throw 'The tag job did not succeed' }
+          displayName: "Build: wait for the tag job"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         # The WS2022 job ships these rather than signing its own build of the same source (~5m of ESRP on its critical path).
         - task: 1ES.PublishPipelineArtifact@1
           displayName: 'Publish signed binaries for the WS2022 image'

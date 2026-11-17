@@ -3,15 +3,19 @@
 import gzip
 import argparse
 import hashlib
+from http.client import IncompleteRead
 import json
 from pathlib import Path
 import re
+import tarfile
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+
+import native_image
 
 
 OSV = "https://api.osv.dev/v1/query"
@@ -226,7 +230,7 @@ def package_identities(image, platform, scan):
     return identities
 
 
-def evaluate(image, platform, scan):
+def evaluate(image, platform, scan, hashes=None, require_verified_hashes=False):
     report = {"image": image, "platform": platform,
               "evaluatedAt": datetime.now(timezone.utc).isoformat(),
               "packages": {}, "verdict": "BLOCKED",
@@ -243,6 +247,16 @@ def evaluate(image, platform, scan):
         return report
     try:
         identities = package_identities(image, platform, scan)
+        if require_verified_hashes and hashes is None:
+            for identity in identities.values():
+                identity["sha256"] = None
+        if hashes is not None:
+            if set(hashes) != set(BINARIES) or any(
+                    not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+                    for value in hashes.values()):
+                raise ValueError("Invalid native executable hashes")
+            for name, value in hashes.items():
+                identities[name]["sha256"] = value
     except (ValueError, KeyError) as error:
         report["gap"] = f"Cannot establish RPM identity: {error}"
         return report
@@ -366,7 +380,15 @@ def evaluate(image, platform, scan):
 
 
 def emit(image, platform, scan):
-    report = evaluate(image, platform, scan)
+    try:
+        hashes = native_image.binary_hashes(image, platform)
+        error = None
+    except (OSError, EOFError, IncompleteRead, ValueError, KeyError, TypeError, tarfile.TarError, URLError) as failure:
+        hashes = None
+        error = f"Cannot bind native executable bytes: {failure}"
+    report = evaluate(image, platform, scan, hashes, require_verified_hashes=True)
+    if error:
+        report["binaryIdentityError"] = error
     for package, detail in report["packages"].items():
         for candidate in detail["candidates"]:
             print("SCAN_ADVISORY " + json.dumps({"package": package, **candidate}, separators=(",", ":")), flush=True)
