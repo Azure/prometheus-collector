@@ -65,8 +65,7 @@
       "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
-      "tier": "weekly",
-      "blockedReason": "Build 132547 still found the CA in distro trust after excluding /anchors/mariner; distrust and recovery remain unverified."
+      "tier": "weekly"
     },
     {
       "id": "ampls-proxy",

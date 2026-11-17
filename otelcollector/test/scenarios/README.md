@@ -248,8 +248,9 @@ package`); other candidate findings remain `OPEN`.
 
 The custom-CA lane temporarily removes its owned `/anchors/proxy` Secret mount and
 the AKS node-anchor mounts at `/anchors/mariner` and `/anchors/ubuntu`, then
-restarts the collectors. AKS also installs `httpProxyConfig.trustedCa` in the
-node trust store, which product startup copies from those mounts. The negative
+restarts the collectors and waits for the original trusted pods to be deleted.
+AKS also installs `httpProxyConfig.trustedCa` in the node trust store, which
+product startup copies from those mounts. The negative
 phase removes the copied anchor, regenerates distro trust with `update-ca-trust`,
 and verifies the file and anchor are absent before probing against
 `/etc/pki/tls/certs/ca-bundle.crt` through the owned proxy endpoint. It requires
@@ -262,59 +263,25 @@ container stdout. The adapter restores and reads back the original mounts even
 after failure. Successful negative proof must then be followed by fresh
 ingestion after recovery.
 
-Custom-CA build 132521 (producer 132516, product source `fe28fdfc`, test source
-`d4d4fb66`) passed all nine selected JUnit suites and the trusted proxy/ingestion
-proof, but `trust anchor --remove` failed because p11-kit could not remove a
-read-only certificate. The negative curl and recovery phases did not run. The
-adapter then removed the exact copied anchor file directly.
+The custom-CA lane's functional proof passed in pipeline 979 build 132661
+(producer 132523, product source `6c42489b`, test source `54cd6300`).
+All nine selected JUnit executions passed (62 executed cases, 294 skipped).
+All three collectors rejected the proxy certificate with curl exit 60 and
+retained stderr. Fresh scraping continued while 21 DCE-specific collector TLS
+errors and three independent empty AMW observations spanning 70.47 seconds
+proved ingestion failure. The proxy recorded 20 CONNECTs and no DCE POSTs during
+distrust. Original mounts were restored and read back; recovery produced a fresh
+AMW sample and six successful DCE POSTs, with zero NO_PROXY bypass routes.
+Private-API ingress/key cleanup and retained-resource checks passed. Its matrix
+blocker is removed. The overall build failed separately at the scan comparison
+(114 closed findings, 23 open, zero new) and global coverage gate; this is not
+vulnerability clearance or complete campaign approval.
 
-Custom-CA build 132536 (producer 132516, product source `fe28fdfc`, test source
-`31a4f42a`) passed all nine selected JUnit suites and the trusted proxy/ingestion
-proof, but `trust list` still reported the CA after the copied file was removed.
-The node's Mariner trust anchors are also mounted at `/anchors/mariner` and copied
-by product startup, so the negative phase now removes that source mount as well.
-The negative curl, ingestion absence, and recovery remain unverified; keep the
-matrix blocker until a live run proves them.
-
-Custom-CA build 132547 (producer 132516, product source `fe28fdfc`, test source
-`997d1579`) passed all nine selected JUnit suites and the trusted proxy/ingestion
-proof, but `trust list` still reported the CA after the copied file was removed
-and `/anchors/mariner` was excluded. The `/anchors/ubuntu` host trust mount
-remained present, so the negative phase now excludes both node-anchor mounts.
-The negative curl, ingestion absence, and recovery remain unverified; keep the
-matrix blocker until a live run proves them.
-
-Custom-CA replay 132643 (producer 132516, product source `fe28fdfc`, test source
-`132157d22`) passed all nine selected JUnit executions, trusted proxy routing and
-fresh ingestion. The negative phase stopped on an old trusted pod still
-terminating after rollout; all three replacement collectors had no trust mounts.
-The adapter now waits for the original collector pods to be deleted before
-probing distrust. CA rejection, absent ingestion and recovery remain unverified;
-this older-product replay is not current-candidate clearance.
-
-Custom-CA build 132618 (producer 132516, product source `fe28fdfc`, test source
-`3a0af100f`) passed all nine selected JUnit executions, then the direct-egress
-denial exec was killed with exit 137 before trusted routing or CA distrust was
-tested. This probe now retries exit 137 twice, while unexpected curl outcomes
-and persistent exec failures still fail. The CA blocker remains unchanged.
-
-Custom-CA build 132495 (producer 131983, product source `d34c33d1`, test source
-`61394955`) passed all nine selected JUnit suites and the trusted proxy/ingestion
-proof, but failed because the negative curl still returned 0 after the mount was
-removed. A read-only probe against the retained Squid VM confirmed the DCE
-hostname is TLS-bumped and requires its generated CA.
 TLS interception is limited to AMW ingestion; public registry and test-source
 connections retain their public certificates so the harness can initialize.
 Its deployment first prepares the retained proxy, then reads only the public CA
 through authenticated VM run-command before creating AKS with that trust.
 No deployment-script container, storage account or CA-reader identity is needed.
-
-Build 132483 (producer 131983, product source `d34c33d1`, test source
-`f76b27cc`) passed trusted ingestion but failed the untrusted probe: the
-scenario-owned CA had already been copied into the generated distro trust bundle
-before its mount was removed. That run did not retain the curl exit code or
-stderr. The harness now clears the exact copied anchor and records both; this
-change still requires live pipeline proof before the blocker can be removed.
 
 Evidence includes command timings/logs, deployment outputs, per-suite JUnit and
 Ginkgo JSON, per-node/component `imageID` observations, results and
