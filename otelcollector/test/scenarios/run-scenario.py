@@ -1105,6 +1105,41 @@ def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
     return target
 
 
+def configure_ampls_cluster_proxy(host, outputs):
+    group = host.receipt["resourceGroup"]
+    cluster = outputs["clusterName"]
+    profile = host.az("aks", "show", "--resource-group", group, "--name", cluster,
+                      json_output=True, private=True).get("httpProxyConfig") or {}
+    if profile.get("enabled") is False or profile.get("httpProxy") != outputs["proxyEndpoint"] or \
+            profile.get("httpsProxy") != outputs["proxyEndpoint"] or not isinstance(profile.get("noProxy"), list):
+        raise ValueError("Retained cluster proxy configuration does not match the owned proxy")
+    endpoints = []
+    for key in ("dceConfigurationEndpoint", "dceMetricsIngestionEndpoint", "queryEndpoint"):
+        parsed = urlsplit(outputs[key])
+        if parsed.scheme != "https" or not parsed.hostname or not re.fullmatch(r"[a-zA-Z0-9.-]+", parsed.hostname):
+            raise ValueError(f"Invalid private monitoring endpoint: {key}")
+        endpoints.append(parsed.hostname)
+    if not endpoints[0].endswith(".handler.control.monitor.azure.com"):
+        raise ValueError("Unexpected AMCS configuration endpoint")
+    bypass = list(dict.fromkeys([*profile["noProxy"], "handler.control.monitor.azure.com",
+                                ".handler.control.monitor.azure.com", *endpoints]))
+    if bypass != profile["noProxy"]:
+        config = {key: profile[key] for key in ("httpProxy", "httpsProxy", "trustedCa") if profile.get(key)}
+        config["noProxy"] = bypass
+        with tempfile.TemporaryDirectory(prefix="ama-proxy-config-") as directory:
+            path = Path(directory) / "proxy.json"
+            save(path, config)
+            host.az("aks", "update", "--resource-group", group, "--name", cluster,
+                    "--http-proxy-config", str(path), private=True)
+        profile = host.az("aks", "show", "--resource-group", group, "--name", cluster,
+                          json_output=True, private=True).get("httpProxyConfig") or {}
+    if not set(bypass).issubset(set(profile.get("noProxy") or [])):
+        raise RuntimeError("AKS did not retain the required private endpoint proxy exclusions")
+    outputs["proxyNoProxy"] = profile["noProxy"]
+    outputs["proxyNoProxyCsv"] = ",".join(profile["noProxy"])
+    save(host.args.evidence / "deployment.json", outputs)
+
+
 def configure_proxy(documents, outputs):
     endpoint = outputs["proxyEndpoint"]
     exclusions = outputs["proxyNoProxyCsv"]
@@ -1599,16 +1634,28 @@ PY""" % (started, source_attribution, sorted(destinations), PROXY_DIAGNOSTIC_MAX
         max_lines, PROXY_DIAGNOSTIC_MAX_SECONDS, max_lines)
 
 
-def start_proxy_diagnostics(host, outputs, proof, started):
-    state = {"windowStarted": started, "samplerStarted": time.time(), "collectors": [], "samplers": [],
-             "proxyVmName": outputs.get("proxyVmName")}
+def start_proxy_diagnostics(host, outputs, proof, started, state=None):
+    if state is None:
+        state = {"windowStarted": started, "samplerStarted": time.time(), "collectors": [], "samplers": [],
+                 "proxyVmName": outputs.get("proxyVmName")}
     try:
         pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
                          json_output=True, private=True)["items"]
     except RuntimeError as failure:
         state["inventoryError"] = str(failure)
-        print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(state), flush=True)
+        print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(
+            {key: value for key, value in state.items() if key != "samplers"}), flush=True)
         return state
+    names = {pod["metadata"]["name"] for pod in pods
+             if any(container["name"] == "prometheus-collector" for container in pod["spec"]["containers"])}
+    if not names:
+        state["inventoryError"] = "No collector pods were available for diagnostics"
+        return state
+    state.pop("inventoryError", None)
+    for sampler in state["samplers"]:
+        if sampler["pod"] not in names:
+            sampler["collector"]["retired"] = True
+            sampler["stop"].set()
     try:
         proxy_ip = urlparse(outputs["proxyEndpoint"]).hostname
         if not proxy_ip or ipaddress.ip_address(proxy_ip).version != 4:
@@ -1642,6 +1689,8 @@ def start_proxy_diagnostics(host, outputs, proof, started):
         if not any(container["name"] == "prometheus-collector" for container in pod["spec"]["containers"]):
             continue
         name = pod["metadata"]["name"]
+        if any(sampler["pod"] == name for sampler in state["samplers"]):
+            continue
         statuses = pod["status"].get("containerStatuses", [])
         status = next((item for item in statuses if item["name"] == "prometheus-collector"), {})
         collector = {"pod": name, "podIP": pod["status"].get("podIP"),
@@ -1683,8 +1732,6 @@ def start_proxy_diagnostics(host, outputs, proof, started):
                 handle.close()
             collector["samplerError"] = str(failure)
             continue
-    if not state["collectors"]:
-        state["inventoryError"] = "No collector pods were available for diagnostics"
     public = {key: value for key, value in state.items() if key != "samplers"}
     print("AMPLS_PROXY_DIAGNOSTICS_START " + json.dumps(public), flush=True)
     return state
@@ -1736,7 +1783,7 @@ done
                 if sampler.get("error"):
                     item["samplerError"] = sampler["error"]
                     errors.append(f"{item['pod']} {item['samplerError']}")
-                elif sampler.get("statusError"):
+                elif sampler.get("statusError") and not item.get("retired"):
                     item["samplerError"] = sampler["statusError"]
                     errors.append(f"{item['pod']} {item['samplerError']}")
                 elif not any(line.startswith(("SOCKET_SNAPSHOT ", "CONNTRACK "))
@@ -1746,13 +1793,14 @@ done
             except OSError as failure:
                 item["samplerError"] = str(failure)
                 errors.append(f"{item['pod']} sampler output: {failure}")
-        try:
-            logs = host.kube("exec", item["pod"], "-n", "kube-system", "-c", "prometheus-collector",
-                             "--", "sh", "-c", log_script, private=True)
-            item["endpointLogs"] = sanitize_proxy_diagnostic_lines(logs)
-        except RuntimeError as failure:
-            item["logError"] = str(failure)
-            errors.append(f"{item['pod']}: {failure}")
+        if not item.get("retired"):
+            try:
+                logs = host.kube("exec", item["pod"], "-n", "kube-system", "-c", "prometheus-collector",
+                                 "--", "sh", "-c", log_script, private=True)
+                item["endpointLogs"] = sanitize_proxy_diagnostic_lines(logs)
+            except RuntimeError as failure:
+                item["logError"] = str(failure)
+                errors.append(f"{item['pod']}: {failure}")
         collectors.append(item)
     if state.get("proxyVmName") and state.get("routeTargets"):
         source_attribution = {
@@ -2345,6 +2393,8 @@ def execute(args, scenario, variants, commands):
         resolved["existing"] = host.reused
         host.assert_owned()
         group, cluster = host.receipt["resourceGroup"], outputs["clusterName"]
+        if scenario["id"] == "ampls-proxy":
+            configure_ampls_cluster_proxy(host, outputs)
         host.az("aks", "get-credentials", "--resource-group", group, "--name", cluster,
                 "--file", str(host.kubeconfig), "--admin", private=True)
         transport.enter_context(private_api(host, outputs))
@@ -2417,6 +2467,7 @@ def execute(args, scenario, variants, commands):
             for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
                 host.kube("rollout", "restart", resource, "-n", "kube-system")
                 host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
+                start_proxy_diagnostics(host, outputs, outcome["ampls"], proxy_started, state=proxy_diagnostics)
             outcome["meConfiguration"] = verify_me_configuration(
                 host, outcome["ampls"], proxy_started, capture_process=True)
         for name in selected_settings:

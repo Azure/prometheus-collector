@@ -431,6 +431,51 @@ class Contracts(unittest.TestCase):
                         self.fail("Public API profile entered the tunnel")
                 discover.assert_not_called()
 
+    def test_ampls_cluster_proxy_updates_and_reuses_private_endpoint_exclusions(self):
+        outputs = {"clusterName": "sc", "proxyEndpoint": "http://10.226.0.4:3128",
+                   "dceConfigurationEndpoint": "https://dce.westcentralus-1.handler.control.monitor.azure.com",
+                   "dceMetricsIngestionEndpoint": "https://dce.westcentralus-1.metrics.ingest.monitor.azure.com",
+                   "queryEndpoint": "https://workspace.westcentralus.prometheus.monitor.azure.com"}
+        profile = {"enabled": True, "httpProxy": outputs["proxyEndpoint"],
+                   "httpsProxy": outputs["proxyEndpoint"], "noProxy": ["localhost", ".monitor.azure.com"]}
+        host = Mock()
+        host.receipt = {"resourceGroup": "owned"}
+        with tempfile.TemporaryDirectory() as directory:
+            host.args.evidence = Path(directory)
+            updates = []
+            def az(*args, **kwargs):
+                if args[:2] == ("aks", "update"):
+                    config = runner.json.loads(Path(args[args.index("--http-proxy-config") + 1]).read_text())
+                    updates.append(config)
+                    profile.update(config)
+                    return ""
+                return {"httpProxyConfig": profile.copy()}
+            host.az.side_effect = az
+            runner.configure_ampls_cluster_proxy(host, outputs)
+            required = {"handler.control.monitor.azure.com", ".handler.control.monitor.azure.com",
+                        "dce.westcentralus-1.handler.control.monitor.azure.com",
+                        "dce.westcentralus-1.metrics.ingest.monitor.azure.com",
+                        "workspace.westcentralus.prometheus.monitor.azure.com"}
+            self.assertTrue(required <= set(updates[0]["noProxy"]))
+            self.assertEqual(outputs["proxyNoProxyCsv"], ",".join(profile["noProxy"]))
+            runner.configure_ampls_cluster_proxy(host, outputs)
+            self.assertEqual(len(updates), 1)
+            host.az.side_effect = lambda *args, **kwargs: {"httpProxyConfig": {
+                **profile, "httpProxy": "http://unexpected:3128"}}
+            with self.assertRaisesRegex(ValueError, "owned proxy"):
+                runner.configure_ampls_cluster_proxy(host, outputs)
+            host.az.side_effect = lambda *args, **kwargs: {"httpProxyConfig": {
+                **profile, "noProxy": ["localhost"]}}
+            with self.assertRaisesRegex(RuntimeError, "did not retain"):
+                runner.configure_ampls_cluster_proxy(host, outputs)
+            host.az.side_effect = lambda *args, **kwargs: {"httpProxyConfig": profile}
+            with self.assertRaisesRegex(ValueError, "Invalid private monitoring endpoint"):
+                runner.configure_ampls_cluster_proxy(host, {
+                    **outputs, "dceMetricsIngestionEndpoint": "not-a-url"})
+            with self.assertRaisesRegex(ValueError, "Unexpected AMCS"):
+                runner.configure_ampls_cluster_proxy(host, {
+                    **outputs, "dceConfigurationEndpoint": "https://wrong.monitor.azure.com"})
+
     def test_proxy_adapter_injects_collector_environment_and_public_trust_only(self):
         documents = [
             {"kind": kind, "spec": {"template": {"spec": {"containers": [
@@ -534,6 +579,43 @@ class Contracts(unittest.TestCase):
         self.assertEqual(collector["containerIds"], ["containerd://old", "containerd://new"])
         self.assertIn("CONTAINER\t", output.getvalue())
         self.assertIn("SAMPLER reconnect=1 exit=137", output.getvalue())
+
+    def test_proxy_sampler_refreshes_replaced_pods_after_rollout(self):
+        def pod(name):
+            return {"metadata": {"name": name},
+                    "spec": {"nodeName": "node-a", "containers": [{"name": "prometheus-collector"}]},
+                    "status": {"podIP": "10.244.0.2", "hostIP": "10.224.0.5",
+                               "containerStatuses": [{"name": "prometheus-collector",
+                                                      "containerID": f"containerd://{name}"}]}}
+
+        host = Mock()
+        host.kubeconfig = "kubeconfig"
+        host.kube.side_effect = [
+            {"items": [pod("ama-metrics-old"), pod("ama-metrics-node")]},
+            "PROCESS\t1\tMetricsExtensio\n", "PROCESS\t2\tMetricsExtensio\n",
+            {"items": [pod("ama-metrics-new"), pod("ama-metrics-node")]},
+            "PROCESS\t3\tMetricsExtensio\n",
+        ]
+        outputs = {"proxyEndpoint": "http://10.225.0.5:3128",
+                   "dceMetricsIngestionEndpoint": "https://ingest.monitor.azure.com"}
+        proof = {"endpointAddresses": {}, "hosts": {}}
+        with tempfile.TemporaryDirectory() as directory:
+            host.args.evidence = Path(directory)
+            with patch.object(runner.shutil, "which", return_value="kubectl"), \
+                 patch.object(runner.threading, "Thread") as threads, \
+                 patch("sys.stdout", new_callable=io.StringIO):
+                state = runner.start_proxy_diagnostics(host, outputs, proof, 0)
+                try:
+                    state = runner.start_proxy_diagnostics(host, outputs, proof, 0, state=state)
+                    self.assertEqual(len(state["samplers"]), 3)
+                    commands = [call.kwargs["args"][0] for call in threads.call_args_list]
+                    self.assertIn("ama-metrics-new", commands[-1])
+                    self.assertTrue(state["samplers"][0]["stop"].is_set())
+                    self.assertFalse(state["samplers"][1]["stop"].is_set())
+                    self.assertEqual(state["collectors"][0]["retired"], True)
+                finally:
+                    for sampler in state["samplers"]:
+                        sampler["handle"].close()
 
     def test_proxy_sampler_does_not_stream_unsanitized_process_environment(self):
         host = Mock()
