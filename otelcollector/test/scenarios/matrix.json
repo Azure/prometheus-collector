@@ -66,7 +66,7 @@
       "platforms": ["linux"],
       "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
       "tier": "weekly",
-      "blockedReason": "Build 132521 failed before the negative probe: p11-kit could not remove the read-only copied CA; distrust and recovery remain unverified."
+      "blockedReason": "Build 132536 retained the CA through AKS node trust; the negative probe and recovery remain unverified."
     },
     {
       "id": "ampls-proxy",

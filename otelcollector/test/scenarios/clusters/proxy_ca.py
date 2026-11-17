@@ -98,9 +98,11 @@ def verify_ca_recovery(host, outputs, mark_probe, verify_ingestion, verify_proxy
             containers = document["spec"]["template"]["spec"]["containers"]
             index = next(i for i, container in enumerate(containers) if container["name"] == "prometheus-collector")
             mounts = containers[index].get("volumeMounts", [])
-            untrusted = [mount for mount in mounts if mount.get("name") != "scenario-proxy-ca"]
-            if mounts == untrusted:
-                raise RuntimeError("CA failure adapter found no owned proxy CA trust mount to remove")
+            trust_mounts = {"scenario-proxy-ca", "anchors-mariner"}
+            if not trust_mounts.issubset({mount.get("name") for mount in mounts}):
+                raise RuntimeError("CA failure adapter is missing an owned or node proxy CA trust mount")
+            # AKS also exposes its trustedCa through this node anchor mount.
+            untrusted = [mount for mount in mounts if mount.get("name") not in trust_mounts]
             patch = {"op": "replace", "path": f"/spec/template/spec/containers/{index}/volumeMounts"}
             originals.append((resource, dict(patch, value=mounts)))
             host.kube("patch", resource, "-n", "kube-system", "--type=json",

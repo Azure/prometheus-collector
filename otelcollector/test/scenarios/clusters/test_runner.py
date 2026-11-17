@@ -218,7 +218,7 @@ class Contracts(unittest.TestCase):
             for mounts in negative_mounts:
                 names = {mount["name"] for mount in mounts}
                 self.assertNotIn("scenario-proxy-ca", names)
-                self.assertIn("anchors-mariner", names)
+                self.assertNotIn("anchors-mariner", names)
                 self.assertIn("anchors-ubuntu", names)
             calls = host.kube.call_args_list
             for pod in ("collector-replica", "collector-node"):
