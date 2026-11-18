@@ -24,13 +24,15 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   child digest/platform, empty ignore/config files and recorded scanner/DB/hash.
   It does not use or change the Docker daemon. Exit zero means the scanner ran,
   not that vulnerabilities are absent.
-- `compare_trivy.py`: every baseline Linux CVE finding and no-new-findings comparison
-  for matched scanner/configuration/DB hashes, complete target/package inventory
-  and a candidate bound to the successful build receipt. It cannot clear a
-  Qualys QID or claim full-image coverage. Every baseline finding is evaluated
-  without severity/fixability filters; unresolved, unreported, or new findings
-  block readiness. OS targets must match the scan's exact image ref and OS
-  metadata before comparing their distribution/version; binary paths remain exact.
+- `compare_trivy.py`: baseline Linux CVE and no-new-findings comparison for
+  matched scanner/configuration/DB hashes, complete target/package inventory
+  and a candidate bound to the successful build receipt. Open and new
+  findings in the exact targets `opt/microsoft/otelcollector/otelcollector`,
+  `opt/microsoft/otelcollector/prometheusui` and `opt/promconfigvalidator`
+  are reported as deferred to the separate Collector
+  upgrade; missing target/package evidence and open or new findings in other
+  targets still block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
+  must match the scan's exact image ref and OS metadata; binary paths remain exact.
 - `published_discovery.py` and `published-images.json`: compare the pinned
   production and latest-main collector `linux/amd64` child digests with Trivy
   0.76.1, the same database snapshot and identical configuration. The main image
@@ -85,12 +87,10 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   Published prod-vs-main discovery
   needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
-  child, scans that exact candidate locally with the producer's scanner version,
-  then scans the released baseline with the same frozen local database. The
-  producer's report remains authenticated evidence, not the local comparison's
-  candidate scan. It retains raw scans plus `comparison.json`, including
-  failed/blocked verdicts. A local report does not acquire a protected pipeline
-  producer by being copied.
+  child, reuses its fresh scan or rescans the exact digest when authenticated
+  evidence expires. The baseline uses the same scanner version and frozen
+  database. Raw scans and `comparison.json` are retained, including failed or
+  blocked verdicts. A local refresh does not replace the protected producer report.
 
 These are executable repository components, **not a deployed Azure SRE Agent
 integration or an end-to-end passing campaign**.
@@ -235,28 +235,48 @@ also runs 979 directly and binds its run to the source head's successful 440
 build. The candidate run validates the source, CVE and protected receipts before
 provisioning. The push-receipt and candidate-build validators accept both SRE
 branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
-`sre-trivy-collector` evidence; its other console scans remain report-only. The
+`sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
+and raw scan log; its other console scans remain report-only. CandidateCapacity
+validates those exact receipts and the frozen DB, then verifies source-bound
+placements and retained-host state before admitting lanes. CandidateScan reuses
+fresh producer findings. If the authenticated scan or database is more than
+24 hours old, it rescans the receipt-bound candidate digest, then uses that
+frozen database for the baseline. Both paths use the producer scanner version
+and canonical configuration. Its FAIL/BLOCKED result does not skip functional
+lanes, but its failed stage still gates approval. Missing or invalid snapshots
+and refreshes that do not yield fresh comparable evidence fail closed;
+legacy report-only artifacts remain readable but cannot drive this comparison.
+Full candidate findings remain in the authenticated log payload; the binary DB
+is retained only in the protected artifact. The
 producer signs only `payload.json` in the collector and allocator signing folders;
 the original Buildx `push-metadata.json` remains readable JSON for immutable
 push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
 This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
-the scanner also evaluates every baseline finding without severity or fixability
-filters. A
+the scanner evaluates every baseline finding without severity or fixability
+filters. Open and new findings (including Go standard library findings) in the exact
+`opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
+and `opt/promconfigvalidator` targets
+are reported unresolved/deferred to the
+separate Collector upgrade, not treated as fixed. The same CVE in any other
+target still fails; missing evidence still blocks.
+All raw findings remain in the comparison evidence. A
 manually queued 979 candidate run can instead supply `candidateBuildId`,
 `candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
 resource group and publish its inventory; the pipeline removes its local kubeconfig
 but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
-`default`, `linux`, `settings`, `classic-azure-cni`, `mixed`, `autoscaler`, `uai`,
-`cilium` and `kubenet` in serial stages, even if an earlier row fails. Each row
+`default`, `linux`, `settings`, `mixed`, `autoscaler`, `uai`,
+`cilium` and `kubenet` in parallel stages after campaign admission,
+even if an earlier row fails. Each row
 has its own UUID, checkout, evidence, retained resource group and bootstrap
 artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
 in the approved build subscription. A named selector runs just that row.
 Before any provisioning, a read-only admission stage compiles the selected rows
-and checks each region's total simultaneous max-count-plus-surge against live
-regional and VM-family quotas, SKU restrictions and the stable Kubernetes version.
+and checks pool/version compatibility, source bindings and retained fixture ownership.
 Every row requires that stage's successful, source/build-bound placement output,
 and still performs its existing live per-row preflight.
-Admission is a point-in-time check, not a capacity reservation. Retention and
+No capacity or quota admission runs, including for new hosts and autoscaler growth;
+Azure provisioning or scale-out can fail if capacity or quota is insufficient.
+`CandidateCapacity` remains the stage's compatibility identifier. Retention and
 auto-upgrade channels remain unchanged; serial test stages do not serialize
 later retained-cluster upgrades.
 After a successful
@@ -280,8 +300,9 @@ those exact image digests. The 979 PR run is linked to the PR and auto-cancels
 when its head changes; only results for the latest head count. The separate 440
 push-triggered run remains the producer and is not itself e2e evidence.
 The fetch CLI's `trivyVersion` comes from the verified producer scan metadata.
-The pipeline installs that version, acquires a fresh local database, and reuses
-that database for both comparison scans. Host prerequisites precede producer
+The pipeline installs that version and uses one fresh database for the
+comparison, reusing the producer database while its evidence is fresh.
+Host prerequisites precede producer
 fetching; comparison runs only after scanner/Python preparation succeeds.
 
 Published discovery also emits its full JSON through the private ADO scan log,
@@ -304,21 +325,24 @@ alongside Trivy, for both Linux and Windows ama-metrics images. Load the
 during setup and each campaign's baseline/candidate evaluation. It defines the
 exact query, actual-agent execution proof, complete private snapshot, native OS
 and digest binding, source-preserving reconciliation and fix-or-blocker contract.
-Do not substitute workstation results for agent consumption. Keep the existing
-Trivy all-findings gate unchanged; absent or stale Kusto rows are not closure.
+Do not substitute workstation results for agent consumption. Trivy deferrals
+do not establish Kusto closure; absent or stale Kusto rows are not closure.
 
-Each row publishes `coverage.json` as a plan, never as proof of execution. It
-explicitly lists blocked matrix rows and the five uncovered settings variants:
-`helm-customer-values` (no isolated customer Helm adapter), and
-`empty-secret-namespaces-v1`, `empty-secret-namespaces-v2`,
-`omitted-secret-namespaces-v1`, `omitted-secret-namespaces-v2` (no enforcement on
-the current approved Kubernetes 1.36.5 baseline). No topology or version override
-is used to manufacture coverage. A new runnable matrix row or unaccounted variant
-fails coverage planning before provisioning. Actual source-bound TestKube results
-for every applicable row, not this selector or plan, are required for completion.
+Each row publishes `coverage.json` as a report-only plan, never as proof of
+execution. Known coverage blockers do not fail individual runs. Functional,
+scan, and cleanup failures still fail. The report lists blocked scenarios,
+variants such as `helm-customer-values`, and test suites. A new runnable matrix
+row or unaccounted variant still fails coverage planning before provisioning.
+
+Before merge approval, every required lane must have a passing result and
+non-empty executed JUnit for the same test source, product source, producer build,
+and candidate digests. Missing, skipped, failed, or mismatched results do not
+count. Cross-run approval enforcement is not implemented. The strict
+`candidate_coverage.py --require-unblocked` mode still fails on global plan
+blockers when explicitly requested; it is not wired to merge approval.
 The nine-row harness runs config-processing variants, five health suites and
 fresh ingestion; it does not run every repository Ginkgo package.
-`coverage.json` also blocks `regionTests`: its specific deployed recording-rule
+`coverage.json` also reports `regionTests` as blocked: its specific deployed recording-rule
 and AMW usage/limits checks need an owned rule and authorization adapter
 (`parmRuleName`, `parmAmwResourceId`). Overlapping health checks do not replace
 those tests. Nine successful rows alone must not be reported as all repo tests passing.

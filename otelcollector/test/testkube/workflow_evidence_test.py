@@ -56,10 +56,11 @@ class WorkflowEvidenceTest(unittest.TestCase):
                     runs = [step for step in rendered["spec"]["steps"] if "shell" in step]
                     self.assertEqual(len(runs), 1)
                     self.assertEqual(runs[0]["container"]["image"], IMAGE)
+                    self.assertNotIn("{{", runs[0]["shell"])
                     self.assertIn(
                         "GOTOOLCHAIN=\"$(go env GOVERSION)\" "
                         "go run github.com/onsi/ginkgo/v2/ginkgo@"
-                        "\"$(go list -m -f '{{.Version}}' github.com/onsi/ginkgo/v2)\" run ",
+                        "\"$(go list -m github.com/onsi/ginkgo/v2 | cut -d ' ' -f 2)\" run ",
                         runs[0]["shell"],
                     )
                     self.assertIn("--fail-on-empty", runs[0]["shell"])
@@ -89,6 +90,46 @@ class WorkflowEvidenceTest(unittest.TestCase):
         self.assertEqual(env.get("AZURE_CLIENT_ID"), "scoped-reader-id")
         with self.assertRaises(ValueError):
             render_candidate(source + "\n---\n" + source, "operator", SHA, IMAGE)
+
+    def test_customer_settings_template_keeps_immutable_inputs_and_ginkgo_options(self):
+        source = (ROOT / "config-processing-test-crs" / "testkube-config-test-customer-settings-v1-crs.yaml").read_text(encoding="utf-8")
+        rendered = render_candidate(source, "customersettingsv1", SHA, IMAGE)
+        spec = rendered["spec"]
+        self.assertNotIn("use", spec)
+        self.assertEqual(spec["content"]["git"]["revision"], SHA)
+        step = spec["steps"][0]
+        self.assertEqual(step["container"]["image"], IMAGE)
+        self.assertEqual(step["container"]["workingDir"], "/data/repo/otelcollector/test/ginkgo-e2e/configprocessing")
+        self.assertIn("--label-filter config-processing-customer-settings-v1", step["shell"])
+        self.assertIn("--timeout=3h", step["shell"])
+        self.assertNotIn(" -p ", step["shell"].splitlines()[-1])
+        self.assertIn("--fail-on-empty", step["shell"])
+        self.assertIn("--junit-report=/data/reports/junit.xml", step["shell"])
+        self.assertEqual(spec["steps"][-1]["condition"], "always")
+        override = render_candidate(source, "customersettingsv1", SHA, IMAGE, "foo || bar")
+        self.assertIn("--label-filter 'foo || bar'", override["spec"]["steps"][0]["shell"])
+        parallel_source = (ROOT / "config-processing-test-crs" / "testkube-config-test-all-targets-enabled-crs.yaml").read_text(encoding="utf-8")
+        parallel = render_candidate(parallel_source, "alltargetsenabled", SHA, IMAGE)
+        self.assertIn(" -p ", parallel["spec"]["steps"][0]["shell"].splitlines()[-1])
+        for modified in (
+            source.replace("configprocessingginkgo", "unknown-template"),
+            source.replace("config-processing-customer-settings-v1", ""),
+        ):
+            with self.assertRaises(ValueError):
+                render_candidate(modified, "customersettingsv1", SHA, IMAGE)
+
+    def test_probe_cleanup_permissions_are_limited_to_pods_and_namespaces(self):
+        role, binding = yaml.safe_load_all((ROOT / "api-server-permissions.yaml").read_text(encoding="utf-8"))
+        cleanup = [rule for rule in role["rules"]
+                   if "delete" in rule["verbs"] and not rule.get("resourceNames")
+                   and "" in rule["apiGroups"]]
+        self.assertEqual(len(cleanup), 1)
+        self.assertEqual(cleanup[0]["apiGroups"], [""])
+        self.assertEqual(set(cleanup[0]["resources"]), {"pods", "namespaces"})
+        self.assertEqual(cleanup[0]["verbs"], ["delete"])
+        self.assertEqual(binding["roleRef"]["name"], role["metadata"]["name"])
+        self.assertIn({"kind": "ServiceAccount", "name": "testkube-api-server-tests-job",
+                       "namespace": "testkube"}, binding["subjects"])
 
     def test_passed_report_allows_selected_out_specs(self):
         self.assertEqual(report_counts(self.artifacts), {
@@ -184,12 +225,21 @@ class WorkflowEvidenceTest(unittest.TestCase):
         expected = set(args[args.index("gate") + 2:])
         summaries = set(re.findall(r"testkube-results/testkube-results-([a-z0-9-]+)\.json", source))
         summaries.update({"customer-settings-v1", "customer-settings-v2"})
+        cases = [step["parameters"] for step in steps
+                 if step.get("template") == "azure-template-config-test-case.yml"]
+        summaries.update(case["scenario"] for case in cases)
         self.assertEqual(expected, summaries)
+        case_template = (ROOT.parents[2] / ".pipelines" / "azure-template-config-test-case.yml").read_text(
+            encoding="utf-8")
         for cr, fixture in [
             ("testkube-config-test-default-targets-on-v2-crs.yaml", "ama-metrics-settings-configmap-defaults-targets-turned-on-v2.yaml"),
             ("testkube-config-test-dcgm-crs.yaml", "ama-metrics-settings-configmap-dcgm.yaml"),
         ]:
             run = [step["bash"] for step in steps if cr in step.get("bash", "")]
+            for case in cases:
+                if case["workflowFile"] == cr:
+                    self.assertIn(fixture, case["setupScript"])
+                    run.append(case_template.replace("${{ parameters.setupScript }}", case["setupScript"]))
             self.assertEqual(len(run), 1)
             self.assertLess(run[0].index(fixture), run[0].index("run-testkube-workflow.sh"))
         for task in ("PublishTestResults@2", "PublishPipelineArtifact@1"):

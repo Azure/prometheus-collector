@@ -13,8 +13,7 @@ param location string
 param kubernetesVersion string
 @minLength(1)
 param owner string
-@minLength(1)
-param expiresAt string
+param sreWorkspaceAssignmentId string = ''
 @secure()
 param windowsAdminPassword string = ''
 param windowsAdminUsername string = 'scenarioadmin'
@@ -23,8 +22,6 @@ param windowsAdminUsername string = 'scenarioadmin'
 param nodePools nodePool[]
 @allowed(['azure', 'cilium', 'kubenet'])
 param dataplane string = 'azure'
-@allowed(['overlay', 'classic'])
-param azureCniMode string = 'overlay'
 param workloadIdentityEnabled bool = true
 param privateApi bool = false
 param userAssignedIdentity bool = false
@@ -34,8 +31,10 @@ param privateMonitoring bool = false
 param installationMode string = 'candidate-addon'
 param proxyEnabled bool = false
 param proxyCustomCa bool = false
+param proxyBootstrapOnly bool = false
+param proxyTrustCertificate string = ''
 param noProxy string[] = []
-@description('Public SSH key for the owned proxy VM; no inbound SSH is opened.')
+@description('Initial public key for owned proxy/orchestrator VMs; NSGs deny inbound SSH by default.')
 param proxyAdminSshPublicKey string = ''
 param proxyVmSize string = 'Standard_D2s_v4'
 @allowed([1])
@@ -49,9 +48,13 @@ var tags = {
   owner: owner
   scenario: scenarioId
   run: runName
-  expiresAt: expiresAt
 }
 var networkContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
+var srePrincipalId = 'e2bd6e9c-e75e-438b-8f57-2bb62327f346'
+var monitoringDataReader = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
+var sreWorkspaceScope = resourceId('Microsoft.Monitor/accounts', '${clusterName}-amw')
+// An owned AMW is not necessarily the AMW this deployment creates.
+var sreWorkspaceAssignmentValid = empty(sreWorkspaceAssignmentId) || startsWith(toLower(sreWorkspaceAssignmentId), '${toLower(sreWorkspaceScope)}/providers/microsoft.authorization/roleassignments/')
 var effectivePrivateApi = privateApi || proxyEnabled
 var effectiveNoProxy = union(
   ['localhost', '127.0.0.1', '169.254.169.254', '168.63.129.16', '10.224.0.0/12', '10.244.0.0/16', '10.0.0.0/16', '.svc', '.cluster.local', '.azmk8s.io'],
@@ -68,11 +71,10 @@ module guards 'guards.bicep' = {
     windows2022Version: any(empty(filter(nodePools, pool => pool.osSKU == 'Windows2022')) || int(split(kubernetesVersion, '.')[1]) < 37)
     windows2025Version: any(empty(filter(nodePools, pool => pool.osSKU == 'Windows2025')) || int(split(kubernetesVersion, '.')[1]) >= 32)
     acnsNeedsAzure: any(!acns || dataplane != 'kubenet')
-    proxyNeedsSshKey: any(!proxyEnabled || startsWith(proxyAdminSshPublicKey, 'ssh-'))
+    proxyNeedsSshKey: any(!effectivePrivateApi || startsWith(proxyAdminSshPublicKey, 'ssh-'))
     proxyCaNeedsProxy: any(!proxyCustomCa || proxyEnabled)
     proxyNoProxyIsScoped: any(!proxyEnabled || (!contains(join(noProxy, ','), '*') && !contains(noProxy, '0.0.0.0/0') && !contains(noProxy, '::/0')))
-    validPoolPlan: any(length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
-    classicNeedsAzure: any(azureCniMode != 'classic' || dataplane == 'azure')
+    validPoolPlan: any(sreWorkspaceAssignmentValid && length(filter(nodePools, pool => pool.mode == 'System' && pool.osType == 'Linux')) >= 1 && length(toObject(nodePools, pool => pool.name)) == length(nodePools) && empty(filter(nodePools, pool => pool.minCount > pool.count || pool.count > pool.maxCount || (!pool.autoscaling && (pool.minCount != pool.count || pool.maxCount != pool.count)) || (pool.osType == 'Windows' && (pool.architecture != 'amd64' || length(pool.name) > 6 || !startsWith(pool.osSKU, 'Windows') || (pool.osSKU == 'Windows2025' && !pool.fips))) || (pool.osType == 'Linux' && startsWith(pool.osSKU, 'Windows')) || (pool.architecture == 'arm64' && pool.fips && pool.osSKU != 'AzureLinux3'))))
     // Keep Windows FIPS on the declared SKU; expanding this coverage needs explicit regional image/SKU preflight.
     windowsFipsVmSupported: any(empty(filter(nodePools, pool => pool.osType == 'Windows' && pool.fips && pool.vmSize != 'Standard_D4s_v4')))
   }
@@ -119,12 +121,31 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
+      {
+        name: 'orchestrator'
+        properties: {
+          addressPrefix: '10.227.0.0/24'
+          defaultOutboundAccess: false
+        }
+      }
     ]
   }
 }
 var nodeSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'nodes')
 var endpointSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'endpoints')
 var proxySubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'proxy')
+
+module orchestrator 'orchestrator.bicep' = if (effectivePrivateApi) {
+  name: '${clusterName}-orchestrator'
+  params: {
+    name: '${clusterName}-runner'
+    location: location
+    tags: tags
+    subnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'orchestrator')
+    adminSshPublicKey: proxyAdminSshPublicKey
+  }
+  dependsOn: [guards]
+}
 
 resource proxyIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = if (proxyEnabled) {
   name: '${clusterName}-proxy-egress'
@@ -240,7 +261,7 @@ resource uaiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
   }
 }
 
-resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
+resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = if (!proxyBootstrapOnly) {
   name: clusterName
   location: location
   tags: tags
@@ -254,6 +275,11 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
     nodeResourceGroup: '${clusterName}-nodes'
     kubernetesVersion: kubernetesVersion
     enableRBAC: true
+    aadProfile: effectivePrivateApi ? {
+      managed: true
+      enableAzureRBAC: true
+      tenantID: tenant().tenantId
+    } : null
     oidcIssuerProfile: { enabled: workloadIdentityEnabled }
     securityProfile: { workloadIdentity: { enabled: workloadIdentityEnabled } }
     autoUpgradeProfile: {
@@ -274,17 +300,17 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
       httpProxy: proxyHost[0]!.outputs.endpoint
       httpsProxy: proxyHost[0]!.outputs.endpoint
       noProxy: effectiveNoProxy
-      trustedCa: proxyCustomCa ? proxyHost[0]!.outputs.trustedCa : null
+      trustedCa: proxyCustomCa ? proxyTrustCertificate : null
     } : null
     networkProfile: {
       networkPlugin: dataplane == 'kubenet' ? 'kubenet' : 'azure'
-      networkPluginMode: dataplane != 'kubenet' && azureCniMode == 'overlay' ? 'overlay' : null
+      networkPluginMode: dataplane != 'kubenet' ? 'overlay' : null
       networkDataplane: dataplane == 'kubenet' ? null : dataplane
       networkPolicy: dataplane == 'cilium' ? 'cilium' : null
       outboundType: 'loadBalancer'
       loadBalancerSku: 'standard'
       loadBalancerProfile: { managedOutboundIPs: { count: 1 } }
-      podCidr: dataplane == 'kubenet' || azureCniMode == 'overlay' ? '10.244.0.0/16' : null
+      podCidr: '10.244.0.0/16'
       serviceCidr: '10.0.0.0/16'
       dnsServiceIP: '10.0.0.10'
       advancedNetworking: {
@@ -306,7 +332,6 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
       osDiskType: 'Managed'
       osDiskSizeGB: 128
       enableNodePublicIP: false
-      maxPods: azureCniMode == 'classic' ? 30 : null
       enableAutoScaling: pool.autoscaling
       minCount: pool.autoscaling ? pool.minCount : null
       maxCount: pool.autoscaling ? pool.maxCount : null
@@ -322,11 +347,11 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
 }
 
 // SAI is allocated by AKS creation; grant subsequent subnet/LB operations on the owned VNet.
-resource saiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useUai) {
-  name: guid(vnet.id, cluster.id, networkContributor)
+resource saiNetworkRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useUai && !proxyBootstrapOnly) {
+  name: guid(vnet.id, cluster!.id, networkContributor)
   scope: vnet
   properties: {
-    principalId: cluster.identity.principalId!
+    principalId: cluster!.identity.principalId!
     principalType: 'ServicePrincipal'
     roleDefinitionId: networkContributor
   }
@@ -337,6 +362,17 @@ resource workspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   location: location
   tags: tags
   properties: { publicNetworkAccess: privateMonitoring ? 'Disabled' : 'Enabled' }
+  dependsOn: [guards]
+}
+
+resource sreWorkspaceReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: empty(sreWorkspaceAssignmentId) ? guid(workspace.id, srePrincipalId, monitoringDataReader) : last(split(sreWorkspaceAssignmentId, '/'))
+  scope: workspace
+  properties: {
+    principalId: srePrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: monitoringDataReader
+  }
 }
 
 resource dce 'Microsoft.Insights/dataCollectionEndpoints@2023-03-11' = {
@@ -373,13 +409,38 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   }
 }
 
-resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = {
-  name: 'prometheus-${uniqueString(cluster.id)}'
+resource ruleAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (!proxyBootstrapOnly) {
+  name: 'prometheus-${uniqueString(cluster!.id)}'
   scope: cluster
   properties: { dataCollectionRuleId: dcr.id }
 }
 
-resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring) {
+resource otlpDcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (scenarioId == 'otlp') {
+  name: 'otlp-${clusterName}'
+  location: location
+  tags: tags
+  properties: {
+    dataCollectionEndpointId: dce.id
+    dataSources: any({
+      otelMetrics: [{ name: 'otlpMetricsDataSource', streams: ['Custom-Metrics-otlp'] }]
+    })
+    destinations: {
+      monitoringAccounts: [{ name: 'MonitoringAccount1', accountResourceId: workspace.id }]
+    }
+    dataFlows: [{
+      streams: ['Custom-Metrics-otlp']
+      destinations: ['MonitoringAccount1']
+    }]
+  }
+}
+
+resource otlpAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (scenarioId == 'otlp' && !proxyBootstrapOnly) {
+  name: 'otlp-${uniqueString(cluster!.id)}'
+  scope: cluster
+  properties: { dataCollectionRuleId: otlpDcr!.id }
+}
+
+resource configurationAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (privateMonitoring && !proxyBootstrapOnly) {
   name: 'configurationAccessEndpoint'
   scope: cluster
   properties: { dataCollectionEndpointId: dce.id }
@@ -477,8 +538,17 @@ resource queryDns 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-
   }
 }
 
-output clusterId string = cluster.id
-output clusterName string = cluster.name
+resource retainCilium 'Microsoft.Authorization/locks@2020-05-01' = if (scenarioId == 'acns-cilium') {
+  name: 'retain-acns-cilium'
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'Persistent managed ACNS Cilium scenario; retain for future candidate runs.'
+  }
+  dependsOn: [cluster, workspace]
+}
+
+output clusterId string = proxyBootstrapOnly ? '' : cluster!.id
+output clusterName string = clusterName
 output location string = location
 output workspaceId string = workspace.id
 output queryEndpoint string = workspace.properties.metrics.prometheusQueryEndpoint
@@ -488,8 +558,8 @@ output dceId string = dce.id
 output dceConfigurationEndpoint string = dce.properties.configurationAccess.endpoint
 output dceMetricsIngestionEndpoint string = dce.properties.metricsIngestion.endpoint
 output configurationDceId string = privateMonitoring ? dce.id : ''
-output configurationAssociationId string = privateMonitoring ? configurationAssociation!.id : ''
-output ruleAssociationId string = ruleAssociation.id
+output configurationAssociationId string = privateMonitoring && !proxyBootstrapOnly ? configurationAssociation!.id : ''
+output ruleAssociationId string = proxyBootstrapOnly ? '' : ruleAssociation!.id
 output workspaceDefaultDceId string = workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId
 output vnetId string = vnet.id
 output subnetId string = nodeSubnetId
@@ -502,17 +572,18 @@ output expectedPools array = nodePools
 output addonEnabled bool = false
 output installationMode string = installationMode
 output identityType string = useUai ? 'UserAssigned' : 'SystemAssigned'
-output oidcIssuerUrl string = workloadIdentityEnabled ? cluster.properties.oidcIssuerProfile!.issuerURL! : ''
+output oidcIssuerUrl string = workloadIdentityEnabled && !proxyBootstrapOnly ? cluster!.properties.oidcIssuerProfile!.issuerURL! : ''
 output workloadIdentityEnabled bool = workloadIdentityEnabled
 output oidcIssuerEnabled bool = workloadIdentityEnabled
-output azureCniMode string = dataplane == 'kubenet' ? '' : azureCniMode
 output resourceTags object = tags
 output privateApiEnabled bool = effectivePrivateApi
+output orchestratorVmName string = effectivePrivateApi ? orchestrator!.outputs.vmName : ''
+output orchestratorNsgName string = effectivePrivateApi ? orchestrator!.outputs.nsgName : ''
+output orchestratorPublicIp string = effectivePrivateApi ? orchestrator!.outputs.publicIp : ''
 output proxyVmId string = proxyEnabled ? proxyHost[0]!.outputs.vmId : ''
 output proxyVmName string = proxyEnabled ? proxyHost[0]!.outputs.vmName : ''
 output proxyEndpoint string = proxyEnabled ? proxyHost[0]!.outputs.endpoint : ''
-output proxyTrustedCa string = proxyEnabled ? proxyHost[0]!.outputs.trustedCa : ''
-output proxyCaFingerprintSha256 string = proxyEnabled ? proxyHost[0]!.outputs.caFingerprintSha256 : ''
+output proxyTrustedCa string = proxyTrustCertificate
 output proxyBootstrapCommandId string = proxyEnabled ? proxyHost[0]!.outputs.bootstrapCommandId : ''
 output proxyAccessLogPath string = proxyEnabled ? '/var/log/squid/access.log' : ''
 output proxyCaCertificatePath string = proxyCustomCa ? '/etc/squid/ssl_cert/ca.crt' : ''
@@ -524,7 +595,7 @@ output proxyEgressPublicIp string = proxyEnabled ? proxyIp!.properties.ipAddress
 output proxyNoProxy array = proxyEnabled ? effectiveNoProxy : []
 output proxyNoProxyCsv string = proxyEnabled ? join(effectiveNoProxy, ',') : ''
 output proxyTlsInterceptionEnabled bool = proxyEnabled && proxyCustomCa
-output nodeResourceGroupName string = cluster.properties.nodeResourceGroup
-output nodeResourceGroupId string = '${subscription().id}/resourceGroups/${cluster.properties.nodeResourceGroup}'
+output nodeResourceGroupName string = proxyBootstrapOnly ? '' : cluster!.properties.nodeResourceGroup
+output nodeResourceGroupId string = proxyBootstrapOnly ? '' : '${subscription().id}/resourceGroups/${cluster!.properties.nodeResourceGroup}'
 output amwManagedResourceGroupName string = split(workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId, '/')[4]
 output amwManagedResourceGroupId string = '${subscription().id}/resourceGroups/${split(workspace.properties.defaultIngestionSettings.dataCollectionEndpointResourceId, '/')[4]}'

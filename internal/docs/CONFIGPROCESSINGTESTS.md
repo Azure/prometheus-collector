@@ -9,4 +9,7 @@ Following are some of the test cases to run through while making config processi
 | All or some default targets enabled       | Invalid custom configmap  |
 | No default targets enabled                | Invalid custom configmap  |
 
-**Test all of the above in simple and advanced mode**
+The candidate settings catalog covers all six combinations above. The shipped
+addon chart hard-codes `MODE` and `WINMODE` to `advanced` and documents it as
+the only supported mode, so the historical simple-mode request is not applicable
+to the current candidate deployment.

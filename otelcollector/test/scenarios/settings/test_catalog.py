@@ -1,9 +1,13 @@
+import http.server
 import json
 import re
 import sys
+import threading
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.request import urlopen
 
 import jsonschema
 import yaml
@@ -149,13 +153,36 @@ class SettingsCatalogTests(unittest.TestCase):
                 workflow = contained_file(COLLECTOR / "test/testkube/config-processing-test-crs", entry["workflow"])
                 selected = set()
                 for doc in yaml.safe_load_all(workflow.read_text()):
-                    for step in doc["spec"]["steps"]:
+                    for template in doc["spec"].get("use", []):
+                        selected.update(re.findall(
+                            r"config-processing[-a-z0-9]+", template["config"]["labelFilter"]))
+                    for step in doc["spec"].get("steps", []):
                         selected.update(re.findall(r"config-processing[-a-z0-9]+", step.get("shell", "")))
                 if override:
                     self.assertNotEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
                 else:
                     self.assertEqual(set(manifest["ginkgoLabels"]), selected, entry["id"])
         self.assertEqual(paths, set(ROOT.glob("*/manifest.json")))
+
+    def test_legacy_configprocessing_matrix_has_all_supported_combinations(self):
+        manifests = {p.parent.name: json.loads(p.read_text()) for p in ROOT.glob("*/manifest.json")}
+        expected = {
+            "default": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml"},
+            "custom-scrape": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+                              "ama-metrics-prometheus-config-configmap-all-actions.yaml"},
+            "all-targets-disabled": {"ama-metrics-settings-configmap-all-targets-disabled.yaml"},
+            "custom-scrape-no-default-targets": {"ama-metrics-settings-configmap-all-targets-disabled.yaml",
+                                                  "ama-metrics-prometheus-config-configmap-all-actions.yaml"},
+            "custom-config-error": {"ama-metrics-settings-configmap-defaults-targets-turned-on.yaml",
+                                    "ama-metrics-prometheus-config-configmap-with-error.yaml"},
+            "custom-config-error-no-default-targets": {"ama-metrics-settings-configmap-all-targets-disabled.yaml",
+                                                        "ama-metrics-prometheus-config-configmap-with-error.yaml"},
+        }
+        for variant, required_files in expected.items():
+            with self.subTest(variant=variant):
+                manifest = manifests[variant]
+                names = {Path(path).name for path in manifest["configmaps"]}
+                self.assertTrue(required_files <= names)
 
     def test_every_documented_setting_has_a_real_variant(self):
         variants = {p.parent.name: configured_settings(p, json.loads(p.read_text())) for p in ROOT.glob("*/manifest.json")}
@@ -194,6 +221,8 @@ class SettingsCatalogTests(unittest.TestCase):
                     else:
                         self.assertNotIn(prefix + "secrets_access_namespaces", values)
                     self.assertIn("config-processing-empty-secret-namespaces", manifest["ginkgoLabels"])
+                    self.assertIn("secrets-watch-enforcement", manifest["requires"]["clusterFeatures"])
+                    self.assertEqual(manifest["customResources"], ["../secret-watch-rbac.yaml"])
 
     def test_transition_inputs_preserve_settings_and_resource_ownership(self):
         auth = list(yaml.safe_load_all((ROOT / "auth-targets.yaml").read_text()))
@@ -277,6 +306,39 @@ class SettingsCatalogTests(unittest.TestCase):
                     if baseline is None:
                         baseline = values
                     self.assertEqual(values, baseline)
+
+    def test_annotation_fixtures_serve_required_weather_metric(self):
+        pods = [
+            doc for name in ("annotation-targets.yaml", "annotation-edge-targets.yaml")
+            for doc in yaml.safe_load_all((ROOT / name).read_text()) if doc["kind"] == "Pod"
+        ]
+        self.assertEqual(len(pods), 4)
+        scripts = set()
+        for pod in pods:
+            container = pod["spec"]["containers"][0]
+            self.assertEqual(container["command"], ["python3", "-c"])
+            self.assertEqual(container["ports"][0]["containerPort"], 2112)
+            self.assertRegex(container["image"], r"^mcr\.microsoft\.com/azurelinux/base/python@sha256:[0-9a-f]{64}$")
+            scripts.add(container["args"][0])
+        self.assertEqual(len(scripts), 1)
+        script = scripts.pop()
+        self.assertIn('HTTPServer(("", 2112), Handler)', script)
+
+        def verify(server):
+            server.timeout = 5
+            worker = threading.Thread(target=server.handle_request)
+            worker.start()
+            try:
+                with urlopen(f"http://127.0.0.1:{server.server_port}/metrics", timeout=5) as response:
+                    self.assertEqual(response.headers["Content-Type"], "text/plain; version=0.0.4")
+                    self.assertEqual(response.read(), b"weather_temperature 1\n")
+            finally:
+                worker.join(timeout=6)
+                server.server_close()
+            self.assertFalse(worker.is_alive())
+
+        with patch.object(http.server.HTTPServer, "serve_forever", verify):
+            exec(script.replace('("", 2112)', '("127.0.0.1", 0)'), {})
 
     def test_empty_labels_cannot_select_every_suite(self):
         path = ROOT / "default/manifest.json"

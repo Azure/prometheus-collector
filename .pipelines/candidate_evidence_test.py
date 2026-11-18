@@ -21,7 +21,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load((root / "azure-pipeline-config-tests.yml").read_text())
         capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
         prepare = next(step["bash"] for step in capacity["jobs"][0]["steps"]
-                       if step.get("displayName") == "Prepare exact-source read-only capacity tools")
+                       if step.get("displayName") == "Prepare exact-source read-only admission tools")
         template = yaml.safe_load((root / "azure-template-candidate-config-tests.yml").read_text())
         install = next(step["bash"] for step in template["steps"]
                        if step.get("displayName") == "Install candidate host prerequisites")
@@ -33,14 +33,16 @@ class CandidateEvidenceTest(unittest.TestCase):
                 if "sudo apt-get" in script:
                     self.assertLess(config, script.index("sudo apt-get"))
 
-    def test_capacity_failure_retains_diagnostic_without_admission_claim(self):
+    def test_admission_failure_retains_diagnostic_without_admission_claim(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
         steps = capacity["jobs"][0]["steps"]
         diagnostic = next(step for step in steps
-                          if step.get("displayName") == "Retain capacity job diagnostic even when setup fails")
+                          if step.get("displayName") == "Retain admission job diagnostic even when setup fails")
         self.assertEqual(diagnostic["condition"], "always()")
-        publish = next(step for step in steps if step.get("task") == "PublishPipelineArtifact@1")
+        publish = next(step for step in steps
+                       if step.get("displayName") ==
+                       "Retain source-bound campaign admission")
         self.assertLess(steps.index(diagnostic), steps.index(publish))
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory) / "not-created-by-failed-setup"
@@ -49,7 +51,7 @@ class CandidateEvidenceTest(unittest.TestCase):
                                          "AGENT_JOBSTATUS": "Failed"})
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Failed", (evidence / "job-status.txt").read_text())
-            self.assertIn("not capacity admission proof", (evidence / "job-status.txt").read_text())
+            self.assertIn("not campaign admission proof", (evidence / "job-status.txt").read_text())
             self.assertFalse((evidence / "campaign-preflight.json").exists())
             self.assertNotIn("task.setvariable", result.stdout)
 
@@ -91,11 +93,11 @@ class CandidateEvidenceTest(unittest.TestCase):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         validation = next(step["bash"] for step in template["steps"]
                           if "Validate opt-in inputs" in step.get("displayName", ""))
-        gate = validation.split('[[ ! -e "$CANDIDATE_ROOT"', 1)[0]
+        gate = 'git() { printf "%s\\n" "$TEST_SOURCE_SHA"; }\n' + validation.split('[[ ! -e "$CANDIDATE_ROOT"', 1)[0]
         run = next(step["inputs"]["inlineScript"] for step in template["steps"]
                    if step.get("displayName", "").startswith("Run authenticated"))
         duration = run[run.index('case "$CANDIDATE_SCENARIO"'):run.index("CANDIDATE_RUN_ID=")]
-        for scenario in (*SCENARIOS, "customer-helm", "operator-secret-watch", "all", "unknown"):
+        for scenario in (*SCENARIOS, "customer-helm", "all", "unknown"):
             for script in (gate, "set -euo pipefail\n" + duration):
                 with self.subTest(scenario=scenario, script=script):
                     result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
@@ -103,21 +105,46 @@ class CandidateEvidenceTest(unittest.TestCase):
                                                  "SYSTEM_JOBATTEMPT": "1", "SYSTEM_STAGEATTEMPT": "1",
                                                  "PRODUCER_BUILD_ID": "4401", "CANDIDATE_SOURCE_SHA": self.sha,
                                                  "CAPACITY_SOURCE_SHA": self.sha, "CAPACITY_BUILD_ID": "9791",
+                                                 "TEST_SOURCE_SHA": self.sha, "CAPACITY_TEST_SOURCE_SHA": self.sha,
+                                                 "BUILD_SOURCESDIRECTORY": "unused",
                                                  "BUILD_BUILDID": "9791",
                                                  "CANDIDATE_SCENARIO": scenario})
                     self.assertEqual(result.returncode == 0, scenario in SCENARIOS, result.stderr)
+
+    def test_bootstrap_storage_is_isolated_by_scenario_and_attempt(self):
+        template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
+        run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
+        upload = next(line.strip() for line in run["inputs"]["inlineScript"].splitlines()
+                      if "##vso[artifact.upload " in line)
+        for scenario in SCENARIOS:
+            for stage_attempt, job_attempt in (("1", "1"), ("1", "2"), ("2", "1")):
+                with self.subTest(scenario=scenario, stage=stage_attempt, job=job_attempt):
+                    command = upload
+                    for variable, value in (("Build.BuildId", "979123"),
+                                            ("System.StageAttempt", stage_attempt),
+                                            ("System.JobAttempt", job_attempt)):
+                        command = command.replace(f"$({variable})", value)
+                    result = subprocess.run(
+                        ["bash", "-c", "set -eu\n" + command], capture_output=True, text=True,
+                        env={**os.environ, "CANDIDATE_SCENARIO": scenario,
+                             "public": "rbac-bootstrap-public.json"},
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    folder = result.stdout.split("containerfolder=", 1)[1].split(";", 1)[0]
+                    self.assertEqual(folder, f"candidate-rbac-bootstrap-979123-{scenario}-{stage_attempt}-{job_attempt}")
 
     def test_bootstrap_publishes_live_and_watcher_stops_without_changing_exit_status(self):
         template = yaml.safe_load(Path(__file__).with_name("azure-template-candidate-config-tests.yml").read_text())
         run = next(step for step in template["steps"] if step.get("displayName", "").startswith("Run authenticated"))
         script = run["inputs"]["inlineScript"]
-        watcher = script[script.index("publish_bootstrap() {"):script.index('"$PYTHON" -B "$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py" run')]
+        watcher = script[script.index("publish_bootstrap() {"):script.index('"$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" run')]
         for variable, value in (("Build.BuildId", "979123"), ("System.StageAttempt", "1"), ("System.JobAttempt", "2")):
             watcher = watcher.replace(f"$({variable})", value)
         self.write("ownership.json", '{"token":"DO_NOT_UPLOAD"}')
         self.write("kubeconfig", "DO_NOT_UPLOAD")
         proof = self.evidence / "rbac-bootstrap.json"
-        for publish, status in ((True, 23), (False, 0), (False, 143)):
+        for publish, status, bootstrap_status in ((True, 23, "waiting"), (True, 23, "granted"),
+                                                  (False, 0, None), (False, 143, None)):
             proof.unlink(missing_ok=True)
             command = "kill -TERM $$" if status == 143 else f"sleep 4; exit {status}"
             output_path = self.root / "watcher-output.txt"
@@ -135,11 +162,14 @@ class CandidateEvidenceTest(unittest.TestCase):
             )
             try:
                 if publish:
+                    self.write("rbac-bootstrap.ps1", "safe administrator script")
                     self.write("rbac-bootstrap.json", '{"status":')
                     time.sleep(0.3)
                     self.assertIsNone(process.poll())
                     self.assertEqual(output_path.read_text(), "")
-                    self.write("rbac-bootstrap.json", '{"status":"waiting","scope":"/subscriptions/test/resourceGroups/new","principalId":"principal","token":"DO_NOT_UPLOAD"}')
+                    self.write("rbac-bootstrap.json", json.dumps({
+                        "status": bootstrap_status, "scope": "/subscriptions/test/resourceGroups/new",
+                        "principalId": "principal", "token": "DO_NOT_UPLOAD"}))
                     deadline = time.monotonic() + 8
                     while not output_path.read_text() and process.poll() is None and time.monotonic() < deadline:
                         time.sleep(0.1)
@@ -147,9 +177,10 @@ class CandidateEvidenceTest(unittest.TestCase):
                     if process.poll() is not None:
                         self.fail("Publication must precede harness completion: " + process.communicate(timeout=10)[1])
                     public = self.evidence / "rbac-bootstrap-public.json"
-                    self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=rbac-bootstrap;artifactname=candidate-rbac-bootstrap-979123-default-1-2]" + public.as_posix())
+                    self.assertEqual(line.strip(), "##vso[artifact.upload containerfolder=candidate-rbac-bootstrap-979123-default-1-2;artifactname=candidate-rbac-bootstrap-979123-default-1-2]" + public.as_posix())
                     data = json.loads(public.read_text())
                     self.assertNotIn("DO_NOT_UPLOAD", public.read_text())
+                    self.assertEqual(data["script"], "safe administrator script")
                     self.assertEqual((data["validationBuildId"], data["candidateSourceSha"], data["producerBuildId"], data["scenario"]), ("979123", "source", "131161", "default"))
                     self.assertEqual(data["runId"], "12345678-1234-1234-1234-123456789abc")
                 _, errors = process.communicate(timeout=10)
@@ -228,9 +259,12 @@ class CandidateEvidenceTest(unittest.TestCase):
         pipeline = yaml.safe_load((directory / "azure-pipeline-config-tests.yml").read_text())
         jobs = pipeline["stages"][0]["jobs"]
         self.assertEqual(len(jobs), 1)
-        capacity = pipeline["stages"][1]
+        capacity = next(stage for stage in pipeline["stages"]
+                        if stage.get("stage") == "CandidateCapacity")
         self.assertEqual(capacity["stage"], "CandidateCapacity")
-        candidate_stage = next(iter(pipeline["stages"][2].values()))[0]
+        candidate_loop = next(stage for stage in pipeline["stages"]
+                              if any("each scenario" in key for key in stage))
+        candidate_stage = next(iter(candidate_loop.values()))[0]
         candidate_stage = next(iter(candidate_stage.values()))[0]
         jobs.append(candidate_stage["jobs"][0])
         self.assertIn("'False'", jobs[0]["condition"])
@@ -247,12 +281,13 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(pipeline["pr"]["branches"]["include"], ["main"])
         self.assertNotIn("paths", pipeline["pr"])
         self.assertIn("startsWith(variables['System.PullRequest.SourceBranch'], 'refs/heads/sre/vuln/')", capacity["condition"])
-        loop = next(iter(pipeline["stages"][2]))
+        loop = next(iter(candidate_loop))
         self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", loop)
         self.assertIn("replace(scenario, '-', '_')", candidate_stage["stage"])
-        selection = next(iter(next(iter(pipeline["stages"][2].values()))[0]))
+        selection = next(iter(next(iter(candidate_loop.values()))[0]))
         self.assertIn("eq(parameters.candidateScenario, 'all')", selection)
         self.assertIn("eq(parameters.candidateScenario, scenario)", selection)
+        self.assertNotIn("ne(scenario,", selection)
         self.assertEqual(candidate_stage["condition"],
                          "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
         self.assertIn("${{ scenario }}", jobs[1]["variables"]["candidateAttempt"])
@@ -272,24 +307,23 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertEqual(automatic_variables["campaignSourceSha"],
                          "$(resources.pipeline.campaignProducer.sourceCommit)")
         self.assertEqual(jobs[1]["cancelTimeoutInMinutes"], 60)
-        self.assertEqual(jobs[1]["${{ if eq(scenario, 'settings') }}"]["timeoutInMinutes"], 900)
-        self.assertEqual(jobs[1]["${{ else }}"]["timeoutInMinutes"], 600)
+        self.assertEqual(jobs[1]["timeoutInMinutes"], 900)
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
-        self.assertEqual(set(scenario["values"]), {"all", *SCENARIOS})
+        self.assertEqual(set(scenario["values"]), {"all", "four-lane", *SCENARIOS})
         cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
         self.assertEqual(cve["default"], "")
         campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
         self.assertEqual(campaign, {"schemaVersion": 1, "cve": "CVE-2026-63209"})
         include = jobs[1]["strategy"]["runOnce"]["deploy"]["steps"][0]
         self.assertEqual(include["parameters"]["scenario"], "${{ scenario }}")
-        self.assertEqual(include["parameters"]["cve"], "$(candidateCve)")
         self.assertEqual(include["parameters"]["producerBuildId"], "$(campaignProducerBuildId)")
         self.assertEqual(include["parameters"]["sourceSha"], "$(campaignSourceSha)")
         template = yaml.safe_load((directory / "azure-template-candidate-config-tests.yml").read_text())
         scenario = next(item for item in template["parameters"] if item["name"] == "scenario")
         self.assertEqual(scenario["default"], "default")
         self.assertEqual(set(scenario["values"]), set(SCENARIOS))
+        self.assertNotIn("cve", {item["name"] for item in template["parameters"]})
         steps = template["steps"]
         pr_resolution = next(step for step in steps if "Resolve successful 440" in step.get("displayName", ""))
         self.assertIn("System.PullRequest.SourceCommitId", str(pr_resolution["env"]))
@@ -298,20 +332,22 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertLess(steps.index(pr_resolution), next(
             i for i, step in enumerate(steps) if "Validate opt-in inputs" in step.get("displayName", "")))
         input_validation = next(step for step in steps if "Validate opt-in inputs" in step.get("displayName", ""))
-        self.assertIn("CANDIDATE_CVE", input_validation["bash"])
-        self.assertIn("CANDIDATE_CVE", input_validation["env"])
         self.assertEqual(input_validation["env"]["BUILD_REASON"], "$(Build.Reason)")
         self.assertIn('"$CANDIDATE_SOURCE_SHA" == "$PR_SOURCE_COMMIT"', input_validation["bash"])
         self.assertIn('"$CAPACITY_SOURCE_SHA" == "$CANDIDATE_SOURCE_SHA"', input_validation["bash"])
         self.assertIn('"$CAPACITY_BUILD_ID" == "$BUILD_BUILDID"', input_validation["bash"])
         self.assertNotIn("Candidate execution requires a trusted pipeline branch", input_validation["bash"])
-        self.assertIn("campaign.json", input_validation["bash"])
-        self.assertLess(input_validation["bash"].index("git fetch"), input_validation["bash"].index("git show"))
-        self.assertLess(input_validation["bash"].index("git show"), input_validation["bash"].index("task.setvariable"))
-        self.assertLess(input_validation["bash"].index("task.setvariable"), input_validation["bash"].index("git worktree add"))
-        scan = next(step for step in steps if "baseline/candidate scan comparison" in step.get("displayName", ""))
-        self.assertIn('--cve "$CANDIDATE_CVE"', scan["inputs"]["inlineScript"])
-        self.assertEqual(scan["env"]["CANDIDATE_CVE"], "$(candidateCve)")
+        self.assertLess(input_validation["bash"].index("git fetch"), input_validation["bash"].index("git worktree add"))
+        capacity_steps = capacity["jobs"][0]["steps"]
+        producer_check = next(step for step in capacity_steps
+                              if "Verify exact producer receipts" in step.get("displayName", ""))
+        self.assertIn("fetch_candidate.py", producer_check["bash"])
+        self.assertIn("require_database=True", producer_check["bash"])
+        self.assertIn("set -euo pipefail", producer_check["bash"])
+        self.assertIsNone(producer_check.get("continueOnError"))
+        self.assertEqual(producer_check["env"]["PRODUCER_BUILD_ID"], "$(capacityProducerBuildId)")
+        admit = next(step for step in capacity_steps if step.get("name") == "admit")
+        self.assertIn("variable=producerBuildId;isOutput=true", admit["inputs"]["inlineScript"])
         prereqs = next(i for i, step in enumerate(steps) if step.get("displayName") == "Install candidate host prerequisites")
         helm = next(i for i, step in enumerate(steps) if step.get("task") == "HelmInstaller@1")
         self.assertEqual(steps[helm]["inputs"]["helmVersionToInstall"], "3.19.0")
@@ -332,46 +368,36 @@ class CandidateEvidenceTest(unittest.TestCase):
             for step in steps
         ))
         cleanup = next(i for i, step in enumerate(steps) if "Always remove private candidate kubeconfig" in step.get("displayName", ""))
-        scan = next(i for i, step in enumerate(steps) if "SRE-owned authenticated" in step.get("displayName", ""))
-        self.assertEqual(cleanup, run + 1)
-        self.assertLess(cleanup, scan)
+        recovery = steps[run + 1]
+        self.assertEqual(cleanup, run + 2)
+        self.assertIn("close-private-api", recovery["inputs"]["inlineScript"])
+        self.assertEqual(recovery["condition"], "and(always(), in('${{ parameters.scenario }}', 'proxy-custom-ca', 'ampls-proxy', 'proxy'))")
         self.assertEqual(steps[cleanup]["condition"], "always()")
         self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', steps[cleanup]["bash"])
-        self.assertIn('$CANDIDATE_ROOT/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
+        self.assertIn('$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py', steps[run]["inputs"]["inlineScript"])
         run_script = steps[run]["inputs"]["inlineScript"]
+        self.assertIn('--source-root "$CANDIDATE_ROOT" --test-source-root "$BUILD_SOURCESDIRECTORY" --test-source-sha "$TEST_SOURCE_SHA"', run_script)
+        self.assertIn('"$TEST_SOURCE_SHA" == "$CAPACITY_TEST_SOURCE_SHA"', run_script)
         exit_handler = run_script[run_script.index("stop_bootstrap_watcher() {"):run_script.index("trap 'exit 130'")]
         self.assertIn("trap stop_bootstrap_watcher EXIT", run_script)
         self.assertIn('rm -f -- "$CANDIDATE_EVIDENCE/kubeconfig"', exit_handler)
         self.assertIn('--receipt-tools-root "$BUILD_SOURCESDIRECTORY"', run_script)
         self.assertIn('--scenario "$CANDIDATE_SCENARIO"', run_script)
         self.assertIn('--run-id "$CANDIDATE_RUN_ID"', run_script)
-        self.assertIn("import uuid; print(uuid.uuid4())", run_script)
+        self.assertIn("uuid.uuid4()", run_script)
+        self.assertIn('--admitted-existing "$CANDIDATE_EXISTING"', run_script)
         self.assertIn('--location "$CANDIDATE_LOCATION"', run_script)
         self.assertIn('"$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2', run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_LOCATION"], "$(candidateLocation)")
         self.assertIn("9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb", run_script)
         self.assertEqual(steps[run]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
-        self.assertEqual(steps[run]["${{ if eq(parameters.scenario, 'settings') }}"]["timeoutInMinutes"], 540)
-        self.assertEqual(steps[run]["${{ else }}"]["timeoutInMinutes"], 300)
-        self.assertIn('settings) max_run_seconds=28800', run_script)
-        self.assertIn('default|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet) max_run_seconds=14400', run_script)
+        self.assertEqual(steps[run]["timeoutInMinutes"], 540)
+        self.assertIn('default|acns|acns-cilium|otlp|operator-secret-watch|proxy-custom-ca|ampls-proxy|ampls|proxy) max_run_seconds=28800', run_script)
         self.assertIn('--max-run-seconds "$max_run_seconds"', steps[run]["inputs"]["inlineScript"])
-        self.assertIn('case "$CANDIDATE_SCENARIO" in default|settings|linux|classic-azure-cni|mixed|autoscaler|uai|cilium|kubenet)', input_validation["bash"])
+        self.assertIn('case "$CANDIDATE_SCENARIO" in default|acns|acns-cilium|otlp|operator-secret-watch|proxy-custom-ca|ampls-proxy|ampls|proxy)', input_validation["bash"])
         self.assertIn(".pipelines/candidate_coverage.py", input_validation["bash"])
         self.assertIn('"$CANDIDATE_EVIDENCE/coverage.json"', input_validation["bash"])
         self.assertEqual(input_validation["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
-        scan_script = steps[scan]["inputs"]["inlineScript"]
-        self.assertLess(
-            scan_script.index(".pipelines/pr-e2e/fetch_candidate.py"),
-            scan_script.index(".pipelines/pr-e2e/scan_candidate.py"),
-        )
-        self.assertIn("sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324", scan_script)
-        self.assertNotIn("sha256:6d284910117ad790e81f1bd6c7de25f2a798b8efbc11642f3c8bff91c044db99", scan_script)
-        self.assertIn('--output "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
-        self.assertIn('--verified-candidate "$CANDIDATE_EVIDENCE/pipeline-verification"', scan_script)
-        self.assertNotIn("scan_trivy.py", scan_script)
-        prepare = next(step for step in steps if "Prepare scoped pinned CLI" in step.get("displayName", ""))
-        self.assertEqual(prepare["env"]["CANDIDATE_TRIVY_VERSION"], "$(candidateTrivyVersion)")
         for task in ("PublishTestResults@2", "PublishPipelineArtifact@1"):
             self.assertEqual(next(step for step in steps if step.get("task") == task)["condition"], "always()")
         junit = next(step for step in steps if step.get("task") == "PublishTestResults@2")["inputs"]
@@ -383,50 +409,137 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertTrue(junit["failTaskOnFailedTests"])
         self.assertTrue(junit["failTaskOnMissingResultsFile"])
 
-    def test_comparison_requires_installed_host_and_scan_tools(self):
-        steps = yaml.safe_load(
-            (Path(__file__).parent / "azure-template-candidate-config-tests.yml").read_text()
-        )["steps"]
-        host = next(i for i, step in enumerate(steps)
-                    if step.get("displayName") == "Install candidate host prerequisites")
-        fetch = next(i for i, step in enumerate(steps)
-                     if step.get("displayName") == "Fetch exact producer evidence and Trivy version")
-        prepare = next(i for i, step in enumerate(steps)
-                       if "Prepare scoped pinned CLI" in step.get("displayName", ""))
-        comparison = next(step for step in steps
-                          if "baseline/candidate scan comparison" in step.get("displayName", ""))
-        self.assertLess(host, fetch)
-        self.assertLess(fetch, prepare)
-        ready = "##vso[task.setvariable variable=candidateScanPrerequisitesReady]true"
-        self.assertTrue(steps[prepare]["bash"].rstrip().endswith(f'echo "{ready}"'))
-        self.assertEqual(
-            comparison["condition"],
-            "and(always(), not(canceled()), eq(variables['candidateScanPrerequisitesReady'], 'true'))",
+    def test_candidate_scan_is_required_but_does_not_gate_functional_lanes(self):
+        directory = Path(__file__).parent
+        pipeline = yaml.safe_load((directory / "azure-pipeline-config-tests.yml").read_text())
+        capacity = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateCapacity")
+        capacity_steps = capacity["jobs"][0]["steps"]
+        self.assertFalse(any("scan_candidate.py" in step.get("bash", "") for step in capacity_steps))
+        scan_stage = next(stage for stage in pipeline["stages"] if stage.get("stage") == "CandidateScan")
+        self.assertEqual(scan_stage["dependsOn"], ["CandidateCapacity"])
+        self.assertEqual(scan_stage["condition"],
+                         "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
+        self.assertIsNone(scan_stage.get("continueOnError"))
+        self.assertIsNone(scan_stage["jobs"][0].get("continueOnError"))
+        scan_steps = [step for step in scan_stage["jobs"][0]["steps"]
+                      if "scan_candidate.py" in step.get("bash", "")]
+        self.assertEqual(len(scan_steps), 1)
+        scan = next(step for step in scan_stage["jobs"][0]["steps"]
+                    if step.get("displayName") ==
+                    "Compare receipt-bound candidate and baseline with a fresh shared Trivy DB")
+        scan_script = scan["bash"]
+        self.assertIn("set -euo pipefail", scan_script)
+        self.assertIsNone(scan.get("continueOnError"))
+        self.assertIsNone(scan.get("condition"))
+        self.assertIn('PATH="$SCAN_TOOLS:$PATH" "$PYTHON"', scan_script)
+        self.assertIn("--verified-candidate", scan_script.splitlines()[-1])
+        self.assertNotIn("||", scan_script.splitlines()[-1])
+        self.assertLess(scan_script.index("fetch_candidate.py"), scan_script.index("scan_candidate.py"))
+        self.assertIn('--verified-candidate "$SCAN_EVIDENCE/verified"', scan_script)
+        self.assertIn("--baseline-image", scan_script)
+        self.assertIn("--build-id \"$PRODUCER_BUILD_ID\"", scan_script)
+        self.assertIn("--source-commit \"$CANDIDATE_SOURCE_SHA\"", scan_script)
+        self.assertIn("campaign.json", scan_script)
+        self.assertEqual(scan["env"]["PRODUCER_BUILD_ID"], "$(candidateScanProducerBuildId)")
+        self.assertEqual(scan["env"]["CANDIDATE_SOURCE_SHA"], "$(candidateScanSourceSha)")
+        candidate_loop = next(stage for stage in pipeline["stages"]
+                              if any("each scenario" in key for key in stage))
+        candidate_stage = next(iter(candidate_loop.values()))[0]
+        candidate_stage = next(iter(candidate_stage.values()))[0]
+        self.assertEqual(candidate_stage["dependsOn"], ["CandidateCapacity"])
+        self.assertEqual(candidate_stage["condition"],
+                         "and(not(canceled()), eq(dependencies.CandidateCapacity.result, 'Succeeded'))")
+        self.assertNotIn("CandidateScan", str(candidate_stage["dependsOn"]) + candidate_stage["condition"])
+
+        scenario = yaml.safe_load(
+            (directory / "azure-template-candidate-config-tests.yml").read_text()
         )
+        template_text = (directory / "azure-template-candidate-config-tests.yml").read_text()
+        self.assertNotIn("scan_candidate.py", template_text)
+        self.assertNotIn("scan_trivy.py", template_text)
+        self.assertNotIn("candidateTrivyVersion", template_text)
+        self.assertNotIn("candidateScanPrerequisitesReady", template_text)
+        self.assertNotIn("trivy", template_text.casefold())
+        self.assertFalse(any("scan comparison" in step.get("displayName", "").casefold()
+                             for step in scenario["steps"]))
 
     def test_candidate_coverage_accounts_for_every_row_and_variant(self):
         root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
+        matrix = json.loads((root / "matrix.json").read_text())
+        rows = {row["id"]: row for row in matrix["scenarios"]}
+        self.assertFalse({"linux", "mixed", "uai"} & rows.keys())
+        self.assertFalse({"autoscaler", "cilium", "kubenet"} & rows.keys())
+        retired = {"ampls-acns", "private-ampls"}
+        self.assertFalse(retired & rows.keys())
+        self.assertEqual(SCENARIOS, ("default", "acns", "otlp", "acns-cilium", "operator-secret-watch",
+                                     "proxy-custom-ca", "ampls-proxy", "ampls", "proxy"))
+        pipeline_path = Path(__file__).with_name("azure-pipeline-config-tests.yml")
+        pipeline = yaml.safe_load(pipeline_path.read_text())
+        template_path = Path(__file__).with_name("azure-template-candidate-config-tests.yml")
+        for scenario in retired:
+            self.assertFalse((root / "clusters" / f"{scenario}.bicepparam").exists())
+            self.assertNotIn(scenario, pipeline_path.read_text())
+            self.assertNotIn(scenario, template_path.read_text())
+        pipeline_scenarios = next(p["values"] for p in pipeline["parameters"]
+                                  if p.get("name") == "candidateScenario")
+        self.assertEqual(pipeline_scenarios, ["all", "four-lane", *SCENARIOS])
+        self.assertIn("split('" + ",".join(SCENARIOS) + "', ',')", pipeline_path.read_text())
+        template = yaml.safe_load(template_path.read_text())
+        self.assertEqual(next(p["values"] for p in template["parameters"]
+                              if p.get("name") == "scenario"), list(SCENARIOS))
+        self.assertNotIn("settings", rows)
+        self.assertTrue({"fips", "arm64", "network-profile"} <= set(rows["default"]["ginkgoLabels"]))
+        self.assertEqual(rows["default"]["settingsVariants"], ["*"])
+        self.assertNotIn("blockedReason", rows["acns"])
+        self.assertIn("managed-acns", rows["acns"]["ginkgoLabels"])
+        self.assertTrue({"network-profile", "mip-enabled"} <= set(rows["acns"]["ginkgoLabels"]))
+        self.assertEqual(rows["acns"]["settingsVariants"], [])
+        self.assertEqual(rows["otlp"]["settingsVariants"], ["*"])
+        self.assertEqual(rows["otlp"]["platforms"], ["linux"])
+        self.assertEqual(set(rows["operator-secret-watch"]["settingsVariants"]), {
+            "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
+            "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
+        })
+        self.assertEqual(rows["operator-secret-watch"]["platforms"], ["linux"])
+        self.assertIn("secrets-watch-enforcement", rows["operator-secret-watch"]["clusterFeatures"])
+        self.assertIn("acns-cilium", rows)
+        self.assertNotIn("blockedReason", rows["acns-cilium"])
+        proof = plan(root, "acns-cilium")
+        self.assertEqual(proof["selectedScenario"], "acns-cilium")
+        self.assertNotIn("acns-cilium", {item["id"] for item in proof["blockedScenarios"]})
         for scenario in SCENARIOS:
             result = plan(root, scenario)
             self.assertFalse(result["executed"])
             self.assertEqual(result["status"], "PLANNED_WITH_BLOCKERS")
             self.assertEqual(result["selectedScenario"], scenario)
             self.assertEqual(set(result["applicableScenarios"]), set(SCENARIOS))
-            self.assertEqual([item["id"] for item in result["blockedTestSuites"]], ["regionTests"])
+            self.assertEqual([item["id"] for item in result["blockedTestSuites"]],
+                             ["arc-conformance", "ccp-health", "regionTests"])
             self.assertTrue(all(item["status"] == "BLOCKED" for item in result["blockedTestSuites"]))
             blocked = {item["id"] for item in result["blockedScenarios"]}
-            self.assertEqual(len(blocked) + len(SCENARIOS), 22)
+            self.assertEqual(len(blocked) + len(SCENARIOS), len(rows))
             self.assertIn("customer-helm", blocked)
-            self.assertIn("operator-secret-watch", blocked)
-            self.assertEqual({item["id"] for item in result["blockedVariants"]}, {
-                "helm-customer-values", "empty-secret-namespaces-v1", "empty-secret-namespaces-v2",
-                "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2",
-            })
+            self.assertNotIn("operator-secret-watch", blocked)
+            self.assertEqual({item["id"] for item in result["blockedVariants"]}, {"helm-customer-values"})
         with patch("candidate_coverage.SCENARIOS", SCENARIOS[:-1]):
             with self.assertRaisesRegex(ValueError, "every runnable matrix row"):
                 plan(root, "default")
         with self.assertRaisesRegex(ValueError, "Unsupported candidate"):
             plan(root, "customer-helm")
+
+    def test_profile_behavior_specs_are_selected_with_a_long_enough_querymetrics_timeout(self):
+        root = Path(__file__).parents[1]
+        source = (root / "otelcollector" / "test" / "ginkgo-e2e" / "querymetrics" /
+                 "query_metrics_test.go").read_text()
+        self.assertIn('Label("autoscaler")', source)
+        self.assertIn('Label("network-profile")', source)
+        self.assertIn('Label("managed-acns")', source)
+        workflows = yaml.safe_load_all((root / "otelcollector" / "test" / "testkube" /
+                                        "testkube-test-crs.yaml").read_text())
+        querymetrics = next(doc for doc in workflows
+                            if doc["metadata"]["name"] == "querymetrics")
+        script = querymetrics["spec"]["steps"][0]["shell"]
+        self.assertIn("--timeout=90m", script)
 
     def test_candidate_coverage_gate_fails_and_preserves_blocker_report(self):
         root = Path(__file__).parents[1] / "otelcollector" / "test" / "scenarios"
@@ -443,26 +556,50 @@ class CandidateEvidenceTest(unittest.TestCase):
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
             self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
-            self.assertEqual(len(report["blockedScenarios"]), 13)
-            self.assertEqual(len(report["blockedVariants"]), 5)
-            self.assertEqual([item["id"] for item in report["blockedTestSuites"]], ["regionTests"])
+            self.assertEqual(len(report["blockedScenarios"]), 3)
+            self.assertEqual(len(report["blockedVariants"]), 1)
+            self.assertEqual([item["id"] for item in report["blockedTestSuites"]],
+                             ["arc-conformance", "ccp-health", "regionTests"])
 
-    def test_candidate_coverage_gate_runs_after_tests_and_before_evidence_publish(self):
+    def test_candidate_coverage_report_runs_without_failing_on_blockers(self):
         steps = yaml.safe_load(
             (Path(__file__).parent / "azure-template-candidate-config-tests.yml").read_text()
         )["steps"]
         results = next(i for i, step in enumerate(steps) if step.get("task") == "PublishTestResults@2")
-        gate = next(i for i, step in enumerate(steps)
-                    if step.get("displayName") == "Gate candidate approval on complete scenario coverage")
+        report_step = next(i for i, step in enumerate(steps)
+                           if step.get("displayName") == "Report candidate scenario coverage")
         artifact = next(i for i, step in enumerate(steps) if step.get("task") == "PublishPipelineArtifact@1")
-        self.assertLess(results, gate)
-        self.assertLess(gate, artifact)
-        self.assertEqual(steps[gate]["condition"], "always()")
-        self.assertIn("--require-unblocked", steps[gate]["bash"])
-        self.assertIn(".pipelines/candidate_coverage.py", steps[gate]["bash"])
-        self.assertEqual(steps[gate]["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        self.assertLess(results, report_step)
+        self.assertLess(report_step, artifact)
+        step = steps[report_step]
+        self.assertEqual(step["condition"], "always()")
+        self.assertEqual(step["env"]["CANDIDATE_SCENARIO"], "${{ parameters.scenario }}")
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                ["bash", "-c", step["bash"]], capture_output=True, text=True,
+                env={**os.environ, "PYTHON": Path(sys.executable).as_posix(),
+                     "BUILD_SOURCESDIRECTORY": Path(__file__).parents[1].as_posix(),
+                     "CANDIDATE_EVIDENCE": Path(directory).as_posix(), "CANDIDATE_SCENARIO": "default"},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads((Path(directory) / "coverage.json").read_text())
+            self.assertEqual(report["status"], "PLANNED_WITH_BLOCKERS")
+            self.assertFalse(report["executed"])
+            self.assertTrue(report["blockedScenarios"])
+            self.assertIn("PLANNED_WITH_BLOCKERS", result.stdout)
 
-    def test_capacity_output_contract_rejects_missing_or_mismatched_admission(self):
+    def test_candidate_scenarios_depend_only_on_campaign_admission(self):
+        pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
+        expansion = next(stage for stage in pipeline["stages"]
+                         if any(key.startswith("${{ each scenario") for key in stage))
+        loop = expansion[next(key for key in expansion if key.startswith("${{ each scenario"))]
+        conditional = loop[0]
+        stage = conditional[next(key for key in conditional if key.startswith("${{ if or("))][0]
+        self.assertEqual(stage["dependsOn"], ["CandidateCapacity"])
+        self.assertIn("and(eq(parameters.candidateScenario, 'four-lane'), in(scenario, 'default', 'acns', 'otlp'))",
+                      next(iter(conditional)))
+
+    def test_admission_output_contract_rejects_missing_or_mismatched_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
         capacity = pipeline["stages"][1]
         task = next(step for step in capacity["jobs"][0]["steps"] if step.get("name") == "admit")
@@ -473,14 +610,21 @@ class CandidateEvidenceTest(unittest.TestCase):
                         script.index("isOutput=true"))
         parser = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         proof = {
-            "status": "PASS", "sourceSha": self.sha, "buildId": 4401, "capacityReserved": False,
-            "placements": {name: "eastus2" if name in {"mixed", "autoscaler"} else "centralus"
-                           for name in SCENARIOS},
-            "regions": {"centralus": {}, "eastus2": {}},
+            "status": "PASS", "sourceSha": self.sha, "testSourceSha": "c" * 40,
+            "buildId": 4401,
+            "placements": {
+                name: ("westcentralus" if name in {"proxy-custom-ca", "ampls-proxy", "proxy"} else
+                       "eastus2" if name in {"acns", "acns-cilium", "operator-secret-watch"} else "centralus")
+                for name in SCENARIOS
+            },
+            "existing": {name: False for name in SCENARIOS},
+            "regions": {"centralus": {}, "eastus2": {}, "westcentralus": {}},
         }
         cases = [("valid", {}, True), ("failed", {"status": "FAIL"}, False),
                  ("source", {"sourceSha": "b" * 40}, False), ("build", {"buildId": 4402}, False),
-                 ("missing", {"placements": {}}, False), ("reservation", {"capacityReserved": True}, False),
+                 ("test-source", {"testSourceSha": "d" * 40}, False),
+                 ("missing", {"placements": {}}, False),
+                 ("missing-existing", {"existing": {}}, False),
                  ("unapproved", {"placements": {name: "eastus" for name in SCENARIOS}}, False),
                  ("missing-region", {"regions": {}}, False)]
         for name, updates, passes in cases:
@@ -491,14 +635,28 @@ class CandidateEvidenceTest(unittest.TestCase):
                                         capture_output=True, text=True,
                                         env={**os.environ, "CANDIDATE_SCENARIO": "all",
                                              "CANDIDATE_SOURCE_SHA": self.sha,
+                                             "TEST_SOURCE_SHA": "c" * 40,
                                              "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
                 self.assertEqual(result.returncode == 0, passes, result.stderr)
                 if passes:
-                    self.assertIn("variable=location_classic_azure_cni;isOutput=true]centralus", result.stdout)
+                    self.assertIn("variable=location_default;isOutput=true]centralus", result.stdout)
                     self.assertIn("variable=sourceSha;isOutput=true]" + self.sha, result.stdout)
                     self.assertIn("variable=validationBuildId;isOutput=true]9791", result.stdout)
                 else:
                     self.assertNotIn("isOutput=true", result.stdout)
+        four_scenarios = ("default", "acns", "otlp")
+        four = {**proof, "placements": {name: proof["placements"][name] for name in four_scenarios},
+                "existing": {name: False for name in four_scenarios}}
+        for value, passes in ((four, True), (proof, False)):
+            path = self.root / ("four-valid.json" if passes else "four-extra.json")
+            path.write_text(json.dumps(value))
+            result = subprocess.run([sys.executable, "-c", parser, str(path)], capture_output=True, text=True,
+                                    env={**os.environ, "CANDIDATE_SCENARIO": "four-lane",
+                                         "CANDIDATE_SOURCE_SHA": self.sha, "TEST_SOURCE_SHA": "c" * 40,
+                                         "PRODUCER_BUILD_ID": "4401", "BUILD_BUILDID": "9791"})
+            self.assertEqual(result.returncode == 0, passes, result.stderr)
+            self.assertEqual("variable=location_operator_secret_watch" in result.stdout, False)
+            self.assertNotIn("variable=location_acns_cilium", result.stdout)
 
     def test_failed_aggregate_check_cannot_emit_admission(self):
         pipeline = yaml.safe_load(Path(__file__).with_name("azure-pipeline-config-tests.yml").read_text())
@@ -515,6 +673,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         result = subprocess.run(["bash", "-c", command], capture_output=True, text=True,
                                 env={**os.environ, "CAPACITY_ROOT": "unused", "CAPACITY_EVIDENCE": "unused",
                                      "CANDIDATE_SOURCE_SHA": self.sha, "CANDIDATE_SCENARIO": "all",
+                                     "TEST_SOURCE_SHA": self.sha, "BUILD_SOURCESDIRECTORY": "unused",
                                      "PRODUCER_BUILD_ID": "4401", "UNSAFE_MARKER": marker.as_posix()})
         self.assertEqual(result.returncode, 23, result.stderr)
         self.assertFalse(marker.exists())

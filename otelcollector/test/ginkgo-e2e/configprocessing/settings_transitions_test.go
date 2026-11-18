@@ -44,13 +44,23 @@ func transitionFixture(parts ...string) []byte {
 	return data
 }
 
+// lastSettingsChange is when this suite last changed the settings ConfigMap data. Every such change
+// restarts the replicaset collectors, which are then followed by one more restart (see
+// collectorFollowOnWindow).
+var lastSettingsChange time.Time
+
 func replaceSettings(data map[string]string) {
 	cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
 		"ama-metrics-settings-configmap", metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	changed := !maps.Equal(cm.Data, data)
 	cm.Data = maps.Clone(data)
+	written := time.Now()
 	_, err = K8sClient.CoreV1().ConfigMaps("kube-system").Update(context.Background(), cm, metav1.UpdateOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	if changed {
+		lastSettingsChange = written
+	}
 }
 
 func settingsPhase(variant, file string) time.Time {
@@ -62,6 +72,125 @@ func settingsPhase(variant, file string) time.Time {
 	replaceSettings(cm.Data)
 	AddReportEntry("settings-phase-"+file, started.UTC().Format(time.RFC3339Nano))
 	return started
+}
+
+// settingsChanged reports whether applying the fixture would change the live settings ConfigMap,
+// that is, whether the phase triggers a collector and config-reader reload.
+func settingsChanged(variant, file string) bool {
+	var desired corev1.ConfigMap
+	Expect(yaml.Unmarshal(transitionFixture(variant, file), &desired)).To(Succeed())
+	current, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+		"ama-metrics-settings-configmap", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	return !maps.Equal(current.Data, desired.Data)
+}
+
+// collectorSettleQuietPeriod is how long the ama-metrics replicaset collectors, the config-reader
+// and the target allocator must run without restarting before a phase is observed. In 979 run
+// 132116 a collector restarted again 60-90 s after the config-reader restart that follows a
+// settings change; three quiet minutes after the latest restart covers that case.
+const collectorSettleQuietPeriod = 3 * time.Minute
+
+// collectorFollowOnWindow bounds the later follow-on restart of the replicaset collectors. In 979
+// runs 132186 (default) and 132187 (classic), container start times from the workspaces show that a
+// collector restarted by a settings change restarted once more, with no DaemonSet settings restart
+// nearby, 450-570 s after that start (13 cases). Two more ambiguous cases took 705-750 s. The
+// follow-on instance then stayed up (13.5 min and 64 min observed). In 132186 the collectors also
+// logged x509 "certificate signed by unknown authority" against the target allocator between the
+// two starts. Logs of the restarted instances were never shipped, so the watched path that fired is
+// unknown. A collector therefore counts as settled only once it is the follow-on instance (its
+// previous instance also started after the latest settings change), or once it has run longer
+// than every observed follow-on interval.
+const collectorFollowOnWindow = 13 * time.Minute
+
+var settledContainers = []struct {
+	label, container string
+	reloads          bool // restarts on every settings change
+	followOn         bool // restarts once more after a settings-driven start
+}{
+	{"ama-metrics", "prometheus-collector", true, true},
+	{"ama-metrics-operator-targets", "config-reader", true, false},
+	{"ama-metrics-operator-targets", "targetallocator", false, false},
+}
+
+// validateContainerSettled requires the container to be ready and running, to have started at or
+// after since when since is set, and to have run for at least quiet.
+func validateContainerSettled(pod corev1.Pod, container string, since, now time.Time, quiet time.Duration) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name != container {
+			continue
+		}
+		if !status.Ready || status.State.Running == nil {
+			return fmt.Errorf("%s/%s is not ready and running", pod.Name, container)
+		}
+		startedAt := status.State.Running.StartedAt.Time
+		if !since.IsZero() && startedAt.Before(since.Truncate(time.Second)) {
+			return fmt.Errorf("%s/%s has not reloaded since the settings change at %s", pod.Name, container,
+				since.UTC().Format(time.RFC3339))
+		}
+		if running := now.Sub(startedAt); running < quiet {
+			return fmt.Errorf("%s/%s restarted %s ago; waiting for %s without a restart", pod.Name, container,
+				running.Round(time.Second), quiet)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s has no %s container status", pod.Name, container)
+}
+
+// validateFollowOnCleared requires that the container either is the follow-on instance after the
+// settings change at changedAt (its previous instance also started at or after changedAt), or has
+// run for at least window. With no recorded change only validateContainerSettled applies.
+func validateFollowOnCleared(pod corev1.Pod, container string, changedAt, now time.Time, window time.Duration) error {
+	if changedAt.IsZero() {
+		return nil
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name != container {
+			continue
+		}
+		if status.State.Running == nil {
+			return fmt.Errorf("%s/%s is not running", pod.Name, container)
+		}
+		changed := changedAt.Truncate(time.Second)
+		if previous := status.LastTerminationState.Terminated; previous != nil && !previous.StartedAt.Time.Before(changed) {
+			return nil
+		}
+		if running := now.Sub(status.State.Running.StartedAt.Time); running < window {
+			return fmt.Errorf("%s/%s has run %s since its last start without the follow-on restart that follows "+
+				"the settings change at %s; waiting for that restart or %s without one", pod.Name, container,
+				running.Round(time.Second), changedAt.UTC().Format(time.RFC3339), window)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s has no %s container status", pod.Name, container)
+}
+
+// waitForCollectorsSettled waits until the collectors, config-reader and target allocator have
+// reloaded after since (when set) and then run for collectorSettleQuietPeriod without a restart,
+// and until the collectors have also had their follow-on restart after the latest settings change
+// (or outlived collectorFollowOnWindow without one). Follow-on restarts therefore finish before any
+// phase observation starts. It only delays observation; every phase assertion still runs unchanged
+// afterwards.
+func waitForCollectorsSettled(since time.Time) {
+	Eventually(func(g Gomega) {
+		now := time.Now()
+		for _, source := range settledContainers {
+			pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", source.label)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(pods).NotTo(BeEmpty(), "no %s pods", source.label)
+			reloadSince := time.Time{}
+			if source.reloads {
+				reloadSince = since
+			}
+			for _, pod := range pods {
+				g.Expect(validateContainerSettled(pod, source.container, reloadSince, now, collectorSettleQuietPeriod)).To(Succeed())
+				if source.followOn {
+					g.Expect(validateFollowOnCleared(pod, source.container, lastSettingsChange, now, collectorFollowOnWindow)).To(Succeed())
+				}
+			}
+		}
+	}, collectorFollowOnWindow+collectorSettleQuietPeriod+5*time.Minute, 15*time.Second).Should(Succeed())
+	AddReportEntry("collectors-settled", time.Now().UTC().Format(time.RFC3339Nano))
 }
 
 func restoreSettingsAfterTransition() {
@@ -169,21 +298,28 @@ func monitorTransitionState(jobs []string, username string, absent bool) error {
 		if err != nil {
 			return err
 		}
-		for _, expected := range jobs {
-			found := false
-			for _, job := range cfg.ScrapeConfigs {
-				if job.JobName != expected {
-					continue
-				}
-				found = true
-				if !absent && (job.HTTPClientConfig.BasicAuth == nil ||
-					job.HTTPClientConfig.BasicAuth.Username != username) {
-					return fmt.Errorf("pod %s has not reloaded the expected dummy username for %s", response.PodName, expected)
-				}
+		if err := validateMonitorTransitionState(cfg.ScrapeConfigs, jobs, username, absent); err != nil {
+			return fmt.Errorf("pod %s: %w", response.PodName, err)
+		}
+	}
+	return nil
+}
+
+func validateMonitorTransitionState(configs []*config.ScrapeConfig, jobs []string, username string, absent bool) error {
+	for _, expected := range jobs {
+		found := false
+		for _, job := range configs {
+			if job.JobName != expected {
+				continue
 			}
-			if found == absent {
-				return fmt.Errorf("pod %s: %s presence=%t, expected absence=%t", response.PodName, expected, found, absent)
+			found = true
+			if !absent && (job.HTTPClientConfig.BasicAuth == nil ||
+				job.HTTPClientConfig.BasicAuth.Username != username) {
+				return fmt.Errorf("unexpected dummy username for %s", expected)
 			}
+		}
+		if found == absent {
+			return fmt.Errorf("%s presence=%t, expected absence=%t", expected, found, absent)
 		}
 	}
 	return nil
@@ -274,6 +410,21 @@ func validateAnnotationTargets(targets []transitionTarget, allowed []string, aft
 		}
 	}
 	return nil
+}
+
+func validateAnnotationReload(pod corev1.Pod, logs string, version string, after time.Time) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name == "prometheus-collector" && status.Ready && status.State.Running != nil &&
+			(after.IsZero() || !status.State.Running.StartedAt.Time.Before(after.Truncate(time.Second))) {
+			for _, line := range strings.Split(logs, "\n") {
+				line = strings.ReplaceAll(strings.ReplaceAll(line, "\x1b[0;36m", ""), "\x1b[0m", "")
+				if strings.TrimSpace(line) == "AZMON_AGENT_CFG_FILE_VERSION="+version {
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("%s has not started with settings version %s", pod.Name, version)
 }
 
 func expectAnnotationNamespaces(api promv1.API, cluster string, expected annotationExpectation, after time.Time) {
@@ -379,7 +530,13 @@ var _ = Describe("Customer alias and annotation transitions", Serial, func() {
 					{"namespace-updated.yaml", fallback, "ama-settings-excluded"},
 					{"namespace-removed.yaml", fallback, ""},
 				} {
+					changed := settingsChanged("customer-transitions-"+schema, phase.file)
 					started := settingsPhase("customer-transitions-"+schema, phase.file)
+					since := time.Time{}
+					if changed {
+						since = started
+					}
+					waitForCollectorsSettled(since)
 					Eventually(func() error {
 						targets, err := transitionTargets()
 						if err != nil {
@@ -451,7 +608,32 @@ var _ = Describe("Annotation namespace regex edges", Serial, func() {
 					}},
 					{"invalid.yaml", annotationExpectation{}},
 				} {
+					var desired corev1.ConfigMap
+					Expect(yaml.Unmarshal(transitionFixture("annotation-regex-edges-"+schema, phase.file), &desired)).To(Succeed())
+					current, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+						"ama-metrics-settings-configmap", metav1.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					changed := !maps.Equal(current.Data, desired.Data)
 					started := settingsPhase("annotation-regex-edges-"+schema, phase.file)
+					version := desired.Data["config-version"]
+					if len(version) > 10 {
+						version = version[:10]
+					}
+					after := time.Time{}
+					if changed {
+						after = started
+					}
+					Eventually(func(g Gomega) {
+						pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics")
+						g.Expect(err).NotTo(HaveOccurred())
+						for _, pod := range pods {
+							logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pod.Name, &corev1.PodLogOptions{
+								Container: "prometheus-collector",
+							}).DoRaw(context.Background())
+							g.Expect(err).NotTo(HaveOccurred())
+							g.Expect(validateAnnotationReload(pod, string(logs), version, after)).To(Succeed())
+						}
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
 					if phase.file == "invalid.yaml" {
 						Eventually(func(g Gomega) {
 							for _, source := range []struct{ label, container string }{
@@ -479,6 +661,7 @@ var _ = Describe("Annotation namespace regex edges", Serial, func() {
 						}, 8*time.Minute, 15*time.Second).Should(Succeed())
 						AddReportEntry("invalid-annotation-regex", "diagnostic verified after normal collector/reader reload")
 					}
+					waitForCollectorsSettled(after)
 					expectAnnotationNamespaces(api, cluster, phase.expected, started)
 					expectTransitionMetric(api, "up", "kubelet", cluster, "", started)
 				}
@@ -565,6 +748,7 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 				}
 			}
 			It("reloads the dummy Secret from rejected credentials to authenticated fresh ingestion without a restart", func() {
+				waitForCollectorsSettled(time.Time{})
 				started, restarts := time.Now(), collectorRestarts()
 				Eventually(func() error { return monitorTransitionState(jobs, "deliberately-invalid-test-user", false) },
 					8*time.Minute, 15*time.Second).Should(Succeed())
@@ -578,7 +762,7 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 				recovered(recoverAuthSecret())
 				Expect(collectorRestarts()).To(Equal(restarts), "Secret reload must not restart collectors, allocator or endpoint")
 			})
-			It("revokes cached Secret access for empty and omitted allowlists, then restores it on the supported scoped path", func() {
+			It("stops watching Secret updates for empty and omitted allowlists, then resumes watching", func() {
 				version, err := K8sClient.Discovery().ServerVersion()
 				Expect(err).NotTo(HaveOccurred())
 				parsed, err := utilversion.ParseSemantic(version.GitVersion)
@@ -587,27 +771,49 @@ var _ = Describe("Credential reload and allowlist transitions, not valid-passwor
 					Skip("unsupported below Kubernetes1.37; auth recovery passed separately, scoped enforcement is not covered")
 				}
 				for _, phase := range []string{"empty.yaml", "omitted.yaml"} {
-					started := settingsPhase("secret-transitions-"+schema, phase)
-					replaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
-					check := func() error {
-						if err := monitorTransitionState(jobs, "", true); err != nil {
+					instance, err := allocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					settingsPhase("secret-transitions-"+schema, phase)
+					Eventually(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
 							return err
 						}
-						for _, job := range metrics {
-							samples, err := freshTransitionSamples(api,
-								fmt.Sprintf("my_metric{job=%q,cluster=%q}", job, cluster), started)
-							if err != nil {
-								return err
-							}
-							if len(samples) != 0 {
-								return fmt.Errorf("revoked monitor %s continues authenticated ingestion", job)
-							}
+						if current == instance {
+							return fmt.Errorf("target allocator has not reloaded the settings")
 						}
-						return nil
+						return monitorTransitionState(jobs, "admin", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					waitForCollectorsSettled(time.Time{})
+					instance, err = allocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					replaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
+					started := time.Now()
+					Consistently(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current != instance {
+							return fmt.Errorf("target allocator restarted during watch observation")
+						}
+						return monitorTransitionState(jobs, "admin", false)
+					}, 5*time.Minute, 15*time.Second).Should(Succeed())
+					for _, job := range metrics {
+						expectTransitionMetric(api, "my_metric", job, cluster, "", started)
 					}
-					Eventually(check, 8*time.Minute, 15*time.Second).Should(Succeed())
-					Consistently(check, time.Minute, 15*time.Second).Should(Succeed())
 					settingsPhase("secret-transitions-"+schema, "allowed.yaml")
+					Eventually(func() error {
+						current, err := allocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current == instance {
+							return fmt.Errorf("target allocator has not restored the allowlist")
+						}
+						return monitorTransitionState(jobs, "deliberately-invalid-test-user", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					Eventually(allocatorSecretWatchReady, 5*time.Minute, 15*time.Second).Should(Succeed())
 					recovered(recoverAuthSecret())
 				}
 			})
@@ -621,8 +827,143 @@ var _ = Describe("Dedicated Windows kube-proxy ingestion", Label(utils.ConfigPro
 	})
 })
 
+func TestCollectorSettleGuard(t *testing.T) {
+	now := time.Now()
+	since := now.Add(-5 * time.Minute)
+	podStartedAt := func(startedAt time.Time, ready bool) corev1.Pod {
+		return corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "ama-metrics-test"},
+			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{
+				Name: "prometheus-collector", Ready: ready,
+				State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(startedAt)}},
+			}}},
+		}
+	}
+	quiet := collectorSettleQuietPeriod
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), true), "prometheus-collector", since, now, quiet); err != nil {
+		t.Fatalf("a collector reloaded after the change and quiet for 4m must be settled: %v", err)
+	}
+	if err := validateContainerSettled(podStartedAt(now.Add(-time.Minute), true), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("a collector that restarted within the quiet period (follow-on liveness restart) must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(-time.Minute), true), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("a collector that has not reloaded since the settings change must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(-time.Minute), true), "prometheus-collector", time.Time{}, now, quiet); err != nil {
+		t.Fatalf("without a settings change only the quiet period applies: %v", err)
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), false), "prometheus-collector", since, now, quiet); err == nil {
+		t.Fatal("an unready collector must not be settled")
+	}
+	if err := validateContainerSettled(podStartedAt(since.Add(time.Minute), true), "config-reader", since, now, quiet); err == nil {
+		t.Fatal("a missing container status must not be settled")
+	}
+	t.Run("follow-on-restart", testCollectorFollowOnGuard)
+}
+
+// testCollectorFollowOnGuard replays replicaset collector container starts from the workspaces of
+// 979 runs 132186 (default) and 132187 (classic).
+func testCollectorFollowOnGuard(t *testing.T) {
+	at := func(clock string) time.Time {
+		parsed, err := time.Parse(time.RFC3339, "2026-11-13T"+clock+"Z")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return parsed
+	}
+	collector := func(started, previous time.Time) corev1.Pod {
+		status := corev1.ContainerStatus{
+			Name: "prometheus-collector", Ready: true,
+			State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(started)}},
+		}
+		if !previous.IsZero() {
+			status.LastTerminationState.Terminated = &corev1.ContainerStateTerminated{
+				StartedAt: metav1.NewTime(previous), FinishedAt: metav1.NewTime(started.Add(-time.Second)),
+			}
+		}
+		return corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "ama-metrics-56f9b9ccb5-m8bsf"},
+			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{status}}}
+	}
+	settled := func(pod corev1.Pod, since, changedAt, now time.Time) error {
+		if err := validateContainerSettled(pod, "prometheus-collector", since, now, collectorSettleQuietPeriod); err != nil {
+			return err
+		}
+		return validateFollowOnCleared(pod, "prometheus-collector", changedAt, now, collectorFollowOnWindow)
+	}
+	window := collectorFollowOnWindow
+
+	// 132186 default: phase 10:02:33, settings-driven start 10:03:41 (previous instance 09:56:41),
+	// x509 against the target allocator at 10:04:52, follow-on start 10:11:18.
+	change := at("10:02:33")
+	first := collector(at("10:03:41"), at("09:56:41"))
+	for _, now := range []string{"10:06:57", "10:09:00", "10:11:10"} {
+		if err := settled(first, change, change, at(now)); err == nil {
+			t.Fatalf("132186: the settings-driven collector must not be settled at %s before its follow-on restart", now)
+		}
+	}
+	followOn := collector(at("10:11:18"), at("10:03:41"))
+	if err := settled(followOn, change, change, at("10:12:30")); err == nil {
+		t.Fatal("132186: the follow-on instance must still wait for the quiet period")
+	}
+	if err := settled(followOn, change, change, at("10:14:20")); err != nil {
+		t.Fatalf("132186: the quiet follow-on instance must be settled: %v", err)
+	}
+
+	// 132187 classic: alternation 09:12:03, settings-driven start 09:12:49 (previous 09:09:41),
+	// follow-on start 09:20:35.
+	change = at("09:12:03")
+	if err := settled(collector(at("09:12:49"), at("09:09:41")), change, change, at("09:16:00")); err == nil {
+		t.Fatal("132187: the settings-driven collector must not be settled before its follow-on restart")
+	}
+	if err := settled(collector(at("09:20:35"), at("09:12:49")), change, change, at("09:23:40")); err != nil {
+		t.Fatalf("132187: the quiet follow-on instance must be settled: %v", err)
+	}
+
+	// No follow-on restart (132186 m8bsf 09:25:11 ran 750 s): settled only after the window.
+	change = at("09:24:11")
+	noFollowOn := collector(at("09:25:11"), at("09:20:26"))
+	if err := settled(noFollowOn, change, change, at("09:25:11").Add(window-time.Second)); err == nil {
+		t.Fatal("a settings-driven collector without a follow-on restart must not be settled inside the window")
+	}
+	if err := settled(noFollowOn, change, change, at("09:25:11").Add(window)); err != nil {
+		t.Fatalf("a settings-driven collector that outlived the window must be settled: %v", err)
+	}
+
+	// Unchanged phase (since unset) after an earlier change still waits for the pending follow-on.
+	if err := settled(first, time.Time{}, at("10:02:33"), at("10:07:00")); err == nil {
+		t.Fatal("a later phase must not observe before the follow-on restart of an earlier change")
+	}
+	// Without any recorded settings change only the quiet period applies.
+	if err := settled(first, time.Time{}, time.Time{}, at("10:07:00")); err != nil {
+		t.Fatalf("without a recorded settings change only the quiet period applies: %v", err)
+	}
+	// Every observed follow-on interval (450-570 s, ambiguous 705-750 s) is inside the window.
+	for _, seconds := range []int{450, 570, 750} {
+		if time.Duration(seconds)*time.Second >= window {
+			t.Fatalf("observed follow-on interval %ds must be inside the %s window", seconds, window)
+		}
+	}
+}
+
 func TestSettingsTransitionGuards(t *testing.T) {
 	now := time.Now()
+	pod := corev1.Pod{Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{
+		Name: "prometheus-collector", Ready: true,
+		State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(now.Add(time.Second))}},
+	}}}}
+	if err := validateAnnotationReload(pod, "\x1b[0;36mAZMON_AGENT_CFG_FILE_VERSION\x1b[0m=regex-empt\n", "regex-empt", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-defa\n", "regex-empt", now); err == nil {
+		t.Fatal("the previous equivalent settings must not prove the new phase reloaded")
+	}
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-empt\n", "regex-empt", now.Add(2*time.Second)); err == nil {
+		t.Fatal("a collector started before the settings change must not prove reload")
+	}
+	pod.Status.ContainerStatuses[0].Ready = false
+	if err := validateAnnotationReload(pod, "AZMON_AGENT_CFG_FILE_VERSION=regex-empt\n", "regex-empt", now); err == nil {
+		t.Fatal("an unready collector must not prove reload")
+	}
 	valid := transitionTarget{ScrapePool: "expected/0", Health: "down", LastError: "HTTP401", LastScrape: now}
 	if err := validateTransitionTargets([]transitionTarget{valid}, []string{"expected/0"}, "down", now); err != nil {
 		t.Fatal(err)
@@ -639,6 +980,33 @@ func TestSettingsTransitionGuards(t *testing.T) {
 	}
 	if err := validateTransitionTargets(nil, []string{"expected/0"}, "up", now); err == nil {
 		t.Fatal("empty targets must fail")
+	}
+	watchConfig, err := config.Load(`
+scrape_configs:
+  - job_name: serviceMonitor/test/secret/0
+    basic_auth:
+      username: old
+      password: synthetic
+`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	watchJobs := []string{"serviceMonitor/test/secret/0"}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "old", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "new", false); err == nil {
+		t.Fatal("stale or unexpected secret update must fail")
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, []string{"podMonitor/test/missing/0"}, "old", false); err == nil {
+		t.Fatal("missing secret-backed job must fail")
+	}
+	watchConfig.ScrapeConfigs[0].HTTPClientConfig.BasicAuth.Username = "new"
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "new", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMonitorTransitionState(watchConfig.ScrapeConfigs, watchJobs, "old", false); err == nil {
+		t.Fatal("unexpected secret update must fail")
 	}
 	for _, test := range []struct{ cluster, mac, want string }{
 		{"/subscriptions/s/resourcegroups/g/providers/p/clusters/real", "true", "real"},

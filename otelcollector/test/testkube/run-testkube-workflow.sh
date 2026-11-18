@@ -150,6 +150,14 @@ rm -f "$rendered"
 kubectl apply -f ./testkube/api-server-permissions.yaml \
     || fail_setup "Failed to apply TestKube API permissions"
 
+# Candidate workflows are flattened and pinned before being applied.
+if [[ "$TARGET_ENV" == "ConfigTests" && "$CANDIDATE_MODE" != true ]]; then
+    shared_template=$(envsubst '$BRANCH_NAME' < "./testkube/config-processing-test-crs/testkube-config-test-ginkgo-template-crs.yaml") \
+        || fail_setup "Failed to render ConfigProcessing TestWorkflowTemplate"
+    kubectl apply -f - <<< "$shared_template" \
+        || fail_setup "Failed to apply ConfigProcessing TestWorkflowTemplate"
+fi
+
 if [[ "$TARGET_ENV" == "ConfigTests" || "$CANDIDATE_MODE" == true ]]; then
     existing_workflows=$(kubectl get -f "./testkube/$TARGET_OUTPUT" --ignore-not-found -o name) \
         || fail_setup "Failed to list existing ConfigTests workflows"

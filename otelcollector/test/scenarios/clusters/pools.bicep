@@ -79,6 +79,3 @@ var mixedPools = concat(defaultPools, normalizedExtraLinuxPools, [
   union(windowsPool, { name: 'winfip', fips: true })
   union(windowsPool, { name: 'win25', osSKU: 'Windows2025', fips: true })
 ])
-
-@export()
-var autoscalerPools = map(defaultPools, pool => union(pool, { autoscaling: true, maxCount: 3 }))

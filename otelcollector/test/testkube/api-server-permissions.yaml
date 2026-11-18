@@ -16,6 +16,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods
+  - namespaces
+  verbs:
+  - delete
+- apiGroups:
+  - ""
+  resources:
   - pods/exec
   verbs:
   - create

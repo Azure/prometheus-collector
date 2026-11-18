@@ -17,7 +17,12 @@
           "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
           "cluster": {"type": "string", "pattern": "^clusters/[a-z0-9-]+\\.bicepparam$"},
           "clusterFeatures": {"$ref": "#/$defs/names"},
-          "settingsVariants": {"$ref": "#/$defs/names"},
+          "settingsVariants": {
+            "oneOf": [
+              {"const": ["*"]},
+              {"$ref": "#/$defs/settingsNames"}
+            ]
+          },
           "platforms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["linux", "windows"]}},
           "ginkgoLabels": {"$ref": "#/$defs/names"},
           "tier": {"enum": ["pr", "nightly", "weekly"]},
@@ -28,6 +33,10 @@
     "coverageGaps": {"type": "array", "items": {"type": "string", "minLength": 1}}
   },
   "$defs": {
-    "names": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+    "names": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "settingsNames": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "not": {"const": "*"}}
+    }
   }
 }

@@ -19,8 +19,8 @@ umask 077
 if [ '__CUSTOM_CA__' = 'true' ]; then
   install -d -o root -g proxy -m 0750 /etc/squid/ssl_cert
   if [ ! -s /etc/squid/ssl_cert/ca.key ]; then
-    openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 7 \
-      -subj '/CN=Disposable AKS scenario proxy CA' \
+    openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
+      -subj '/CN=Retained AKS scenario proxy CA' \
       -addext 'basicConstraints=critical,CA:TRUE' \
       -addext 'keyUsage=critical,keyCertSign,cRLSign' \
       -addext 'subjectAltName=DNS:scenario-proxy,IP:10.226.0.4' \
@@ -38,8 +38,10 @@ if [ '__CUSTOM_CA__' = 'true' ]; then
 http_port 3128 ssl-bump cert=/etc/squid/ssl_cert/ca.crt key=/etc/squid/ssl_cert/ca.key generate-host-certificates=on dynamic_cert_mem_cache_size=4MB
 sslcrtd_program /usr/lib/squid/security_file_certgen -s /var/lib/squid/ssl_db -M 4MB
 acl step1 at_step SslBump1
+acl metrics_ingestion ssl::server_name .ingest.monitor.azure.com
 ssl_bump peek step1
-ssl_bump bump all
+ssl_bump bump metrics_ingestion
+ssl_bump splice all
 tls_outgoing_options cafile=/etc/ssl/certs/ca-certificates.crt
 SQUID_TLS
 else
@@ -57,7 +59,7 @@ http_access allow localhost
 http_access allow nodes
 http_access deny all
 cache deny all
-logformat scenario %ts.%03tu %>a %rm %rd %>Hs %Sh/%<a
+logformat scenario %ts.%03tu %>a %rm %>rd %>Hs %Sh/%<a
 access_log stdio:/var/log/squid/access.log scenario
 visible_hostname scenario-proxy
 SQUID_COMMON
@@ -67,7 +69,7 @@ systemctl enable squid >&2
 systemctl restart squid
 systemctl is-active --quiet squid
 if [ '__CUSTOM_CA__' = 'true' ]; then
-  curl --noproxy '' --proxy http://127.0.0.1:3128 --cacert /etc/squid/ssl_cert/ca.crt \
+  curl --noproxy '' --proxy http://127.0.0.1:3128 --cacert /etc/squid/ssl_cert/ca.crt --capath /etc/ssl/certs \
     --retry 5 --retry-connrefused --retry-delay 5 --fail --silent --show-error \
     --output /dev/null '__PROBE_URL__'
   base64 -w0 /etc/squid/ssl_cert/ca.crt
@@ -139,58 +141,12 @@ resource configure 'Microsoft.Compute/virtualMachines/runCommands@2024-07-01' = 
     treatFailureAsDeploymentFailure: true
     timeoutInSeconds: 1800
     source: {
-      script: replace(replace(bootstrap, '__CUSTOM_CA__', string(customCa)), '__PROBE_URL__', '${environment().resourceManager}metadata/endpoints?api-version=2020-06-01')
+      script: replace(replace(bootstrap, '__CUSTOM_CA__', toLower(string(customCa))), '__PROBE_URL__', '${environment().resourceManager}metadata/endpoints?api-version=2020-06-01')
     }
   }
-}
-
-// Only the public certificate crosses the VM boundary; the signing key remains on its disposable disk.
-resource certificateReader 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (customCa) {
-  name: '${name}-certificate-reader'
-  location: location
-  tags: tags
-}
-resource readerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (customCa) {
-  name: guid(vm.id, certificateReader!.id, 'Reader')
-  scope: vm
-  properties: {
-    principalId: certificateReader!.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
-  }
-}
-resource certificate 'Microsoft.Resources/deploymentScripts@2023-08-01' = if (customCa) {
-  name: '${name}-public-certificate'
-  location: location
-  tags: tags
-  kind: 'AzureCLI'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: { '${certificateReader!.id}': {} }
-  }
-  properties: {
-    azCliVersion: '2.89.1'
-    timeout: 'PT10M'
-    retentionInterval: 'PT1H'
-    cleanupPreference: 'Always'
-    environmentVariables: [
-      { name: 'PROXY_RESOURCE_GROUP', value: resourceGroup().name }
-      { name: 'PROXY_VM', value: vm.name }
-    ]
-    scriptContent: '''
-set -euo pipefail
-CA=$(az vm run-command show --resource-group "$PROXY_RESOURCE_GROUP" --vm-name "$PROXY_VM" --name proxy-bootstrap --expand instanceView --query instanceView.output --output tsv)
-printf '%s' "$CA" | base64 -d | openssl x509 -noout -checkend 3600 >/dev/null
-SHA256=$(printf '%s' "$CA" | base64 -d | openssl x509 -outform DER | sha256sum | cut -d ' ' -f 1)
-jq -n --arg ca "$CA" --arg sha "$SHA256" '{trustedCa: $ca, sha256: $sha}' > "$AZ_SCRIPTS_OUTPUT_PATH"
-'''
-  }
-  dependsOn: [configure, readerRole]
 }
 
 output vmId string = vm.id
 output vmName string = vm.name
 output endpoint string = 'http://10.226.0.4:3128'
-output trustedCa string = customCa ? certificate!.properties.outputs.trustedCa : ''
-output caFingerprintSha256 string = customCa ? certificate!.properties.outputs.sha256 : ''
 output bootstrapCommandId string = configure.id

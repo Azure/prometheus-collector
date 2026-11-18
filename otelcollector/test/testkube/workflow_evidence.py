@@ -25,6 +25,35 @@ def render_candidate(source, workflow, sha, image, label_filter=None, expectatio
         raise ValueError("select exactly one existing TestWorkflow by metadata.name")
     document = matches[0]
     spec = document["spec"]
+    config = {}
+    if "use" in spec:
+        uses = spec.pop("use")
+        if len(uses) != 1 or uses[0].get("name") != "configprocessingginkgo":
+            raise ValueError("candidate must use the known ConfigProcessing template")
+        template_path = Path(__file__).parent / "config-processing-test-crs" / "testkube-config-test-ginkgo-template-crs.yaml"
+        template = yaml.safe_load(template_path.read_text(encoding="utf-8"))
+        if (template.get("kind") != "TestWorkflowTemplate"
+                or template.get("metadata", {}).get("name") != uses[0]["name"]
+                or template["metadata"].get("namespace") != document["metadata"].get("namespace")):
+            raise ValueError("invalid ConfigProcessing workflow template")
+        template_spec = template["spec"]
+        if any(key in spec for key in ("content", "steps", "pod")):
+            raise ValueError("templated candidate cannot override shared content, steps or pod")
+        config = {name: definition.get("default") for name, definition in template_spec["config"].items()}
+        supplied = uses[0].get("config", {})
+        if not isinstance(supplied, dict) or set(supplied) - config.keys():
+            raise ValueError("invalid ConfigProcessing template configuration")
+        config.update(supplied)
+        if any(not isinstance(value, str) for value in config.values()):
+            raise ValueError("ConfigProcessing template configuration must contain strings")
+        if not config.get("labelFilter", "").strip():
+            raise ValueError("ConfigProcessing template label filter cannot be empty")
+        spec.update({key: template_spec[key] for key in ("content", "steps", "pod")})
+        container = dict(template_spec["container"])
+        container.update(spec.get("container", {}))
+        for step in spec["steps"]:
+            if "shell" in step:
+                step["container"] = dict(container)
     spec["content"]["git"]["revision"] = sha
     spec.setdefault("pod", {}).setdefault("nodeSelector", {}).update({
         "kubernetes.io/os": "linux", "kubernetes.io/arch": "amd64",
@@ -41,7 +70,26 @@ def render_candidate(source, workflow, sha, image, label_filter=None, expectatio
         for index, line in enumerate(lines):
             if not line.strip().startswith("ginkgo run "):
                 continue
-            args = shlex.split(line)
+            markers = {}
+            def replace_config(match):
+                name = match.group(1)
+                if name not in config:
+                    raise ValueError(f"unknown ConfigProcessing template config: {name}")
+                marker = f"__testkube_config_{name}__"
+                markers[marker] = config[name]
+                return marker
+            line = re.sub(r"\{\{\s*config\.([A-Za-z][A-Za-z0-9]*)\s*\}\}", replace_config, line)
+            if "{{" in line or "}}" in line:
+                raise ValueError("unsupported workflow template expression")
+            args = []
+            for arg in shlex.split(line):
+                if arg in markers:
+                    if markers[arg]:
+                        args.append(markers[arg])
+                elif any(marker in arg for marker in markers):
+                    raise ValueError("workflow template config must occupy a whole argument")
+                else:
+                    args.append(arg)
             suite = args[-1]
             if not re.fullmatch(r"\./[A-Za-z][A-Za-z0-9]*", suite):
                 raise ValueError("candidate workflow must select an existing Ginkgo suite")
@@ -70,7 +118,7 @@ def render_candidate(source, workflow, sha, image, label_filter=None, expectatio
             lines[index] = (
                 "GOTOOLCHAIN=\"$(go env GOVERSION)\" "
                 "go run github.com/onsi/ginkgo/v2/ginkgo@"
-                "\"$(go list -m -f '{{.Version}}' github.com/onsi/ginkgo/v2)\" run "
+                "\"$(go list -m github.com/onsi/ginkgo/v2 | cut -d ' ' -f 2)\" run "
                 + shlex.join(options)
             )
             container = step["container"]

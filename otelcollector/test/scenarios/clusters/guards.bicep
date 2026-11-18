@@ -17,8 +17,6 @@ param proxyNoProxyIsScoped bool
 @allowed([true])
 param validPoolPlan bool
 @allowed([true])
-param classicNeedsAzure bool
-@allowed([true])
 param windowsFipsVmSupported bool
 
-output validated bool = windowsNeedsAzure && windowsNeedsPassword && windows2022Version && windows2025Version && acnsNeedsAzure && proxyNeedsSshKey && proxyCaNeedsProxy && proxyNoProxyIsScoped && validPoolPlan && classicNeedsAzure && windowsFipsVmSupported
+output validated bool = windowsNeedsAzure && windowsNeedsPassword && windows2022Version && windows2025Version && acnsNeedsAzure && proxyNeedsSshKey && proxyCaNeedsProxy && proxyNoProxyIsScoped && validPoolPlan && windowsFipsVmSupported
