@@ -1031,7 +1031,7 @@ stages:
       - deployment: CandidateTestkube
         displayName: Test receipt-bound candidate ${{ scenario }}
         environment: Prometheus-Collector-Tests
-        timeoutInMinutes: 900
+        timeoutInMinutes: 1680
         cancelTimeoutInMinutes: 60
         variables:
           candidateAttempt: $(Build.BuildId)-${{ scenario }}-$(System.StageAttempt)-$(System.JobAttempt)

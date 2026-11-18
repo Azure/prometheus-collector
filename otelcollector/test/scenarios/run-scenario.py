@@ -1437,6 +1437,53 @@ def enable_otlp_settings(text):
     return yaml.safe_dump_all(documents)
 
 
+def snapshot(host, identities):
+    originals = {}
+    for kind, name, namespace in identities:
+        output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
+                           private=True)
+        originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
+    return originals
+
+
+def restore(host, originals, preserve_settings=False):
+    restore_failures = []
+    for (kind, name, namespace), original in reversed(list(originals.items())):
+        if kind == "Namespace" and original is not None:
+            continue
+        try:
+            if original is None:
+                for attempt in range(4):
+                    try:
+                        host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
+                        break
+                    except RuntimeError as failure:
+                        if "ServiceUnavailable" not in str(failure) or attempt == 3:
+                            raise
+                        delay = 2 ** (attempt + 1)
+                        print(f"Retrying settings-slot cleanup after Kubernetes ServiceUnavailable in {delay}s",
+                              flush=True)
+                        time.sleep(delay)
+            elif preserve_settings and (kind, name, namespace) == ("ConfigMap", RESET[0], "kube-system"):
+                current = host.kube("get", kind, name, "-n", namespace,
+                                    "-o", "json", json_output=True, private=True)
+                original_with_version = copy.deepcopy(original)
+                original_with_version["metadata"]["resourceVersion"] = current["metadata"]["resourceVersion"]
+                host.kube("replace", "-f", "-", data=json.dumps(original_with_version), private=True)
+            else:
+                host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
+            readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",
+                                 "-o", "json", private=True)
+            actual = clean_resource(json.loads(readback)) if readback.strip() else None
+            if actual != original:
+                raise RuntimeError(f"Baseline restoration mismatch: {kind}/{name}")
+        except RuntimeError as restore_failure:
+            restore_failures.append((kind, name, restore_failure))
+    if restore_failures:
+        details = "; ".join(f"{kind}/{name}: {failure}" for kind, name, failure in restore_failures)
+        raise RuntimeError(f"Restoration failed; no next variant allowed: {details}") from restore_failures[0][2]
+
+
 def settings_slot(host, variant):
     if variant.get("helmValues"):
         raise ValueError("Customer Helm install adapter is not implemented; refusing addon substitution")
@@ -1474,11 +1521,7 @@ def settings_slot(host, variant):
                     doc["metadata"].get("namespace", "default"))
         if identity not in identities:
             identities.append(identity)
-    originals = {}
-    for kind, name, namespace in identities:
-        output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
-                           private=True)
-        originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
+    originals = snapshot(host, identities)
     if preserve_settings and originals[settings_identity] is None:
         raise RuntimeError("AMPLS-proxy settings baseline is missing; refusing settings transition")
     error = None
@@ -1534,39 +1577,14 @@ def settings_slot(host, variant):
         error = failure
         raise
     finally:
-        restore_failures = []
-        for (kind, name, namespace), original in reversed(list(originals.items())):
-            if kind == "Namespace" and original is not None:
-                continue
-            try:
-                if original is None:
-                    for attempt in range(4):
-                        try:
-                            host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
-                            break
-                        except RuntimeError as failure:
-                            if "ServiceUnavailable" not in str(failure) or attempt == 3:
-                                raise
-                            delay = 2 ** (attempt + 1)
-                            print(f"Retrying settings-slot cleanup after Kubernetes ServiceUnavailable in {delay}s",
-                                  flush=True)
-                            time.sleep(delay)
-                elif preserve_settings and (kind, name, namespace) == settings_identity:
-                    replace_settings(copy.deepcopy(original))
-                else:
-                    host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
-                readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",
-                                     "-o", "json", private=True)
-                actual = clean_resource(json.loads(readback)) if readback.strip() else None
-                if actual != original:
-                    raise RuntimeError(f"Baseline restoration mismatch: {kind}/{name}")
-            except RuntimeError as restore_failure:
-                restore_failures.append((kind, name, restore_failure))
-        if restore_failures:
-            details = "; ".join(
-                f"{kind}/{name}: {failure}" for kind, name, failure in restore_failures)
-            raise RuntimeError(f"Restoration failed; no next variant allowed. Original: {error}; "
-                               f"restore failures: {details}") from restore_failures[0][2]
+        run_deadline = host.commands.deadline
+        host.commands.deadline = time.monotonic() + 600
+        try:
+            restore(host, originals, preserve_settings)
+        except RuntimeError as restore_failure:
+            raise RuntimeError(f"Original: {error}; {restore_failure}") from restore_failure
+        finally:
+            host.commands.deadline = run_deadline
 
 
 def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
@@ -2526,12 +2544,20 @@ def cleanup_reference_apps(host):
     for fixture in fixtures:
         host.kube("delete", "-f", str(TEST_SOURCE / fixture), "-n", "default",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
+    if "windows" in host.scenario["platforms"]:
+        host.kube("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config", "-n", "monitoring",
+                  "--ignore-not-found", "--wait=true", "--timeout=5m")
     if host.scenario["id"] == "otlp":
         host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
     if host.scenario["id"] in PRIVATE_API_SCENARIOS or host.scenario["id"] == "ampls":
         host.kube("delete", "servicemonitors.azmonitoring.coreos.com", "scenario-network-probe", "-n", "default",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
+
+
+def install_windows_exporter(host):
+    host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
+    host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=10m")
 
 
 def execute(args, scenario, variants, commands):
@@ -2569,6 +2595,7 @@ def execute(args, scenario, variants, commands):
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
                "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
     reference_apps_ready = False
+    baseline = None
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
@@ -2664,6 +2691,7 @@ def execute(args, scenario, variants, commands):
                 time.sleep(10)
         if "private-api" in scenario["clusterFeatures"] or ampls:
             host.protect_private_host()
+        baseline = snapshot(host, [("ConfigMap", name, "kube-system") for name in RESET])
         if ampls_proxy:
             settings = enable_otlp_settings(
                 (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
@@ -2682,11 +2710,10 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
         if "windows" in scenario["platforms"]:
             host.kube("rollout", "status", "daemonset/ama-metrics-win-node", "-n", "kube-system", "--timeout=20m")
-            if ampls:
-                host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
-                host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=15m")
         reference_apps_ready = True
         cleanup_reference_apps(host)
+        if "windows" in scenario["platforms"] and ampls:
+            install_windows_exporter(host)
         save(args.evidence / "images-before.json", audit_images(host, images))
         if ampls:
             outcome["ampls"] = ampls_proofs.verify(host, outputs)
@@ -2704,6 +2731,8 @@ def execute(args, scenario, variants, commands):
             host.kube("rollout", "status", "deployment/prometheus-reference-app", "--timeout=10m")
         for name in selected_settings:
             outcome["settings"][name] = settings_slot(host, variants[name])
+        if "windows" in scenario["platforms"] and not ampls:
+            install_windows_exporter(host)
         # Health suites depend on the repository's existing reference-app scrape fixtures.
         for name in ("ama-metrics-prometheus-config-configmap.yaml",
                      "ama-metrics-prometheus-config-node-configmap.yaml",
@@ -2762,8 +2791,16 @@ def execute(args, scenario, variants, commands):
     finally:
         commands.deadline = None
         try:
-            if reference_apps_ready:
-                cleanup_reference_apps(host)
+            try:
+                if baseline is not None:
+                    commands.deadline = time.monotonic() + 600
+                    try:
+                        restore(host, baseline, preserve_settings=ampls_proxy)
+                    finally:
+                        commands.deadline = None
+            finally:
+                if reference_apps_ready:
+                    cleanup_reference_apps(host)
         except (RuntimeError, ValueError, OSError, KeyError) as failure:
             outcome.update(status="FAIL", fixtureCleanupError=str(failure))
             raise

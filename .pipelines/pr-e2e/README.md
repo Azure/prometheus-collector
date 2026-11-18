@@ -1,13 +1,10 @@
 # Ama-metrics vulnerability campaign
 
-Phase 1 is a real scan/fix/build/one-cluster/evidence-PR campaign, not a replacement
-for the full scenario matrix. That matrix covers representative current clusters
-with auto-upgrade enabled, not historical Kubernetes versions. All runtime code
-lives in this repository.
-The campaign automatically runs its approved build, scan, and run-owned cluster
-validation. It never uses a shared cluster or expands the existing resource/IAM
-scope. A human reviews and merges the resulting PR; the agent never approves or
-merges it.
+Phase 1 supplies scan/fix/build/cluster/evidence-PR components, **not a deployed
+Azure SRE Agent integration or an end-to-end passing campaign**. It does not
+replace the full scenario matrix: representative current, auto-upgraded clusters,
+not historical Kubernetes versions. Approved validation never uses shared
+clusters or expands resource/IAM scope. Only humans approve and merge.
 
 Pipeline 440 uses the Official 1ES template only for `refs/heads/main`; branch
 and PR runs disable optional SDL via Unofficial's `enableAllTools: false`, with
@@ -18,21 +15,16 @@ tasks run only on main, as do production Ev2 artifacts. Official main keeps its
 enforced security checks, including Defender's refresh for Linux definitions
 at least 2,880 minutes old. Non-main runs no longer request that refresh.
 
-## Implemented
+## Components
 
 - `scan_trivy.py`: remote-only Linux discovery, fresh private output/cache, explicit
   child digest/platform, empty ignore/config files and recorded scanner/DB/hash.
-  It does not use or change the Docker daemon. Exit zero means the scanner ran,
-  not that vulnerabilities are absent.
+  No Docker daemon is used. Exit zero means the scanner ran, not a clean image.
 - `compare_trivy.py`: baseline Linux CVE and no-new-findings comparison for
   matched scanner/configuration/DB hashes, complete target/package inventory
-  and a candidate bound to the successful build receipt. Open and new
-  findings in the exact targets `opt/microsoft/otelcollector/otelcollector`,
-  `opt/microsoft/otelcollector/prometheusui` and `opt/promconfigvalidator`
-  are reported as deferred to the separate Collector
-  upgrade; missing target/package evidence and open or new findings in other
-  targets still block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
-  must match the scan's exact image ref and OS metadata; binary paths remain exact.
+  and a receipt-bound candidate. OS targets must match the exact scan image ref
+  and OS metadata; binary paths remain exact. Collector deferrals are described
+  below. It cannot clear Qualys QIDs or claim full-image coverage.
 - `scan.ps1` and `scan-steps.yml`: ported per-child CoMET/OIDC producer, output
   ownership guards and scoped cleanup. They still require dedicated trusted
   workers, approved scanner digests and verified onboarding. Coverage is explicitly
@@ -44,18 +36,11 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   per-component push receipts against published MCR manifest/config bytes.
   Emits immutable child refs for Linux amd64/arm64, Windows2022, allocator and cfg;
   rejects incomplete images, moved tags and mismatched source/platforms.
-  It does not authenticate caller-supplied JSON or replace protected push receipts.
-  SRE-branch product jobs publish four protected `sre-push-*` artifacts, captured
-  from BuildKit metadata or Windows push output, with unique per-build tags.
-  Fetch the completed authenticated ADO build response before resolving them.
   Windows pools, including the mixed scenario, use the protected Windows2022
-  collector receipt and verified `10.0.20348.*` image config. No Windows2025
-  producer, scan or common-index receipt is required by this campaign.
-  The emitter also requires `sre-testkube-runner`: a protected receipt binding
-  separately fetched test source to this build, the existing toolchain's immutable
-  image and its durable artifact URL. No replacement runner is built or pushed.
-  The pinned existing image is not yet demonstrated compatible with the candidate
-  workflows; the coverage owner must verify suitability through real execution.
+  collector receipt and `10.0.20348.*` config; no Windows2025 receipt is required.
+  The protected `sre-testkube-runner` receipt binds separately fetched test source,
+  this build, the existing immutable toolchain image and its artifact URL.
+  No replacement runner is built; suitability still requires real execution.
 - `fetch_candidate.py`: authenticates to the fixed build project, checks the
   successful build against the requested full source SHA, downloads five
   protected receipt artifacts plus the collector Trivy artifact, and validates
@@ -63,28 +48,18 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   retains the raw producer files and build response beside `candidate-build.json`.
 - `producer_trivy.py`: on SRE candidate branches, pipeline 440 replaces its collector
   vulnerability console scan with full, unfiltered JSON for the exact pushed Linux
-  amd64 child. The protected `sre-trivy-collector` artifact contains
-  only `trivy/{result.json,metadata.json}` and `provenance.json`
-  binding source repo/commit/build, definition 440, index/child/platform and every
-  published file's SHA256. Database identity remains in metadata; database bytes,
-  cache and temporary scanner configuration are not published. Both download and
-  extraction retain the 512 MiB limit. Only successful first-attempt SRE branch
-  jobs/stages publish it.
-  MCR lag retries the immutable digest, never a tag. Filtered console findings and existing
-  secret/sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
-  A consumer must authenticate this artifact from the exact successful 440 build,
-  verify its hashes/provenance against the push receipts, and locally scan both
-  images with the same Trivy version/configuration and one fresh private database.
-  Published prod-vs-main discovery
-  needs no new 440 build; this artifact is reusable unmerged-candidate evidence.
+  amd64 child. `sre-trivy-collector` retains the raw scan/log, hashed private DB
+  snapshot and provenance binding repo/commit/build, definition 440,
+  index/child/platform and published file hashes. Downloads are bounded at
+  512 MiB, extraction at 2 GiB. Only successful first-attempt jobs/stages publish.
+  MCR lag retries the digest, never a tag. Existing filtered console, secret and
+  sidecar scans remain; this is not Windows, arm64 or Qualys clearance.
+  Published prod-vs-main discovery needs no new 440 build.
 - `scan_candidate.py`: authenticates that same build before selecting its collector
   child, reuses its fresh scan or rescans the exact digest when authenticated
   evidence expires. The baseline uses the same scanner version and frozen
   database. Raw scans and `comparison.json` are retained, including failed or
   blocked verdicts. A local refresh does not replace the protected producer report.
-
-These are executable repository components, **not a deployed Azure SRE Agent
-integration or an end-to-end passing campaign**.
 
 ```powershell
 python .pipelines\pr-e2e\scan_trivy.py --image <repository@sha256:child> --platform linux/amd64 --output <new-run-directory>
@@ -96,18 +71,15 @@ python .pipelines\pr-e2e\fetch_candidate.py --build-id <successful-build-id> --s
 python .pipelines\pr-e2e\scan_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --baseline-image <released-ama-metrics-child@sha256> --platform linux/amd64 --output <new-scan-evidence-directory>
 ```
 
-CoMET lane layout is `<name>/<os>/<Windows-osVersion-if-present>/<arch>/`, containing
+CoMET lanes use `<name>/<os>/<Windows-osVersion-if-present>/<arch>/`, containing
 `provenance.json`, `completion.json`, `comet/{result.xml,result.json,scan.log}` and
 Linux `trivy/{result.json,metadata.json}`. The standalone Trivy discovery output
 is not a complete lane and must not be relabeled as CoMET evidence.
-Requested QIDs must be explicitly present before and absent after under matched
-scanner/KB/configuration/coverage. A missing QID is not closure. Requested CVEs
-still need verified QID mapping; a Trivy finding alone does not clear a Qualys QID.
-For a Trivy-only Phase 1 finding, use the separate `compare_trivy.py` command.
-Rescan the baseline with the current producer, then reuse its hashed private DB
-snapshot for the candidate. Both scans and DB must be fresh within 24 hours.
-The early discovery receipt predates the DB/configuration hash fields, so it
-cannot itself pass this stronger comparison.
+QIDs must be explicitly present before and absent after with matched scanner/
+KB/configuration/coverage; CVEs need verified QID mapping. Missing QIDs or Trivy
+findings alone cannot prove Qualys closure. For Trivy-only comparison, rescan
+the baseline and reuse its hashed private DB for the candidate. Both scans and
+DB must be fresh within 24 hours; legacy receipts lacking DB/config hashes fail.
 
 Baseline and candidate target descriptors bind `product: ama-metrics`, source
 `repo`, full `commit`, original `buildId`, child `images` and requested IDs.
@@ -115,31 +87,22 @@ Candidate `baseline` additionally binds source commit/build, current rescan buil
 and artifact identities. Runtime source/build/coverage assertions must come from
 protected jobs, not user-authored JSON. Local validation is not authentication.
 
-The receipt command consumes the completed ADO build REST response and a JSON
-array or individual files of protected push receipts:
-`{name, commit, buildId, indexRef, tag}`.
-Names are `collector` (separate Linux and Windows push entries),
-`targetallocator` and `config-reader` (cfg). The separate runner receipt binds
-`source: {repo, commit, buildId}`, `imageRef` and `artifactUrl` to the current
-build's `sre-testkube-runner` artifact. It is a reused toolchain; its image is
-not claimed to have been built from the separately fetched test-source commit.
-`schemaVersion` is 1 and `artifactPath` is `runner.json`. The product receipt
-embeds this as `testRunner: {imageRef, testSource, images, artifactUrl, artifactPath,
-receiptSha256, mode}`; `receiptSha256` hashes the original artifact bytes.
-`indexRef` is a published MCR
-`repository@sha256:...` captured from that build's push, not resolved later from
-a mutable tag. It may name a single manifest. The command verifies its children
-and configuration hashes and confirms that the published tag still matches.
-Keep the resulting JSON as a campaign artifact, not a fictional committed fixture.
-Its `built-not-e2e-validated` status never means tests or scans passed.
+`build_receipt.py` consumes the authenticated completed build response and four
+protected `sre-push-*` receipts from BuildKit/Windows push output:
+`{name, commit, buildId, indexRef, tag}`. Names are `collector` (Linux and Windows
+entries), `targetallocator` and `config-reader` (cfg). Tags are unique per build;
+`indexRef` is the published MCR digest captured at push, possibly a single
+manifest, never a later tag lookup. Children/config hashes and the tag must match.
+The schema-1 `runner.json` binds `source: {repo, commit, buildId}`, `imageRef` and
+`artifactUrl` to the same build's `sre-testkube-runner` artifact; embedded
+`testRunner.receiptSha256` hashes its original bytes. The reused toolchain image
+is not claimed to be built from the separately fetched test source.
+Retain receipts as artifacts, not committed fixtures; `built-not-e2e-validated`
+does not mean tests or scans passed.
 The SRE-only receipt job verifies the existing public
 `docker.io/cerebro31/ginkgo-test@sha256:749da46a2c50b88e20f249ab3302707cb8005a2ff32a5abe2c37f066076afc57`
 manifest/config bytes and requires Linux amd64 support. Public Docker Hub token
 exchange is anonymous and memory-only; no workstation login or Docker daemon is used.
-The actual gate must execute real TestKube workflows/Ginkgo suites, not a direct
-Ginkgo substitute. Bind the TestKube source and runner digest from this receipt;
-retain the submitted execution IDs, per-case results and JUnit as durable artifacts.
-Unknown, aborted, skipped, empty or missing required cases are not successful.
 Before invocation, the authenticated artifact adapter must confirm that pipeline
 440 completed successfully for `source.commit`, download `runner.json` from that
 same build's protected artifact, verify its hash and cross-check its source/build/
@@ -155,7 +118,6 @@ other cross-host redirects, including signed blob downloads, lose the token.
 The CLI emits JSON with `source`, `testRunner` and `candidateReceipt`; importable
 `fetch(build_id, commit, output_path)` returns the verified receipt. Retain the
 entire output directory, including `sre-testkube-runner/runner.json`.
-This is executable code, not proof that the actual ci-sre identity can invoke it.
 MCR publication may lag ACR push completion; a missing public manifest blocks
 the receipt until it is actually readable. Never substitute a released image.
 
@@ -178,119 +140,72 @@ select the Linux amd64 child. Never take expected bindings from the scan envelop
 Read trusted decoder code from that build's exact source, then run:
 
 ```text
-python candidate_log.py --input scan-log.txt --build-id <440-id> --source-sha <sha> --image-ref <resolved-child@sha256:...> --index-ref <push-index@sha256:...> --output candidate-scan.json
+python .pipelines\pr-e2e\candidate_log.py --input scan-log.txt --build-id <440-id> --source-sha <sha> --image-ref <resolved-child@sha256:...> --index-ref <push-index@sha256:...> --output candidate-scan.json
 ```
 
-The decoder validates the complete file set, exact source/build/image/platform,
-coverage, file hashes, scanner configuration and database identity using the
-existing scan-provenance validator. Wrong-source/build/image, truncated or duplicate
-frames, corrupt hashes and oversized envelopes fail without writing output.
-The output remains collector Linux amd64 Trivy evidence only, not Windows,
-arm64, other-image, Qualys or e2e clearance. Record actual agent connector call
-IDs and negative-check results. Missing frames block consumption; a console
-table or an older baseline is not a substitute. The ADO test worker's protected
-artifact checks above are unchanged; TF400813 artifact downloads are not an
-SRE Agent readiness gate.
-
-Local execution bootstraps the same repository commands that trusted ADO workers
-will execute. The finished flow must not depend on a workstation, Copilot session
-directory, developer login, local Docker engine or absolute local path.
+The decoder rejects incomplete/duplicate frames, oversized envelopes, wrong
+source/build/image/platform/coverage, hashes, configuration or DB identity
+without writing output. Record actual connector call IDs and negative checks.
+Missing frames block consumption; console tables and older baselines are not
+substitutes. This remains Linux amd64 collector Trivy evidence only. ADO worker
+artifact checks are unchanged; SRE Agent readiness does not require artifact downloads.
 
 Reuse the existing `ci-sre`; do not create another agent. Its resource is
 `/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/containerinsights-sre/providers/Microsoft.App/agents/ci-sre`.
 The validation/build subscription is separately
 `9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb`. Resource discovery does not verify its
 connectors, branch access or pipeline permissions. The agent
-needs authenticated source checkout/edit/commit/push access as well as a pipeline
-read adapter. Source/dependency fixes are agent work, not a fixed pipeline patch.
-ADO owns clean checkout, scanner/build workers, registry publication, test deployment
-and durable artifacts. No new service is required by this design.
+needs authenticated source checkout/edit/commit/push access and a tested pipeline
+read adapter; local Copilot tool availability does not prove either. ADO owns
+checkout, scan/build workers, publication, deployment and durable artifacts.
+The remote flow must not depend on a workstation, developer login, local Docker
+engine, Copilot session directory or absolute local path.
 
-Azure SRE Agent tool discovery exposes MCP connector configuration and connector
-testing, but that does **not** establish that a suitable ADO adapter is installed,
-authorized or reachable on an actual agent. Select and test that existing supported
-adapter before deployment; do not assume these local Copilot tools exist in SRE Agent.
-
-### Branch trigger and agent iteration
+### Candidate pipeline
 
 Use `sre/vuln/<campaign-id>` for the SRE remediation branch.
-The build pipeline includes this namespace alongside its existing main, OTel,
-Dependabot and `*/ama-metrics-sre-*` triggers. A successful 440 completion
-triggers pipeline 979 for either SRE campaign branch form only after that
-completion filter is present on 979's default branch. The campaign PR trigger
-also runs 979 directly and binds its run to the source head's successful 440
-build. The candidate run validates the source and protected receipts before
-provisioning. The push-receipt and candidate-build validators accept both SRE
-branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
-`sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
-and raw scan log; its other console scans remain report-only. CandidateCapacity
-validates those exact receipts and the frozen DB, then verifies source-bound
-placements and retained-host state before admitting lanes. CandidateScan reuses
-fresh producer findings. If the authenticated scan or database is more than
-24 hours old, it rescans the receipt-bound candidate digest, then uses that
-frozen database for the baseline. Both paths use the producer scanner version
-and canonical configuration. Its FAIL/BLOCKED result does not skip functional
-lanes, but its failed stage still gates approval. Missing or invalid snapshots
-and refreshes that do not yield fresh comparable evidence fail closed;
-legacy report-only artifacts remain readable but cannot drive this comparison.
-Full candidate findings remain in the authenticated log payload; the binary DB
-is retained only in the protected artifact. The
-producer signs only `payload.json` in the collector and allocator signing folders;
-the original Buildx `push-metadata.json` remains readable JSON for immutable
-push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
-The scanner compares every baseline and candidate finding, without severity,
-fixability, or CVE selection filters. Open and new findings (including Go standard
-library findings) in the exact
-`opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
-and `opt/promconfigvalidator` targets
-are reported unresolved/deferred to the
-separate Collector upgrade, not treated as fixed; findings in any other target
-still fail, and missing evidence still blocks.
-All raw findings remain in the comparison evidence. A
-manually queued 979 candidate run can instead supply `candidateBuildId` and
-`candidateSourceSha`. Candidate runs retain their run-owned
-resource group and publish its inventory; the pipeline removes its local kubeconfig
-but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
-`default`, `linux`, `settings`, `mixed`, `autoscaler`, `uai`,
-`cilium` and `kubenet` in parallel stages after campaign admission,
-even if an earlier row fails. Each row
-has its own UUID, checkout, evidence, retained resource group and bootstrap
-artifact. `mixed` and `autoscaler` use `eastus2`; the other seven use `centralus`
-in the approved build subscription. A named selector runs just that row.
-Before any provisioning, a read-only admission stage compiles the selected rows
-and checks pool/version compatibility, source bindings and retained fixture ownership.
-Every row requires that stage's successful, source/build-bound placement output,
-and still performs its existing live per-row preflight.
-No capacity or quota admission runs, including for new hosts and autoscaler growth;
-Azure provisioning or scale-out can fail if capacity or quota is insufficient.
-`CandidateCapacity` remains the stage's compatibility identifier. Retention and
-auto-upgrade channels remain unchanged; serial test stages do not serialize
-later retained-cluster upgrades.
-After a successful
-retained run, the authorized owner revokes the recorded temporary administrator
-assignment with the runner's `revoke-bootstrap` action; resource cleanup remains
-an explicit action, not an automatic pipeline step.
-The trusted pipeline checkout may include pipeline/scanner-only repairs while
-the product/test candidate stays immutable; publication records both revisions
-as `pipelineSourceSha` and `sourceSha`. Product or test-source changes require
-a matching new protected producer and fresh execution.
+Pipeline 440 triggers on this namespace and `*/ama-metrics-sre-*`. Its successful
+completion triggers 979 only once that completion filter is on 979's default
+branch. Campaign PRs also trigger 979 directly, with no path filter, including
+dependency-only updates. PRs cannot enter the legacy shared-cluster job.
+Before fetching or provisioning, 979 admits only an authorized SRE head and
+resolves its successful 440 build using `System.PullRequest.SourceCommitId`.
+Only the latest head's PR-linked 979 results count; head changes auto-cancel
+the old PR run. A 440 producer run is not e2e evidence. Manual 979 runs instead
+supply `candidateBuildId` and `candidateSourceSha`.
 
-Pipeline 440's ordinary PR builds do not run the AKS, OTel, or Arc TestKube
-jobs. Pipeline 979 therefore has a PR validation trigger for campaign PRs. It
-excludes every PR from the legacy shared-cluster job and admits only SRE branches
-to the candidate job. There is no path filter: dependency-only PR updates must
-also validate. The candidate execution gate checks the allowed branch and resolved
-source SHA before fetching or provisioning the candidate. It resolves a successful
-440 build for `System.PullRequest.SourceCommitId`, validates
-that build's protected receipts, and runs the existing TestKube scenario against
-those exact image digests. The 979 PR run is linked to the PR and auto-cancels
-when its head changes; only results for the latest head count. The separate 440
-push-triggered run remains the producer and is not itself e2e evidence.
-The fetch CLI's `trivyVersion` comes from the verified producer scan metadata.
-The pipeline installs that version and uses one fresh database for the
-comparison, reusing the producer database while its evidence is fresh.
-Host prerequisites precede producer
-fetching; comparison runs only after scanner/Python preparation succeeds.
+`CandidateCapacity` validates receipts, frozen DB and source-bound placements/
+retained-host state before admission. `CandidateScan` reuses fresh findings;
+after 24 hours it rescans the receipt-bound digest and uses that frozen DB for
+the baseline. Both paths use the verified producer scanner version and canonical
+configuration, installed before comparison. Missing/invalid snapshots or
+incomparable refreshes fail closed; legacy report-only artifacts cannot pass.
+A failed/blocked scan does not skip functional lanes but still prevents approval.
+Full findings remain in the authenticated log; DB bytes stay in the protected
+artifact. Signing covers only `payload.json`, leaving original Buildx
+`push-metadata.json` readable for digest-bound push receipts/scanning.
+Comparison has no severity, fixability or CVE filters. Open/new findings
+(including Go standard library) in the exact
+`opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
+and `opt/promconfigvalidator` targets remain unresolved/deferred to the separate
+Collector upgrade, not fixed. Other targets' findings fail; missing evidence
+blocks. All raw findings are retained.
+
+`candidateScenario: all` runs the nine required lanes; see the
+[scenario runbook](../../otelcollector/test/scenarios/README.md) for lane selection,
+placements, exclusive locks, retained-host ownership and bootstrap revocation.
+Read-only admission checks source/build bindings, pool/version compatibility and
+fixture ownership; each lane still performs live preflight. There is **no capacity
+or quota admission** despite the compatibility name `CandidateCapacity`.
+Provisioning/scale-out can fail for insufficient capacity or quota.
+Persistent profile resource groups are retained, ownership-checked and never
+automatically deleted; local kubeconfigs are removed. Tests are serialized per
+profile, but automatic cluster upgrades remain enabled independently.
+The trusted pipeline checkout may contain harness/scanner repairs while product
+images remain immutable; publication records pipeline/product/test revisions.
+Product changes require a matching protected producer; test changes require
+fresh execution at the recorded test-source SHA. Earlier branch passes do not
+validate the consolidated tree.
 
 ### Vulnerability Management findings for Linux and Windows
 
@@ -303,11 +218,9 @@ and digest binding, source-preserving reconciliation and fix-or-blocker contract
 Do not substitute workstation results for agent consumption. Trivy deferrals
 do not establish Kusto closure; absent or stale Kusto rows are not closure.
 
-Each row publishes `coverage.json` as a report-only plan, never as proof of
-execution. Known coverage blockers do not fail individual runs. Functional,
-scan, and cleanup failures still fail. The report lists blocked scenarios,
-variants such as `helm-customer-values`, and test suites. A new runnable matrix
-row or unaccounted variant still fails coverage planning before provisioning.
+`coverage.json` is report-only, not execution proof. Known blockers (including
+`helm-customer-values`) do not fail individual runs; functional, scan and cleanup
+failures do. New runnable rows or unaccounted variants fail planning before provisioning.
 
 Before merge approval, every required lane must have a passing result and
 non-empty executed JUnit for the same test source, product source, producer build,
@@ -315,14 +228,12 @@ and candidate digests. Missing, skipped, failed, or mismatched results do not
 count. Cross-run approval enforcement is not implemented. The strict
 `candidate_coverage.py --require-unblocked` mode still fails on global plan
 blockers when explicitly requested; it is not wired to merge approval.
-The nine-row harness runs config-processing variants, five health suites and
-fresh ingestion; it does not run every repository Ginkgo package.
-`coverage.json` also reports `regionTests` as blocked: its specific deployed recording-rule
-and AMW usage/limits checks need an owned rule and authorization adapter
-(`parmRuleName`, `parmAmwResourceId`). Overlapping health checks do not replace
-those tests. Nine successful rows alone must not be reported as all repo tests passing.
+The harness runs config-processing, five health suites and fresh ingestion,
+not every Ginkgo package. `regionTests` remains blocked pending its owned
+recording rule and AMW authorization adapter (`parmRuleName`, `parmAmwResourceId`).
+Overlapping health checks or nine passing rows do not mean all repo tests passed.
 
-The ci-sre instruction contract is:
+### Agent loop
 
 1. Freeze the baseline, scan it with Trivy and collect a fresh complete Kusto
    snapshot for Linux and Windows through the actual agent connector. Bind and
@@ -336,26 +247,23 @@ The ci-sre instruction contract is:
    Run local checks, then commit/push only within the human-approved write scope.
 3. Observe the push-triggered build for that exact branch/head. Persist its run
    identity; do not queue a duplicate when a push run already exists.
-4. Read build/scan/test failures and raw evidence. Diagnose and fix the source or
-   harness defect within ownership, then push another commit and repeat. There is
-   no one-retry limit and no automatic pipeline-supplied fix. Infrastructure,
-   missing-permission or owner conflicts require the corresponding real action,
-   not speculative package changes.
+4. Diagnose build/scan/test failures from raw evidence, fix source/harness defects
+   within ownership and repeat. Infrastructure, permission and owner conflicts
+   require real remediation, not speculative package changes.
 5. On every changed head/base, invalidate previous build/image/test/closure verdicts.
-   Require current-head component receipts, exact tested child digests, every
-   baseline finding closed, no new findings, the PR-linked 979 e2e run for that
-   exact head, the required scenario tier and verified restoration. Require fresh
+   Require current-head component receipts, exact tested child digests, all
+   non-deferred findings closed with no new non-deferred findings, the PR-linked
+   979 e2e run for that head, the required scenario tier and verified restoration.
+   Deferred Collector findings remain unresolved. Require fresh
    source-specific Kusto evidence for the relevant digests as well; missing or
    pending external scans remain explicit blockers, not successful rescans.
 6. Publish the evidence PR and request human review only with honest scope.
    Never approve/merge, silently waive failing tests, treat skipped/not-run as
    passed or re-label an earlier successful image as the new build.
 
-Keep iterating while there is an evidenced actionable fix. Monitor the PR's own
-979 run and required checks for the latest head; after each pushed fix, wait for
-the new producer and PR e2e run before evaluating readiness. A real external blocker
-pauses with durable diagnostics and the exact missing action; repeated identical
-failures without a new hypothesis are not useful iteration.
+After each fix, wait for the latest producer and PR e2e checks. Continue while
+there is an evidenced actionable fix; external blockers need durable diagnostics
+and the exact missing action, not identical retries.
 
 For now, print the intended Teams approval/results message in the automation
 output only. Do not configure or send a Teams message.
@@ -363,11 +271,10 @@ output only. Do not configure or send a Teams message.
 ### Trigger/input/output
 
 An approved ci-sre campaign request starts the branch loop; scheduling is separate.
-The protected pipeline
-accepts a campaign ID, allowlisted repository, exact source/base commits, immutable
-baseline image references, selected vulnerability IDs and an approved scenario
-profile. Stage-specific approval references bind the exact intended action and
-resources. A string supplied as `approved: true` is not authorization.
+The planned adapter must bind the allowlisted repository, exact source/base
+commits, immutable baseline image references and approved scenario profile.
+Stage-specific approvals must bind the intended action and resources; a string
+supplied as `approved: true` is not authorization.
 
 The pipeline adapter reads run status/artifacts, and can queue the allowlisted
 pipeline only for an explicitly approved run not already triggered by a push.
@@ -406,14 +313,8 @@ store. Verify actual adapter authentication support rather than promising MSI.
 
 ### Remaining deployment prerequisites
 
-Read-only verification of the existing ci-sre found it Running in review mode.
-Code Access now contains six repositories: `Docker-Provider`,
-`InfrastructureInsights`, `Microsoft_Azure_ContainerInsightsExt`, `aks-rp`,
-`ci-build` and `Azure/prometheus-collector`. The user confirmed that the former
-`fluent-bit`, `fluentd` and `telegraf` entries were intentionally removed. The
-repository connection test passes using the existing `azure-monitor-assistant`
-GitHub App, and the host auth domain reports `GitHubApp`. The original OAuth
-attempt was unrelated to this app; do not retry its SSO flow.
+Code Access uses the existing `azure-monitor-assistant` GitHub App. Do not retry
+the unrelated `SREAgent-OAuth` flow or restore intentionally removed repositories.
 
 | Code Access field | Value |
 |---|---|
@@ -421,47 +322,27 @@ attempt was unrelated to this app; do not retry its SSO flow.
 | Private key URI (Key Vault) | Existing app key's Key Vault **key** URI |
 | Key Vault identity | ci-sre's existing user-assigned managed identity |
 
-Use the Key Vault **key** URI (`/keys/`), not the legacy secret URI (`/secrets/`);
-the private key remains in Key Vault. The selected ci-sre identity needs the
-Key Vault cryptographic permission required to sign with this key. The ci-sre
-identity's Key Vault Crypto User assignment was verified before the Code Access
-test. Do not repeat the unrelated `SREAgent-OAuth` SSO flow.
+Use `/keys/`, not `/secrets/`; the private key stays in Key Vault. ci-sre needs
+its own managed identity with signing permission (Key Vault Crypto User).
+Keep app identifiers in approved configuration, not this repository. Code Access
+validation does not verify the separate `github` data connector's PR/action
+identity; that connector remains `GitHubOAuth` by user decision.
 
-The Client ID and key URI were verified in the existing
-`managed-prometheus-agent-tsg` setup; ci-sre must use its own managed identity.
-Keep those identifiers in the approved configuration surface rather than
-committing them here. The separate ci-sre `github` data connector remains
-`GitHubOAuth` by user decision; Code Access validation does not verify that
-connector's PR/action identity. The successful Code Access test returned HTTP
-200 with `isSuccessful: true`.
-
-Next, approve branch writes and pipeline publication, and verify effective 1ES
-expansion.
-Configure/test the actual pipeline read/queue adapter and least-privilege identities; approve
-dedicated Linux/Windows scan/build workers and CoMET coverage; attest candidate
-build receipts; connect the scenario owner's live cluster execution; persist and
-retrieve campaign artifacts from ADO after agent restarts. Demonstrate one complete
-remote campaign before calling the SRE integration deployed.
-
-None of those deployment/permission changes is authorized merely by this runbook.
-Full-matrix success remains required before advertising the PR as merge-ready.
-The release manifest and Monday consumer spec follow in Phase 3; no release
-orchestration is installed by Phase 1.
+Before calling the integration deployed: approve branch writes/publication,
+verify 1ES expansion, test the actual pipeline adapter and least-privilege
+identities, approve dedicated Linux/Windows workers and CoMET coverage, attest
+receipts, connect live scenario execution, and demonstrate durable ADO artifact
+retrieval after restart in one complete remote campaign.
+This runbook authorizes no deployment/permission changes. Full-matrix success is
+required for merge readiness; Phase 1 installs no release orchestration.
 
 ### Native advisory log report
 
-The producer scan hook emits `SCAN_ADVISORY` and `NATIVE_ADVISORY_REPORT`
-rows using its existing Trivy result, without adding protected artifact files.
-The reporter hashes the actual executables from digest-verified image layers
-without executing the image or scanning again. Only hashes with existing
-code-level evidence can confirm a finding; version matches alone remain
-potential associations. Missing files, unsupported links or registry failures
-are reported as `binaryIdentityError`, not clearance.
-Known shipped binaries have investigated embedded inventories; other image
-versions and failed advisory lookups remain BLOCKED rather than clear. Shared
-RPM findings are potential associations, and their fixed RPM versions are not
-ME or mdsd package upgrade recommendations. Advisory sources are incomplete.
-Confirmed byte-bound findings emit FAIL; incomplete inventory, applicability,
-backport evidence or lookup failures emit BLOCKED, never PASS. These diagnostic
-rows do not grant scan approval or replace the frozen-DB admission checks and
-authenticated complete Trivy report. No native-clearance path is implemented.
+`SCAN_ADVISORY` and `NATIVE_ADVISORY_REPORT` reuse Trivy results and hash
+executables from digest-verified layers without executing images, rescanning or
+adding artifact files. Only byte-bound code evidence confirms findings (FAIL).
+Version/RPM matches are potential associations, not ME/mdsd upgrade advice.
+Missing files, unsupported links and registry failures yield `binaryIdentityError`.
+Incomplete inventory, applicability/backport evidence or lookups remain BLOCKED,
+never PASS. These diagnostics cannot grant native clearance or replace the
+authenticated full Trivy report and frozen-DB checks.
