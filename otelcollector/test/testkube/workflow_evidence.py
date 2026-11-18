@@ -159,6 +159,10 @@ def report_counts(artifact_dir):
     suites = json.loads(reports["ginkgo.json"].read_text(encoding="utf-8"))
     if not isinstance(suites, list) or not suites:
         raise ValueError("missing Ginkgo suite reports")
+    if not all(suite.get("SuiteSucceeded") is True for suite in suites):
+        # Compile failures have SpecReports=null; the cause is at the end of the special reasons.
+        reasons = [str(reason)[-1000:] for suite in suites for reason in suite.get("SpecialSuiteFailureReasons") or []]
+        raise ValueError("Ginkgo suite did not succeed" + "".join("\n" + reason for reason in reasons))
     reports_all = [spec for suite in suites for spec in suite.get("SpecReports", [])]
     specs = [spec for spec in reports_all if spec.get("LeafNodeType") == "It"]
     states = [spec.get("State") for spec in specs]
@@ -168,8 +172,6 @@ def report_counts(artifact_dir):
         "skipped": states.count("skipped") + states.count("pending"),
         "failed": sum(state not in {"passed", "skipped", "pending"} for state in states),
     }
-    if not all(suite.get("SuiteSucceeded") is True for suite in suites):
-        raise ValueError("Ginkgo suite did not succeed")
     if any(suite.get("SuiteConfig", {}).get("DryRun") for suite in suites):
         raise ValueError("dry runs are not execution evidence")
     if any(spec.get("State") not in {"passed", "skipped", "pending"} for spec in reports_all):

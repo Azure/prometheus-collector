@@ -167,6 +167,13 @@ class WorkflowEvidenceTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     report_counts(self.artifacts)
 
+    def test_compile_failure_surfaces_suite_reason(self):
+        self.suites = [{"SuiteSucceeded": False, "SpecReports": None,
+                        "SpecialSuiteFailureReasons": ["Failed to compile configprocessing:\nstream ID 59; INTERNAL_ERROR"]}]
+        self.write_reports()
+        with self.assertRaisesRegex(ValueError, "(?s)did not succeed.*INTERNAL_ERROR"):
+            report_counts(self.artifacts)
+
     def test_gate_requires_exact_scenarios_and_rechecks_retained_evidence(self):
         result = {
             "environment": "default-targets-on-v2", "status": "passed",
