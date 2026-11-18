@@ -1370,6 +1370,14 @@ class Contracts(unittest.TestCase):
                                               "configmap/windows-exporter-config", "-n", "monitoring",
                                               "--ignore-not-found", "--wait=true", "--timeout=5m")
                 self.assertEqual(deleted, expected)
+                self.assertNotIn(("delete", "namespace", "monitoring"), [c.args[:3] for c in host.kube.call_args_list])
+                if "windows" in platforms:
+                    host.kube.reset_mock()
+                    host.created_monitoring = True
+                    runner.cleanup_reference_apps(host)
+                    host.kube.assert_any_call("delete", "namespace", "monitoring", "--ignore-not-found",
+                                              "--wait=true", "--timeout=5m")
+                    del host.created_monitoring
                 host.kube.assert_any_call("delete", "service", "candidate-otlp", "-n", "kube-system",
                                           "--ignore-not-found", "--wait=true", "--timeout=5m")
                 host.kube.reset_mock()
@@ -1380,7 +1388,7 @@ class Contracts(unittest.TestCase):
 
     def test_reused_reference_apps_are_isolated_and_cleaned_even_after_failure(self):
         for failure, platforms in ((None, ["linux"]), ("tests", ["linux"]), ("cleanup", ["linux"]),
-                                   (None, ["linux", "windows"])):
+                                   (None, ["linux", "windows"]), ("shared-namespace", ["linux", "windows"])):
             with self.subTest(failure=failure, platforms=platforms), tempfile.TemporaryDirectory() as temporary:
                 args = types.SimpleNamespace(evidence=Path(temporary), run_id="run", max_run_seconds=60,
                                              admitted_existing=True, test_source_sha="b" * 40, settle_seconds=0)
@@ -1398,7 +1406,8 @@ class Contracts(unittest.TestCase):
                              ("Service", "candidate-otlp")}
                 if "windows" in platforms:
                     leftovers |= {("DaemonSet", "windows-exporter"), ("ConfigMap", "windows-exporter-config")}
-                resources = set(leftovers) | {("Service", "unrelated")}
+                unrelated = {("Service", "unrelated")} | ({("Namespace", "monitoring")} if failure == "shared-namespace" else set())
+                resources = set(leftovers) | unrelated
                 health_applied = False
 
                 def kube(*command, **kwargs):
@@ -1423,12 +1432,19 @@ class Contracts(unittest.TestCase):
                     if command[:3] == ("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config"):
                         resources.difference_update({("DaemonSet", "windows-exporter"),
                                                      ("ConfigMap", "windows-exporter-config")})
+                    if command[:3] == ("get", "namespace", "monitoring"):
+                        return "namespace/monitoring" if ("Namespace", "monitoring") in resources else ""
+                    if command[:3] == ("create", "namespace", "monitoring"):
+                        self.assertNotIn(("Namespace", "monitoring"), resources)
+                        resources.add(("Namespace", "monitoring"))
+                    if command[:3] == ("delete", "namespace", "monitoring"):
+                        resources.discard(("Namespace", "monitoring"))
                     if command[:3] == ("delete", "service", "candidate-otlp"):
                         resources.discard(("Service", "candidate-otlp"))
                     return ""
 
                 def settings(*unused):
-                    self.assertEqual(resources, {("Service", "unrelated")})
+                    self.assertEqual(resources, unrelated)
                     if failure == "tests":
                         raise RuntimeError("settings failed")
                     return {"status": "passed"}
@@ -1446,21 +1462,23 @@ class Contracts(unittest.TestCase):
                         audit_images=Mock(return_value=[]), settings_slot=Mock(side_effect=settings),
                         run_suite=Mock(return_value={}), verify_ingestion=Mock(return_value={})), \
                         patch.object(runner.time, "sleep"):
-                    if failure:
+                    if failure in ("tests", "cleanup"):
                         with self.assertRaisesRegex(RuntimeError, "settings failed" if failure == "tests"
                                                     else "fixture deletion failed"):
                             runner.execute(args, row, {"custom": selected}, Mock())
                     else:
                         runner.execute(args, row, {"custom": selected}, Mock())
                 result = runner.load(args.evidence / "result.json")
-                self.assertEqual(result["status"], "FAIL" if failure else "PASS")
+                self.assertEqual(result["status"], "FAIL" if failure in ("tests", "cleanup") else "PASS")
                 self.assertEqual("fixtureCleanupError" in result, failure == "cleanup")
                 if failure != "cleanup":
-                    self.assertEqual(resources, {("Service", "unrelated")})
+                    self.assertEqual(resources, unrelated)
                 if "windows" in platforms:
                     host.kube.assert_any_call("apply", "-f", str(runner.TEST_SOURCE / runner.WINDOWS_EXPORTER))
                     host.kube.assert_any_call("rollout", "status", "daemonset/windows-exporter",
                                               "-n", "monitoring", "--timeout=10m")
+                    self.assertEqual(unittest.mock.call("create", "namespace", "monitoring") in host.kube.call_args_list,
+                                     failure != "shared-namespace")
                 host.retain.assert_called_once()
 
     def test_health_configmaps_are_restored_after_budget_exhaustion_without_settings(self):

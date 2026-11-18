@@ -1632,9 +1632,11 @@ def cleanup_reference_apps(host):
         host.kube("delete", "-f", str(TEST_SOURCE / fixture), "-n", "default",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
     if "windows" in host.scenario["platforms"]:
-        # Leave the shared monitoring namespace; deleting it would cascade to unrelated resources.
         host.kube("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config", "-n", "monitoring",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
+        # Only a namespace this run created; a pre-existing one may hold unrelated resources.
+        if getattr(host, "created_monitoring", False):
+            host.kube("delete", "namespace", "monitoring", "--ignore-not-found", "--wait=true", "--timeout=5m")
     if host.scenario["id"] == "otlp":
         host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
@@ -1788,6 +1790,10 @@ def execute(args, scenario, variants, commands):
             host.kube("apply", "-f", str(TEST_SOURCE / "internal/referenceapp" / name))
         if "windows" in scenario["platforms"]:
             # The test settings enable windowsexporter; CI clusters get the exporter from this installer.
+            if not host.kube("get", "namespace", "monitoring", "--ignore-not-found", "-o", "name").strip():
+                # create fails if another actor made it first, so only a namespace this run owns is deleted.
+                host.kube("create", "namespace", "monitoring")
+                host.created_monitoring = True
             host.kube("apply", "-f", str(TEST_SOURCE / WINDOWS_EXPORTER))
             host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=10m")
         monitors = list(yaml.safe_load_all(
