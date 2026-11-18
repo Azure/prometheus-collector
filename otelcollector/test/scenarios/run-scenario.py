@@ -941,6 +941,30 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
             generated.unlink()
 
 
+def snapshot(host, identities):
+    originals = {}
+    for kind, name, namespace in identities:
+        output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
+                           private=True)
+        if kind == "Namespace" and output.strip():
+            raise ValueError(f"Fixture namespace already exists; refusing mutation: {name}")
+        originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
+    return originals
+
+
+def restore(host, originals):
+    for (kind, name, namespace), original in reversed(list(originals.items())):
+        if original is None:
+            host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
+        else:
+            host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
+        readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",
+                             "-o", "json", private=True)
+        actual = clean_resource(json.loads(readback)) if readback.strip() else None
+        if actual != original:
+            raise RuntimeError(f"Baseline restoration mismatch: {kind}/{name}")
+
+
 def settings_slot(host, variant):
     if variant.get("helmValues"):
         raise ValueError("Customer Helm install adapter is not implemented; refusing addon substitution")
@@ -968,13 +992,7 @@ def settings_slot(host, variant):
                     doc["metadata"].get("namespace", "default"))
         if identity not in identities:
             identities.append(identity)
-    originals = {}
-    for kind, name, namespace in identities:
-        output = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json",
-                           private=True)
-        if kind == "Namespace" and output.strip():
-            raise ValueError(f"Fixture namespace already exists; refusing mutation: {name}")
-        originals[(kind, name, namespace)] = clean_resource(json.loads(output)) if output.strip() else None
+    originals = snapshot(host, identities)
     error = None
     try:
         for name in RESET:
@@ -1018,16 +1036,7 @@ def settings_slot(host, variant):
         run_deadline = host.commands.deadline
         host.commands.deadline = time.monotonic() + 600
         try:
-            for (kind, name, namespace), original in reversed(list(originals.items())):
-                if original is None:
-                    host.kube("delete", kind, name, "-n", namespace, "--ignore-not-found")
-                else:
-                    host.kube("replace", "--force", "-f", "-", data=json.dumps(original), private=True)
-                readback = host.kube("get", kind, name, "-n", namespace, "--ignore-not-found",
-                                     "-o", "json", private=True)
-                actual = clean_resource(json.loads(readback)) if readback.strip() else None
-                if actual != original:
-                    raise RuntimeError(f"Baseline restoration mismatch: {kind}/{name}")
+            restore(host, originals)
         except RuntimeError as restore_failure:
             raise RuntimeError(f"Restoration failed; no next variant allowed. Original: {error}; "
                                f"restore: {restore_failure}") from restore_failure
@@ -1655,6 +1664,7 @@ def execute(args, scenario, variants, commands):
     outcome = {"scenario": scenario["id"], "runId": args.run_id, "executionEngine": "testkube",
                "sourceSha": source, "testSourceSha": args.test_source_sha, "status": "RUNNING", "settings": {}}
     reference_apps_ready = False
+    baseline = None
     commands.deadline = time.monotonic() + args.max_run_seconds
     try:
         outputs = host.provision(env, testkube[1], testkube[2], resolved["expectedPools"])
@@ -1732,6 +1742,8 @@ def execute(args, scenario, variants, commands):
                 if time.monotonic() >= deadline:
                     raise RuntimeError("Managed addon workloads remain; refusing competing Helm ownership")
                 time.sleep(10)
+        # Health and OTLP setup apply RESET ConfigMaps outside any settings slot.
+        baseline = snapshot(host, [("ConfigMap", name, "kube-system") for name in RESET])
         if scenario["id"] == "otlp":
             settings = yaml.safe_load(
                 (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml").read_text())
@@ -1798,8 +1810,12 @@ def execute(args, scenario, variants, commands):
     finally:
         commands.deadline = None
         try:
-            if reference_apps_ready:
-                cleanup_reference_apps(host)
+            try:
+                if baseline is not None:
+                    restore(host, baseline)
+            finally:
+                if reference_apps_ready:
+                    cleanup_reference_apps(host)
         except (RuntimeError, ValueError, OSError, KeyError) as failure:
             outcome.update(status="FAIL", fixtureCleanupError=str(failure))
             raise

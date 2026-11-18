@@ -150,7 +150,7 @@ steps:
 
 - task: AzureCLI@2
   displayName: "Run authenticated candidate scenario through existing TestKube harness"
-  timeoutInMinutes: 540
+  timeoutInMinutes: 1560
   inputs:
     azureSubscription: ${{ parameters.azureSubscription }}
     scriptType: bash
@@ -162,7 +162,8 @@ steps:
       [[ "$TEST_SOURCE_SHA" == "$CAPACITY_TEST_SOURCE_SHA" && "$(git -C "$BUILD_SOURCESDIRECTORY" rev-parse HEAD)" == "$TEST_SOURCE_SHA" ]] || { echo "Candidate test-source admission mismatch" >&2; exit 1; }
       [[ "$CANDIDATE_LOCATION" == centralus || "$CANDIDATE_LOCATION" == eastus2 || "$CANDIDATE_LOCATION" == westcentralus ]] || { echo "Campaign admission has no approved placement" >&2; exit 1; }
       case "$CANDIDATE_SCENARIO" in
-        default|acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800 ;;
+        default) max_run_seconds=86400 ;;
+        acns|acns-cilium|otlp|operator-secret-watch) max_run_seconds=28800 ;;
         *) echo "Unsupported candidate scenario" >&2; exit 1 ;;
       esac
       CANDIDATE_RUN_ID="$("$PYTHON" -c 'import uuid; print(uuid.uuid4())')"

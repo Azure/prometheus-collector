@@ -114,6 +114,8 @@ class Contracts(unittest.TestCase):
                 def kube(*a, **kw):
                     if "secret/aad-msi-auth-token" in a and failure == "secret":
                         raise RuntimeError("probe-failure")
+                    if a[:2] == ("get", "ConfigMap"):
+                        return ""
                     return {"items": []}
 
                 host.az.side_effect = az
@@ -1447,6 +1449,58 @@ class Contracts(unittest.TestCase):
                 if failure != "cleanup":
                     self.assertEqual(resources, {("Service", "unrelated")})
                 host.retain.assert_called_once()
+
+    def test_health_configmaps_are_restored_after_budget_exhaustion_without_settings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = types.SimpleNamespace(evidence=Path(temporary), build_id=1, max_run_seconds=60, run_id="run",
+                                         subscription=runner.BUILD_SUBSCRIPTION, location="eastus2",
+                                         admitted_existing=True, test_source_sha="b" * 40, settle_seconds=0)
+            row = dict(scenario(), id="acns", platforms=["linux"], clusterFeatures=[], settingsVariants=[])
+            commands = Mock(deadline=None)
+            host = Mock(spec=runner.Host, args=args, scenario=row, reused=True)
+            host.receipt = {"resourceGroup": "owned"}
+            host.kubeconfig = args.evidence / "kubeconfig"
+            host.provision.return_value = {"clusterName": "cluster"}
+            host.az.return_value = {"kubernetesVersion": "1.36.5"}
+            host.retain.return_value = {"retained": True}
+            present = set()
+
+            def kube(*command, **kwargs):
+                if command[:2] == ("get", "nodes"):
+                    return {"items": []}
+                if command[0] == "apply" and command[1:2] == ("-f",) and command[2] != "-":
+                    for doc in runner.yaml.safe_load_all(Path(command[2]).read_text()):
+                        if doc and doc["kind"] == "ConfigMap" and doc["metadata"]["name"] in runner.RESET:
+                            present.add(doc["metadata"]["name"])
+                if command[:2] == ("delete", "ConfigMap"):
+                    self.assertIsNone(commands.deadline)
+                    present.discard(command[2])
+                if command[:2] == ("get", "ConfigMap") and command[2] in present:
+                    raise AssertionError("snapshot or readback saw a run-created ConfigMap")
+                return ""
+
+            host.kube.side_effect = kube
+
+            def exhausted(*unused, **kwargs):
+                self.assertEqual(present, set(runner.RESET))
+                raise RuntimeError("Execution time budget exhausted")
+
+            with patch.multiple(runner,
+                    verified_candidate=Mock(return_value=({"source": {"commit": "a" * 40}}, {})),
+                    label_filter=Mock(return_value=""),
+                    preflight=Mock(return_value={"expectedPools": [], "kubernetesVersion": "1.36.5", "existing": True}),
+                    candidate_receipt=Mock(return_value=([], {})),
+                    prepare_testkube=Mock(return_value=("chart", "principal", "User")),
+                    deployment_env=Mock(return_value={}), Host=Mock(return_value=host),
+                    bootstrap_testkube=Mock(return_value={"agentPoolProfiles": []}),
+                    verify_pool_inventory=Mock(return_value={}), render_chart=Mock(return_value="chart"),
+                    audit_images=Mock(return_value=[]), cleanup_reference_apps=Mock(),
+                    run_suite=Mock(side_effect=exhausted)), \
+                    patch.object(runner.time, "sleep"):
+                with self.assertRaisesRegex(RuntimeError, "budget exhausted"):
+                    runner.execute(args, row, {}, commands)
+            self.assertEqual(present, set())
+            self.assertEqual(runner.load(args.evidence / "result.json")["status"], "FAIL")
 
     def test_secret_watch_requires_effective_locks_before_cluster_access(self):
         with tempfile.TemporaryDirectory() as temporary:

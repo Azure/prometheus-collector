@@ -291,7 +291,10 @@ When an administrator bootstrap was recorded, cleanup also verifies its role
 assignment disappeared after deleting the owned group.
 A four-hour execution budget bounds commands by default; `--max-run-seconds`
 changes it. Settings restoration and readback use a separate ten-minute budget,
-even after execution expires. Retention recording and kubeconfig removal still run.
+even after execution expires. After execution, the four reset ConfigMaps are
+restored to their pre-health snapshot without a run deadline, even when no settings
+variant ran. Retention recording and kubeconfig removal still run. CI gives the
+41-variant default lane 24 hours (other lanes 8), a 26-hour step and a 28-hour job.
 The cleanup action applies only to earlier nonpersistent executions:
 
 ```powershell
