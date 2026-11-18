@@ -64,10 +64,8 @@ def load(directory, now, *, binary_targets=False):
                            "findings": findings}
 
 
-def compare(baseline, candidate, receipt, requested, now=None):
+def compare(baseline, candidate, receipt, now=None):
     normalize.validate_targets(receipt)
-    if not requested or any(not re.fullmatch(r"CVE-[0-9]{4}-[0-9]+", cve) for cve in requested):
-        raise ValueError("Explicit selected CVEs required")
     now = now or datetime.now(timezone.utc)
     before_meta, before, previous = load(baseline, now, binary_targets=True)
     after_meta, after, current = load(candidate, now, binary_targets=True)
@@ -103,24 +101,9 @@ def compare(baseline, candidate, receipt, requested, now=None):
             "status": status,
         })
 
-    smoke_tests = []
-    for cve in sorted(set(requested)):
-        prior = [f for f in previous["findings"] if f["id"] == cve]
-        present = [f for f in current["findings"] if f["id"] == cve]
-        statuses = [row["status"] for row in baseline_findings
-                    if row["finding"]["id"] == cve]
-        if any(not deferred(f) for f in present):
-            status = "OPEN"
-        elif "NOT_REPORTED" in statuses:
-            status = "NOT_REPORTED"
-        elif present:
-            status = "DEFERRED"
-        else:
-            status = "CLOSED" if prior else "NOT_REPORTED"
-        smoke_tests.append({"id": cve, "status": status})
     new_findings = [dict(finding, status="DEFERRED" if deferred(finding) else "NEW")
                     for finding in current["newFindings"]]
-    statuses = {row["status"] for row in baseline_findings + smoke_tests + new_findings}
+    statuses = {row["status"] for row in baseline_findings + new_findings}
     verdict = ("BLOCKED" if "NOT_REPORTED" in statuses
                else "FAIL" if statuses & {"NEW", "OPEN"} else "PASS")
     return {
@@ -131,7 +114,6 @@ def compare(baseline, candidate, receipt, requested, now=None):
         "deferredTargets": sorted(DEFERRED_TARGETS),
         "baselineFindingCount": len(baseline_findings),
         "baselineFindings": baseline_findings,
-        "smokeTests": smoke_tests,
         "supportedCoverage": ["Trivy vulnerability scan of the ama-metrics collector linux/amd64 child"],
         "unsupportedCoverage": [
             "Collector linux/arm64 and Windows images",
@@ -149,9 +131,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("baseline", "candidate", "receipt", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
-    parser.add_argument("--cve", required=True, action="append")
     args = parser.parse_args()
-    result = compare(args.baseline, args.candidate, normalize.read_json(args.receipt), args.cve)
+    result = compare(args.baseline, args.candidate, normalize.read_json(args.receipt))
     with args.output.open("x", encoding="utf-8") as output:
         json.dump(result, output, indent=2)
         output.write("\n")

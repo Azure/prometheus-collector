@@ -33,15 +33,6 @@ at least 2,880 minutes old. Non-main runs no longer request that refresh.
   upgrade; missing target/package evidence and open or new findings in other
   targets still block. It cannot clear a Qualys QID or claim full-image coverage. OS targets
   must match the scan's exact image ref and OS metadata; binary paths remain exact.
-- `published_discovery.py` and `published-images.json`: compare the pinned
-  production and latest-main collector `linux/amd64` child digests with Trivy
-  0.76.1, the same database snapshot and identical configuration. The main image
-  came from build 131326: its collector amd64 child was published while the
-  overall build remained in progress and the Windows 2019/index outputs were
-  pending. The report is discovery-only; absence from the main scan is not proof
-  of a fix. `published-scan-steps.yml` runs this without a 440 artifact, Azure
-  service connection, cluster, deployment, or cleanup step. The scan-only 979
-  route still requires exact-source preview and its routing guard before a live run.
 - `scan.ps1` and `scan-steps.yml`: ported per-child CoMET/OIDC producer, output
   ownership guards and scoped cleanup. They still require dedicated trusted
   workers, approved scanner digests and verified onboarding. Coverage is explicitly
@@ -96,15 +87,13 @@ These are executable repository components, **not a deployed Azure SRE Agent
 integration or an end-to-end passing campaign**.
 
 ```powershell
-python .pipelines\pr-e2e\published_discovery.py --manifest .pipelines\pr-e2e\published-images.json --output <new-discovery-directory>
 python .pipelines\pr-e2e\scan_trivy.py --image <repository@sha256:child> --platform linux/amd64 --output <new-run-directory>
 python .pipelines\pr-e2e\scan_trivy.py --image <candidate-repository@sha256:child> --platform linux/amd64 --database-from <fresh-baseline-run> --output <new-candidate-run>
-python .pipelines\pr-e2e\compare_trivy.py --baseline <fresh-baseline-run> --candidate <new-candidate-run> --receipt .pipelines\pr-e2e\candidate-build.json --cve CVE-2026-63209 --output <new-comparison.json>
+python .pipelines\pr-e2e\compare_trivy.py --baseline <fresh-baseline-run> --candidate <new-candidate-run> --receipt .pipelines\pr-e2e\candidate-build.json --output <new-comparison.json>
 python .pipelines\pr-e2e\normalize.py --targets <candidate-targets.json> --scans <candidate-lanes> --baseline-targets <baseline-targets.json> --baseline-scans <baseline-lanes> --output <new-report-directory>
 python .pipelines\pr-e2e\build_receipt.py --build <ado-build.json> --pushes <linux-push.json> <windows-push.json> <allocator-push.json> <cfg-push.json> --runner-receipt <runner.json> --output .pipelines\pr-e2e\candidate-build.json
 python .pipelines\pr-e2e\fetch_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --output <new-evidence-directory>
-python .pipelines\pr-e2e\scan_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --baseline-image <released-ama-metrics-child@sha256> --platform linux/amd64 --cve CVE-2026-63209 --output <new-scan-evidence-directory>
-python -m unittest discover -s .pipelines\pr-e2e -p 'test_*.py' -v
+python .pipelines\pr-e2e\scan_candidate.py --build-id <successful-build-id> --source-commit <full-candidate-sha> --baseline-image <released-ama-metrics-child@sha256> --platform linux/amd64 --output <new-scan-evidence-directory>
 ```
 
 CoMET lane layout is `<name>/<os>/<Windows-osVersion-if-present>/<arch>/`, containing
@@ -224,15 +213,13 @@ adapter before deployment; do not assume these local Copilot tools exist in SRE 
 
 ### Branch trigger and agent iteration
 
-Use `sre/vuln/<campaign-id>` for the SRE remediation branch and commit
-`.pipelines/pr-e2e/campaign.json` with
-`{"schemaVersion":1,"cve":"CVE-YYYY-N"}`.
+Use `sre/vuln/<campaign-id>` for the SRE remediation branch.
 The build pipeline includes this namespace alongside its existing main, OTel,
 Dependabot and `*/ama-metrics-sre-*` triggers. A successful 440 completion
 triggers pipeline 979 for either SRE campaign branch form only after that
 completion filter is present on 979's default branch. The campaign PR trigger
 also runs 979 directly and binds its run to the source head's successful 440
-build. The candidate run validates the source, CVE and protected receipts before
+build. The candidate run validates the source and protected receipts before
 provisioning. The push-receipt and candidate-build validators accept both SRE
 branch forms. Pipeline 440's collector Trivy scan publishes reusable structured
 `sre-trivy-collector` evidence, including the hashed vulnerability DB snapshot
@@ -251,17 +238,17 @@ is retained only in the protected artifact. The
 producer signs only `payload.json` in the collector and allocator signing folders;
 the original Buildx `push-metadata.json` remains readable JSON for immutable
 push receipts and the collector scanner. No mutable-tag lookup replaces that binding.
-This POC's `.pipelines/pr-e2e/campaign.json` selects `CVE-2026-63209` as a smoke test;
-the scanner evaluates every baseline finding without severity or fixability
-filters. Open and new findings (including Go standard library findings) in the exact
+The scanner compares every baseline and candidate finding, without severity,
+fixability, or CVE selection filters. Open and new findings (including Go standard
+library findings) in the exact
 `opt/microsoft/otelcollector/otelcollector`, `opt/microsoft/otelcollector/prometheusui`
 and `opt/promconfigvalidator` targets
 are reported unresolved/deferred to the
-separate Collector upgrade, not treated as fixed. The same CVE in any other
-target still fails; missing evidence still blocks.
+separate Collector upgrade, not treated as fixed; findings in any other target
+still fail, and missing evidence still blocks.
 All raw findings remain in the comparison evidence. A
-manually queued 979 candidate run can instead supply `candidateBuildId`,
-`candidateSourceSha` and `candidateCve`. Candidate runs retain their run-owned
+manually queued 979 candidate run can instead supply `candidateBuildId` and
+`candidateSourceSha`. Candidate runs retain their run-owned
 resource group and publish its inventory; the pipeline removes its local kubeconfig
 but never invokes cloud cleanup. `candidateScenario: all` (the default) runs
 `default`, `linux`, `settings`, `mixed`, `autoscaler`, `uai`,
@@ -304,18 +291,6 @@ The pipeline installs that version and uses one fresh database for the
 comparison, reusing the producer database while its evidence is fresh.
 Host prerequisites precede producer
 fetching; comparison runs only after scanner/Python preparation succeeds.
-
-Published discovery also emits its full JSON through the private ADO scan log,
-framed as `AMA_METRICS_DISCOVERY_BEGIN/DATA/END`. The gzip/base64 envelope binds
-the discovery 979 build ID and source SHA separately from the image producer
-provenance, with SHA-256 over the decoded envelope. Existing log-read permission
-suffices; findings must not be copied to this public repository.
-`discovery_log.py read --input build-log.txt --manifest published-images.json
---build-id <979-id> --source-sha <979-sha> --output discovery.json` rejects
-incomplete/duplicate frames, bad checksums, and build/source/image mismatches.
-Obtain expected build/source from authenticated ADO metadata and the image
-manifest from that exact source, not from the unverified envelope. Verify an
-actual agent log round-trip before relying on this fallback.
 
 ### Vulnerability Management findings for Linux and Windows
 

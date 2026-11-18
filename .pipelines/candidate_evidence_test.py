@@ -311,10 +311,7 @@ class CandidateEvidenceTest(unittest.TestCase):
         scenario = next(item for item in pipeline["parameters"] if item["name"] == "candidateScenario")
         self.assertEqual(scenario["default"], "all")
         self.assertEqual(set(scenario["values"]), {"all", "four-lane", *SCENARIOS})
-        cve = next(item for item in pipeline["parameters"] if item["name"] == "candidateCve")
-        self.assertEqual(cve["default"], "")
-        campaign = json.loads((directory / "pr-e2e" / "campaign.json").read_text())
-        self.assertEqual(campaign, {"schemaVersion": 1, "cve": "CVE-2026-63209"})
+        self.assertNotIn("candidateCve", {item["name"] for item in pipeline["parameters"]})
         include = jobs[1]["strategy"]["runOnce"]["deploy"]["steps"][0]
         self.assertEqual(include["parameters"]["scenario"], "${{ scenario }}")
         self.assertEqual(include["parameters"]["producerBuildId"], "$(campaignProducerBuildId)")
@@ -439,7 +436,8 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.assertIn("--baseline-image", scan_script)
         self.assertIn("--build-id \"$PRODUCER_BUILD_ID\"", scan_script)
         self.assertIn("--source-commit \"$CANDIDATE_SOURCE_SHA\"", scan_script)
-        self.assertIn("campaign.json", scan_script)
+        self.assertNotIn("campaign.json", scan_script)
+        self.assertNotIn("--cve", scan_script)
         self.assertEqual(scan["env"]["PRODUCER_BUILD_ID"], "$(candidateScanProducerBuildId)")
         self.assertEqual(scan["env"]["CANDIDATE_SOURCE_SHA"], "$(candidateScanSourceSha)")
         candidate_loop = next(stage for stage in pipeline["stages"]

@@ -96,7 +96,6 @@ tests use each suite's module-pinned Ginkgo CLI. Install dependencies only when 
 
 ```powershell
 python -m pip install -r otelcollector\test\scenarios\clusters\requirements.txt
-python otelcollector\test\scenarios\clusters\test_runner.py --mutations
 ```
 
 Provide the settings owner's `settings/catalog.json`, `manifest.schema.json`, and
@@ -379,10 +378,8 @@ files alone are not a published CI result.
    manifest-relative and preserving its reset/restore lifecycle. Helm values belong
    to an isolated customer-chart target, never `addonParams`. Empty Ginkgo labels
    must not select all suites.
-4. Run `test_runner.py --mutations`, matrix `validate`, Bicep module/parameter
-   compilation and the scenario's read-only `preflight`. Add a focused rejecting
-   case when introducing an incompatibility, and confirm it fails when that guard
-   is removed. Then run the same candidate lifecycle with authorized resources;
+4. Run matrix `validate`, Bicep module/parameter compilation and the scenario's
+   read-only `preflight`. Then run the same candidate lifecycle with authorized resources;
    retain JUnit, imageIDs, timing and retained-resource evidence before claiming coverage.
 
 No separate per-scenario runner, fixture copies, or additional scenario schema is

@@ -16,15 +16,13 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from candidate_evidence import filter_json
 
 
-def run(build_id, commit, baseline, platform, requested, output, verified_candidate=None):
+def run(build_id, commit, baseline, platform, output, verified_candidate=None):
     if not re.fullmatch(
             r"mcr\.microsoft\.com/azuremonitor/containerinsights/(?:ciprod|cidev)/prometheus-collector/images@sha256:[0-9a-f]{64}",
             baseline):
         raise ValueError("Expected an immutable released ama-metrics baseline child")
     if platform not in ("linux/amd64", "linux/arm64"):
         raise ValueError("This campaign scan covers Linux Trivy findings only")
-    if not requested or any(not re.fullmatch(r"CVE-[0-9]{4}-[0-9]+", cve) for cve in requested):
-        raise ValueError("Explicit selected CVEs required")
     output.mkdir(parents=True, exist_ok=False)
     if verified_candidate is None:
         verified_candidate = output / "verified-candidate"
@@ -54,7 +52,7 @@ def run(build_id, commit, baseline, platform, requested, output, verified_candid
     else:
         shutil.copytree(producer_scan, candidate_scan)
     scan_trivy.scan(baseline, platform, output / "baseline", candidate_scan)
-    result = compare_trivy.compare(output / "baseline", candidate_scan, receipt, requested)
+    result = compare_trivy.compare(output / "baseline", candidate_scan, receipt)
     with (output / "comparison.json").open("x", encoding="utf-8") as file:
         json.dump(result, file, indent=2)
         file.write("\n")
@@ -67,13 +65,12 @@ def main():
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--baseline-image", required=True)
     parser.add_argument("--platform", required=True, choices=("linux/amd64", "linux/arm64"))
-    parser.add_argument("--cve", required=True, action="append")
     parser.add_argument("--output", required=True, type=Path, help="New evidence directory")
     parser.add_argument("--verified-candidate", type=Path,
                         help="Previously fetched producer evidence to avoid a second artifact download")
     args = parser.parse_args()
     result = run(args.build_id, args.source_commit, args.baseline_image, args.platform,
-                 args.cve, args.output.resolve(), args.verified_candidate)
+                 args.output.resolve(), args.verified_candidate)
     print(json.dumps({"source": result["source"], "verdict": result["verdict"],
                       "scope": result["scope"], "findingPolicy": result["findingPolicy"],
                       "comparison": str(args.output.resolve() / "comparison.json")}, indent=2))
@@ -111,8 +108,6 @@ def main():
         status = finding["status"]
         public = {"status": status, "reason": reasons[status], "candidate": public_finding(finding)}
         log_row("SCAN_COMPARISON", public)
-    for row in result["smokeTests"]:
-        log_row("SCAN_SMOKE", {"id": row["id"], "status": row["status"], "reason": reasons[row["status"]]})
     return {"PASS": 0, "FAIL": 1, "BLOCKED": 2}[result["verdict"]]
 
 
