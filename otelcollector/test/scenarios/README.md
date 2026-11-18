@@ -289,8 +289,9 @@ when cloud cleanup fails. CI publication must unconditionally exclude credential
 files in case the process was killed before `finally`.
 When an administrator bootstrap was recorded, cleanup also verifies its role
 assignment disappeared after deleting the owned group.
-A four-hour execution budget bounds commands; retention recording and kubeconfig
-removal still run after the budget expires. `--max-run-seconds` changes that budget.
+A four-hour execution budget bounds commands by default; `--max-run-seconds`
+changes it. Settings restoration and readback use a separate ten-minute budget,
+even after execution expires. Retention recording and kubeconfig removal still run.
 The cleanup action applies only to earlier nonpersistent executions:
 
 ```powershell

@@ -1661,6 +1661,56 @@ class Contracts(unittest.TestCase):
                 host.args.evidence = Path(temporary)
                 runner.settings_slot(host, manifest)
 
+    def test_settings_restore_runs_after_the_execution_deadline(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary)
+            commands = runner.Commands(evidence)
+            commands.deadline = 100
+            host = runner.Host(types.SimpleNamespace(evidence=evidence, settle_seconds=0), scenario(), commands)
+            path = evidence / "settings.yaml"
+            original = {"apiVersion": "v1", "kind": "ConfigMap",
+                        "metadata": {"name": runner.RESET[0]}, "data": {"original": "true"}}
+            applied = {"apiVersion": "v1", "kind": "ConfigMap",
+                       "metadata": {"name": "variant-only"}, "data": {"variant": "true"}}
+            path.write_text(json.dumps(applied), encoding="utf-8")
+            state = {runner.RESET[0]: original}
+            clock = 50
+            restore_verbs = []
+
+            def kubectl(args, *, input, timeout, **kwargs):
+                verb = args[3]
+                if clock > 100:
+                    self.assertLessEqual(timeout, 600)
+                    restore_verbs.append(verb)
+                if verb in ("apply", "replace"):
+                    resource = json.loads(input)
+                    state[resource["metadata"]["name"]] = resource
+                elif verb == "delete":
+                    state.pop(args[5], None)
+                elif verb == "get":
+                    return types.SimpleNamespace(returncode=0, stdout=json.dumps(state[args[5]])
+                                                 if args[5] in state else "", stderr="")
+                return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            def expire(*args, **kwargs):
+                nonlocal clock
+                self.assertEqual(state, {"variant-only": applied})
+                clock = 101
+                host.kube("get", "pods")
+
+            with patch.object(runner.time, "monotonic", side_effect=lambda: clock), patch.object(
+                    runner.shutil, "which", return_value="kubectl"), patch.object(
+                    runner.subprocess, "run", side_effect=kubectl), patch.object(
+                    runner, "settings_workflow", return_value=("case.yaml", "case")), patch.object(
+                    runner, "run_suite", side_effect=expire):
+                with self.assertRaisesRegex(RuntimeError, "^Execution time budget exhausted"):
+                    runner.settings_slot(host, dict(variant(), configmaps=[path]))
+            self.assertEqual(state, {runner.RESET[0]: original})
+            self.assertIn("replace", restore_verbs)
+            self.assertIn("delete", restore_verbs)
+            self.assertEqual(restore_verbs.count("get"), len(runner.RESET) + 1)
+            self.assertEqual(commands.deadline, 100)
+
     def test_existing_fixture_namespace_is_refused_before_any_mutation(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "namespace.yaml"

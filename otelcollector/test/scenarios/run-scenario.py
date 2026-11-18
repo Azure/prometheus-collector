@@ -1014,6 +1014,9 @@ def settings_slot(host, variant):
         error = failure
         raise
     finally:
+        # A slot must restore the fixture even if its tests used up the run budget.
+        run_deadline = host.commands.deadline
+        host.commands.deadline = time.monotonic() + 600
         try:
             for (kind, name, namespace), original in reversed(list(originals.items())):
                 if original is None:
@@ -1028,6 +1031,8 @@ def settings_slot(host, variant):
         except RuntimeError as restore_failure:
             raise RuntimeError(f"Restoration failed; no next variant allowed. Original: {error}; "
                                f"restore: {restore_failure}") from restore_failure
+        finally:
+            host.commands.deadline = run_deadline
 
 
 def render_chart(commands, evidence, outputs, source_sha, mapping, otlp=False):
