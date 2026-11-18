@@ -1823,8 +1823,11 @@ def execute(args, scenario, variants, commands):
         try:
             try:
                 if baseline is not None:
+                    # Bounded so restore cannot consume the step's post-budget cleanup margin.
+                    commands.deadline = time.monotonic() + 600
                     restore(host, baseline)
             finally:
+                commands.deadline = None
                 if reference_apps_ready:
                     cleanup_reference_apps(host)
         except (RuntimeError, ValueError, OSError, KeyError) as failure:

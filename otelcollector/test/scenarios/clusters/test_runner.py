@@ -1477,6 +1477,7 @@ class Contracts(unittest.TestCase):
             host.az.return_value = {"kubernetesVersion": "1.36.5"}
             host.retain.return_value = {"retained": True}
             present = set()
+            cleanup_deadlines = []
 
             def kube(*command, **kwargs):
                 if command[:2] == ("get", "nodes"):
@@ -1486,7 +1487,7 @@ class Contracts(unittest.TestCase):
                         if doc and doc["kind"] == "ConfigMap" and doc["metadata"]["name"] in runner.RESET:
                             present.add(doc["metadata"]["name"])
                 if command[:2] == ("delete", "ConfigMap"):
-                    self.assertIsNone(commands.deadline)
+                    self.assertLessEqual(commands.deadline, runner.time.monotonic() + 600)
                     present.discard(command[2])
                 if command[:2] == ("get", "ConfigMap") and command[2] in present:
                     raise AssertionError("snapshot or readback saw a run-created ConfigMap")
@@ -1507,12 +1508,14 @@ class Contracts(unittest.TestCase):
                     deployment_env=Mock(return_value={}), Host=Mock(return_value=host),
                     bootstrap_testkube=Mock(return_value={"agentPoolProfiles": []}),
                     verify_pool_inventory=Mock(return_value={}), render_chart=Mock(return_value="chart"),
-                    audit_images=Mock(return_value=[]), cleanup_reference_apps=Mock(),
+                    audit_images=Mock(return_value=[]),
+                    cleanup_reference_apps=Mock(side_effect=lambda host: cleanup_deadlines.append(commands.deadline)),
                     run_suite=Mock(side_effect=exhausted)), \
                     patch.object(runner.time, "sleep"):
                 with self.assertRaisesRegex(RuntimeError, "budget exhausted"):
                     runner.execute(args, row, {}, commands)
             self.assertEqual(present, set())
+            self.assertIsNone(cleanup_deadlines[-1])
             self.assertEqual(runner.load(args.evidence / "result.json")["status"], "FAIL")
 
     def test_secret_watch_requires_effective_locks_before_cluster_access(self):
