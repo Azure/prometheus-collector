@@ -1594,7 +1594,7 @@ def verified_candidate(args, commands):
     source = source_commit(commands, REPO, ["otelcollector/deploy/addon-chart"])
     test_source = source_commit(commands, TEST_SOURCE, [
         "otelcollector/test/scenarios", "otelcollector/test/ginkgo-e2e", "otelcollector/test/test-cluster-yamls",
-        "otelcollector/test/testkube", "internal/referenceapp",
+        "otelcollector/test/testkube", "internal/referenceapp", "internal/windowsExporterInstaller",
     ])
     if test_source != args.test_source_sha:
         raise ValueError("Candidate test source does not match the expected test source SHA")
@@ -1617,6 +1617,9 @@ def verified_candidate(args, commands):
     return candidate, runner
 
 
+WINDOWS_EXPORTER = "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"
+
+
 def cleanup_reference_apps(host):
     host.assert_owned()
     fixtures = [
@@ -1627,6 +1630,10 @@ def cleanup_reference_apps(host):
         fixtures.append("internal/referenceapp/win-prometheus-reference-app.yaml")
     for fixture in fixtures:
         host.kube("delete", "-f", str(TEST_SOURCE / fixture), "-n", "default",
+                  "--ignore-not-found", "--wait=true", "--timeout=5m")
+    if "windows" in host.scenario["platforms"]:
+        # Leave the shared monitoring namespace; deleting it would cascade to unrelated resources.
+        host.kube("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config", "-n", "monitoring",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
     if host.scenario["id"] == "otlp":
         host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
@@ -1779,6 +1786,10 @@ def execute(args, scenario, variants, commands):
             references.append("win-prometheus-reference-app.yaml")
         for name in references:
             host.kube("apply", "-f", str(TEST_SOURCE / "internal/referenceapp" / name))
+        if "windows" in scenario["platforms"]:
+            # The test settings enable windowsexporter; CI clusters get the exporter from this installer.
+            host.kube("apply", "-f", str(TEST_SOURCE / WINDOWS_EXPORTER))
+            host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=10m")
         monitors = list(yaml.safe_load_all(
             (TEST_SOURCE / "otelcollector/test/test-cluster-yamls/customresources/prometheus-reference-app.yaml").read_text()))
         probe_started = time.time()

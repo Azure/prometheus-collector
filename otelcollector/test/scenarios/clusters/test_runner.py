@@ -1366,6 +1366,9 @@ class Contracts(unittest.TestCase):
                 if "windows" in platforms:
                     expected.update({("Deployment", "win-prometheus-reference-app"),
                                      ("Service", "win-prometheus-reference-service")})
+                    host.kube.assert_any_call("delete", "daemonset/windows-exporter",
+                                              "configmap/windows-exporter-config", "-n", "monitoring",
+                                              "--ignore-not-found", "--wait=true", "--timeout=5m")
                 self.assertEqual(deleted, expected)
                 host.kube.assert_any_call("delete", "service", "candidate-otlp", "-n", "kube-system",
                                           "--ignore-not-found", "--wait=true", "--timeout=5m")
@@ -1376,11 +1379,12 @@ class Contracts(unittest.TestCase):
                 host.kube.assert_not_called()
 
     def test_reused_reference_apps_are_isolated_and_cleaned_even_after_failure(self):
-        for failure in (None, "tests", "cleanup"):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+        for failure, platforms in ((None, ["linux"]), ("tests", ["linux"]), ("cleanup", ["linux"]),
+                                   (None, ["linux", "windows"])):
+            with self.subTest(failure=failure, platforms=platforms), tempfile.TemporaryDirectory() as temporary:
                 args = types.SimpleNamespace(evidence=Path(temporary), run_id="run", max_run_seconds=60,
                                              admitted_existing=True, test_source_sha="b" * 40, settle_seconds=0)
-                row = dict(scenario(), id="otlp", platforms=["linux"], clusterFeatures=[],
+                row = dict(scenario(), id="otlp", platforms=platforms, clusterFeatures=[],
                            settingsVariants=["custom"])
                 selected = dict(variant(), id="custom", _manifestSha256="manifest")
                 host = Mock(spec=runner.Host, args=args, scenario=row, reused=True)
@@ -1392,6 +1396,8 @@ class Contracts(unittest.TestCase):
                 leftovers = {("Deployment", "prometheus-reference-app"), ("Service", "prometheus-reference-service"),
                              ("PodMonitor", "referenceapp"), ("ServiceMonitor", "referenceapp"),
                              ("Service", "candidate-otlp")}
+                if "windows" in platforms:
+                    leftovers |= {("DaemonSet", "windows-exporter"), ("ConfigMap", "windows-exporter-config")}
                 resources = set(leftovers) | {("Service", "unrelated")}
                 health_applied = False
 
@@ -1414,6 +1420,9 @@ class Contracts(unittest.TestCase):
                                 if failure == "cleanup" and health_applied:
                                     raise RuntimeError("fixture deletion failed")
                                 resources.discard(identity)
+                    if command[:3] == ("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config"):
+                        resources.difference_update({("DaemonSet", "windows-exporter"),
+                                                     ("ConfigMap", "windows-exporter-config")})
                     if command[:3] == ("delete", "service", "candidate-otlp"):
                         resources.discard(("Service", "candidate-otlp"))
                     return ""
@@ -1448,6 +1457,10 @@ class Contracts(unittest.TestCase):
                 self.assertEqual("fixtureCleanupError" in result, failure == "cleanup")
                 if failure != "cleanup":
                     self.assertEqual(resources, {("Service", "unrelated")})
+                if "windows" in platforms:
+                    host.kube.assert_any_call("apply", "-f", str(runner.TEST_SOURCE / runner.WINDOWS_EXPORTER))
+                    host.kube.assert_any_call("rollout", "status", "daemonset/windows-exporter",
+                                              "-n", "monitoring", "--timeout=10m")
                 host.retain.assert_called_once()
 
     def test_health_configmaps_are_restored_after_budget_exhaustion_without_settings(self):
