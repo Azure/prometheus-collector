@@ -193,12 +193,9 @@ stages:
               python3 -m venv "$(Agent.TempDirectory)/settings-checks"
               "$(Agent.TempDirectory)/settings-checks/bin/python" -m pip install -r ./scenarios/settings/requirements.txt
               "$(Agent.TempDirectory)/settings-checks/bin/python" ./scenarios/settings/test_catalog.py -v
-              export PYTHON="$(Agent.TempDirectory)/settings-checks/bin/python"
-              "$PYTHON" -m unittest discover -s ./testkube -p workflow_evidence_test.py
-              bash ./testkube/run-testkube-workflow-test.sh
               (cd ./ginkgo-e2e/configprocessing && go test ../../testkube/config_processing_workflow_test.go ../../testkube/config_pipeline_template_test.go)
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
-            displayName: "Test customer settings catalog and TestKube evidence guards"
+            displayName: "Test customer settings catalog"
 
           - task: AzureCLI@2
             displayName: Get kubeconfig

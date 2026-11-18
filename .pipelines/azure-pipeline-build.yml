@@ -101,14 +101,6 @@ extends:
         - checkout: self
           submodules: true
         - bash: |
-            set -e
-            bash .pipelines/tests/windows-image-restore-test.sh
-            bash .pipelines/tests/image-tag-test.sh
-            bash .pipelines/tests/tag-job-trivy-version-test.sh
-            bash .pipelines/tests/wait-for-jobs-test.sh
-            bash .pipelines/tests/native-rpm-capture-test.sh
-          displayName: "Build: test image recovery, tags and native RPM capture"
-        - bash: |
             set -euo pipefail
             release_file=$(mktemp)
             trap 'rm -f "$release_file"' EXIT

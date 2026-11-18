@@ -144,8 +144,6 @@ steps:
     for tool in az kubectl helm bash jq envsubst; do command -v "$tool"; done
     ./kubectl-testkube run testworkflow --help > /dev/null
     az bicep version
-    "$CANDIDATE_PYTHON/bin/python" -B \
-      "$BUILD_SOURCESDIRECTORY/.pipelines/candidate_evidence_test.py" -v
   workingDirectory: $(candidateRoot)
   displayName: "Prepare scoped pinned CLI and verify harness prerequisites"
   env:

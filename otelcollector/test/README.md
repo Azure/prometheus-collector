@@ -1,8 +1,4 @@
-# TestKube workflow setup regression tests
-
-Run `python3 -m unittest discover -s otelcollector/test/testkube -p workflow_evidence_test.py` and `bash otelcollector/test/testkube/run-testkube-workflow-test.sh` from the repository root with Python/PyYAML, Bash, `jq`, and `envsubst` installed. Set `PYTHON` if the Python executable is not `python3`. These tests mock `kubectl` and require no cluster access. They reject setup errors, missing/mismatched execution IDs, nonpassed terminal statuses, empty or failed reports, and mutable candidate inputs. Pipeline 979 runs them before accessing the cluster.
-
-## Immutable candidate execution
+# Immutable candidate execution
 
 The existing TestKube TestWorkflow remains the executor; candidate mode does not run Ginkgo on the host. First verify the protected runner receipt and candidate deployment. The receipt must bind a full test-source commit to the runner digest and successful producer build/artifact, not free-form image fields. Candidate mode reuses the existing runner image, resolves the suite's Go toolchain and Ginkgo module versions, and runs that explicit CLI version with the same Go toolchain without modifying module manifests. The runner is scheduled on Linux/amd64. Toolchain/module downloads require outbound access from the TestKube namespace, independently of collector ingestion egress.
 
