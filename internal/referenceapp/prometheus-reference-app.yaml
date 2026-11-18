@@ -14,8 +14,14 @@ spec:
         app: prometheus-reference-app
     spec:
       containers:
+        - name: prometheus-reference-app-python
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
+          ports:
+          - containerPort: 2114
+            protocol: TCP
+            name: "python-client"
         - name: prometheus-reference-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:7.5.0-main-11-11-2026-3e060365-ref-app-golang
           env:
             - name: RUN_PERF_TEST
               value: "false"
@@ -30,12 +36,6 @@ spec:
             - containerPort: 2113
               protocol: TCP
               name: "untyped-metrics"
-        - name: prometheus-reference-app-python
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
-          ports:
-          - containerPort: 2114
-            protocol: TCP
-            name: "python-client"
       nodeSelector:
           kubernetes.io/os: linux
           kubernetes.io/arch: amd64
