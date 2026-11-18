@@ -468,9 +468,10 @@ workflow, which ordinary AKS/TestKube cannot reach. Arc conformance is a
 separate Arc/Sonobuoy workflow and is not executed by this AKS candidate matrix.
 Neither is inferred from a passing AKS row.
 
-The default 360-second settle alone costs 216 minutes for a 36-slot profile;
-provisioning and TestKube execution are additional. Each candidate row allows
-eight hours, but no measured Azure duration or live pass is claimed yet.
+After each settings change, the runner restarts the collectors and target allocator
+and waits for their rollouts. The catalog has 41 variants, of which 36 are
+compatible with the default lane. Its execution budget is 24 hours. No measured
+Azure duration or live pass is claimed yet.
 
 ### Observed CI/CD examples
 

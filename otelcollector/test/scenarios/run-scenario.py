@@ -1484,6 +1484,18 @@ def restore(host, originals, preserve_settings=False):
         raise RuntimeError(f"Restoration failed; no next variant allowed: {details}") from restore_failures[0][2]
 
 
+def restart_collectors(host):
+    resources = ["deployment/ama-metrics", "daemonset/ama-metrics-node",
+                 "deployment/ama-metrics-operator-targets"]
+    if "windows" in host.scenario["platforms"]:
+        resources.append("daemonset/ama-metrics-win-node")
+    for resource in resources:
+        host.kube("rollout", "restart", resource, "-n", "kube-system")
+    for resource in resources:
+        timeout = "20m" if resource == "daemonset/ama-metrics-win-node" else "15m"
+        host.kube("rollout", "status", resource, "-n", "kube-system", f"--timeout={timeout}")
+
+
 def settings_slot(host, variant):
     if variant.get("helmValues"):
         raise ValueError("Customer Helm install adapter is not implemented; refusing addon substitution")
@@ -1544,7 +1556,7 @@ def settings_slot(host, variant):
                         resources.remove(doc)
             if resources:
                 host.kube("apply", "-f", "-", data=yaml.safe_dump_all(resources, sort_keys=False), private=True)
-        time.sleep(host.args.settle_seconds)
+        restart_collectors(host)
         result = run_suite(host, "configprocessing",
                            host.args.evidence / variant["id"] / "configprocessing",
                            expression, template=template, workflow=workflow)
@@ -2751,7 +2763,7 @@ def execute(args, scenario, variants, commands):
         probe_started = time.time()
         host.kube("apply", "-f", "-", data=yaml.safe_dump_all(
             mark_health_monitors(monitors, args.run_id)), private=True)
-        time.sleep(args.settle_seconds)
+        restart_collectors(host)
         outcome["suites"] = {}
         for suite in SUITES:
             outcome["suites"][suite] = run_suite(host, suite, args.evidence / "health" / suite,
@@ -2847,7 +2859,6 @@ def main(argv=None):
     parser.add_argument("--kubectl", default="kubectl", help="kubectl executable name or absolute path")
     parser.add_argument("--tools-bin", type=Path, help="Directory containing scoped TestKube CLI/jq executables")
     parser.add_argument("--evidence", type=Path, required=True)
-    parser.add_argument("--settle-seconds", type=int, default=360)
     parser.add_argument("--max-run-seconds", type=int, default=14400)
     args = parser.parse_args(argv)
     admitted_existing = args.admitted_existing
@@ -2861,8 +2872,8 @@ def main(argv=None):
             raise ValueError("Scenario matrix and settings must come from the expected test source checkout")
     args.evidence = args.evidence.resolve()
     uuid.UUID(args.run_id)
-    if args.settle_seconds < 0 or args.max_run_seconds <= 0:
-        raise ValueError("settle-seconds must be nonnegative and max-run-seconds must be positive")
+    if args.max_run_seconds <= 0:
+        raise ValueError("max-run-seconds must be positive")
     commands = Commands(args.evidence)
     if args.action == "run" and not args.build_id:
         raise ValueError("--build-id must identify a protected candidate build before provisioning")
