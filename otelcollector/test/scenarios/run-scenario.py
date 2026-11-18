@@ -2559,6 +2559,8 @@ def cleanup_reference_apps(host):
     if "windows" in host.scenario["platforms"]:
         host.kube("delete", "daemonset/windows-exporter", "configmap/windows-exporter-config", "-n", "monitoring",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
+        if getattr(host, "created_monitoring", False):
+            host.kube("delete", "namespace", "monitoring", "--ignore-not-found", "--wait=true", "--timeout=5m")
     if host.scenario["id"] == "otlp":
         host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
@@ -2568,6 +2570,9 @@ def cleanup_reference_apps(host):
 
 
 def install_windows_exporter(host):
+    if not host.kube("get", "namespace", "monitoring", "--ignore-not-found", "-o", "name").strip():
+        host.kube("create", "namespace", "monitoring")
+        host.created_monitoring = True
     host.kube("apply", "-f", str(TEST_SOURCE / "internal/windowsExporterInstaller/windows-exporter-daemonset.yaml"))
     host.kube("rollout", "status", "daemonset/windows-exporter", "-n", "monitoring", "--timeout=10m")
 
