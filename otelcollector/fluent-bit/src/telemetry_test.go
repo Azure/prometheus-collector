@@ -1,8 +1,37 @@
 package main
 
 import (
+	"encoding/base64"
 	"testing"
 )
+
+func TestInitializeTelemetryClientDenyFSAccessThroughSMs(t *testing.T) {
+	originalClient, originalProperties := TelemetryClient, CommonProperties
+	t.Cleanup(func() {
+		TelemetryClient, CommonProperties = originalClient, originalProperties
+	})
+	t.Setenv(envAppInsightsAuth, base64.StdEncoding.EncodeToString([]byte("00000000-0000-0000-0000-000000000000")))
+	t.Setenv(envTelemetryOffSwitch, "true")
+	t.Setenv("MAC", "false")
+
+	for _, tc := range []struct {
+		name string
+		env  string
+		want string
+	}{
+		{"default", "", "false"},
+		{"disabled", "false", "false"},
+		{"enabled", "true", "true"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("AZMON_DENY_FS_ACCESS_THROUGH_SMS", tc.env)
+			if status, err := InitializeTelemetryClient(""); err != nil || status != 0 {
+				t.Fatalf("InitializeTelemetryClient() = %d, %v", status, err)
+			}
+			assertTelemetryProperty(t, TelemetryClient.Context().CommonProperties, "denyFSAccessThroughSMs", tc.want)
+		})
+	}
+}
 
 func TestScrapeJobMetadataBearerTokenFileMonitorTypes(t *testing.T) {
 	scrapeJobs := map[string]interface{}{

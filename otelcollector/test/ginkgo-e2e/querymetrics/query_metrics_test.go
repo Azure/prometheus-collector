@@ -200,6 +200,12 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"kube_node_status_condition",
 			// "kube_node_spec_taint",
 			"kube_pod_container_info",
+			"kube_pod_status_ready",
+			"kube_pod_status_scheduled",
+			"kube_node_spec_unschedulable",
+			// Only emitted when the cluster has statefulsets/PVs; uncomment if the e2e cluster gets them.
+			// "kube_statefulset_metadata_generation",
+			// "kube_statefulset_status_observed_generation",
 			// "kube_persistentvolumeclaim_access_mode",
 			// "kube_persistentvolumeclaim_labels",
 			// "kube_persistentvolume_status_phase",

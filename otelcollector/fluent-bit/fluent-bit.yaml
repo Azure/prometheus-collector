@@ -72,7 +72,9 @@ pipeline:
       port: 8888
       tag: prometheus.metrics.otelcollector
       metrics_path: /metrics
-      scrape_interval: 1m
+      # These are cumulative counters plus a queue-depth gauge used for agent health diagnostics.
+      # 5m sampling keeps rate/trend analysis intact at a fifth of the telemetry volume.
+      scrape_interval: 5m
       processors:
         metrics:
           - name: metrics_selector

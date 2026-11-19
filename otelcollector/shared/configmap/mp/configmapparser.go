@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
@@ -14,6 +15,10 @@ const (
 	defaultConfigSchemaVersion = "v1"
 	defaultConfigFileVersion   = "ver1"
 )
+
+// configVersionPattern constrains the schema-version and config-version configmap values,
+// which are otherwise free-form text mounted from the settings configmap.
+var configVersionPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,10}$`)
 
 func setConfigSchemaVersionEnv() {
 	fileInfo, err := os.Stat(schemaVersionFile)
@@ -31,6 +36,10 @@ func setConfigSchemaVersionEnv() {
 	configSchemaVersion := strings.ReplaceAll(trimmedContent, " ", "")
 	if len(configSchemaVersion) > 10 {
 		configSchemaVersion = configSchemaVersion[:10]
+	}
+	if !configVersionPattern.MatchString(configSchemaVersion) {
+		log.Printf("Ignoring invalid schema version in configmap; using default\n")
+		configSchemaVersion = defaultConfigSchemaVersion
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
 }
@@ -51,6 +60,10 @@ func setConfigFileVersionEnv() {
 	configFileVersion := strings.ReplaceAll(trimmedContent, " ", "")
 	if len(configFileVersion) > 10 {
 		configFileVersion = configFileVersion[:10]
+	}
+	if !configVersionPattern.MatchString(configFileVersion) {
+		log.Printf("Ignoring invalid config file version in configmap; using default\n")
+		configFileVersion = defaultConfigFileVersion
 	}
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
 }
@@ -291,7 +304,7 @@ func Configmapparser() {
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := scanner.Text()
-			parts := strings.Split(line, "=")
+			parts := strings.SplitN(line, "=", 2)
 			if len(parts) == 2 {
 				key := parts[0]
 				value := parts[1]

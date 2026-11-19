@@ -1,0 +1,32 @@
+parameters:
+- name: version
+  type: string
+
+steps:
+- bash: |
+    set -euo pipefail
+    archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+    release_url="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' EXIT
+
+    for file in "$archive" "trivy_${TRIVY_VERSION}_checksums.txt"; do
+      curl --fail --show-error --silent --location \
+        --retry 4 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
+        --connect-timeout 15 --max-time 120 \
+        --output "$temp_dir/$file" "$release_url/$file"
+    done
+    (
+      cd "$temp_dir"
+      awk -v archive="$archive" '$2 == archive { print; found = 1 } END { if (!found) exit 1 }' \
+        "trivy_${TRIVY_VERSION}_checksums.txt" | sha256sum --check --strict -
+    )
+    tar --no-same-owner -xzf "$temp_dir/$archive" -C "$temp_dir" trivy
+    install_dir="$(Agent.TempDirectory)/trivy-bin"
+    mkdir -p "$install_dir"
+    install -m 755 "$temp_dir/trivy" "$install_dir/trivy"
+    "$install_dir/trivy" --version
+    echo "##vso[task.prependpath]$install_dir"
+  displayName: "Build: install Trivy"
+  env:
+    TRIVY_VERSION: ${{ parameters.version }}

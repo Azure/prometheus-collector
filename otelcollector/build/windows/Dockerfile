@@ -22,9 +22,11 @@ ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliM
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
 # Below is for CIAgentPromCollectorAI AppInsights Resource in Bleu
 ENV APPLICATIONINSIGHTS_AUTH_BLEU NTI3MjJjYTgtYWZiMy1iYWVjLWFiMWEtZGYzZjZjNDZlNWE5
+ENV APPLICATIONINSIGHTS_AUTH_DELOS YTEwMDNhNTYtNDllZC1kNDFhLWFkYjUtMmQxMTVlMGI2YmFi
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
+COPY ./build/windows/scripts/Test-MicrosoftSignature.ps1 $tmpdir/scripts/
 RUN mkdir "C:\\opt\\microsoft\\configmapparser"
 RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/

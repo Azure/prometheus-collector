@@ -14,15 +14,16 @@ spec:
   - IPv4
   ipFamilyPolicy: SingleStack
   ports:
-  - name: targetallocation
-    port: 80
-    protocol: TCP
-    targetPort: 8080
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - name: targetallocation-https
     port: 443
     protocol: TCP
     targetPort: 8443
+{{- else }}
+  - name: targetallocation
+    port: 80
+    protocol: TCP
+    targetPort: 8080
 {{- end }}
   selector:
     rsName: ama-metrics-operator-targets

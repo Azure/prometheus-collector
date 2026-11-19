@@ -239,8 +239,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 	CommonProperties["collectorConfigWithHttps"] = os.Getenv("COLLECTOR_CONFIG_WITH_HTTPS")
 	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
+	CommonProperties["collectorConfigHttpsCheckFailed"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_CHECK_FAILED")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
+	CommonProperties["denyFSAccessThroughSMs"] = strconv.FormatBool(os.Getenv("AZMON_DENY_FS_ACCESS_THROUGH_SMS") == "true")
 	CommonProperties["ksmConfigEnabled"] = os.Getenv("AZMON_KSM_CONFIG_ENABLED")
 
 	isMacMode := os.Getenv("MAC")
@@ -1003,20 +1005,38 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 	}
 }
 
+// Matches the Metrics Extension diagnostic heartbeat line carrying the queue depth and drop counters.
+// Compiled once rather than per record, since this is one of the hottest paths in the plugin.
+var meMetricsDroppedRegex = regexp.MustCompile(`.*CurrentRawDataQueueSize: (\d+).*EtwEventsDropped: (\d+).*AggregatedMetricsDropped: (\d+).*`)
+
 func PushMetricsDroppedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
-		var metricScrapeInfoRegex = regexp.MustCompile(`.*CurrentRawDataQueueSize: (\d+).*EtwEventsDropped: (\d+).*AggregatedMetricsDropped: (\d+).*`)
-		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
+		groupMatches := meMetricsDroppedRegex.FindStringSubmatch(logEntry)
 
 		if len(groupMatches) > 3 {
 			metricsDroppedCount, err := strconv.ParseFloat(groupMatches[2], 64)
-			if err == nil {
-				metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
-				metric.Properties["currentQueueSize"] = groupMatches[1]
-				metric.Properties["aggregatedMetricsDropped"] = groupMatches[3]
-				TelemetryClient.Track(metric)
+			if err != nil {
+				continue
 			}
+
+			aggregatedMetricsDropped, err := strconv.ParseFloat(groupMatches[3], 64)
+			if err != nil {
+				aggregatedMetricsDropped = 0
+			}
+
+			// Metrics Extension emits this heartbeat every few seconds on every agent pod, and both
+			// drop counters are zero the overwhelming majority of the time. Emitting unconditionally
+			// made this the single largest source of agent telemetry, so only report actual drops.
+			// Either counter being non-zero is reported, so no drop signal is lost.
+			if metricsDroppedCount == 0 && aggregatedMetricsDropped == 0 {
+				continue
+			}
+
+			metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
+			metric.Properties["currentQueueSize"] = groupMatches[1]
+			metric.Properties["aggregatedMetricsDropped"] = groupMatches[3]
+			TelemetryClient.Track(metric)
 		}
 	}
 

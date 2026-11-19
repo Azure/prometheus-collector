@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -101,10 +102,25 @@ func isProcessRunningWindows(processName string) bool {
 	return false
 }
 
+// envKeyPattern matches the POSIX-portable form for environment variable names.
+var envKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
 // SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable.
 // If OS_TYPE is 'linux', it sets the variable in the .bashrc file and sources it.
 // If OS_TYPE is 'windows', it sets the variable in the system environment.
 func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
+	if !envKeyPattern.MatchString(key) {
+		log.Println("SetEnvAndSourceBashrcOrPowershell: rejecting invalid environment variable name:", key)
+		return fmt.Errorf("invalid environment variable name")
+	}
+
+	// Values are written to the configmapparser env files line by line and read back the
+	// same way, so a line break would be parsed as an additional key=value pair.
+	if strings.ContainsAny(value, "\n\r\x00") {
+		log.Println("SetEnvAndSourceBashrcOrPowershell: rejecting control characters in value for key:", key)
+		return fmt.Errorf("invalid characters in value for %s", key)
+	}
+
 	// Get the OS_TYPE from environment variables
 	osType := os.Getenv("OS_TYPE")
 

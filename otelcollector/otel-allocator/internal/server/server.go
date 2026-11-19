@@ -21,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 	"github.com/goccy/go-json"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	promcommconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -62,9 +63,22 @@ type Server struct {
 	ScrapeConfigMarshalledSecretResponse []byte
 	httpDuration                         metric.Float64Histogram
 	allowInsecureAuthSecrets             bool
+	// metricsGatherer, when set, is used to serve the /metrics endpoint. Defaults to
+	// the global Prometheus default gatherer.
+	metricsGatherer    prometheus.Gatherer
+	httpMetricsHandler http.Handler
 }
 
 type Option func(*Server)
+
+// WithMetricsGatherer sets the Prometheus gatherer used to serve /metrics. This allows
+// the caller to combine multiple registries (e.g. the default registry plus a dedicated
+// OTel SDK registry) into a single endpoint.
+func WithMetricsGatherer(gatherer prometheus.Gatherer) Option {
+	return func(s *Server) {
+		s.metricsGatherer = gatherer
+	}
+}
 
 // Option to create an additional https server with mTLS configuration.
 // Used for getting the scrape config with real secret values.
@@ -81,6 +95,10 @@ func WithInsecureAuthSecrets() Option {
 	return func(s *Server) {
 		s.allowInsecureAuthSecrets = true
 	}
+}
+
+func (s *Server) metricsHandler() http.Handler {
+	return s.httpMetricsHandler
 }
 
 func (s *Server) setRouter(router *gin.Engine) {
@@ -100,7 +118,11 @@ func (s *Server) setRouter(router *gin.Engine) {
 	router.GET("/scrape_configs", s.ScrapeConfigsHandler)
 	router.GET("/jobs", s.JobsHandler)
 	router.GET("/jobs/:job_id/targets", s.TargetsHandler)
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	// Use a closure so that both the HTTP and HTTPS routers (the latter built
+	// inside WithTLSConfig) share the same handler initialized in NewServer.
+	router.GET("/metrics", func(c *gin.Context) {
+		s.metricsHandler().ServeHTTP(c.Writer, c.Request)
+	})
 	router.GET("/livez", s.LivenessProbeHandler)
 	router.GET("/readyz", s.ReadinessProbeHandler)
 	registerPprof(router.Group("/debug/pprof/"))
@@ -126,6 +148,25 @@ func NewServer(log logr.Logger, allocator allocation.Allocator, listenAddr strin
 
 	for _, opt := range options {
 		opt(s)
+	}
+
+	// Build the /metrics handler once after all options (including WithMetricsGatherer)
+	// are applied. InstrumentMetricHandler wraps the handler to register
+	// promhttp_metric_handler_requests_total and promhttp_metric_handler_requests_in_flight;
+	// bare HandlerFor omits that instrumentation.
+	if s.metricsGatherer != nil {
+		reg, ok := s.metricsGatherer.(prometheus.Registerer)
+		if !ok {
+			// Gatherer is a multi-gatherer (e.g. prometheus.Gatherers) that includes
+			// DefaultGatherer, so registering into DefaultRegisterer is sufficient.
+			reg = prometheus.DefaultRegisterer
+		}
+		s.httpMetricsHandler = promhttp.InstrumentMetricHandler(
+			reg,
+			promhttp.HandlerFor(s.metricsGatherer, promhttp.HandlerOpts{}),
+		)
+	} else {
+		s.httpMetricsHandler = promhttp.Handler()
 	}
 
 	if s.allowInsecureAuthSecrets {

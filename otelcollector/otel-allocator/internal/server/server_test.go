@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -31,13 +32,15 @@ import (
 )
 
 var (
-	logger                  = logf.Log.WithName("server-unit-tests")
-	baseLabelSet            = labels.New(labels.Label{Name: "test_label", Value: "test-value"})
-	testJobLabelSetTwo      = labels.New(labels.Label{Name: "test_label", Value: "test-value2"})
-	baseTargetItem          = target.NewItem("test-job", "test-url", baseLabelSet, "test-collector", target.HashLabels(baseLabelSet, "test-job"))
-	secondTargetItem        = target.NewItem("test-job", "test-url", baseLabelSet, "test-collector", target.HashLabels(baseLabelSet, "test-job"))
-	testJobTargetItemTwo    = target.NewItem("test-job", "test-url2", testJobLabelSetTwo, "test-collector2", target.HashLabels(testJobLabelSetTwo, "test-job"))
-	testJobTwoTargetItemTwo = target.NewItem("test-job2", "test-url3", testJobLabelSetTwo, "test-collector2", target.HashLabels(testJobLabelSetTwo, "test-job2"))
+	logger                   = logf.Log.WithName("server-unit-tests")
+	baseLabelSet             = labels.New(labels.Label{Name: "test_label", Value: "test-value"})
+	testJobLabelSetTwo       = labels.New(labels.Label{Name: "test_label", Value: "test-value2"})
+	testJobLabelSetThree     = labels.New(labels.Label{Name: "test_label", Value: "test-value3"})
+	baseTargetItem           = target.NewItem("test-job", "test-url", baseLabelSet, "test-collector", target.HashLabels(baseLabelSet, "test-job"))
+	secondTargetItem         = target.NewItem("test-job", "test-url", baseLabelSet, "test-collector", target.HashLabels(baseLabelSet, "test-job"))
+	testJobTargetItemTwo     = target.NewItem("test-job", "test-url2", testJobLabelSetTwo, "test-collector2", target.HashLabels(testJobLabelSetTwo, "test-job"))
+	testJobTwoTargetItemTwo  = target.NewItem("test-job2", "test-url3", testJobLabelSetTwo, "test-collector2", target.HashLabels(testJobLabelSetTwo, "test-job2"))
+	testJobTwoTargetItemFour = target.NewItem("test-job2", "test-url4", testJobLabelSetThree, "test-collector2", target.HashLabels(testJobLabelSetThree, "test-job2"))
 )
 
 func TestServer_LivenessProbeHandler(t *testing.T) {
@@ -895,7 +898,7 @@ func TestServer_CollectorHandler(t *testing.T) {
 		},
 		{
 			description: "Single entry target map",
-			collectorId: "test-collector2",
+			collectorId: "test-collector",
 			targetItems: []*target.Item{
 				baseTargetItem,
 			},
@@ -908,7 +911,7 @@ func TestServer_CollectorHandler(t *testing.T) {
 			collectorId: "test-collector2",
 			targetItems: []*target.Item{
 				baseTargetItem,
-				testJobTwoTargetItemTwo,
+				testJobTwoTargetItemFour,
 			},
 			allocator:    allocator,
 			expectedCode: http.StatusOK,
@@ -1366,4 +1369,31 @@ func TestServer_EmptyTargetReturnsEmptyList(t *testing.T) {
 	err = json.Unmarshal(bodyBytes, &items)
 	require.NoError(t, err)
 	assert.Empty(t, items)
+}
+
+func TestServer_MetricsHandler(t *testing.T) {
+	// With a custom gatherer, /metrics serves it (covers WithMetricsGatherer + the
+	// gatherer branch of metricsHandler).
+	reg := prometheus.NewRegistry()
+	counter := prometheus.NewCounter(prometheus.CounterOpts{Name: "ta_test_metric_total", Help: "test"})
+	reg.MustRegister(counter)
+	counter.Inc()
+
+	s, err := NewServer(logger, nil, "", WithMetricsGatherer(reg))
+	require.NoError(t, err)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", http.NoBody)
+	w := httptest.NewRecorder()
+	s.server.Handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "ta_test_metric_total")
+	assert.Contains(t, body, "promhttp_metric_handler_requests_total")
+	assert.Contains(t, body, "promhttp_metric_handler_requests_in_flight")
+
+	// Without the option, /metrics falls back to the default gatherer (covers the nil branch).
+	sd, err := NewServer(logger, nil, "")
+	require.NoError(t, err)
+	wd := httptest.NewRecorder()
+	sd.server.Handler.ServeHTTP(wd, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", http.NoBody))
+	require.Equal(t, http.StatusOK, wd.Code)
 }

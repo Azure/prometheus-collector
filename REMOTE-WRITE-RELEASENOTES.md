@@ -1,5 +1,16 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 08-25-2026
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260825.2`
+* Change log -
+  * Dependency bump only; no Go toolchain change (remains 1.25.13). Both x/ advisories below live in golang.org/x/* modules rather than the Go stdlib, so the earlier 1.25.10 -> 1.25.13 upgrade did not cover them.
+  * golang.org/x/text v0.3.8 -> v0.41.0. The effective build version was pinned to v0.3.8 by a `replace` directive that overrode the `require` line, so the exposure was older than the manifest suggested.
+  * golang.org/x/net v0.55.0 -> v0.58.0, golang.org/x/sys v0.15.0 -> v0.47.0, golang.org/x/crypto v0.52.0 -> v0.55.0 (crypto realigned to match the resolved module graph; no CVE of its own).
+* Fixed CVEs:
+    - [CVE-2026-56852](https://avd.aquasec.com/nvd/cve-2026-56852) - `golang.org/x/text` infinite loop on invalid input, leading to denial of service (fixed in x/text v0.39.0).
+    - [CVE-2026-46600](https://avd.aquasec.com/nvd/cve-2026-46600) - `golang.org/x/net/dns/dnsmessage` panic when parsing an invalid SVCB or HTTPS resource record (fixed in x/net v0.56.0). The stdlib range for this CVE begins at Go 1.26.0, so the 1.25.13 toolchain was not affected.
+    - [CVE-2026-39824](https://avd.aquasec.com/nvd/cve-2026-39824) - `golang.org/x/sys/windows` integer overflow in NewNTUnicodeString (fixed in x/sys v0.44.0). Windows-only and not reachable from this Linux image, cleared to keep dependency scans clean.
+
 ## Release 08-13-2026
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20260813.1`
 * Change log -

@@ -56,7 +56,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ $.Values.AzureMonitorMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTag }}"
+          image: "{{ template "addon_mcr_repository_base" $ }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTag }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -149,7 +149,7 @@ spec:
               {{- if $.Values.AzureMonitorMetrics }}
               {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+              value: "{{ template "addon_mcr_repository_base" $ }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
@@ -263,7 +263,7 @@ spec:
             value: /data/token
           - name: LIVENESS_PROBE_ENABLED
             value: "true"
-          image: mcr.microsoft.com/azurearck8s/msi-adapter:1.29.3
+          image: {{ template "addon_mcr_repository_base" $ }}/azurearck8s/msi-adapter:1.29.3
           securityContext:
             privileged: true
             capabilities:
@@ -445,7 +445,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ $.Values.AzureMonitorMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTagWin }}"
+          image: "{{ template "addon_mcr_repository_base" $ }}{{ $.Values.AzureMonitorMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.ImageTagWin }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -503,7 +503,7 @@ spec:
             {{- if $.Values.AzureMonitorMetrics }}
               {{- if $.Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
+              value: "{{ template "addon_mcr_repository_base" $ }}{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ $.Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION

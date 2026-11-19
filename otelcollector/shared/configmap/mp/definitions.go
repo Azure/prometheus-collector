@@ -106,6 +106,7 @@ type ConfigProcessor struct {
 	TargetallocatorHttpsEnabled             bool
 	TargetallocatorHttpsEnabledChartSetting bool
 	SecretsAccessNamespaces                 []string
+	DenyFSAccessThroughSMs                  bool
 
 	Kubelet                    string
 	Coredns                    string

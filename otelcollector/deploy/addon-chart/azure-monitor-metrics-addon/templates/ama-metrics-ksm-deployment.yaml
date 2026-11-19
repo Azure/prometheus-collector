@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: ama-metrics
     app.kubernetes.io/name: ama-metrics-ksm
     app.kubernetes.io/part-of: ama-metrics-ksm
-    app.kubernetes.io/version: 2.19.1
+    app.kubernetes.io/version: 2.20.0
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
     kubernetes.azure.com/managedby: aks
 spec:
@@ -23,7 +23,7 @@ spec:
         app.kubernetes.io/component: ama-metrics
         app.kubernetes.io/name: ama-metrics-ksm
         app.kubernetes.io/part-of: ama-metrics-ksm
-        app.kubernetes.io/version: 2.19.1
+        app.kubernetes.io/version: 2.20.0
         helm.sh/chart: azure-monitor-metrics-addon-0.1.0
         kubernetes.azure.com/managedby: aks
       annotations:
@@ -49,28 +49,28 @@ spec:
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{-  if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
-        - --resources={{ .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors | join "," }}
+        - {{ printf "--resources=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors) | quote }}
             {{-  end  }}
           {{-  end  }}
         {{-  end  }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList }}
-        - --metric-labels-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList | join "," }}
+        - {{ printf "--metric-labels-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
-        - --metric-annotations-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList | join "," }}
+        - {{ printf "--metric-annotations-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}
         {{- if .Values.AzureMonitorMetrics }}
           {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList }}
-        - --metric-allowlist={{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList | join "," }}
+        - {{ printf "--metric-allowlist=%s" (join "," .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAllowList) | quote }}
             {{- end }}
           {{- end }}
         {{- end }}
@@ -78,7 +78,7 @@ spec:
         imagePullPolicy: IfNotPresent
         {{- if .Values.AzureMonitorMetrics }}
         {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-        image: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+        image: "{{ template "addon_mcr_repository_base" . }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
         {{-  end  }}
         {{-  end  }}
         resources:

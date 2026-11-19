@@ -183,7 +183,7 @@ func CreatePrometheusAPIClient(amwQueryEndpoint string) (v1.API, error) {
  * Example parsing of the instant query response.
  */
 func InstantQuery(api v1.API, query string) (v1.Warnings, interface{}, error) {
-	result, warnings, err := api.Query(context.Background(), query, time.Now())
+	result, warnings, _, err := api.Query(context.Background(), query, time.Now())
 	if err != nil {
 		return warnings, nil, fmt.Errorf("Failed to run query: %s", err.Error())
 	}

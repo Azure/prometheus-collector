@@ -61,3 +61,9 @@ variable "enable_windows_recording_rules" {
   default = false
   description = "Enable UX recording rules for Windows (default: false)"
 }
+
+variable "enable_control_plane_metrics" {
+  type        = bool
+  default     = false
+  description = "Enable Azure Monitor managed Prometheus control plane metrics (controlplane-apiserver and controlplane-etcd targets by default). Requires Azure Monitor metrics to be enabled (default: false)."
+}

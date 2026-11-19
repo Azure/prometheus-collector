@@ -1,3 +1,7 @@
+# TestKube workflow setup regression tests
+
+Run `bash otelcollector/test/testkube/run-testkube-workflow-test.sh` from the repository root with Bash, `jq`, and `envsubst` installed. These tests mock `kubectl` and require no cluster access. They cover resetting exported last-applied metadata, creating new workflows, and stopping with failed JSON results before workflow execution when generation, permissions, discovery, annotation repair, or application fails. Pipeline 979 runs them before accessing the cluster.
+
 # Current Tests
 - Container Status
   - Each container on each pod that we deploy has status `Running`. Pods include:
