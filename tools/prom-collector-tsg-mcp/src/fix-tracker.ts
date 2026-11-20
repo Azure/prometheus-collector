@@ -1,12 +1,8 @@
 // Plans IcM discussion entries that track fix PRs from link to release. Read-only:
 // the SRE agent supplies incidents (with their entries) and Ev2 rollouts (from ev2-mcp) and posts the planned entries itself.
 
-// Ev2 definitions per repo: push builds the image; aks/arc roll the extension out per cloud endpoint.
-// ponytail: ama-logs reaches AKS/Arc through rollouts this team's Ev2 service doesn't own, so its release stays unknown.
-export const REPOS: Record<string, { push: number; aks?: number; arc?: number }> = {
-  "Azure/prometheus-collector": { push: 978, aks: 1196, arc: 1205 },
-  "microsoft/Docker-Provider": { push: 1032 },
-};
+// Ev2 definitions: push builds the image; aks/arc roll the extension out per cloud endpoint.
+const DEFS = { push: 978, aks: 1196, arc: 1205 };
 export const REPO = "Azure/prometheus-collector";
 type Channel = "aks" | "arc";
 // ponytail: release = the Ev2 Prod endpoint finishing (team decision); sovereign endpoints aren't tracked.
@@ -77,14 +73,13 @@ const median = (xs: number[]) => xs.sort((a, b) => a - b)[Math.floor(xs.length /
 
 // Per channel from Prod Ev2 stage summaries. Released = a rollout containing the fix has every stage Succeeded and
 // no later rollout dropped it. Missing evidence is reported as unknown, never as done. This is not fleet adoption.
-export function releaseState(rollouts: TrackedRollout[], channels: Channel[] = ["aks", "arc"], defs = REPOS[REPO]) {
+export function releaseState(rollouts: TrackedRollout[], channels: Channel[] = ["aks", "arc"]) {
   let done = 0, started = false, back = false, required = 0;
   const notes: string[] = [];
   for (const channel of channels) {
     required++;
     const label = channel.toUpperCase();
-    if (!defs[channel]) { notes.push(`${label}: release status unknown`); continue; }
-    const rs = rollouts.filter((r) => r.definitionId === defs[channel] && isProd(r))
+    const rs = rollouts.filter((r) => r.definitionId === DEFS[channel] && isProd(r))
       .sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
     const latest = rs[0], idx = rs.findIndex((r) => r.includesFix);
     const complete = (r: Rollout) => !!r.stages?.length && r.stages.every((s) => ok(s.status));
@@ -137,7 +132,7 @@ function coverage(i: Incident, key: string, state: string, releasedPrs: Set<stri
   return text + (pending ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
 
-export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>, repo = REPO): PlannedEntry[] {
+export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>): PlannedEntry[] {
   const out: PlannedEntry[] = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   // Match against all active IcMs at once so an MSRC case shared by several IcMs stays a proposal.
   // Release-bump notes quote other PRs' IcM references; only a human link can attach one.
@@ -177,7 +172,7 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
       }
       if (!lc || lc.state === "open") continue;
       if (lc.state === "closed-unmerged") { if (!posted.has(lc.state)) add(lc.state); continue; }
-      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : undefined, REPOS[repo]) : { state: null, notes: [] };
+      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : undefined) : { state: null, notes: [] };
       const state = rel.state ?? lc.state;
       if (state === "rolled-back") { if (!posted.has(state)) add(state, rel.notes); continue; }
       const top = Math.max(...[...posted].map((s) => PROGRESS.indexOf(s)), 0);
@@ -204,10 +199,10 @@ export function githubGet(token = process.env.GITHUB_TOKEN): Get {
 const toPr = (p: any): PullRequest => ({ url: p.html_url, number: p.number, title: p.title, body: p.body, branch: p.head?.ref,
   state: p.merged_at ? "merged" : p.state, mergeSha: p.merged_at ? p.merge_commit_sha : null });
 
-export async function recentPrs(gh: Get, since: Date, repo = REPO) {
+export async function recentPrs(gh: Get, since: Date) {
   const prs: PullRequest[] = [];
   for (let page = 1; page <= 10; page++) {
-    const batch = await gh(`repos/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=100&page=${page}`);
+    const batch = await gh(`repos/${REPO}/pulls?state=all&sort=updated&direction=desc&per_page=100&page=${page}`);
     for (const p of batch) if (Date.parse(p.created_at) >= +since || Date.parse(p.merged_at) >= +since) prs.push(toPr(p));
     if (batch.length < 100 || Date.parse(batch.at(-1).updated_at) < +since) break;
   }
@@ -215,13 +210,13 @@ export async function recentPrs(gh: Get, since: Date, repo = REPO) {
 }
 
 // Annotates every rollout with whether its SourceVersion contains the PR's merge commit (GitHub compare).
-export async function lifecycles(prs: PullRequest[], gh: Get, rollouts: Rollout[], track?: Set<string>, repo = REPO) {
-  const push = REPOS[repo].push;
+export async function lifecycles(prs: PullRequest[], gh: Get, rollouts: Rollout[], track?: Set<string>) {
+  const push = DEFS.push;
   const result = new Map<string, Lifecycle>(), errors: string[] = [], cache = new Map<string, Promise<boolean>>();
   for (const p of prs) if (p.state !== "merged") result.set(p.url.toLowerCase(), { state: p.state === "open" ? "open" : "closed-unmerged", rollouts: [] });
   const contains = (fix: string, sha: string) => {
     const k = `${fix}...${sha}`;
-    if (!cache.has(k)) cache.set(k, gh(`repos/${repo}/compare/${k}`).then((c) => ["ahead", "identical"].includes(c.status)));
+    if (!cache.has(k)) cache.set(k, gh(`repos/${REPO}/compare/${k}`).then((c) => ["ahead", "identical"].includes(c.status)));
     return cache.get(k)!;
   };
   // Hotfix pushes build a tag SHA that differs from SourceVersion; the image tag is what actually shipped.
@@ -243,10 +238,9 @@ export async function lifecycles(prs: PullRequest[], gh: Get, rollouts: Rollout[
   }
   return { result, errors };
 }
-export async function planFixTracker(incidents: Incident[], lookbackHours = 24, rollouts: Rollout[] = [], gh = githubGet(), repo = REPO) {
-  if (!REPOS[repo]) throw new Error(`Unsupported repo ${repo}`);
+export async function planFixTracker(incidents: Incident[], lookbackHours = 24, rollouts: Rollout[] = [], gh = githubGet()) {
   const since = new Date(Date.now() - lookbackHours * 3600e3);
-  const scanned = await recentPrs(gh, since, repo);
+  const scanned = await recentPrs(gh, since);
   const tracked = new Set<string>();
   for (const i of incidents) {
     for (const url of markers(i.entries).keys()) tracked.add(url);
@@ -254,20 +248,20 @@ export async function planFixTracker(incidents: Incident[], lookbackHours = 24, 
     for (const f of i.findings ?? []) for (const u of f.fixedBy ?? []) tracked.add(u.toLowerCase());
   }
   const prs = new Map(scanned.map((p) => [p.url.toLowerCase(), p]));
-  const prefix = `https://github.com/${repo.toLowerCase()}/pull/`, fetchErrors: string[] = [];
+  const prefix = `https://github.com/${REPO.toLowerCase()}/pull/`, fetchErrors: string[] = [];
   for (const url of tracked) if (url.startsWith(prefix) && !prs.has(url)) {
-    try { prs.set(url, toPr(await gh(`repos/${repo}/pulls/${url.slice(prefix.length)}`))); }
+    try { prs.set(url, toPr(await gh(`repos/${REPO}/pulls/${url.slice(prefix.length)}`))); }
     catch (e: any) { fetchErrors.push(`${url}: ${e.message}`); }
   }
   const all = [...prs.values()], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   // Only linked PRs need Ev2 ancestry; proposals and unrelated PRs would just burn GitHub compare calls.
   const linked = new Set([...tracked, ...all.filter((p) => !isReleaseBump(p.title) && matchIcms(p, active).some((m) => m.confidence === "linked"))
     .map((p) => p.url.toLowerCase())]);
-  const { result, errors } = await lifecycles(all, gh, rollouts, linked, repo);
+  const { result, errors } = await lifecycles(all, gh, rollouts, linked);
   return {
     since: since.toISOString(), scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
-    entries: planEntries(all, incidents, result, repo), errors: [...fetchErrors, ...errors],
+    entries: planEntries(all, incidents, result), errors: [...fetchErrors, ...errors],
     needsFixPr: active.map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
   };
 }

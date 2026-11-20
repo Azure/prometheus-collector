@@ -1056,9 +1056,8 @@ server.tool(
 // Tool: tsg_fix_tracker_plan
 server.tool(
   "tsg_fix_tracker_plan",
-  "Read-only. Scans the repo (Azure/prometheus-collector by default, or microsoft/Docker-Provider for ama-logs) for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (prometheus-collector: Ev2 978 shell/PushLinuxImage; Docker-Provider: 1032 shell/PushAgentToACR; exit code 0) and AKS/Arc Ev2 Prod release rollouts (prometheus-collector only: 1196/1205 stage status; released = every Prod stage Succeeded; Docker-Provider release is reported unknown), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
+  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = every Prod stage Succeeded), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
   {
-    repo: z.enum(["Azure/prometheus-collector", "microsoft/Docker-Provider"]).default("Azure/prometheus-collector"),
     incidents: z.array(z.object({
       id: z.union([z.string(), z.number()]),
       title: z.string().optional(),
@@ -1074,7 +1073,7 @@ server.tool(
     })).describe("Active IcMs owned by the team"),
     lookbackHours: z.number().default(24).describe("Scan PRs created or merged in this many hours (overlap with the previous run is safe)"),
     rollouts: z.array(z.object({
-      definitionId: z.coerce.number().describe("978 = ama-metrics image push, 1196 = AKS release, 1205 = Arc release; 1032 = ama-logs image push"),
+      definitionId: z.coerce.number().describe("978 = ama-metrics image push, 1196 = AKS release, 1205 = Arc release"),
       endpoint: z.string().optional().describe("Ev2 endpoint the rollout was read from; only Prod counts (default Prod)"),
       rolloutId: z.string(),
       status: z.string().optional().describe("Overall rollout Status"),
@@ -1085,11 +1084,11 @@ server.tool(
       url: z.string().optional(),
       stages: z.array(z.object({ name: z.string(), status: z.string() })).optional().describe("get_rollout_summary StageInfos[].StageName/StageStatus"),
       push: z.object({ status: z.string().optional(), exitCode: z.union([z.number(), z.string()]).optional() }).optional()
-        .describe("Push rollouts only: shell/PushLinuxImage (978) or shell/PushAgentToACR (1032) action status and exit code. Never pass log text."),
+        .describe("Push rollouts only: shell/PushLinuxImage (978) action status and exit code. Never pass log text."),
     })).default([]).describe("Ev2 rollouts from ev2-mcp for the last 30 days"),
   },
-  async ({ repo, incidents, lookbackHours, rollouts }) => ({
-    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts, undefined, repo), null, 2) }],
+  async ({ incidents, lookbackHours, rollouts }) => ({
+    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts), null, 2) }],
   })
 );
 

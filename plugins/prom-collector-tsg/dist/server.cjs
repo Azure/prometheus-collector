@@ -67501,10 +67501,7 @@ async function scrapeICMIncident(incidentId) {
 }
 
 // src/fix-tracker.ts
-var REPOS = {
-  "Azure/prometheus-collector": { push: 978, aks: 1196, arc: 1205 },
-  "microsoft/Docker-Provider": { push: 1032 }
-};
+var DEFS = { push: 978, aks: 1196, arc: 1205 };
 var REPO = "Azure/prometheus-collector";
 var isProd = (r) => !/^(fairfax|mooncake|ussec|usnat|bleu|delos)$/i.test(r.endpoint?.trim() ?? "");
 var PROGRESS = ["linked", "merged", "in-image", "rolling", "released"];
@@ -67553,17 +67550,13 @@ var msrcCase = (title = "") => /\bMSRC\]?\s*\[?\s*(\d{5,7})\b/i.exec(title)?.[1]
 var ref = (r) => r.url ?? `Ev2 Prod rollout ${r.rolloutId}`;
 var ok = (s) => /^succeeded$/i.test(s ?? "");
 var median = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-function releaseState(rollouts, channels = ["aks", "arc"], defs = REPOS[REPO]) {
+function releaseState(rollouts, channels = ["aks", "arc"]) {
   let done = 0, started = false, back = false, required2 = 0;
   const notes = [];
   for (const channel of channels) {
     required2++;
     const label = channel.toUpperCase();
-    if (!defs[channel]) {
-      notes.push(`${label}: release status unknown`);
-      continue;
-    }
-    const rs = rollouts.filter((r) => r.definitionId === defs[channel] && isProd(r)).sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
+    const rs = rollouts.filter((r) => r.definitionId === DEFS[channel] && isProd(r)).sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
     const latest = rs[0], idx = rs.findIndex((r) => r.includesFix);
     const complete = (r) => !!r.stages?.length && r.stages.every((s) => ok(s.status));
     const shipped = rs.find((r) => r.includesFix && complete(r));
@@ -67609,7 +67602,7 @@ function coverage(i, key, state3, releasedPrs) {
   const pending = all.some((f) => !f.fixed && !f.fixedBy?.some((u) => u.toLowerCase() === key || releasedPrs.has(u.toLowerCase())));
   return text + (pending ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
-function planEntries(prs, incidents, lifecycles2, repo = REPO) {
+function planEntries(prs, incidents, lifecycles2) {
   const out = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   const matches = new Map(prs.map((pr) => [pr.url.toLowerCase(), isReleaseBump(pr.title) ? [] : matchIcms(pr, active)]));
   for (const incident of active) {
@@ -67649,7 +67642,7 @@ function planEntries(prs, incidents, lifecycles2, repo = REPO) {
         if (!posted.has(lc.state)) add(lc.state);
         continue;
       }
-      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0, REPOS[repo]) : { state: null, notes: [] };
+      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0) : { state: null, notes: [] };
       const state3 = rel.state ?? lc.state;
       if (state3 === "rolled-back") {
         if (!posted.has(state3)) add(state3, rel.notes);
@@ -67682,22 +67675,22 @@ var toPr = (p) => ({
   state: p.merged_at ? "merged" : p.state,
   mergeSha: p.merged_at ? p.merge_commit_sha : null
 });
-async function recentPrs(gh, since, repo = REPO) {
+async function recentPrs(gh, since) {
   const prs = [];
   for (let page = 1; page <= 10; page++) {
-    const batch = await gh(`repos/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=100&page=${page}`);
+    const batch = await gh(`repos/${REPO}/pulls?state=all&sort=updated&direction=desc&per_page=100&page=${page}`);
     for (const p of batch) if (Date.parse(p.created_at) >= +since || Date.parse(p.merged_at) >= +since) prs.push(toPr(p));
     if (batch.length < 100 || Date.parse(batch.at(-1).updated_at) < +since) break;
   }
   return prs;
 }
-async function lifecycles(prs, gh, rollouts, track, repo = REPO) {
-  const push = REPOS[repo].push;
+async function lifecycles(prs, gh, rollouts, track) {
+  const push = DEFS.push;
   const result = /* @__PURE__ */ new Map(), errors = [], cache = /* @__PURE__ */ new Map();
   for (const p of prs) if (p.state !== "merged") result.set(p.url.toLowerCase(), { state: p.state === "open" ? "open" : "closed-unmerged", rollouts: [] });
   const contains = (fix, sha) => {
     const k = `${fix}...${sha}`;
-    if (!cache.has(k)) cache.set(k, gh(`repos/${repo}/compare/${k}`).then((c) => ["ahead", "identical"].includes(c.status)));
+    if (!cache.has(k)) cache.set(k, gh(`repos/${REPO}/compare/${k}`).then((c) => ["ahead", "identical"].includes(c.status)));
     return cache.get(k);
   };
   const commit = (r) => r.definitionId === push && r.artifactsVersion?.match(/-([0-9a-f]{7,40})$/i)?.[1] || r.sourceVersion;
@@ -67724,10 +67717,9 @@ async function lifecycles(prs, gh, rollouts, track, repo = REPO) {
   }
   return { result, errors };
 }
-async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh = githubGet(), repo = REPO) {
-  if (!REPOS[repo]) throw new Error(`Unsupported repo ${repo}`);
+async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh = githubGet()) {
   const since = new Date(Date.now() - lookbackHours * 36e5);
-  const scanned = await recentPrs(gh, since, repo);
+  const scanned = await recentPrs(gh, since);
   const tracked = /* @__PURE__ */ new Set();
   for (const i of incidents) {
     for (const url2 of markers(i.entries).keys()) tracked.add(url2);
@@ -67738,22 +67730,22 @@ async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh =
     for (const f of i.findings ?? []) for (const u of f.fixedBy ?? []) tracked.add(u.toLowerCase());
   }
   const prs = new Map(scanned.map((p) => [p.url.toLowerCase(), p]));
-  const prefix = `https://github.com/${repo.toLowerCase()}/pull/`, fetchErrors = [];
+  const prefix = `https://github.com/${REPO.toLowerCase()}/pull/`, fetchErrors = [];
   for (const url2 of tracked) if (url2.startsWith(prefix) && !prs.has(url2)) {
     try {
-      prs.set(url2, toPr(await gh(`repos/${repo}/pulls/${url2.slice(prefix.length)}`)));
+      prs.set(url2, toPr(await gh(`repos/${REPO}/pulls/${url2.slice(prefix.length)}`)));
     } catch (e) {
       fetchErrors.push(`${url2}: ${e.message}`);
     }
   }
   const all = [...prs.values()], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   const linked = /* @__PURE__ */ new Set([...tracked, ...all.filter((p) => !isReleaseBump(p.title) && matchIcms(p, active).some((m) => m.confidence === "linked")).map((p) => p.url.toLowerCase())]);
-  const { result, errors } = await lifecycles(all, gh, rollouts, linked, repo);
+  const { result, errors } = await lifecycles(all, gh, rollouts, linked);
   return {
     since: since.toISOString(),
     scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
-    entries: planEntries(all, incidents, result, repo),
+    entries: planEntries(all, incidents, result),
     errors: [...fetchErrors, ...errors],
     needsFixPr: active.map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
   };
@@ -68524,9 +68516,8 @@ server.tool(
 );
 server.tool(
   "tsg_fix_tracker_plan",
-  "Read-only. Scans the repo (Azure/prometheus-collector by default, or microsoft/Docker-Provider for ama-logs) for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (prometheus-collector: Ev2 978 shell/PushLinuxImage; Docker-Provider: 1032 shell/PushAgentToACR; exit code 0) and AKS/Arc Ev2 Prod release rollouts (prometheus-collector only: 1196/1205 stage status; released = every Prod stage Succeeded; Docker-Provider release is reported unknown), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
+  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = every Prod stage Succeeded), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
   {
-    repo: external_exports3.enum(["Azure/prometheus-collector", "microsoft/Docker-Provider"]).default("Azure/prometheus-collector"),
     incidents: external_exports3.array(external_exports3.object({
       id: external_exports3.union([external_exports3.string(), external_exports3.number()]),
       title: external_exports3.string().optional(),
@@ -68542,7 +68533,7 @@ server.tool(
     })).describe("Active IcMs owned by the team"),
     lookbackHours: external_exports3.number().default(24).describe("Scan PRs created or merged in this many hours (overlap with the previous run is safe)"),
     rollouts: external_exports3.array(external_exports3.object({
-      definitionId: external_exports3.coerce.number().describe("978 = ama-metrics image push, 1196 = AKS release, 1205 = Arc release; 1032 = ama-logs image push"),
+      definitionId: external_exports3.coerce.number().describe("978 = ama-metrics image push, 1196 = AKS release, 1205 = Arc release"),
       endpoint: external_exports3.string().optional().describe("Ev2 endpoint the rollout was read from; only Prod counts (default Prod)"),
       rolloutId: external_exports3.string(),
       status: external_exports3.string().optional().describe("Overall rollout Status"),
@@ -68552,11 +68543,11 @@ server.tool(
       artifactsVersion: external_exports3.string().optional().describe("RolloutDetails.ArtifactsRegistrationInfo.ArtifactsVersion (the image tag for 978)"),
       url: external_exports3.string().optional(),
       stages: external_exports3.array(external_exports3.object({ name: external_exports3.string(), status: external_exports3.string() })).optional().describe("get_rollout_summary StageInfos[].StageName/StageStatus"),
-      push: external_exports3.object({ status: external_exports3.string().optional(), exitCode: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional() }).optional().describe("Push rollouts only: shell/PushLinuxImage (978) or shell/PushAgentToACR (1032) action status and exit code. Never pass log text.")
+      push: external_exports3.object({ status: external_exports3.string().optional(), exitCode: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional() }).optional().describe("Push rollouts only: shell/PushLinuxImage (978) action status and exit code. Never pass log text.")
     })).default([]).describe("Ev2 rollouts from ev2-mcp for the last 30 days")
   },
-  async ({ repo, incidents, lookbackHours, rollouts }) => ({
-    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts, void 0, repo), null, 2) }]
+  async ({ incidents, lookbackHours, rollouts }) => ({
+    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts), null, 2) }]
   })
 );
 server.tool(

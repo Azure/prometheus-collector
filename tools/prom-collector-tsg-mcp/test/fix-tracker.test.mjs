@@ -71,19 +71,6 @@ test("in-image requires a succeeded PushLinuxImage with exit code 0, not overall
   assert.match(failing.errors[0], /GitHub 403/);
 });
 
-test("Docker-Provider: 1032 push by SourceVersion puts the fix in image; AKS/Arc release stays unknown", async () => {
-  const DP = "microsoft/Docker-Provider", p = { ...merged, url: "https://github.com/microsoft/Docker-Provider/pull/1826" };
-  const ok = { status: "Succeeded", exitCode: 0 };
-  const lc = async (rs) => (await lifecycles([p], gh, rs, undefined, DP)).result.get(p.url.toLowerCase());
-  assert.equal((await lc([push({ push: ok })])).state, "merged", "a 978 ama-metrics push says nothing about ama-logs");
-  const got = await lc([push({ definitionId: 1032, artifactsVersion: "20261111.8", push: ok })]);
-  assert.equal(got.state, "in-image");
-  const linked = icm(1, "", { entries: [`[fix-tracker:${p.url}:linked]`] });
-  const [e] = planEntries([p], [linked], new Map([[p.url.toLowerCase(), got]]), DP);
-  assert.equal(e.state, "in-image");
-  assert.match(e.text, /20261111\.8.*AKS: release status unknown; ARC: release status unknown/);
-});
-
 test("merged text says unknown without Ev2 push evidence", () => {
   const linked = icm(1, "", { entries: [`[fix-tracker:${merged.url}:linked]`] });
   const text = (lc) => planEntries([merged], [linked], new Map([[merged.url.toLowerCase(), lc]]))[0].text;
