@@ -1,0 +1,18 @@
+{
+  "name": "troubleshooting-setup",
+  "description": "Complete onboarding guide for setting up the Azure Managed Prometheus troubleshooting environment with Copilot CLI, MCP servers, and diagnostic tooling.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Azure Container Insights"
+  },
+  "repository": "https://github.com/Azure/prometheus-collector",
+  "keywords": [
+    "prometheus",
+    "azure-monitor",
+    "setup",
+    "onboarding",
+    "mcp",
+    "troubleshooting"
+  ],
+  "category": "setup"
+}
