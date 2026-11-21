@@ -67505,6 +67505,15 @@ var DEFS = { push: 978, aks: 1196, arc: 1205 };
 var REPO = "Azure/prometheus-collector";
 var isProd = (r) => !/^(fairfax|mooncake|ussec|usnat|bleu|delos)$/i.test(r.endpoint?.trim() ?? "");
 var PROGRESS = ["linked", "merged", "in-image", "rolling", "released"];
+function unverified(i) {
+  const all = i.findings ?? [], missing = all.filter((f) => !f.evidence?.trim()).map((f) => f.id);
+  const ids = new Set(all.map((f) => f.id.trim().toUpperCase()));
+  const cve = all.length > 0 || /CVE-\d{4}-\d+/i.test([i.title ?? "", ...i.entries ?? []].join(" "));
+  if (cve && !i.listedCves) return `${i.id}: CVE incident without listedCves; verify every CVE before posting`;
+  if (ids.size < all.length) return `${i.id}: duplicate CVE findings; send one finding per listed CVE`;
+  if (ids.size < (i.listedCves ?? 0)) return `${i.id}: ${ids.size} of ${i.listedCves} listed CVEs have findings; verify every CVE before posting`;
+  return missing.length ? `${i.id}: no verification evidence for ${missing.join(", ")}; verify every CVE before posting` : null;
+}
 var short = (prUrl) => prUrl.replace(/^https:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+).*$/i, "$1#$2");
 var marker = (prUrl, state3) => `[ft:${short(prUrl)}:${state3}]`;
 function markers(entries = []) {
@@ -67606,6 +67615,7 @@ function planEntries(prs, incidents, lifecycles2) {
   const out = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   const matches = new Map(prs.map((pr) => [pr.url.toLowerCase(), isReleaseBump(pr.title) ? [] : matchIcms(pr, active)]));
   for (const incident of active) {
+    if (unverified(incident)) continue;
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
     for (const [u, l] of lifecycles2) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : void 0).state === "released") releasedPrs.add(u);
@@ -67747,8 +67757,8 @@ async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh =
     scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
     entries: planEntries(all, incidents, result),
-    errors: [...fetchErrors, ...errors],
-    needsFixPr: active.map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
+    errors: [...active.map(unverified).filter((e) => !!e), ...fetchErrors, ...errors],
+    needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
   };
 }
 
@@ -68529,8 +68539,10 @@ server.tool(
       findings: external_exports3.array(external_exports3.object({
         id: external_exports3.string().describe("CVE or finding ID listed in the incident"),
         fixedBy: external_exports3.array(external_exports3.string()).optional().describe("Fix PR URLs you verified update the affected package to at least its fixed version"),
-        fixed: external_exports3.boolean().optional().describe("True only if a version already released to Prod contains the fix")
-      })).optional().describe("Vulnerability incidents only: every listed CVE. Entries then state coverage, PRs covering none are not linked, and 'released' only invites resolving when every CVE has a released fix")
+        fixed: external_exports3.boolean().optional().describe("True only if a version already released to Prod contains the fix"),
+        evidence: external_exports3.string().optional().describe("How you verified this CVE against the released and rolling images: binary module/Go version (go version -m), OS build (os.version) or .NET version vs the advisory's fixed version. Required for every CVE, Windows included")
+      })).optional().describe("Vulnerability incidents only: every listed CVE. Entries then state coverage, PRs covering none are not linked, and 'released' only invites resolving when every CVE has a released fix"),
+      listedCves: external_exports3.number().optional().describe("Number of CVEs the incident lists; nothing is planned for it until findings cover them all with evidence")
     })).describe("Active IcMs owned by the team"),
     lookbackHours: external_exports3.number().default(24).describe("Scan PRs created or merged in this many hours (overlap with the previous run is safe)"),
     rollouts: external_exports3.array(external_exports3.object({

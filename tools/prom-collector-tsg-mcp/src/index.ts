@@ -1069,7 +1069,9 @@ server.tool(
         id: z.string().describe("CVE or finding ID listed in the incident"),
         fixedBy: z.array(z.string()).optional().describe("Fix PR URLs you verified update the affected package to at least its fixed version"),
         fixed: z.boolean().optional().describe("True only if a version already released to Prod contains the fix"),
+        evidence: z.string().optional().describe("How you verified this CVE against the released and rolling images: binary module/Go version (go version -m), OS build (os.version) or .NET version vs the advisory's fixed version. Required for every CVE, Windows included"),
       })).optional().describe("Vulnerability incidents only: every listed CVE. Entries then state coverage, PRs covering none are not linked, and 'released' only invites resolving when every CVE has a released fix"),
+      listedCves: z.number().optional().describe("Number of CVEs the incident lists; nothing is planned for it until findings cover them all with evidence"),
     })).describe("Active IcMs owned by the team"),
     lookbackHours: z.number().default(24).describe("Scan PRs created or merged in this many hours (overlap with the previous run is safe)"),
     rollouts: z.array(z.object({

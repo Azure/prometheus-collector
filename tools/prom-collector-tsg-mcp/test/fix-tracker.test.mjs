@@ -1,15 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { matchIcms, isReleaseBump, markers, planEntries, releaseState, lifecycles } from "../dist/fix-tracker.js";
+import { matchIcms, isReleaseBump, markers, planEntries, releaseState, lifecycles, unverified } from "../dist/fix-tracker.js";
 
 const pr = (over) => ({ url: "https://github.com/Azure/prometheus-collector/pull/1", number: 1, title: "fix", body: "", branch: "b", state: "open", ...over });
-const icm = (id, title = "", over = {}) => ({ id, title, status: "ACTIVE", entries: [], ...over });
+// Incidents named after CVEs default to one verified finding per title CVE, fixed by the default PR.
+const icm = (id, title = "", over = {}) => {
+  const findings = ("findings" in over ? over.findings : title.match(/CVE-\d{4}-\d+/g)?.map((c) => ({ id: c, fixedBy: [pr().url] })))?.map((f) => ({ evidence: "go version -m", ...f }));
+  return { id, title, status: "ACTIVE", entries: [], listedCves: findings?.length, ...over, findings };
+};
 
 test("release-bump PRs are excluded from matching but still tracked when a human links them", () => {
   assert.ok(isReleaseBump("version bump and rel notes for 6.24.0"));
   assert.ok(!isReleaseBump("fix: ksm release lock"));
   const bump = pr({ title: "Version bump 6.24.0", body: "- fix CVE-2026-1234" });
-  assert.deepEqual(planEntries([bump], [icm(1, "CVE-2026-1234")], new Map()), []);
+  assert.deepEqual(planEntries([bump], [icm(1, "CVE-2026-1234", { findings: [{ id: "CVE-2026-1234" }] })], new Map()), []);
   const confirmed = icm(1, "", { entries: [`[fix-tracker:${bump.url}:linked]`] });
   const lc = new Map([[bump.url.toLowerCase(), { state: "merged", rollouts: [] }]]);
   assert.deepEqual(planEntries([bump], [confirmed], lc).map((e) => e.state), ["merged"]);
@@ -135,6 +139,18 @@ test("CVE coverage: links and release text depend on which listed CVEs each PR f
   const viaText = (cState) => planEntries([a], [icm(1, "", { findings: covered, entries: posted.slice(0, 1), channel: "aks" })], viaEv2(cState))[0].text;
   assert.match(viaText("in-image"), /2 already fixed in released images\..*please verify and resolve/, "c is released per Ev2 though never linked here, so its CVE isn't open");
   assert.match(viaText("merged"), /stays open/, "without push evidence c is not in an image, so not released");
+});
+
+test("no link, tag or post on a CVE incident until every listed CVE has a verified verdict", () => {
+  const a = pr({ title: "fix CVE-2026-0001", state: "merged" }), lc = new Map([[a.url.toLowerCase(), { state: "merged", rollouts: [] }]]);
+  const plan = (over) => planEntries([a], [icm(1, "CVE-2026-0001", { entries: [`[ft:Azure/prometheus-collector#1:linked]`], ...over })], lc);
+  const ok = [{ id: "CVE-2026-0001", fixedBy: [a.url] }, { id: "CVE-2026-0002", fixed: true }];
+  assert.equal(plan({ findings: ok, listedCves: 2 }).length, 1);
+  assert.equal(plan({ findings: ok, listedCves: 3 }).length, 0, "a CVE the incident lists was never checked");
+  assert.equal(plan({ findings: [ok[0], { ...ok[1], evidence: "" }], listedCves: 2 }).length, 0, "a verdict without evidence is not verified");
+  assert.match(unverified(icm(1, "", { findings: ok, listedCves: 3 })), /2 of 3 listed CVEs/);
+  assert.equal(plan({ findings: [ok[0], ok[0]], listedCves: 2 }).length, 0, "a duplicate finding does not stand in for an unchecked CVE");
+  assert.equal(plan({ findings: undefined, listedCves: undefined }).length, 0, "a CVE incident the agent sent no findings for");
 });
 
 test("rolling entry is short: rollout link and ETA from earlier completed Prod rollouts, no stage names", () => {

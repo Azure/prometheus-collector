@@ -9,9 +9,21 @@ type Channel = "aks" | "arc";
 const isProd = (r: Rollout) => !/^(fairfax|mooncake|ussec|usnat|bleu|delos)$/i.test(r.endpoint?.trim() ?? "");
 const PROGRESS = ["linked", "merged", "in-image", "rolling", "released"];
 
-// findings: CVEs the agent extracted from the incident; fixedBy = fix PR URLs it verified; fixed = already in a released image.
-export interface Finding { id: string; fixedBy?: string[]; fixed?: boolean }
-export interface Incident { id: string | number; title?: string; status?: string; tags?: string[]; entries?: string[]; channel?: Channel; findings?: Finding[] }
+// findings: every CVE the incident lists (listedCves = that count); fixedBy = fix PR URLs it verified; fixed = already in a released image;
+// evidence = the binary/package/OS-build check behind the verdict.
+export interface Finding { id: string; fixedBy?: string[]; fixed?: boolean; evidence?: string }
+export interface Incident { id: string | number; title?: string; status?: string; tags?: string[]; entries?: string[]; channel?: Channel; findings?: Finding[]; listedCves?: number }
+
+// A CVE incident is only linked, tagged or posted on once every listed CVE has a verified verdict.
+export function unverified(i: Incident) {
+  const all = i.findings ?? [], missing = all.filter((f) => !f.evidence?.trim()).map((f) => f.id);
+  const ids = new Set(all.map((f) => f.id.trim().toUpperCase()));
+  const cve = all.length > 0 || /CVE-\d{4}-\d+/i.test([i.title ?? "", ...(i.entries ?? [])].join(" "));
+  if (cve && !i.listedCves) return `${i.id}: CVE incident without listedCves; verify every CVE before posting`;
+  if (ids.size < all.length) return `${i.id}: duplicate CVE findings; send one finding per listed CVE`;
+  if (ids.size < (i.listedCves ?? 0)) return `${i.id}: ${ids.size} of ${i.listedCves} listed CVEs have findings; verify every CVE before posting`;
+  return missing.length ? `${i.id}: no verification evidence for ${missing.join(", ")}; verify every CVE before posting` : null;
+}
 export interface PullRequest { url: string; number: number; title: string; body?: string | null; branch?: string; state: "open" | "closed" | "merged"; mergeSha?: string | null }
 export interface Match { incidentId: string; confidence: "linked" | "proposed"; evidence: string }
 // Shaped from ev2-mcp get_rollout_summary (stages) and get_rollout_details for shell/PushLinuxImage (push). No log text.
@@ -138,6 +150,7 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
   // Release-bump notes quote other PRs' IcM references; only a human link can attach one.
   const matches = new Map(prs.map((pr) => [pr.url.toLowerCase(), isReleaseBump(pr.title) ? [] : matchIcms(pr, active)]));
   for (const incident of active) {
+    if (unverified(incident)) continue;
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
     // A fix PR that Ev2 shows released counts even if it was never linked here, so its CVEs aren't listed as open again.
@@ -263,7 +276,8 @@ export async function planFixTracker(incidents: Incident[], lookbackHours = 24, 
   return {
     since: since.toISOString(), scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
-    entries: planEntries(all, incidents, result), errors: [...fetchErrors, ...errors],
-    needsFixPr: active.map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
+    entries: planEntries(all, incidents, result),
+    errors: [...active.map(unverified).filter((e): e is string => !!e), ...fetchErrors, ...errors],
+    needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
   };
 }

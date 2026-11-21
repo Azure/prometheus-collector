@@ -17,12 +17,22 @@ spec:
     1. List the team's ACTIVE incidents. For each, collect id, title, status, tags, and the text of
        every discussion entry. If the release channel (aks or arc) is stated in the incident,
        include it; otherwise omit it.
-       For vulnerability incidents (CVE/FedRAMP/S360 findings), also set findings: one item per CVE the
-       incident lists, {id}. Add fixedBy = URLs of open or merged Azure/prometheus-collector PRs whose diff raises the
-       affected module, package, Go version or base image to at least the fixed version (look the fixed
-       version up on osv.dev; search PRs by CVE ID and package name; one CVE may need several PRs).
-       Set fixed true only if a version already released to Prod contains the fixed version. If unsure,
-       leave the CVE without fixedBy or fixed: an open CVE is never reported as fixed.
+       For vulnerability incidents (CVE/FedRAMP/S360 findings), also set listedCves = the number of CVEs
+       the incident lists (description and finding titles), and findings: one item per listed CVE, {id, evidence}.
+       Verify EVERY listed CVE, never a subset, Windows included, against the image the incident names, the
+       released Prod image and the rolling image (pull with crane/MCR):
+       - Go: `go version -m` on every binary and .so for module versions and the Go version; compare with
+         the fixed version on vuln.go.dev (a module the image does not contain is not present = fixed).
+       - Windows/OS: os.version of each -win manifest (LTSC 2019 and 2022 separately) vs the FixedBuild for
+         that OS in the MSRC CVRF (api.msrc.microsoft.com/cvrf/v3.0); .NET via its version vs the advisory.
+         A CVE whose MSRC products exclude Server 2019/2022 is not applicable.
+       Put that check in evidence (binary, version found, fixed version). Without evidence for every listed
+       CVE the tool plans nothing for the incident: do not link, tag or post on it yourself either.
+       Add fixedBy = URLs of open or merged Azure/prometheus-collector PRs whose diff or rolling image raises the
+       affected module, package, Go version or base image to at least the fixed version (search PRs by CVE
+       ID and package name; one CVE may need several PRs). Set fixed true only if the image already released
+       to Prod (every variant) contains the fixed version. If unsure, leave the CVE without fixedBy or fixed:
+       an open CVE is never reported as fixed.
     2. Gather Ev2 rollouts with ev2-mcp read tools only (serviceId 3170cdd2-19f0-4027-912b-1027311691a2;
        never start, approve, suspend or cancel a rollout). From the Prod endpoint only: list rollout
        history for the last 29 days (windows over 30 days are rejected) and keep DefinitionId 978,
