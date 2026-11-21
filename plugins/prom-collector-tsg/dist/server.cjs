@@ -67592,15 +67592,15 @@ var unfixed = (i) => (i.findings ?? []).filter((f) => !f.fixed && !f.fixedBy?.le
 function coverage(i, key, state3, releasedPrs) {
   const all = i.findings ?? [];
   if (!all.length) return state3 === "released" ? " Please verify and resolve." : "";
-  const mine = fixes(i, key), open2 = unfixed(i), done = all.filter((f) => f.fixed && !mine.includes(f.id)).length;
+  const shipped = (f) => f.fixed || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
+  const mine = fixes(i, key), open2 = unfixed(i), done = all.filter((f) => shipped(f) && !mine.includes(f.id)).length;
   const others = all.length - mine.length - open2.length - done;
   let text = ` Fixes ${mine.length} of ${all.length} listed CVEs${mine.length ? ` (${list(mine)})` : ""}.`;
   if (done) text += ` ${done} already fixed in released images.`;
   if (others) text += ` ${others} covered by other fix PRs.`;
   if (open2.length) text += ` Still open, no fix yet: ${list(open2)}.`;
   if (state3 !== "released") return text;
-  const pending = all.some((f) => !f.fixed && !f.fixedBy?.some((u) => u.toLowerCase() === key || releasedPrs.has(u.toLowerCase())));
-  return text + (pending ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
+  return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
 function planEntries(prs, incidents, lifecycles2) {
   const out = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
@@ -67608,6 +67608,7 @@ function planEntries(prs, incidents, lifecycles2) {
   for (const incident of active) {
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
+    for (const [u, l] of lifecycles2) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : void 0).state === "released") releasedPrs.add(u);
     const render = [];
     const tagged = new Set((incident.tags ?? []).map((t) => /^Fix PR:\s*(\S+)/i.exec(t)?.[1]?.toLowerCase()).filter(Boolean));
     for (const pr of prs) {

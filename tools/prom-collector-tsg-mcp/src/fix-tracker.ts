@@ -121,15 +121,15 @@ export const unfixed = (i: Incident) => (i.findings ?? []).filter((f) => !f.fixe
 function coverage(i: Incident, key: string, state: string, releasedPrs: Set<string>) {
   const all = i.findings ?? [];
   if (!all.length) return state === "released" ? " Please verify and resolve." : "";
-  const mine = fixes(i, key), open = unfixed(i), done = all.filter((f) => f.fixed && !mine.includes(f.id)).length;
+  const shipped = (f: Finding) => f.fixed || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
+  const mine = fixes(i, key), open = unfixed(i), done = all.filter((f) => shipped(f) && !mine.includes(f.id)).length;
   const others = all.length - mine.length - open.length - done;
   let text = ` Fixes ${mine.length} of ${all.length} listed CVEs${mine.length ? ` (${list(mine)})` : ""}.`;
   if (done) text += ` ${done} already fixed in released images.`;
   if (others) text += ` ${others} covered by other fix PRs.`;
   if (open.length) text += ` Still open, no fix yet: ${list(open)}.`;
   if (state !== "released") return text;
-  const pending = all.some((f) => !f.fixed && !f.fixedBy?.some((u) => u.toLowerCase() === key || releasedPrs.has(u.toLowerCase())));
-  return text + (pending ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
+  return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
 
 export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>): PlannedEntry[] {
@@ -140,6 +140,8 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
   for (const incident of active) {
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
+    // A fix PR that Ev2 shows released counts even if it was never linked here, so its CVEs aren't listed as open again.
+    for (const [u, l] of lifecycles) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : undefined).state === "released") releasedPrs.add(u);
     // Rendered after every PR is planned, so PRs released in the same run count as released for each other.
     const render: (() => PlannedEntry)[] = [];
     const tagged = new Set((incident.tags ?? []).map((t) => /^Fix PR:\s*(\S+)/i.exec(t)?.[1]?.toLowerCase()).filter(Boolean));

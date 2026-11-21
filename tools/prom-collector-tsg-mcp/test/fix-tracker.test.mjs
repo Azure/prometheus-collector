@@ -130,6 +130,11 @@ test("CVE coverage: links and release text depend on which listed CVEs each PR f
   const sameRun = planEntries([a, c], [icm(1, "", { findings: covered, entries: inImage, channel: "aks" })], both);
   assert.deepEqual(sameRun.map((e) => e.state), ["released", "released"]);
   assert.ok(sameRun.every((e) => /please verify and resolve/.test(e.text)), "PRs released in the same run count for each other");
+
+  const viaEv2 = (cState) => new Map([[a.url.toLowerCase(), { state: "in-image", rollouts: [rel] }], [c.url.toLowerCase(), { state: cState, rollouts: [rel] }]]);
+  const viaText = (cState) => planEntries([a], [icm(1, "", { findings: covered, entries: posted.slice(0, 1), channel: "aks" })], viaEv2(cState))[0].text;
+  assert.match(viaText("in-image"), /2 already fixed in released images\..*please verify and resolve/, "c is released per Ev2 though never linked here, so its CVE isn't open");
+  assert.match(viaText("merged"), /stays open/, "without push evidence c is not in an image, so not released");
 });
 
 test("rolling entry is short: rollout link and ETA from earlier completed Prod rollouts, no stage names", () => {
