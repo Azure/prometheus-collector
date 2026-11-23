@@ -198,8 +198,12 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
           text: `${DETAIL[state](fix, lc, notes)}${/closed|rolled/.test(state) ? "" : coverage(incident, key, state, releasedPrs)} ${marker(pr.url, state)}` }));
       };
       if (!linked) {
+        // Only the IcM link is unconfirmed; the PR may already be merged or rolling, so say where it stands.
+        const where = lc?.state === "in-image"
+          ? ` The PR is already merged and built into agent image ${lc.image ?? "(tag unknown)"}; ${releaseState(lc.rollouts, incident.channel ? [incident.channel] : undefined, prodStages).notes.join("; ") || "rollout not started"}.`
+          : pr.state === "merged" ? " The PR is already merged." : pr.state === "open" ? " The PR is still open." : "";
         if (match && !posted.has("proposed") && lc?.state !== "closed-unmerged")
-          render.push(() => ({ incidentId: id, prUrl: pr.url, state: "proposed", text: `Possible fix: ${fix}, because ${match.evidence}.${coverage(incident, key, "proposed", releasedPrs)} Not linked yet. ` +
+          render.push(() => ({ incidentId: id, prUrl: pr.url, state: "proposed", text: `Possible fix: ${fix}, because ${match.evidence}.${where}${coverage(incident, key, "proposed", releasedPrs)} Not yet confirmed as this incident's fix. ` +
             `To confirm, add the tag "Fix PR: ${pr.url}"; to reject, post an entry containing ft:${short(pr.url)}:rejected in square brackets. ${marker(pr.url, "proposed")}` }));
         continue;
       }

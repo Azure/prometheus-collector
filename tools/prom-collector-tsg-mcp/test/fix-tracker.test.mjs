@@ -187,3 +187,15 @@ test("rolling entry is short: rollout link and ETA from earlier completed Prod r
   const [e] = planEntries([p], [icm(1, "", { channel: "aks", entries: [`[fix-tracker:${p.url}:linked]`] })], new Map([[p.url.toLowerCase(), { state: "in-image", rollouts }]]));
   assert.equal(e.text, `Fix is rolling out: fix (${p.url}). AKS: rolling out (https://ev2/now), estimated completion 2026-11-24. [ft:Azure/prometheus-collector#1:rolling]`);
 });
+
+test("a proposal for a merged, rolling PR says where the PR stands and that only the link is unconfirmed", () => {
+  const p = pr({ number: 2, url: pr().url.replace(/1$/, "2"), state: "merged" }), other = pr({ state: "merged" });
+  const ro = { definitionId: 1196, endpoint: "Prod", rolloutId: "now", url: "https://ev2/now", startTime: "2026-11-17", includesFix: true, stages: [{ name: "Heavy", status: "Running" }] };
+  const lc = new Map([[p.url.toLowerCase(), { state: "in-image", image: "7.5.0-main-x", rollouts: [ro] }]]);
+  const incident = icm(1, "", { channel: "aks", tags: [`Fix PR: ${other.url}`], findings: [{ id: "CVE-2026-0001", fixedBy: [other.url, p.url] }] });
+  const [e] = planEntries([p], [incident], lc);
+  assert.equal(e.state, "proposed", "another tagged PR covering the same CVE doesn't suppress the proposal");
+  assert.match(e.text, /^Possible fix: .*The PR is already merged and built into agent image 7\.5\.0-main-x; AKS: rolling out \(https:\/\/ev2\/now\), ETA unknown\..*Not yet confirmed as this incident's fix\. To confirm, add the tag/);
+  const open = planEntries([pr({ title: "bump for CVE-2026-1234" })], [icm(1, "CVE-2026-1234")], new Map())[0].text;
+  assert.match(open, /The PR is still open\./);
+});
