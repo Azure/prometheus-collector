@@ -46,7 +46,12 @@ spec:
        and includeStatusMessages true, and set push = {status, exitCode} from that action
        (exitCode from its EXITCODE#n message). Never copy log lines, tokens, identities or any other
        status-message text into the tool input, the IcM, or your report.
-    3. Call prom-collector-tsg_tsg_fix_tracker_plan with those incidents, lookbackHours 24 and rollouts.
+       Then build prodStages = {aks, arc}: for 1196 (aks) and 1205 (arc), read the Prod stage map with
+       get_latest_stage_map (stage map name from get_or_list_stage_maps for this service) and list every
+       region stage name in the form the rollout StageInfos use (e.g. Broad1.westus); skip __STAGE_PRECHECK__ and
+       __ROLLOUT_PRE_CHECK__. Never derive the list from a rollout: a region Select leaves regions out. If the map
+       cannot be read, omit that channel and report it; nothing on it is then counted as released.
+    3. Call prom-collector-tsg_tsg_fix_tracker_plan with those incidents, lookbackHours 24, rollouts and prodStages.
     4. For each item in "entries", post its "text" verbatim as a discussion entry on incidentId.
        Do not post anything that is not in "entries", and do not reword the text: the trailing
        [ft:...] marker is how the next run avoids duplicates.

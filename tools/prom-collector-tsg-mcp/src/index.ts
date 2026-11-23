@@ -1056,7 +1056,7 @@ server.tool(
 // Tool: tsg_fix_tracker_plan
 server.tool(
   "tsg_fix_tracker_plan",
-  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = every Prod stage Succeeded), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
+  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = Prod rollouts containing the fix together Succeeded every stage in the Ev2 Prod stage map passed as prodStages), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
   {
     incidents: z.array(z.object({
       id: z.union([z.string(), z.number()]),
@@ -1088,9 +1088,11 @@ server.tool(
       push: z.object({ status: z.string().optional(), exitCode: z.union([z.number(), z.string()]).optional() }).optional()
         .describe("Push rollouts only: shell/PushLinuxImage (978) action status and exit code. Never pass log text."),
     })).default([]).describe("Ev2 rollouts from ev2-mcp for the last 30 days"),
+    prodStages: z.object({ aks: z.array(z.string()).optional(), arc: z.array(z.string()).optional() }).default({})
+      .describe("Full Prod stage names per channel from the Ev2 stage map of 1196 (aks) / 1205 (arc), not from one rollout. A channel is released only when Prod rollouts containing the fix together Succeeded every one; omitted = never released"),
   },
-  async ({ incidents, lookbackHours, rollouts }) => ({
-    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts), null, 2) }],
+  async ({ incidents, lookbackHours, rollouts, prodStages }) => ({
+    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts, prodStages), null, 2) }],
   })
 );
 

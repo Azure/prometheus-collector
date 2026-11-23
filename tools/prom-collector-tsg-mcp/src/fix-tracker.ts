@@ -83,9 +83,11 @@ const ref = (r: Rollout) => r.url ?? `Ev2 Prod rollout ${r.rolloutId}`;
 const ok = (s?: string) => /^succeeded$/i.test(s ?? "");
 const median = (xs: number[]) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
-// Per channel from Prod Ev2 stage summaries. Released = a rollout containing the fix has every stage Succeeded and
-// no later rollout dropped it. Missing evidence is reported as unknown, never as done. This is not fleet adoption.
-export function releaseState(rollouts: TrackedRollout[], channels: Channel[] = ["aks", "arc"]) {
+// Full Prod stage list per channel from the Ev2 stage map, not from any one rollout (a region Select drops stages).
+export type ProdStages = Partial<Record<Channel, string[]>>;
+// Per channel from Prod Ev2 stage summaries. Released = Prod rollouts containing the fix together have Succeeded every
+// stage-map stage and no later rollout dropped it. Missing evidence is reported as unknown, never as done. This is not fleet adoption.
+export function releaseState(rollouts: TrackedRollout[], channels: Channel[] = ["aks", "arc"], prodStages: ProdStages = {}) {
   let done = 0, started = false, back = false, required = 0;
   const notes: string[] = [];
   for (const channel of channels) {
@@ -95,7 +97,10 @@ export function releaseState(rollouts: TrackedRollout[], channels: Channel[] = [
       .sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
     const latest = rs[0], idx = rs.findIndex((r) => r.includesFix);
     const complete = (r: Rollout) => !!r.stages?.length && r.stages.every((s) => ok(s.status));
-    const shipped = rs.find((r) => r.includesFix && complete(r));
+    const need = (prodStages[channel] ?? []).map((s) => s.toLowerCase());
+    const succeeded = new Set(rs.filter((r) => r.includesFix).flatMap((r) => r.stages ?? []).filter((s) => ok(s.status)).map((s) => s.name.toLowerCase()));
+    const shipped = need.length > 0 && need.every((s) => succeeded.has(s))
+      && rs.find((r) => r.includesFix && r.stages?.some((s) => ok(s.status) && need.includes(s.name.toLowerCase())));
     if (!latest) notes.push(`${label}: release status unknown`);
     else if (idx > 0) { back = true; notes.push(`${label}: newer rollout ${ref(latest)} does not include the fix`); }
     else if (shipped) { done++; notes.push(`${label}: completed in Prod (${ref(shipped)})`); }
@@ -144,7 +149,7 @@ function coverage(i: Incident, key: string, state: string, releasedPrs: Set<stri
   return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
 
-export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>): PlannedEntry[] {
+export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>, prodStages: ProdStages = {}): PlannedEntry[] {
   const out: PlannedEntry[] = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   // Match against all active IcMs at once so an MSRC case shared by several IcMs stays a proposal.
   // Release-bump notes quote other PRs' IcM references; only a human link can attach one.
@@ -154,7 +159,7 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
     // A fix PR that Ev2 shows released counts even if it was never linked here, so its CVEs aren't listed as open again.
-    for (const [u, l] of lifecycles) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : undefined).state === "released") releasedPrs.add(u);
+    for (const [u, l] of lifecycles) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : undefined, prodStages).state === "released") releasedPrs.add(u);
     // Rendered after every PR is planned, so PRs released in the same run count as released for each other.
     const render: (() => PlannedEntry)[] = [];
     const tagged = new Set((incident.tags ?? []).map((t) => /^Fix PR:\s*(\S+)/i.exec(t)?.[1]?.toLowerCase()).filter(Boolean));
@@ -187,7 +192,7 @@ export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycle
       }
       if (!lc || lc.state === "open") continue;
       if (lc.state === "closed-unmerged") { if (!posted.has(lc.state)) add(lc.state); continue; }
-      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : undefined) : { state: null, notes: [] };
+      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : undefined, prodStages) : { state: null, notes: [] };
       const state = rel.state ?? lc.state;
       if (state === "rolled-back") { if (!posted.has(state)) add(state, rel.notes); continue; }
       const top = Math.max(...[...posted].map((s) => PROGRESS.indexOf(s)), 0);
@@ -253,7 +258,7 @@ export async function lifecycles(prs: PullRequest[], gh: Get, rollouts: Rollout[
   }
   return { result, errors };
 }
-export async function planFixTracker(incidents: Incident[], lookbackHours = 24, rollouts: Rollout[] = [], gh = githubGet()) {
+export async function planFixTracker(incidents: Incident[], lookbackHours = 24, rollouts: Rollout[] = [], prodStages: ProdStages = {}, gh = githubGet()) {
   const since = new Date(Date.now() - lookbackHours * 3600e3);
   const scanned = await recentPrs(gh, since);
   const tracked = new Set<string>();
@@ -276,8 +281,9 @@ export async function planFixTracker(incidents: Incident[], lookbackHours = 24, 
   return {
     since: since.toISOString(), scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
-    entries: planEntries(all, incidents, result),
-    errors: [...active.map(unverified).filter((e): e is string => !!e), ...fetchErrors, ...errors],
+    entries: planEntries(all, incidents, result, prodStages),
+    errors: [...active.map(unverified).filter((e): e is string => !!e), ...fetchErrors, ...errors,
+      ...(["aks", "arc"] as const).filter((c) => !prodStages[c]?.length).map((c) => `prodStages.${c} missing: nothing on ${c} can count as released without the Ev2 Prod stage map`)],
     needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
   };
 }

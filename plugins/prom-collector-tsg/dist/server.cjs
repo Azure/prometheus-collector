@@ -67559,7 +67559,7 @@ var msrcCase = (title = "") => /\bMSRC\]?\s*\[?\s*(\d{5,7})\b/i.exec(title)?.[1]
 var ref = (r) => r.url ?? `Ev2 Prod rollout ${r.rolloutId}`;
 var ok = (s) => /^succeeded$/i.test(s ?? "");
 var median = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-function releaseState(rollouts, channels = ["aks", "arc"]) {
+function releaseState(rollouts, channels = ["aks", "arc"], prodStages = {}) {
   let done = 0, started = false, back = false, required2 = 0;
   const notes = [];
   for (const channel of channels) {
@@ -67568,7 +67568,9 @@ function releaseState(rollouts, channels = ["aks", "arc"]) {
     const rs = rollouts.filter((r) => r.definitionId === DEFS[channel] && isProd(r)).sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
     const latest = rs[0], idx = rs.findIndex((r) => r.includesFix);
     const complete = (r) => !!r.stages?.length && r.stages.every((s) => ok(s.status));
-    const shipped = rs.find((r) => r.includesFix && complete(r));
+    const need = (prodStages[channel] ?? []).map((s) => s.toLowerCase());
+    const succeeded = new Set(rs.filter((r) => r.includesFix).flatMap((r) => r.stages ?? []).filter((s) => ok(s.status)).map((s) => s.name.toLowerCase()));
+    const shipped = need.length > 0 && need.every((s) => succeeded.has(s)) && rs.find((r) => r.includesFix && r.stages?.some((s) => ok(s.status) && need.includes(s.name.toLowerCase())));
     if (!latest) notes.push(`${label}: release status unknown`);
     else if (idx > 0) {
       back = true;
@@ -67611,14 +67613,14 @@ function coverage(i, key, state3, releasedPrs) {
   if (state3 !== "released") return text;
   return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
-function planEntries(prs, incidents, lifecycles2) {
+function planEntries(prs, incidents, lifecycles2, prodStages = {}) {
   const out = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   const matches = new Map(prs.map((pr) => [pr.url.toLowerCase(), isReleaseBump(pr.title) ? [] : matchIcms(pr, active)]));
   for (const incident of active) {
     if (unverified(incident)) continue;
     const id = String(incident.id), seen = markers(incident.entries);
     const releasedPrs = new Set([...seen].filter(([, s]) => s.has("released")).map(([u]) => u));
-    for (const [u, l] of lifecycles2) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : void 0).state === "released") releasedPrs.add(u);
+    for (const [u, l] of lifecycles2) if (l.state === "in-image" && releaseState(l.rollouts, incident.channel ? [incident.channel] : void 0, prodStages).state === "released") releasedPrs.add(u);
     const render = [];
     const tagged = new Set((incident.tags ?? []).map((t) => /^Fix PR:\s*(\S+)/i.exec(t)?.[1]?.toLowerCase()).filter(Boolean));
     for (const pr of prs) {
@@ -67653,7 +67655,7 @@ function planEntries(prs, incidents, lifecycles2) {
         if (!posted.has(lc.state)) add(lc.state);
         continue;
       }
-      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0) : { state: null, notes: [] };
+      const rel = lc.state === "in-image" ? releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0, prodStages) : { state: null, notes: [] };
       const state3 = rel.state ?? lc.state;
       if (state3 === "rolled-back") {
         if (!posted.has(state3)) add(state3, rel.notes);
@@ -67728,7 +67730,7 @@ async function lifecycles(prs, gh, rollouts, track) {
   }
   return { result, errors };
 }
-async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh = githubGet()) {
+async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], prodStages = {}, gh = githubGet()) {
   const since = new Date(Date.now() - lookbackHours * 36e5);
   const scanned = await recentPrs(gh, since);
   const tracked = /* @__PURE__ */ new Set();
@@ -67756,8 +67758,13 @@ async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], gh =
     since: since.toISOString(),
     scanned: scanned.length,
     excludedReleaseBumps: scanned.filter((p) => isReleaseBump(p.title)).map((p) => p.url),
-    entries: planEntries(all, incidents, result),
-    errors: [...active.map(unverified).filter((e) => !!e), ...fetchErrors, ...errors],
+    entries: planEntries(all, incidents, result, prodStages),
+    errors: [
+      ...active.map(unverified).filter((e) => !!e),
+      ...fetchErrors,
+      ...errors,
+      ...["aks", "arc"].filter((c) => !prodStages[c]?.length).map((c) => `prodStages.${c} missing: nothing on ${c} can count as released without the Ev2 Prod stage map`)
+    ],
     needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
   };
 }
@@ -68527,7 +68534,7 @@ server.tool(
 );
 server.tool(
   "tsg_fix_tracker_plan",
-  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = every Prod stage Succeeded), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
+  "Read-only. Scans Azure/prometheus-collector for PRs opened or merged in the lookback window, matches them to the given active IcMs (explicit IcM ID/link or unique MSRC case = linked; bare number, shared CVE or ambiguous MSRC = proposed), follows linked PRs through merge, pushed image (Ev2 978 shell/PushLinuxImage, exit code 0) and AKS/Arc Ev2 Prod release rollouts (1196/1205 stage status; released = Prod rollouts containing the fix together Succeeded every stage in the Ev2 Prod stage map passed as prodStages), and returns short customer-readable IcM discussion entries to post (what is fixed, CVE coverage, rollout link, ETA) plus needsFixPr (listed CVEs with no fix PR). Ev2 data comes from the caller via `rollouts` (gather it with ev2-mcp from the Prod endpoint); missing rollouts are reported as unknown. Each entry ends with an [ft:<owner/repo>#<n>:<state>] marker; pass each incident's existing discussion entries so already-posted states are skipped. Release-bump PRs are never auto-matched. Does not write to IcM.",
   {
     incidents: external_exports3.array(external_exports3.object({
       id: external_exports3.union([external_exports3.string(), external_exports3.number()]),
@@ -68557,10 +68564,11 @@ server.tool(
       url: external_exports3.string().optional(),
       stages: external_exports3.array(external_exports3.object({ name: external_exports3.string(), status: external_exports3.string() })).optional().describe("get_rollout_summary StageInfos[].StageName/StageStatus"),
       push: external_exports3.object({ status: external_exports3.string().optional(), exitCode: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional() }).optional().describe("Push rollouts only: shell/PushLinuxImage (978) action status and exit code. Never pass log text.")
-    })).default([]).describe("Ev2 rollouts from ev2-mcp for the last 30 days")
+    })).default([]).describe("Ev2 rollouts from ev2-mcp for the last 30 days"),
+    prodStages: external_exports3.object({ aks: external_exports3.array(external_exports3.string()).optional(), arc: external_exports3.array(external_exports3.string()).optional() }).default({}).describe("Full Prod stage names per channel from the Ev2 stage map of 1196 (aks) / 1205 (arc), not from one rollout. A channel is released only when Prod rollouts containing the fix together Succeeded every one; omitted = never released")
   },
-  async ({ incidents, lookbackHours, rollouts }) => ({
-    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts), null, 2) }]
+  async ({ incidents, lookbackHours, rollouts, prodStages }) => ({
+    content: [{ type: "text", text: JSON.stringify(await planFixTracker(incidents, lookbackHours, rollouts, prodStages), null, 2) }]
   })
 );
 server.tool(
