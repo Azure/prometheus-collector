@@ -67599,21 +67599,35 @@ var DETAIL = {
 };
 var list = (ids) => ids.length > 5 ? `${ids.slice(0, 5).join(", ")} and ${ids.length - 5} more` : ids.join(", ");
 var fixes = (i, key) => (i.findings ?? []).filter((f) => f.fixedBy?.some((u) => u.toLowerCase() === key)).map((f) => f.id);
-var unfixed = (i) => (i.findings ?? []).filter((f) => !f.fixed && !f.fixedBy?.length).map((f) => f.id);
+var unfixed = (i) => (i.findings ?? []).filter((f) => !f.fixed && !f.notAffected && !f.fixedBy?.length).map((f) => f.id);
 function coverage(i, key, state3, releasedPrs) {
   const all = i.findings ?? [];
   if (!all.length) return state3 === "released" ? " Please verify and resolve." : "";
-  const shipped = (f) => f.fixed || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
-  const mine = fixes(i, key), open2 = unfixed(i), done = all.filter((f) => shipped(f) && !mine.includes(f.id)).length;
-  const others = all.length - mine.length - open2.length - done;
+  const shipped = (f) => f.fixed || f.notAffected || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
+  const mine = fixes(i, key), open2 = unfixed(i), na = all.filter((f) => f.notAffected && !mine.includes(f.id)).length;
+  const done = all.filter((f) => shipped(f) && !f.notAffected && !mine.includes(f.id)).length;
+  const others = all.length - mine.length - open2.length - done - na;
   let text = ` Fixes ${mine.length} of ${all.length} listed CVEs${mine.length ? ` (${list(mine)})` : ""}.`;
   if (done) text += ` ${done} already fixed in released images.`;
+  if (na) text += ` ${na} do not affect the agent images.`;
   if (others) text += ` ${others} covered by other fix PRs.`;
   if (open2.length) text += ` Still open, no fix yet: ${list(open2)}.`;
   if (state3 !== "released") return text;
   return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
+function withoutStale(incidents, lcs, prodStages = {}) {
+  const shipped = (l) => ["aks", "arc"].some((c) => {
+    const need = (prodStages[c] ?? []).map((s) => s.toLowerCase());
+    const rs = l.rollouts.filter((r) => r.definitionId === DEFS[c] && isProd(r)).sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
+    if (!need.length || rs.length < 2 || !rs[0].includesFix) return false;
+    const done = new Set(rs.slice(1).filter((r) => r.includesFix).flatMap((r) => r.stages ?? []).filter((s) => ok(s.status)).map((s) => s.name.toLowerCase()));
+    return need.every((s) => done.has(s));
+  });
+  const stale = new Set([...lcs].filter(([, l]) => shipped(l)).map(([u]) => u));
+  return incidents.map((i) => ({ ...i, findings: i.findings?.map((f) => f.fixed ? f : { ...f, fixedBy: f.fixedBy?.filter((u) => !stale.has(u.toLowerCase())) }) }));
+}
 function planEntries(prs, incidents, lifecycles2, prodStages = {}) {
+  incidents = withoutStale(incidents, lifecycles2, prodStages);
   const out = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   const matches = new Map(prs.map((pr) => [pr.url.toLowerCase(), isReleaseBump(pr.title) ? [] : matchIcms(pr, active)]));
   for (const incident of active) {
@@ -67765,7 +67779,7 @@ async function planFixTracker(incidents, lookbackHours = 24, rollouts = [], prod
       ...errors,
       ...["aks", "arc"].filter((c) => !prodStages[c]?.length).map((c) => `prodStages.${c} missing: nothing on ${c} can count as released without the Ev2 Prod stage map`)
     ],
-    needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
+    needsFixPr: withoutStale(active, result, prodStages).filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length)
   };
 }
 
@@ -68547,6 +68561,7 @@ server.tool(
         id: external_exports3.string().describe("CVE or finding ID listed in the incident"),
         fixedBy: external_exports3.array(external_exports3.string()).optional().describe("Fix PR URLs you verified update the affected package to at least its fixed version"),
         fixed: external_exports3.boolean().optional().describe("True only if a version already released to Prod contains the fix"),
+        notAffected: external_exports3.boolean().optional().describe("True if no shipped image contains the vulnerable module/package, or the advisory's products exclude the shipped OS builds"),
         evidence: external_exports3.string().optional().describe("How you verified this CVE against the released and rolling images: binary module/Go version (go version -m), OS build (os.version) or .NET version vs the advisory's fixed version. Required for every CVE, Windows included")
       })).optional().describe("Vulnerability incidents only: every listed CVE. Entries then state coverage, PRs covering none are not linked, and 'released' only invites resolving when every CVE has a released fix"),
       listedCves: external_exports3.number().optional().describe("Number of CVEs the incident lists; nothing is planned for it until findings cover them all with evidence")
