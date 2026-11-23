@@ -98,7 +98,7 @@ test("release finished per channel, Prod only, never with a newer rollout lackin
   const running = ro(1196, "Prod", { status: "Running", stages: [done[0], { name: "Medium", status: "Running" }] });
   const r = releaseState([running], ["aks"], map);
   assert.equal(r.state, "rolling");
-  assert.match(r.notes[0], /^AKS: rolling out \(.+\), ETA unknown$/);
+  assert.match(r.notes[0], /^AKS: rolling out \(.+\), estimated completion \d{4}-\d{2}-\d{2}$/, "own pace when there is no completed history");
   assert.equal(releaseState([ro(1196, "Prod", { includesFix: false })], ["aks"]).state, null, "not started");
   assert.equal(releaseState([], ["aks"]).state, null, "no evidence is not released");
   const newer = ro(1196, "Prod", { rolloutId: "new", startTime: "2026-11-18", includesFix: false });
@@ -182,10 +182,10 @@ test("no link, tag or post on a CVE incident until every listed CVE has a verifi
 test("rolling entry is short: rollout link and ETA from earlier completed Prod rollouts, no stage names", () => {
   const p = pr({ state: "merged" }), done = [{ name: "Heavy", status: "Succeeded" }];
   const ro = (id, start, end, over = {}) => ({ definitionId: 1196, endpoint: "Prod", rolloutId: id, url: `https://ev2/${id}`, startTime: start, endTime: end, includesFix: false, stages: done, ...over });
-  const rollouts = [ro("old1", "2026-10-01T00:00Z", "2026-10-08T00:00Z"), ro("old2", "2026-10-20T00:00Z", "2026-10-25T00:00Z"),
-    ro("now", "2026-11-17T00:00Z", undefined, { includesFix: true, stages: [{ name: "Heavy", status: "Running" }] })];
+  const day = 864e5, start = Date.now() - day, rollouts = [ro("old1", "2026-10-01T00:00Z", "2026-10-08T00:00Z"), ro("old2", "2026-10-20T00:00Z", "2026-10-25T00:00Z"),
+    ro("now", new Date(start).toISOString(), undefined, { includesFix: true, stages: [{ name: "Heavy", status: "Running" }] })];
   const [e] = planEntries([p], [icm(1, "", { channel: "aks", entries: [`[fix-tracker:${p.url}:linked]`] })], new Map([[p.url.toLowerCase(), { state: "in-image", rollouts }]]));
-  assert.equal(e.text, `Fix is rolling out: fix (${p.url}). AKS: rolling out (https://ev2/now), estimated completion 2026-11-24. [ft:Azure/prometheus-collector#1:rolling]`);
+  assert.equal(e.text, `Fix is rolling out: fix (${p.url}). AKS: rolling out (https://ev2/now), estimated completion ${new Date(start + 7 * day).toISOString().slice(0, 10)}. [ft:Azure/prometheus-collector#1:rolling]`);
 });
 
 test("a proposal for a merged, rolling PR says where the PR stands and that only the link is unconfirmed", () => {
@@ -195,7 +195,23 @@ test("a proposal for a merged, rolling PR says where the PR stands and that only
   const incident = icm(1, "", { channel: "aks", tags: [`Fix PR: ${other.url}`], findings: [{ id: "CVE-2026-0001", fixedBy: [other.url, p.url] }] });
   const [e] = planEntries([p], [incident], lc);
   assert.equal(e.state, "proposed", "another tagged PR covering the same CVE doesn't suppress the proposal");
-  assert.match(e.text, /^Possible fix: .*The PR is already merged and built into agent image 7\.5\.0-main-x; AKS: rolling out \(https:\/\/ev2\/now\), ETA unknown\..*Not yet confirmed as this incident's fix\. To confirm, add the tag/);
+  assert.match(e.text, /^Possible fix: .*The PR is already merged and first built into agent image 7\.5\.0-main-x; AKS: rolling out \(https:\/\/ev2\/now\), ETA unknown\..*Not yet confirmed as this incident's fix\. To confirm, add the tag/);
   const open = planEntries([pr({ title: "bump for CVE-2026-1234" })], [icm(1, "CVE-2026-1234")], new Map())[0].text;
   assert.match(open, /The PR is still open\./);
+});
+
+test("a running rollout with no completed history gets an ETA from its own ring pace and names the image it deploys", () => {
+  const day = 864e5, now = Date.now(), iso = (t) => new Date(t).toISOString();
+  const push = (id, sha, tag) => ({ definitionId: 978, endpoint: "Prod", rolloutId: id, sourceVersion: sha, artifactsVersion: tag, includesFix: true, push: { status: "Succeeded", exitCode: 0 } });
+  const rings = ["Canary", "Pilot", "Heavy", "Broad1"].map((name) => ({ name, status: "Succeeded" }));
+  const ro = { definitionId: 1196, endpoint: "Prod", rolloutId: "now", url: "https://ev2/now", status: "Running", sourceVersion: "bbb", startTime: iso(now - 4 * day), includesFix: true,
+    stages: [...rings, { name: "Broad1.westus", status: "Succeeded" }, { name: "Broad2", status: "Running" }, { name: "Broad2.eastus", status: "NotStarted" }] };
+  const { notes } = releaseState([push("p1", "aaa", "7.5.0-aaa"), push("p2", "bbb", "7.5.0-bbb"), ro], ["aks"]);
+  // 4 of 5 rings in 4 days: one more day.
+  assert.deepEqual(notes, [`AKS: rolling out agent image 7.5.0-bbb (https://ev2/now), estimated completion ${iso(now + day).slice(0, 10)}`]);
+  const hotfix = { ...push("p3", "bbb", "7.5.0-hotfix-ccc"), includesFix: false };
+  assert.match(releaseState([push("p2", "bbb", "7.5.0-bbb"), hotfix, ro], ["aks"]).notes[0], /^AKS: rolling out \(/, "no image named when pushes of the commit disagree");
+  // A follow-up rollout pacing only its own rings: rings it never runs don't stretch the ETA.
+  const later = releaseState([{ ...ro, stages: [{ name: "Broad1", status: "Succeeded" }, { name: "Broad2", status: "Running" }] }], ["aks"], { aks: ["Canary", "Pilot", "Heavy", "Broad1", "Broad2"] });
+  assert.match(later.notes[0], new RegExp(`estimated completion ${iso(now + 4 * day).slice(0, 10)}$`));
 });
