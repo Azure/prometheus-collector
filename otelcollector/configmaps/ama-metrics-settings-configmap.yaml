@@ -1,6 +1,10 @@
 kind: ConfigMap
 apiVersion: v1
 data:
+  # Set microsoft_metrics_account on all enabled built-in cluster and control-plane scrapes.
+  # Empty or omitted disables labeling. Match this value in the DCR labelIncludeFilter.
+  # Custom scrape jobs and monitor resources are not modified.
+  default-scrape-metrics-account: ""
   schema-version:
     #string.used by agent to parse config. supported versions are {v1, v2}. Configs with other schema versions will be rejected by the agent.
     v2

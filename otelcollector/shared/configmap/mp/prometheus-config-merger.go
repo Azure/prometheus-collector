@@ -1475,6 +1475,14 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 			populateDefaultPrometheusConfig()
 		}
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+			account, err := shared.ReadDefaultScrapeMetricsAccount(defaultScrapeMetricsAccountPath)
+			if err != nil {
+				log.Printf("%v; default targets metrics account will not be added\n", err)
+			}
+			if account != "" {
+				shared.AddDefaultScrapeMetricsAccount(mergedDefaultConfigs, account)
+				log.Printf("Applying default scrape metrics account %q\n", account)
+			}
 			log.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err != nil {
