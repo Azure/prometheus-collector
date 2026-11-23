@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { matchIcms, isReleaseBump, markers, planEntries, releaseState, lifecycles, unverified } from "../dist/fix-tracker.js";
+import { matchIcms, isReleaseBump, markers, planEntries, releaseState, lifecycles, unverified, withoutStale } from "../dist/fix-tracker.js";
 
 const pr = (over) => ({ url: "https://github.com/Azure/prometheus-collector/pull/1", number: 1, title: "fix", body: "", branch: "b", state: "open", ...over });
 // Incidents named after CVEs default to one verified finding per title CVE, fixed by the default PR.
@@ -151,6 +151,20 @@ test("CVE coverage: links and release text depend on which listed CVEs each PR f
   const viaText = (cState) => planEntries([a], [icm(1, "", { findings: covered, entries: posted.slice(0, 1), channel: "aks" })], viaEv2(cState), map)[0].text;
   assert.match(viaText("in-image"), /2 already fixed in released images\..*please verify and resolve/, "c is released per Ev2 though never linked here, so its CVE isn't open");
   assert.match(viaText("merged"), /stays open/, "without push evidence c is not in an image, so not released");
+});
+
+test("not-affected CVEs aren't open, and PRs already shipped before the current rollout aren't proposed or counted", () => {
+  const cur = pr({ number: 1, state: "merged" }), old = pr({ url: cur.url.replace(/1$/, "2"), number: 2, title: "old bump", state: "merged" });
+  const r = (startTime, status, includesFix) => ({ definitionId: 1196, endpoint: "Prod", rolloutId: startTime, startTime, status, includesFix, stages: [{ name: "x", status }] });
+  const lc = new Map([[cur.url.toLowerCase(), { state: "in-image", rollouts: [r("2026-10-24", "Succeeded", false), r("2026-11-16", "Running", true)] }],
+    [old.url.toLowerCase(), { state: "in-image", rollouts: [r("2026-10-24", "Succeeded", true), r("2026-11-16", "Running", true)] }]]);
+  const findings = [{ id: "CVE-2026-0001", fixedBy: [cur.url, old.url] }, { id: "CVE-2026-0002", notAffected: true }, { id: "CVE-2026-0003", fixedBy: [old.url] }];
+  const plan = planEntries([cur, old], [icm(1, "", { findings, entries: [`[ft:Azure/prometheus-collector#1:linked]`], channel: "aks" })], lc, { aks: ["x"] });
+  assert.deepEqual(plan.map((e) => [e.prUrl.slice(-1), e.state]), [["1", "rolling"]], "the old PR shipped in the 10-24 release yet the CVE is still open, so it is not a fix");
+  assert.match(plan[0].text, /Fixes 1 of 3 listed CVEs \(CVE-2026-0001\)\. 1 do not affect the agent images\. Still open, no fix yet: CVE-2026-0003\./);
+  const kept = (rollouts, stages) => withoutStale([icm(1, "", { findings })], new Map([[old.url.toLowerCase(), { state: "in-image", rollouts }]]), { aks: stages })[0].findings[2].fixedBy;
+  assert.deepEqual(kept([r("2026-10-24", "Succeeded", true), r("2026-11-16", "Running", true)], ["x", "y"]), [old.url], "a partial-region release is still rolling, not shipped");
+  assert.deepEqual(kept([r("2026-10-24", "Succeeded", true), r("2026-11-16", "Running", false)], ["x"]), [old.url], "the newest rollout dropped it, so the vulnerable image lacks it");
 });
 
 test("no link, tag or post on a CVE incident until every listed CVE has a verified verdict", () => {

@@ -22,17 +22,18 @@ spec:
        Verify EVERY listed CVE, never a subset, Windows included, against the image the incident names, the
        released Prod image and the rolling image (pull with crane/MCR):
        - Go: `go version -m` on every binary and .so for module versions and the Go version; compare with
-         the fixed version on vuln.go.dev (a module the image does not contain is not present = fixed).
+         the fixed version on vuln.go.dev (a module no shipped image contains: set notAffected true).
        - Windows/OS: os.version of each -win manifest (LTSC 2019 and 2022 separately) vs the FixedBuild for
          that OS in the MSRC CVRF (api.msrc.microsoft.com/cvrf/v3.0); .NET via its version vs the advisory.
-         A CVE whose MSRC products exclude Server 2019/2022 is not applicable.
+         A CVE whose MSRC products exclude Server 2019/2022 is not applicable: set notAffected true.
        Put that check in evidence (binary, version found, fixed version). Without evidence for every listed
        CVE the tool plans nothing for the incident: do not link, tag or post on it yourself either.
        Add fixedBy = URLs of open or merged Azure/prometheus-collector PRs whose diff or rolling image raises the
        affected module, package, Go version or base image to at least the fixed version (search PRs by CVE
-       ID and package name; one CVE may need several PRs). Set fixed true only if the image already released
-       to Prod (every variant) contains the fixed version. If unsure, leave the CVE without fixedBy or fixed:
-       an open CVE is never reported as fixed.
+       ID and package name; one CVE may need several PRs). Never list a PR whose code is already in the
+       released Prod image you found vulnerable: it did not fix that CVE. Set fixed true only if the image
+       already released to Prod (every variant) contains the fixed version. If unsure, leave the CVE without
+       fixedBy, fixed or notAffected: an open CVE is never reported as fixed.
     2. Gather Ev2 rollouts with ev2-mcp read tools only (serviceId 3170cdd2-19f0-4027-912b-1027311691a2;
        never start, approve, suspend or cancel a rollout). From the Prod endpoint only: list rollout
        history for the last 29 days (windows over 30 days are rejected) and keep DefinitionId 978,

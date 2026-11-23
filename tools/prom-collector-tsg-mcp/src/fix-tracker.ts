@@ -10,8 +10,8 @@ const isProd = (r: Rollout) => !/^(fairfax|mooncake|ussec|usnat|bleu|delos)$/i.t
 const PROGRESS = ["linked", "merged", "in-image", "rolling", "released"];
 
 // findings: every CVE the incident lists (listedCves = that count); fixedBy = fix PR URLs it verified; fixed = already in a released image;
-// evidence = the binary/package/OS-build check behind the verdict.
-export interface Finding { id: string; fixedBy?: string[]; fixed?: boolean; evidence?: string }
+// notAffected = the shipped images don't contain the vulnerable package/OS build; evidence = the check behind the verdict.
+export interface Finding { id: string; fixedBy?: string[]; fixed?: boolean; notAffected?: boolean; evidence?: string }
 export interface Incident { id: string | number; title?: string; status?: string; tags?: string[]; entries?: string[]; channel?: Channel; findings?: Finding[]; listedCves?: number }
 
 // A CVE incident is only linked, tagged or posted on once every listed CVE has a verified verdict.
@@ -132,24 +132,41 @@ const DETAIL: Record<string, (fix: string, l: Lifecycle | undefined, notes: stri
 const list = (ids: string[]) => ids.length > 5 ? `${ids.slice(0, 5).join(", ")} and ${ids.length - 5} more` : ids.join(", ");
 const fixes = (i: Incident, key: string) => (i.findings ?? []).filter((f) => f.fixedBy?.some((u) => u.toLowerCase() === key)).map((f) => f.id);
 // Findings with neither a verified fix PR nor an already-released fix: candidates for a new fix PR.
-export const unfixed = (i: Incident) => (i.findings ?? []).filter((f) => !f.fixed && !f.fixedBy?.length).map((f) => f.id);
+export const unfixed = (i: Incident) => (i.findings ?? []).filter((f) => !f.fixed && !f.notAffected && !f.fixedBy?.length).map((f) => f.id);
 
 // Coverage combines all fix PRs; "released" only invites resolving when every finding has a released fix.
 function coverage(i: Incident, key: string, state: string, releasedPrs: Set<string>) {
   const all = i.findings ?? [];
   if (!all.length) return state === "released" ? " Please verify and resolve." : "";
-  const shipped = (f: Finding) => f.fixed || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
-  const mine = fixes(i, key), open = unfixed(i), done = all.filter((f) => shipped(f) && !mine.includes(f.id)).length;
-  const others = all.length - mine.length - open.length - done;
+  const shipped = (f: Finding) => f.fixed || f.notAffected || !!f.fixedBy?.some((u) => releasedPrs.has(u.toLowerCase()));
+  const mine = fixes(i, key), open = unfixed(i), na = all.filter((f) => f.notAffected && !mine.includes(f.id)).length;
+  const done = all.filter((f) => shipped(f) && !f.notAffected && !mine.includes(f.id)).length;
+  const others = all.length - mine.length - open.length - done - na;
   let text = ` Fixes ${mine.length} of ${all.length} listed CVEs${mine.length ? ` (${list(mine)})` : ""}.`;
   if (done) text += ` ${done} already fixed in released images.`;
+  if (na) text += ` ${na} do not affect the agent images.`;
   if (others) text += ` ${others} covered by other fix PRs.`;
   if (open.length) text += ` Still open, no fix yet: ${list(open)}.`;
   if (state !== "released") return text;
   return text + (all.some((f) => !shipped(f)) ? " The incident stays open until the remaining CVEs are fixed and released." : " Every listed CVE now has a released fix; please verify and resolve.");
 }
 
+// A PR fully released (every stage-map stage) before the newest Prod rollout, which still contains it, is in the image the agent
+// found vulnerable, so it didn't fix the CVE: drop it from fixedBy so it is neither proposed, counted, nor hides needsFixPr.
+export function withoutStale(incidents: Incident[], lcs: Map<string, Lifecycle>, prodStages: ProdStages = {}) {
+  const shipped = (l: Lifecycle) => (["aks", "arc"] as Channel[]).some((c) => {
+    const need = (prodStages[c] ?? []).map((s) => s.toLowerCase());
+    const rs = l.rollouts.filter((r) => r.definitionId === DEFS[c] && isProd(r)).sort((a, b) => Date.parse(b.startTime ?? "") - Date.parse(a.startTime ?? ""));
+    if (!need.length || rs.length < 2 || !rs[0].includesFix) return false;
+    const done = new Set(rs.slice(1).filter((r) => r.includesFix).flatMap((r) => r.stages ?? []).filter((s) => ok(s.status)).map((s) => s.name.toLowerCase()));
+    return need.every((s) => done.has(s));
+  });
+  const stale = new Set([...lcs].filter(([, l]) => shipped(l)).map(([u]) => u));
+  return incidents.map((i) => ({ ...i, findings: i.findings?.map((f) => f.fixed ? f : { ...f, fixedBy: f.fixedBy?.filter((u) => !stale.has(u.toLowerCase())) }) }));
+}
+
 export function planEntries(prs: PullRequest[], incidents: Incident[], lifecycles: Map<string, Lifecycle>, prodStages: ProdStages = {}): PlannedEntry[] {
+  incidents = withoutStale(incidents, lifecycles, prodStages);
   const out: PlannedEntry[] = [], active = incidents.filter((i) => !/resolved/i.test(i.status ?? ""));
   // Match against all active IcMs at once so an MSRC case shared by several IcMs stays a proposal.
   // Release-bump notes quote other PRs' IcM references; only a human link can attach one.
@@ -284,6 +301,6 @@ export async function planFixTracker(incidents: Incident[], lookbackHours = 24, 
     entries: planEntries(all, incidents, result, prodStages),
     errors: [...active.map(unverified).filter((e): e is string => !!e), ...fetchErrors, ...errors,
       ...(["aks", "arc"] as const).filter((c) => !prodStages[c]?.length).map((c) => `prodStages.${c} missing: nothing on ${c} can count as released without the Ev2 Prod stage map`)],
-    needsFixPr: active.filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
+    needsFixPr: withoutStale(active, result, prodStages).filter((i) => !unverified(i)).map((i) => ({ incidentId: String(i.id), cves: unfixed(i) })).filter((n) => n.cves.length),
   };
 }
