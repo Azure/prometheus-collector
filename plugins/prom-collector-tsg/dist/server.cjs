@@ -67581,8 +67581,15 @@ function releaseState(rollouts, channels = ["aks", "arc"], prodStages = {}) {
     } else if (idx === 0) {
       started = true;
       const took = rs.slice(1).filter((r) => complete(r) && r.startTime && r.endTime).map((r) => Date.parse(r.endTime) - Date.parse(r.startTime));
-      const eta = took.length && latest.startTime ? new Date(Date.parse(latest.startTime) + median(took)).toISOString().slice(0, 10) : null;
-      notes.push(`${label}: rolling out (${ref(latest)}), ${eta ? `estimated completion ${eta}` : "ETA unknown"}`);
+      const start = Date.parse(latest.startTime ?? ""), now = Date.now();
+      let at = took.length ? start + median(took) : NaN;
+      const rings = (latest.stages ?? []).filter((s) => !/[.]|__/.test(s.name));
+      const n = rings.filter((s) => ok(s.status)).length;
+      if (!(at > now) && n && n < rings.length && /^running$/i.test(latest.status ?? "")) at = now + (now - start) * (rings.length - n) / n;
+      const eta = at > now ? new Date(at).toISOString().slice(0, 10) : null;
+      const pushes = rollouts.filter((r) => r.definitionId === DEFS.push && r.artifactsVersion && latest.sourceVersion && r.sourceVersion === latest.sourceVersion && ok(r.push?.status) && /^(?:exitcode#)?0$/i.test(String(r.push?.exitCode)));
+      const tags = new Set(pushes.map((r) => r.artifactsVersion)), img = tags.size === 1 && pushes.every((r) => r.includesFix) ? pushes[0].artifactsVersion : void 0;
+      notes.push(`${label}: rolling out${img ? ` agent image ${img}` : ""} (${ref(latest)}), ${eta ? `estimated completion ${eta}` : "ETA unknown"}`);
     } else notes.push(`${label}: not started`);
   }
   const state3 = back ? "rolled-back" : required2 && done === required2 ? "released" : started || done ? "rolling" : null;
@@ -67591,7 +67598,7 @@ function releaseState(rollouts, channels = ["aks", "arc"], prodStages = {}) {
 var DETAIL = {
   linked: (fix) => `Fix in progress: ${fix}.`,
   merged: (fix, l) => `Fix merged: ${fix}. ${l?.pushChecked ? "It will ship in the next agent image." : "Image and rollout status not known yet."}`,
-  "in-image": (fix, l, n) => `Fix is built into agent image ${l?.image ?? "(tag unknown)"}: ${fix}. ${n.join("; ") || "Rollout not started"}.`,
+  "in-image": (fix, l, n) => `Fix first built into agent image ${l?.image ?? "(tag unknown)"}: ${fix}. ${n.join("; ") || "Rollout not started"}.`,
   rolling: (fix, _, n) => `Fix is rolling out: ${fix}. ${n.join("; ")}.`,
   released: (fix, _, n) => `Fix released to Prod: ${fix}. ${n.join("; ")}.`,
   "rolled-back": (fix, _, n) => `Fix was rolled back: ${fix}. ${n.join("; ")}. We are reviewing.`,
@@ -67656,7 +67663,7 @@ function planEntries(prs, incidents, lifecycles2, prodStages = {}) {
         }));
       };
       if (!linked) {
-        const where = lc?.state === "in-image" ? ` The PR is already merged and built into agent image ${lc.image ?? "(tag unknown)"}; ${releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0, prodStages).notes.join("; ") || "rollout not started"}.` : pr.state === "merged" ? " The PR is already merged." : pr.state === "open" ? " The PR is still open." : "";
+        const where = lc?.state === "in-image" ? ` The PR is already merged and first built into agent image ${lc.image ?? "(tag unknown)"}; ${releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0, prodStages).notes.join("; ") || "rollout not started"}.` : pr.state === "merged" ? " The PR is already merged." : pr.state === "open" ? " The PR is still open." : "";
         if (match && !posted.has("proposed") && lc?.state !== "closed-unmerged")
           render.push(() => ({ incidentId: id, prUrl: pr.url, state: "proposed", text: `Possible fix: ${fix}, because ${match.evidence}.${where}${coverage(incident, key, "proposed", releasedPrs)} Not yet confirmed as this incident's fix. To confirm, add the tag "Fix PR: ${pr.url}"; to reject, post an entry containing ft:${short(pr.url)}:rejected in square brackets. ${marker(pr.url, "proposed")}` }));
         continue;
