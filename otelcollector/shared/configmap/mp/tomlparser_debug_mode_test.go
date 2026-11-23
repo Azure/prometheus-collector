@@ -12,6 +12,10 @@ import (
 )
 
 var _ = ginkgo.Describe("When parsing debug mode settings", func() {
+	enabledSettings := map[string]map[string]string{"debug-mode": {"enabled": "true"}}
+	ginkgo.BeforeEach(func() {
+		ginkgo.GinkgoT().Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", "v1")
+	})
 	ginkgo.Context("when debug mode is enabled", func() {
 
 		ginkgo.BeforeEach(func() {
@@ -24,7 +28,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
 			os.Setenv("OS_TYPE", "linux")
 
-			err := ConfigureDebugModeSettings()
+			err := ConfigureDebugModeSettings(enabledSettings)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Verify that the environment variable file is created
@@ -47,7 +51,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
 			os.Setenv("OS_TYPE", "linux")
 
-			err := ConfigureDebugModeSettings()
+			err := ConfigureDebugModeSettings(enabledSettings)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Verify that the environment variable file is created
@@ -70,7 +74,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
 			os.Setenv("OS_TYPE", "windows")
 
-			err := ConfigureDebugModeSettings()
+			err := ConfigureDebugModeSettings(enabledSettings)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Verify that the environment variable file is created
@@ -111,12 +115,12 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 		err = os.Remove(fmt.Sprintf("temp/debug-mode-%s", suffix))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		err = ConfigureDebugModeSettings()
+		err = ConfigureDebugModeSettings(nil)
 		gomega.Expect(err).To(gomega.HaveOccurred())
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("configmap section not mounted, using defaults"))
 	})
 
-	ginkgo.It("should handle an error while parsing config map", func() {
+	ginkgo.It("should default to disabled when the parsed section lacks the enabled key", func() {
 		os.Setenv("CONTROLLER_TYPE", "ReplicaSet")
 		suffix := createRandomString(5)
 		ginkgo.DeferCleanup(func() {
@@ -125,9 +129,11 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 		err := createTempFiles(suffix, `		[ invalid_key = true		`)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		err = ConfigureDebugModeSettings()
-		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("exception while parsing config map for debug mode"))
+		err = ConfigureDebugModeSettings(map[string]map[string]string{"debug-mode": {"[ invalid_key": "true"}})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		content, err := os.ReadFile(debugModeEnvVarPath)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=false\n"))
 	})
 
 	ginkgo.It("should handle an error while opening environment variable file", func() {
@@ -140,7 +146,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		debugModeEnvVarPath = "/nonexistant-path/envvarpath"
 
-		err = ConfigureDebugModeSettings()
+		err = ConfigureDebugModeSettings(enabledSettings)
 		gomega.Expect(err).To(gomega.HaveOccurred())
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while opening file for writing prometheus-collector config environment variables"))
 	})
@@ -155,9 +161,9 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		replicaSetCollectorConfig = "/nonexistant-path/replicasetconfig"
 
-		err = ConfigureDebugModeSettings()
+		err = ConfigureDebugModeSettings(enabledSettings)
 		gomega.Expect(err).To(gomega.HaveOccurred())
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled"))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled"))
 	})
 })
 
