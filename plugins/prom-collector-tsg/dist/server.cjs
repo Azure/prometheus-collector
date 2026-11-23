@@ -67656,8 +67656,9 @@ function planEntries(prs, incidents, lifecycles2, prodStages = {}) {
         }));
       };
       if (!linked) {
+        const where = lc?.state === "in-image" ? ` The PR is already merged and built into agent image ${lc.image ?? "(tag unknown)"}; ${releaseState(lc.rollouts, incident.channel ? [incident.channel] : void 0, prodStages).notes.join("; ") || "rollout not started"}.` : pr.state === "merged" ? " The PR is already merged." : pr.state === "open" ? " The PR is still open." : "";
         if (match && !posted.has("proposed") && lc?.state !== "closed-unmerged")
-          render.push(() => ({ incidentId: id, prUrl: pr.url, state: "proposed", text: `Possible fix: ${fix}, because ${match.evidence}.${coverage(incident, key, "proposed", releasedPrs)} Not linked yet. To confirm, add the tag "Fix PR: ${pr.url}"; to reject, post an entry containing ft:${short(pr.url)}:rejected in square brackets. ${marker(pr.url, "proposed")}` }));
+          render.push(() => ({ incidentId: id, prUrl: pr.url, state: "proposed", text: `Possible fix: ${fix}, because ${match.evidence}.${where}${coverage(incident, key, "proposed", releasedPrs)} Not yet confirmed as this incident's fix. To confirm, add the tag "Fix PR: ${pr.url}"; to reject, post an entry containing ft:${short(pr.url)}:rejected in square brackets. ${marker(pr.url, "proposed")}` }));
         continue;
       }
       if (!posted.has("linked") && !tagged.has(key)) {
