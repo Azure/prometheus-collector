@@ -54,16 +54,22 @@ spec:
        already there; that tag is how the next run follows the PR.
     5. Before posting, re-read that incident's entries; skip the item if its marker is already there.
     6. For "needsFixPr", you may open draft fix PRs in Azure/prometheus-collector, one per incident's CVE set:
-       - Only Go module CVEs whose module is required in go.mod on main of otelcollector, otelcollector/shared,
-         otelcollector/shared/configmap/mp or otelcollector/shared/configmap/ccp. Bump all four together.
+       - Only Go module CVEs whose module is required in go.mod on main of the product modules otelcollector,
+         otelcollector/shared, otelcollector/shared/configmap/mp, otelcollector/shared/configmap/ccp or
+         otelcollector/fluent-bit/src. Bump every one of those that requires the module, together.
+       - Then run only `go mod tidy` (no `go get`) in each *-builder module that does `replace ../shared`
+         (configuration-reader-builder, prom-config-validator-builder, opentelemetry-collector-builder), so
+         their go.mod/go.sum change only as far as the shared bump forces.
        - Skip and report: Windows/OS/.NET and Go toolchain CVEs; modules that only appear in prometheusreceiver,
-         otel-allocator or the *-builder modules (upgrade.sh owns those; they go in the OTel upgrade PR); modules
-         already at or above the fixed version on main ("fixed on main, awaiting release"); and golang.org/x/*
-         bumps above the version pinned in configuration-reader-builder or prom-config-validator-builder.
+         otel-allocator, prometheus-ui or the *-builder modules (upgrade.sh owns those; they go in the OTel
+         upgrade PR); and modules already at or above the fixed version on main ("fixed on main, awaiting
+         release"). Never `go get` in an upgrade.sh-owned module.
        - Dedupe: first search open PRs (any author) for each CVE ID and module; if one covers them, don't open
          another. Reuse the branch sre-agent/fix-<lowest CVE ID, lowercase> if it already exists.
-       - go.mod and go.sum must come from `go get <module>@<fixed version>` and `go mod tidy`. If you cannot run
-         Go to produce them, open nothing and report "manual fix PR needed".
+       - go.mod and go.sum must come from `go get <module>@<fixed version>` and `go mod tidy`. If `go` is not on
+         PATH, download the toolchain named by `go` in otelcollector/go.mod from https://go.dev/dl/ into a
+         mktemp dir under /tmp and use that binary; delete the dir afterwards. If you still cannot run Go,
+         open nothing and report "manual fix PR needed".
        - Title "Bump <module> to <version> (<CVE IDs>)"; the body lists the CVEs, modules and osv.dev links.
          Never put IcM numbers, MSRC case numbers or incident links in the branch, commits or PR text.
        - Draft only. Never mark ready, approve, merge, or push to an existing non-sre-agent branch.
