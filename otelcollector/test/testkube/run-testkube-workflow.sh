@@ -216,6 +216,15 @@ if [[ "$TARGET_ENV" == "ConfigTests" ]]; then
         testkube-config-test-basic-auth-secret-update-v2-crs.yaml)
             workflows=(basicauthsecretupdatev2)
             ;;
+        testkube-config-test-default-scrape-metrics-account-v1-crs.yaml)
+            workflows=(defaultscrapemetricsaccountv1)
+            ;;
+        testkube-config-test-default-scrape-metrics-account-v2-crs.yaml)
+            workflows=(defaultscrapemetricsaccountv2)
+            ;;
+        testkube-config-test-default-scrape-metrics-account-disabled-crs.yaml)
+            workflows=(defaultscrapemetricsaccountdisabled)
+            ;;
         testkube-config-test-deny-fs-access-crs.yaml)
             workflows=(denyfsaccess)
             ;;

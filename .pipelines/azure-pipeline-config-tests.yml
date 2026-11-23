@@ -964,6 +964,185 @@ stages:
             displayName: "Create TestKube Results Summary and restore default settings configmap"
             condition: always()
 
+          # Metrics-account routing: enable, then disable, with both settings schemas.
+          # ReplicaSet targets come from the allocator; the collector watches its settings volume.
+          - bash: |
+              set -e
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-default-scrape-metrics-account-v1.yaml
+
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-scrape-metrics-account-v1-crs.yaml" \
+                "testkube-config-test-default-scrape-metrics-account-v1-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default-scrape-metrics-account-v1"
+            continueOnError: true
+
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+              result="$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              summary="$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-scrape-metrics-account-v1.json"
+              if ! jq -e 'select(.status == "passed" or .status == "failed") | .environment="default-scrape-metrics-account-v1"' "$result" > "$summary"; then
+                jq -n '{environment:"default-scrape-metrics-account-v1",status:"failed",message:"Scenario ended without a completed TestKube result",link:""}' > "$summary"
+              fi
+              rm -f "$result"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary (default-scrape-metrics-account-v1)"
+            condition: always()
+
+          - bash: |
+              set -e
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              kubectl patch configmap ama-metrics-settings-configmap -n kube-system --type=json -p='[{"op":"replace","path":"/data/default-scrape-metrics-account","value":""}]'
+
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-scrape-metrics-account-disabled-crs.yaml" \
+                "testkube-config-test-default-scrape-metrics-account-disabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default-scrape-metrics-account-v1-disabled"
+            continueOnError: true
+
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+              result="$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              summary="$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-scrape-metrics-account-v1-disabled.json"
+              if ! jq -e 'select(.status == "passed" or .status == "failed") | .environment="default-scrape-metrics-account-v1-disabled"' "$result" > "$summary"; then
+                jq -n '{environment:"default-scrape-metrics-account-v1-disabled",status:"failed",message:"Scenario ended without a completed TestKube result",link:""}' > "$summary"
+              fi
+              rm -f "$result"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary (default-scrape-metrics-account-v1-disabled)"
+            condition: always()
+
+          - bash: |
+              set -e
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-default-scrape-metrics-account-v2.yaml
+
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-scrape-metrics-account-v2-crs.yaml" \
+                "testkube-config-test-default-scrape-metrics-account-v2-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default-scrape-metrics-account-v2"
+            continueOnError: true
+
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+              result="$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              summary="$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-scrape-metrics-account-v2.json"
+              if ! jq -e 'select(.status == "passed" or .status == "failed") | .environment="default-scrape-metrics-account-v2"' "$result" > "$summary"; then
+                jq -n '{environment:"default-scrape-metrics-account-v2",status:"failed",message:"Scenario ended without a completed TestKube result",link:""}' > "$summary"
+              fi
+              rm -f "$result"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary (default-scrape-metrics-account-v2)"
+            condition: always()
+
+          - bash: |
+              set -e
+              rm -f "$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              kubectl patch configmap ama-metrics-settings-configmap -n kube-system --type=json -p='[{"op":"remove","path":"/data/default-scrape-metrics-account"}]'
+
+              kubectl rollout restart deployment/ama-metrics-operator-targets -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-node -n kube-system
+              kubectl rollout restart daemonset/ama-metrics-win-node -n kube-system
+              kubectl rollout status deployment/ama-metrics-operator-targets -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-node -n kube-system --timeout=300s
+              kubectl rollout status daemonset/ama-metrics-win-node -n kube-system --timeout=300s
+
+              export BUILD_ARTIFACTSTAGINGDIRECTORY="$(Build.ArtifactStagingDirectory)"
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export SYSTEM_JOBID="$(System.JobId)"
+              export SYSTEM_TASKINSTANCEID="$(System.TaskInstanceId)"
+
+              chmod +x ./testkube/run-testkube-workflow.sh
+              ./testkube/run-testkube-workflow.sh \
+                "${{ parameters.AMW_QUERY_ENDPOINT }}" \
+                "${{ parameters.AZURE_CLIENT_ID }}" \
+                "testkube-config-test-default-scrape-metrics-account-disabled-crs.yaml" \
+                "testkube-config-test-default-scrape-metrics-account-disabled-crs.yaml" \
+                "false" \
+                "480" \
+                "ConfigTests" \
+                "${{ parameters.branch }}"
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Run tests for default-scrape-metrics-account-v2-disabled"
+            continueOnError: true
+
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/testkube-results"
+              result="$(Build.ArtifactStagingDirectory)/testkube-results-ConfigTests.json"
+              summary="$(Build.ArtifactStagingDirectory)/testkube-results/testkube-results-default-scrape-metrics-account-v2-disabled.json"
+              if ! jq -e 'select(.status == "passed" or .status == "failed") | .environment="default-scrape-metrics-account-v2-disabled"' "$result" > "$summary"; then
+                jq -n '{environment:"default-scrape-metrics-account-v2-disabled",status:"failed",message:"Scenario ended without a completed TestKube result",link:""}' > "$summary"
+              fi
+              rm -f "$result"
+              # Replace the ConfigMap so removed and newly introduced keys cannot linger.
+              kubectl delete configmap ama-metrics-settings-configmap -n kube-system --ignore-not-found
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test
+            displayName: "Create TestKube Results Summary (default-scrape-metrics-account-v2-disabled)"
+            condition: always()
+
           # List created files
           - bash: |
               echo "Results files created:"

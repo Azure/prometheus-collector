@@ -10,6 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/relabel"
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 )
@@ -949,6 +951,67 @@ var _ = DescribeTable("The Prometheus UI API should honor a partial v2 configmap
 		"kube-system", "rsName", "ama-metrics", "prometheus-collector", true, "59s",
 		[]string{"kube_persistentvolumeclaim_info", "kube_persistentvolume_capacity_bytes"},
 		Label(utils.ConfigProcessingPartialNoPcsV2)),
+)
+
+// Distinct v1/v2 values detect stale configuration across the enable and clear steps.
+const defaultScrapeMetricsAccountLabel = "microsoft_metrics_account"
+
+func assertDefaultScrapeMetricsAccount(expectedAccount, namespace, controllerLabelName, controllerLabelValue, containerName string, isLinux, _ bool, expectedJobs []string) {
+	Eventually(func(g Gomega) {
+		var response utils.APIResponse
+		g.Expect(utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &response)).To(Succeed())
+		var result v1.ConfigResult
+		g.Expect(json.Unmarshal(response.Data, &result)).To(Succeed())
+		g.Expect(result.YAML).NotTo(BeEmpty())
+		scrapeConfig, err := config.Load(result.YAML, nil)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		scrapeJobs, err := scrapeConfig.GetScrapeConfigs()
+		g.Expect(err).NotTo(HaveOccurred())
+		jobs := make(map[string]*config.ScrapeConfig, len(scrapeJobs))
+		for _, job := range scrapeJobs {
+			jobs[job.JobName] = job
+		}
+		for _, jobName := range expectedJobs {
+			job := jobs[jobName]
+			g.Expect(job).NotTo(BeNil(), "%s must be in the active configuration", jobName)
+			var accountRules []*relabel.Config
+			for _, rule := range job.MetricRelabelConfigs {
+				if rule.TargetLabel == defaultScrapeMetricsAccountLabel {
+					accountRules = append(accountRules, rule)
+				}
+			}
+			unlabeled := labels.NewBuilder(labels.EmptyLabels())
+			g.Expect(relabel.ProcessBuilder(unlabeled, accountRules...)).To(BeTrue())
+			g.Expect(unlabeled.Get(defaultScrapeMetricsAccountLabel)).To(Equal(expectedAccount), "%s fallback on unlabeled samples", jobName)
+
+			labeled := labels.NewBuilder(labels.FromStrings(defaultScrapeMetricsAccountLabel, "upstream"))
+			g.Expect(relabel.ProcessBuilder(labeled, accountRules...)).To(BeTrue())
+			g.Expect(labeled.Get(defaultScrapeMetricsAccountLabel)).To(Equal("upstream"), "%s must preserve an existing account", jobName)
+		}
+	}).WithTimeout(3 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+}
+
+var _ = DescribeTable("Built-in scrapes should use the configured metrics account",
+	assertDefaultScrapeMetricsAccount,
+	Entry("v1 ReplicaSet", "service-v1", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v1 Linux DaemonSet", "service-v1", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v1 Windows DaemonSet", "service-v1", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV1)),
+	Entry("v2 ReplicaSet", "service-v2", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("v2 Linux DaemonSet", "service-v2", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("v2 Windows DaemonSet", "service-v2", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountV2)),
+	Entry("disabled ReplicaSet", "", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, true,
+		[]string{"kube-state-metrics", "kube-dns"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
+	Entry("disabled Linux DaemonSet", "", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, false,
+		[]string{"kubelet", "cadvisor"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
+	Entry("disabled Windows DaemonSet", "", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, false,
+		[]string{"kubelet"}, Label(utils.ConfigProcessingDefaultScrapeMetricsAccountDisabled)),
 )
 
 // Basic auth ServiceMonitor — verify RBAC, config, and targets

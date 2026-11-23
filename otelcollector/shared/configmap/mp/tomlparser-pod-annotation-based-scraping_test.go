@@ -1,13 +1,14 @@
 package configmapsettings
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
+	"log"
 	"os"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus-collector/shared"
 )
 
 var _ = Describe("ConfigMapSettings", func() {
@@ -19,7 +20,8 @@ var _ = Describe("ConfigMapSettings", func() {
 		Context("when the config map file exists", func() {
 			BeforeEach(func() {
 				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
+				fileContent := `pod-annotation-based-scraping: |-
+  podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
 				file, err := os.CreateTemp("", "configmap")
 				Expect(err).NotTo(HaveOccurred())
 				defer file.Close()
@@ -49,20 +51,24 @@ var _ = Describe("ConfigMapSettings", func() {
 
 			It("should print the configmap namespace regex", func() {
 				capturedOutput := captureOutput(func() {
-					err := configurePodAnnotationSettings()
+					settings, err := shared.ParseMetricsFiles([]string{configMapMountPathForPodAnnotation})
+					Expect(err).NotTo(HaveOccurred())
+					err = configurePodAnnotationSettings(settings)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				Expect(capturedOutput).To(ContainSubstring("Using configmap namespace regex for podannotations: ^namespace-regex|namespace-regex-2$"))
+				Expect(capturedOutput).To(ContainSubstring("Using configmap namespace regex for pod annotations: ^namespace-regex|namespace-regex-2$"))
 			})
 
 			It("should write the config to the output file", func() {
-				err := configurePodAnnotationSettings()
+				settings, err := shared.ParseMetricsFiles([]string{configMapMountPathForPodAnnotation})
+				Expect(err).NotTo(HaveOccurred())
+				err = configurePodAnnotationSettings(settings)
 				Expect(err).NotTo(HaveOccurred())
 
 				content, err := os.ReadFile(podAnnotationEnvVarPath)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='^namespace-regex|namespace-regex-2$'\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"))
+				Expect(string(content)).To(Equal("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=^namespace-regex|namespace-regex-2$\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"))
 			})
 		})
 
@@ -82,7 +88,7 @@ var _ = Describe("ConfigMapSettings", func() {
 			})
 
 			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
+				err := configurePodAnnotationSettings(nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("configmap section not mounted, using defaults"))
 			})
@@ -91,7 +97,8 @@ var _ = Describe("ConfigMapSettings", func() {
 		Context("when the out file does not exist", func() {
 			BeforeEach(func() {
 				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
+				fileContent := `pod-annotation-based-scraping: |-
+  podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
 				file, err := os.CreateTemp("", "configmap")
 				Expect(err).NotTo(HaveOccurred())
 				defer file.Close()
@@ -115,8 +122,14 @@ var _ = Describe("ConfigMapSettings", func() {
 				})
 			})
 
+			AfterEach(func() {
+				Expect(os.Remove(configMapMountPathForPodAnnotation)).To(Succeed())
+			})
+
 			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
+				settings, err := shared.ParseMetricsFiles([]string{configMapMountPathForPodAnnotation})
+				Expect(err).NotTo(HaveOccurred())
+				err = configurePodAnnotationSettings(settings)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("error opening file"))
 			})
@@ -125,7 +138,8 @@ var _ = Describe("ConfigMapSettings", func() {
 		Context("when the config map file contains an invalid namespace regex", func() {
 			BeforeEach(func() {
 				// Create a temporary file with an invalid regex
-				fileContent := `podannotationnamespaceregex = "invalid-regex("`
+				fileContent := `pod-annotation-based-scraping: |-
+  podannotationnamespaceregex = "invalid-regex("`
 				file, err := os.CreateTemp("", "configmap")
 				Expect(err).NotTo(HaveOccurred())
 				defer file.Close()
@@ -153,31 +167,21 @@ var _ = Describe("ConfigMapSettings", func() {
 			})
 
 			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
+				settings, err := shared.ParseMetricsFiles([]string{configMapMountPathForPodAnnotation})
+				Expect(err).NotTo(HaveOccurred())
+				err = configurePodAnnotationSettings(settings)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid namespace regex for podannotations"))
+				Expect(err.Error()).To(ContainSubstring("Invalid namespace regex for pod annotations"))
 			})
 		})
 	})
 })
 
-// Helper function to capture the output of fmt.Printf
 func captureOutput(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
+	var output bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&output)
+	defer log.SetOutput(previous)
 	f()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf strings.Builder
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		buf.WriteString(scanner.Text())
-		buf.WriteString("\n")
-	}
-
-	return buf.String()
+	return output.String()
 }
