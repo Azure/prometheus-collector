@@ -24,7 +24,11 @@ spec:
        - Go: `go version -m` on every binary and .so for module versions and the Go version; compare with
          the fixed version on vuln.go.dev (a module no shipped image contains: set notAffected true).
        - Windows/OS: os.version of each -win manifest (LTSC 2019 and 2022 separately) vs the FixedBuild for
-         that OS in the MSRC CVRF (api.msrc.microsoft.com/cvrf/v3.0); .NET via its version vs the advisory.
+         that OS in the MSRC CVRF (api.msrc.microsoft.com/cvrf/v3.0). A CVE that also lists ".NET Framework ...
+         on Windows Server 2019/2022" products needs that part checked too: compare the UTF-16 FileVersion
+         string of Files/Windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll with that product's FixedBuild
+         (e.g. "... & 4.8.4803.0"). Read it from the highest layer where it is a regular file, not a hardlink
+         (often layer 0), by streaming one layer at a time (`crane blob | tarfile 'r|*'`).
          A CVE whose MSRC products exclude Server 2019/2022 is not applicable: set notAffected true.
        Put that check in evidence (binary, version found, fixed version). Without evidence for every listed
        CVE the tool plans nothing for the incident: do not link, tag or post on it yourself either.
