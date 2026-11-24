@@ -1719,6 +1719,12 @@ def render_workflow(source, workflow, sha, image, label_filter=None, expectation
             values.update(expectations or {})
             env[:] = [item for item in env if item["name"] not in values]
             env.extend({"name": name, "value": value} for name, value in values.items())
+            if suite == "./querymetrics":
+                pod_fields = {"SCENARIO_POD_NAME": "metadata.name",
+                              "SCENARIO_POD_NAMESPACE": "metadata.namespace"}
+                env[:] = [item for item in env if item["name"] not in pod_fields]
+                env.extend({"name": name, "valueFrom": {"fieldRef": {"fieldPath": field}}}
+                           for name, field in pod_fields.items())
             runs += 1
         if "go run github.com/onsi/ginkgo/v2/ginkgo@" in "\n".join(lines):
             step["shell"] = "mkdir -p /data/reports\n" + "\n".join(

@@ -155,6 +155,11 @@ def test_candidate_workflow_rendering():
     assert {"name": "EXPECTED_CLUSTER", "value": "cluster"} in step["container"]["env"]
     assert "selected" in step["shell"] and "--junit-report=/data/reports/junit.xml" in step["shell"]
     assert spec["steps"][-1]["condition"] == "always" and "artifacts" in spec["steps"][-1]
+    query_source = (testkube / "testkube-test-crs.yaml").read_text(encoding="utf-8")
+    query = render(query_source, "querymetrics", sha, image, "managed-acns", {"EXPECTED_CLUSTER": "cluster"})
+    query_env = query["spec"]["steps"][0]["container"]["env"]
+    for name, field in (("SCENARIO_POD_NAME", "metadata.name"), ("SCENARIO_POD_NAMESPACE", "metadata.namespace")):
+        assert {"name": name, "valueFrom": {"fieldRef": {"fieldPath": field}}} in query_env
     try:
         render(source, "missing-workflow", sha, image)
     except ValueError:

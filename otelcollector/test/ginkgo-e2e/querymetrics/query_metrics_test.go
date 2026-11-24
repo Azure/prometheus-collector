@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -18,6 +19,36 @@ import (
 
 	"prometheus-collector/otelcollector/test/utils"
 )
+
+func acnsCounterSnapshot(samples model.Vector, source string) map[model.Fingerprint]model.SampleValue {
+	snapshot := make(map[model.Fingerprint]model.SampleValue, len(samples))
+	for _, sample := range samples {
+		if source == "" || string(sample.Metric["source"]) == source {
+			snapshot[sample.Metric.Fingerprint()] = sample.Value
+		}
+	}
+	return snapshot
+}
+
+func TestACNSCounterSnapshot(t *testing.T) {
+	probe := &model.Sample{Metric: model.Metric{"source": "testkube/probe", "qtypes": "a"}, Value: 4}
+	other := &model.Sample{Metric: model.Metric{"source": "testkube/other", "qtypes": "a"}, Value: 3}
+	samples := model.Vector{probe, other}
+	baseline := acnsCounterSnapshot(samples, "testkube/probe")
+	other.Value = 10
+	after := acnsCounterSnapshot(samples, "testkube/probe")
+	if len(baseline) != 1 || len(after) != 1 || after[probe.Metric.Fingerprint()] != baseline[probe.Metric.Fingerprint()] {
+		t.Fatal("unrelated pod traffic changed the probe snapshot")
+	}
+	probe.Value++
+	after = acnsCounterSnapshot(samples, "testkube/probe")
+	if after[probe.Metric.Fingerprint()] <= baseline[probe.Metric.Fingerprint()] {
+		t.Fatal("probe traffic did not increase its counter")
+	}
+	if len(acnsCounterSnapshot(samples, "")) != 2 {
+		t.Fatal("node counters must remain unfiltered")
+	}
+}
 
 var _ = Describe("Scenario cluster metrics", func() {
 	var expectedCluster string
@@ -129,6 +160,10 @@ var _ = Describe("Scenario cluster metrics", func() {
 		nodePods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "dsName", "ama-metrics-node")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nodePods).NotTo(BeEmpty(), "ACNS basic metrics require Linux collector nodes")
+		podName, podNamespace := os.Getenv("SCENARIO_POD_NAME"), os.Getenv("SCENARIO_POD_NAMESPACE")
+		Expect(podName).NotTo(BeEmpty(), "workflow pod name is required for ACNS attribution")
+		Expect(podNamespace).NotTo(BeEmpty(), "workflow pod namespace is required for ACNS attribution")
+		probeSource := podNamespace + "/" + podName
 
 		client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
 		nodeJob, nodeMetric := "networkobservability-retina", "networkobservability_forward_bytes"
@@ -142,6 +177,19 @@ var _ = Describe("Scenario cluster metrics", func() {
 			{"networkobservability-hubble", "hubble_dns_queries_total"},
 		} {
 			query := utils.MetricQuery(target.metric, target.job, expectedCluster)
+			source := ""
+			if target.job == "networkobservability-hubble" {
+				source = probeSource
+			}
+			if source != "" {
+				warmupStarted := time.Now()
+				Eventually(func(g Gomega) {
+					_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
+					g.Expect(err).NotTo(HaveOccurred())
+					samples := utils.FreshSamples(g, PrometheusQueryClient, query, warmupStarted)
+					g.Expect(acnsCounterSnapshot(samples, source)).NotTo(BeEmpty())
+				}, 8*time.Minute, 15*time.Second).Should(Succeed())
+			}
 			var baseline map[model.Fingerprint]model.SampleValue
 			baselineStarted := time.Now()
 			Eventually(func(g Gomega) {
@@ -156,10 +204,8 @@ var _ = Describe("Scenario cluster metrics", func() {
 				samples, ok := result.(model.Vector)
 				g.Expect(ok).To(BeTrue())
 				g.Expect(samples).NotTo(BeEmpty())
-				snapshot := make(map[model.Fingerprint]model.SampleValue, len(samples))
-				for _, sample := range samples {
-					snapshot[sample.Metric.Fingerprint()] = sample.Value
-				}
+				snapshot := acnsCounterSnapshot(samples, source)
+				g.Expect(snapshot).NotTo(BeEmpty(), "no pre-probe %s counter for %q", target.metric, source)
 				baseline = snapshot
 			}, 8*time.Minute, 15*time.Second).Should(Succeed())
 			started := time.Now()
@@ -200,21 +246,13 @@ var _ = Describe("Scenario cluster metrics", func() {
 					}
 				}
 				observedTraffic := false
-				podTraffic := false
-				for _, sample := range samples {
-					before, existed := baseline[sample.Metric.Fingerprint()]
-					increased := existed && sample.Value > before
-					observedTraffic = observedTraffic || increased
-					podTraffic = podTraffic || (increased &&
-						(sample.Metric["source"] != "" || sample.Metric["destination"] != ""))
+				for fingerprint, value := range acnsCounterSnapshot(samples, source) {
+					before, existed := baseline[fingerprint]
+					observedTraffic = observedTraffic || (existed && value > before)
 				}
-				// ponytail: cluster counters show a delta, not which pod generated it.
 				g.Expect(observedTraffic).To(BeTrue(), "managed %s counter must exceed the fresh pre-probe snapshot", target.metric)
-				if target.job == "networkobservability-hubble" {
-					g.Expect(podTraffic).To(BeTrue(), "pod-level Hubble metrics must identify a source or destination pod")
-				}
-				fmt.Fprintf(GinkgoWriter, "Managed ACNS evidence: job=%s metric=%s freshSamples=%d positiveIncrease=%t podTraffic=%t\n",
-					target.job, target.metric, len(samples), observedTraffic, podTraffic)
+				fmt.Fprintf(GinkgoWriter, "Managed ACNS evidence: job=%s metric=%s source=%q freshSamples=%d positiveIncrease=%t\n",
+					target.job, target.metric, source, len(samples), observedTraffic)
 			}, 8*time.Minute, 15*time.Second).Should(Succeed())
 		}
 	},
