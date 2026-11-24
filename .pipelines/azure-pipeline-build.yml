@@ -314,7 +314,16 @@ extends:
                 | awk 'BEGIN { IGNORECASE = 1 } /^Docker-Content-Digest:/ { gsub("\r", "", $2); print $2; exit }'
             }
             RETINA_VERSION=
-            for candidate in $(curl -sfL https://api.github.com/repos/microsoft/retina/releases | jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' | head -n 5); do
+            # Use the release feed to avoid the REST API's unauthenticated rate limit.
+            if ! CANDIDATES=$(curl -sfL https://github.com/microsoft/retina/releases.atom | sed -nE 's#^[[:space:]]*<title>(v[0-9]+\.[0-9]+\.[0-9]+)</title>$#\1#p' | awk 'NR <= 5'); then
+              echo "##vso[task.logissue type=error]Failed to retrieve Retina releases from GitHub"
+              exit 1
+            fi
+            if [[ -z "$CANDIDATES" ]]; then
+              echo "##vso[task.logissue type=error]GitHub returned no stable Retina release tags"
+              exit 1
+            fi
+            for candidate in $CANDIDATES; do
               if ghcr_manifest retina-agent "$candidate" | jq -e 'any(.manifests[]?; .platform.os == "linux") and any(.manifests[]?; .platform.os == "windows")' > /dev/null \
                 && ghcr_manifest retina-init "$candidate" > /dev/null \
                 && ghcr_manifest retina-operator "$candidate" > /dev/null \
