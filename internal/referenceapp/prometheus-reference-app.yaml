@@ -17,6 +17,8 @@ spec:
         - name: prometheus-reference-app-golang
           image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
           env:
+            - name: BASIC_AUTH_PORT
+              value: "2115"
             - name: RUN_PERF_TEST
               value: "false"
             - name: SCRAPE_INTERVAL

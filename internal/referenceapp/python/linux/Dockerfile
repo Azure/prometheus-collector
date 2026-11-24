@@ -2,10 +2,13 @@
 
 FROM mcr.microsoft.com/azurelinux/base/python:3
 
+ARG PIP_INDEX_URL=https://pypi.org/simple
+
 # Move to working directory /build
 WORKDIR /build
 
-RUN pip install prometheus-client opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+COPY requirements.txt .
+RUN python3 -m pip install --no-cache-dir --index-url "$PIP_INDEX_URL" -r requirements.txt
 
 # Copy the code into the container
 COPY . .
