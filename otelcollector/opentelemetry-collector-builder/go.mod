@@ -7,6 +7,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.162.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.162.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.162.0
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/collector/component v1.68.0
 	go.opentelemetry.io/collector/confmap v1.68.0
 	go.opentelemetry.io/collector/confmap/provider/envprovider v1.68.0

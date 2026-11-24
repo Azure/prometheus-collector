@@ -61,4 +61,16 @@ var _ = ginkgo.Describe("When parsing the deny_fs_access_through_sms setting", f
 		gomega.Expect(cp.DenyFSAccessThroughSMs).To(gomega.BeTrue())
 		gomega.Expect(cp.ClusterAlias).To(gomega.Equal("my_cluster"))
 	})
+
+	ginkgo.It("parses and exports the custom scrape credential-file restriction", func() {
+		cp := populate(map[string]string{"deny_arbitrary_fs_access": " TRUE "})
+		gomega.Expect(cp.DenyArbitraryFSAccess).To(gomega.BeTrue())
+		gomega.Expect(writeEnvFile(cp)).To(gomega.ContainSubstring("AZMON_DENY_ARBITRARY_FS_ACCESS=true\n"))
+	})
+
+	ginkgo.It("parses and exports the Prometheus config provider restriction", func() {
+		cp := populate(map[string]string{"restrict_prometheus_config_providers": " TRUE "})
+		gomega.Expect(cp.RestrictPrometheusConfigProviders).To(gomega.BeTrue())
+		gomega.Expect(writeEnvFile(cp)).To(gomega.ContainSubstring("AZMON_RESTRICT_PROMETHEUS_CONFIG_PROVIDERS=true\n"))
+	})
 })

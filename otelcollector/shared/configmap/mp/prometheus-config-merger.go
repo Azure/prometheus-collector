@@ -1649,11 +1649,28 @@ func prometheusConfigMerger(operatorEnabled bool) {
 		writeDefaultScrapeTargetsFile(operatorEnabled)
 		// Set label limits for every custom scrape job, before merging the default & custom config
 		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
-		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
+		fsRestrictedConfigString := dropScrapeConfigsWithFileAccess(labellimitedconfigString)
+		mergeDefaultAndCustomScrapeConfigs(fsRestrictedConfigString, mergedDefaultConfigs)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
 	} else {
 		setDefaultFileScrapeInterval("30s")
 		writeDefaultScrapeTargetsFile(operatorEnabled)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}
+}
+
+func dropScrapeConfigsWithFileAccess(prometheusConfigString string) string {
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("AZMON_DENY_ARBITRARY_FS_ACCESS")), "true") {
+		return prometheusConfigString
+	}
+
+	filtered, dropped, err := shared.DropScrapeConfigsWithFileRefs(prometheusConfigString)
+	if err != nil {
+		shared.EchoError(fmt.Sprintf("Error checking custom config for credential file references: %v", err))
+		return prometheusConfigString
+	}
+	for _, job := range dropped {
+		shared.EchoError(fmt.Sprintf("Dropping custom scrape job %s: deny_arbitrary_fs_access is enabled and this job reads credentials from the collector filesystem. Supply the credentials inline instead.", job))
+	}
+	return filtered
 }

@@ -107,6 +107,8 @@ type ConfigProcessor struct {
 	TargetallocatorHttpsEnabledChartSetting bool
 	SecretsAccessNamespaces                 []string
 	DenyFSAccessThroughSMs                  bool
+	DenyArbitraryFSAccess                   bool
+	RestrictPrometheusConfigProviders       bool
 
 	Kubelet                    string
 	Coredns                    string
