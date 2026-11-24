@@ -27,7 +27,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.20.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
   IS_SRE_BRANCH: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/sre/')]
   IS_OTEL_UPGRADE_BRANCH: $[startsWith(variables['Build.SourceBranchName'], 'otelcollector-upgrade-')]
   BUILD_WINDOWS: true
@@ -64,6 +64,7 @@ extends:
     - ES365AIMigrationTooling
 
     stages:
+    # Pipeline 440 producer builds always run the speed path. Keep it when layering candidate-only wiring.
     - stage: Build
       jobs:
       - job: Image_Tags_and_Ev2_Artifacts
@@ -103,58 +104,19 @@ extends:
           name: trivyVersion
           displayName: "Build: resolve latest stable Trivy version"
         - bash: |
-            if [ $(IS_PR) == "True" ]; then
-              BRANCH_NAME=$(System.PullRequest.SourceBranch)
-            else
-              BRANCH_NAME=$(Build.SourceBranch)
-              BRANCH_NAME=${BRANCH_NAME#refs/heads/}
-            fi
-            BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
-            COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
-            DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-            VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
-            SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
-            LINUX_IMAGE_TAG=$SEMVER
-            # Truncating to 128 characters as it is required by docker
-            LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-            #Truncating this to 128 to add the arm/amd suffix
-            LINUX_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-            #Truncating this to 124 to add the cfg suffix
-            LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-            LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
-            LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
-            LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
-            LINUX_ARM64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-arm
-            LINUX_AMD64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-amd
+            source .pipelines/image-tag.sh
             #Truncating this to 113 to add the ref app suffices
             LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
             LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
             LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
-            # Truncating to 115 characters as it is required by docker (4 characters used in -win, 9 characters used in -ltsc2019/-ltsc2022, 10 characters used in -unsigned)
-            WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-105)
-            WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
-            #Truncating this to 112 characters to add the targetallocator suffix
-            TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
-            TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
-            #Truncating this 108 to characters to add the targetallocator-arm/amd suffix
-            TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
-            TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-arm
-            TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-amd
             #Truncating this to 113 to add the ref app suffices
             WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
             WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
             WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
-            # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
-            WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
-            WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
             #Truncating this to 123 characters to add the conf prefix
             ARC_CONFORMANCE_TAG_SUFFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-123)
             ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
             LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-            TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
-            LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
-            LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
-            WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
             HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
             AKS_ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$AKS_ARC_HELM_CHART_NAME:$SEMVER    
             LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
@@ -162,18 +124,12 @@ extends:
             WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
             WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
             ARC_CONFORMANCE_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$ARC_CONFORMANCE_IMAGE_TAG
-            LINUX_ARM64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_ARM64_IMAGE_TAG
-            LINUX_AMD64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_AMD64_IMAGE_TAG
-            TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_ARM64_IMAGE_TAG
-            TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_AMD64_IMAGE_TAG
             echo "##vso[build.updatebuildnumber]$SEMVER"
             echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
             echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
             echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
-            echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
-            echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
             echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
@@ -195,6 +151,8 @@ extends:
             echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
           displayName: 'Build: set image registry, repo, and tags'
           name: setup
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             cd .pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
@@ -211,7 +169,9 @@ extends:
             export ARC_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Kubernetes/connectedClusters/ci-prod-arc-wcus"
             export ARC_REGION="westcentralus"
             envsubst < ama-metrics/Chart-template.yaml > ama-metrics/Chart.yaml && envsubst < ama-metrics/values-template.yaml > ama-metrics/values.yaml
-            tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics
+            if [ "$BUILD_SOURCEBRANCH" = "refs/heads/main" ]; then
+              tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics
+            fi
             cd $(Build.ArtifactStagingDirectory)
             cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
             export HELM_CHART_NAME="ama-metrics"
@@ -220,9 +180,12 @@ extends:
             export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
 
-            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
-            echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
-          displayName: 'Ev2: package artifacts.tar.gz for prod release'
+            if [ "$BUILD_SOURCEBRANCH" = "refs/heads/main" ]; then
+              echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/buildver.txt"
+              echo $(Build.BuildNumber) > "$(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/buildver.txt"
+            fi
+          displayName: 'Build: prepare charts for PR lint and main release'
+          condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
         - task: HelmInstaller@1
           displayName: 'CI/CD: Install Helm version for linting'
           condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -252,47 +215,51 @@ extends:
             cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
             tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
         - task: CredScan@3
           displayName: "SDL : Run credscan"
         - task: CopyFiles@2
           displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
+          condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
           inputs:
             SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
             Contents: |
               **/*
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
-      - job: CreateSidecarArtifact
-        displayName: "Create Sidecar YAML Artifact for Remote Write"
+      - job: DevClusterHelmChartFiles
+        displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
+        # Deploy-only artifacts and the Aks Arc chart share one job after the tag job: each extra request here can
+        # starve the multi-arch job of a pool slot (max 14) while other pipelines hold agents.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
+        variables:
+          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+          IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+          AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
+          INCLUDE_DEPENDENT_CHARTS: true
         templateContext:
           outputs:
           - output: pipelineArtifact
-            displayName: 'Publish sidecar.yaml as an artifact'
-            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
-            artifactName: 'remote-write-drop'
-        steps:
-        - task: CopyFiles@2
-          displayName: "Copy sidecar.yaml to artifact staging directory"
-          inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
-            Contents: 'sidecar.yaml'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
-
-      - job: DevClusterHelmChartFiles
-        displayName: "CI/CD: Export Helm Chart files for Dev Clusters"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
+            displayName: 'Ev2: publish helm chart artifacts'
+            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+            targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
+            artifactName: aks-arc-drop
           - output: pipelineArtifact
             displayName: 'CI/CD: Publish Dev Cluster Helm Chart files'
             targetPath: '$(Build.ArtifactStagingDirectory)/helm-chart'
             artifactName: dev-cluster-helm-chart
+          - output: pipelineArtifact
+            displayName: 'Publish sidecar.yaml as an artifact'
+            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
+            artifactName: 'remote-write-drop'
+          - output: pipelineArtifact
+            displayName: 'CI/CD: Publish TestKube test files'
+            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
+            artifactName: testkube-test-files
         steps:
         - checkout: self
           persistCredentials: true
@@ -349,22 +316,12 @@ extends:
             Contents: |
               azure-monitor-metrics-addon/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
-
-      - job: TestKubeTestFiles
-        displayName: "CI/CD: Export TestKube test files for Deploy stage"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'CI/CD: Publish TestKube test files'
-            targetPath: '$(Build.ArtifactStagingDirectory)/testkube-files'
-            artifactName: testkube-test-files
-        steps:
-        - checkout: self
-          persistCredentials: true
+        - task: CopyFiles@2
+          displayName: "Copy sidecar.yaml to artifact staging directory"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+            Contents: 'sidecar.yaml'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
         - task: CopyFiles@2
           displayName: "CI/CD: Copy TestKube files to artifact staging directory"
           inputs:
@@ -373,6 +330,38 @@ extends:
               testkube/**
               test-cluster-yamls/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/testkube-files'
+        # The Aks Arc steps edit the addon chart in place, so they must run after it is copied for the dev clusters.
+        - bash: |
+            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
+            envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+            helm version
+          displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+        - bash: |
+            helm dep update
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+          displayName: "Build: update helm dependencies"
+        - bash: |
+            helm package ./azure-monitor-metrics-addon/
+            # Also package the SAME chart contents under <ver>-arc so the
+            # Arc extension central rollout pipeline can pull a distinct
+            # OCI tag from the same artifact. Chart.yaml version is
+            # overridden at package time so the embedded version matches
+            # the OCI tag.
+            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+          displayName: "Build: package helm chart (aks + arc-tagged variant)"
+        - bash: bash .pipelines/wait-for-jobs.sh Linux_Prometheus_Collector
+          displayName: "Build: wait for collector image before publishing charts"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - bash: |
+            helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+            mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
+            echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+          displayName: "Build: push helm chart to dev ACR (aks + arc tags)"
 
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
@@ -825,10 +814,8 @@ extends:
           os: linux
           hostArchitecture: Arm64
           image: ci-1es-managed-arm64-ubuntu--2204
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-          LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         steps:
         - checkout: self
@@ -844,6 +831,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_ARM64_FULL_IMAGE_NAME]$LINUX_ARM64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -881,10 +876,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-          LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         steps:
         - checkout: self
@@ -899,6 +892,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_AMD64_FULL_IMAGE_NAME]$LINUX_AMD64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             echo "=== Docker Version Info (AMD64 Agent) ==="
             docker version
@@ -922,10 +923,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Linux_Prometheus_Collector_AMD64
-        - Linux_Prometheus_Collector_ARM64
+        # The arch jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -957,6 +956,10 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: bash .pipelines/wait-for-jobs.sh Linux_Prometheus_Collector_AMD64 Linux_Prometheus_Collector_ARM64
+          displayName: "Build: wait for architecture images"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linux
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -980,7 +983,7 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
               exit 1
             fi
-            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            echo "Manifest Type: MANIFEST LIST (multi-arch) âœ“"
             
             # Count the number of manifests
             MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
@@ -990,7 +993,7 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
               exit 1
             fi
-            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            echo "Manifest count verified: $MANIFEST_COUNT architectures âœ“"
             
             # Extract architectures from manifest list
             ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
@@ -1001,16 +1004,16 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
               exit 1
             fi
-            echo "amd64 architecture found ✓"
+            echo "amd64 architecture found âœ“"
             
             # Check for arm64
             if ! echo "$ARCHS" | grep -q "arm64"; then
               echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
               exit 1
             fi
-            echo "arm64 architecture found ✓"
+            echo "arm64 architecture found âœ“"
             
-            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+            echo "âœ“ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - bash: |
@@ -1040,7 +1043,7 @@ extends:
             AuthCertName: 'ESRPContainerImageSignCert'
             AuthSignCertName: 'ESRPReqPrometheusProdCert'
             FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
-            Pattern: '*.json'
+            Pattern: 'payload.json'
             signConfigType: 'inlineSignParams'
             inlineOperation: |
               [
@@ -1156,16 +1159,23 @@ extends:
             GdnBreakGdnToolGosecSeverity: 'Warning'
             GdnBreakGdnToolSemmle: true
             GdnBreakGdnToolSemmleSeverity: 'Warning'
+      # Pool 66 hands its one warm Ubuntu/Windows agent to the lowest pending request; holding these t=0 jobs behind
+      # an agentless job keeps them for the tag job and WS2019, which the other Linux jobs and WS2022 wait on.
+      - job: Agent_Request_Gate
+        displayName: "Build: hold image job agent requests behind the tag job"
+        pool: server
+        steps:
+        - task: Delay@1
+          inputs:
+            delayForMinutes: '0'
       - job: Linux_CCP_Prometheus_Collector
         displayName: "Build: linux CCP prometheus-collector image"
         pool:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
         templateContext:
           outputs:
@@ -1187,6 +1197,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME]$LINUX_CCP_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -1346,10 +1364,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1363,6 +1379,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1387,11 +1411,8 @@ extends:
           os: linux
           hostArchitecture: Arm64
           image: ci-1es-managed-arm64-ubuntu--2204
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1406,6 +1427,14 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             # Add Docker's official GPG key:
             # sudo apt-get update
@@ -1439,15 +1468,9 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Linux_Target_Allocator_ARM64
-        - Linux_Target_Allocator_AMD64
+        # The arch jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Agent_Request_Gate
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-          TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1461,6 +1484,20 @@ extends:
             echo "##vso[task.prependpath]/usr/local/go/bin"
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
+        - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME]$TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - bash: bash .pipelines/wait-for-jobs.sh Linux_Target_Allocator_AMD64 Linux_Target_Allocator_ARM64
+          displayName: "Build: wait for architecture images"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1497,7 +1534,7 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Expected manifest list but got single manifest. Multi-arch image should be a manifest list."
               exit 1
             fi
-            echo "Manifest Type: MANIFEST LIST (multi-arch) ✓"
+            echo "Manifest Type: MANIFEST LIST (multi-arch) âœ“"
             
             # Count the number of manifests
             MANIFEST_COUNT=$(echo "$MANIFEST_VERBOSE" | jq '.manifests | length')
@@ -1507,7 +1544,7 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Expected at least 2 architectures but found $MANIFEST_COUNT"
               exit 1
             fi
-            echo "Manifest count verified: $MANIFEST_COUNT architectures ✓"
+            echo "Manifest count verified: $MANIFEST_COUNT architectures âœ“"
             
             # Extract architectures from manifest list
             ARCHS=$(echo "$MANIFEST_VERBOSE" | jq -r '.manifests[].platform.architecture' | sort | tr '\n' ' ')
@@ -1518,16 +1555,16 @@ extends:
               echo "##vso[task.logissue type=error]ERROR: Missing amd64 architecture in manifest list"
               exit 1
             fi
-            echo "amd64 architecture found ✓"
+            echo "amd64 architecture found âœ“"
             
             # Check for arm64
             if ! echo "$ARCHS" | grep -q "arm64"; then
               echo "##vso[task.logissue type=error]ERROR: Missing arm64 architecture in manifest list"
               exit 1
             fi
-            echo "arm64 architecture found ✓"
+            echo "arm64 architecture found âœ“"
             
-            echo "✓ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
+            echo "âœ“ Multi-arch manifest list verified successfully with amd64 and arm64 (total: $MANIFEST_COUNT architectures)"
           displayName: 'Build: verify multi-arch manifest list'
           condition: succeeded()
         - template: /.pipelines/azure-template-install-trivy.yml@self
@@ -1569,7 +1606,7 @@ extends:
             AuthCertName: 'ESRPContainerImageSignCert'
             AuthSignCertName: 'ESRPReqPrometheusProdCert'
             FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-            Pattern: "*.json"
+            Pattern: "payload.json"
             signConfigType: inlineSignParams
             inlineOperation: |
               [
@@ -1613,10 +1650,8 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-ubuntu-2204
           os: linux
-        dependsOn: Image_Tags_and_Ev2_Artifacts
+        dependsOn: Agent_Request_Gate
         variables:
-          TRIVY_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['trivyVersion.TRIVY_VERSION'] ]
-          LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
           DOCKER_BUILDKIT: 1
           skipComponentGovernanceDetection: true
         steps:
@@ -1629,23 +1664,28 @@ extends:
             go version
           displayName: "Build: install golang $(GOLANG_VERSION)"
         - bash: |
+            set -e
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
+            bash .pipelines/tag-job-trivy-version.sh
+          displayName: "Build: set image name and wait for the tag job"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - bash: |
+            set -e
             mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
             # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
             sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
             docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
             docker system prune --all -f
             docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-            docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+            docker buildx inspect dockerbuilder >/dev/null 2>&1 || docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+            docker buildx use dockerbuilder
             docker buildx inspect --bootstrap
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
+            docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxcfgreader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
             docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-            MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-            DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-            SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-            cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
-            {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-            EOF
+            jq -e '.["containerimage.descriptor"] | select(.mediaType and (.digest | test("^sha256:[0-9a-f]{64}$")) and (.size | type == "number") and .size > 0) | {targetArtifact: .}' $(Build.ArtifactStagingDirectory)/linuxcfgreader/metadata.json > $(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
           retryCountOnTaskFailure: 1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: build and push configuration reader image to dev ACR"
@@ -1734,79 +1774,92 @@ extends:
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
         variables:
-          WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-          WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
+        # Builds need only this commit; the default full-history fetch is ~386 MiB and ~0.3m.
+        - checkout: self
+          fetchDepth: 1
+          fetchTags: false
+        - bash: |
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME]$WINDOWS_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION]$WINDOWS_2019_BASE_IMAGE_VERSION"
+          displayName: "Build: set image name"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        # Pulling the base inside docker build --pull costs ~3.5m; start it before the seed setup and docker build --pull joins it.
+        - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)' -WindowStyle Hidden
+          displayName: "Build: start WS2019 base image pull"
+        # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
+        - powershell: |
+            curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
+            Expand-Archive $(Agent.TempDirectory)\oras.zip $(Agent.TempDirectory)\oras -Force
+            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2019_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
+          displayName: "Build: start WS2019 base layer registry seed"
+          continueOnError: true
+        # The image build needs only the host-built binaries' paths: their signed copies replace them before push.
+        - powershell: |
+            New-Item -ItemType File -Force opentelemetry-collector-builder/otelcollector.exe, prom-config-validator-builder/promconfigvalidator.exe, prometheus-ui/prometheusui.exe, fluent-bit/src/out_appinsights.so, main/main.exe | Out-Null
+            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
+            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
+            # The Go build overwrites the placeholders, so let docker finish reading the build context first.
+            while (-not ((Get-Content $(Agent.TempDirectory)\image-build.log -Raw -ErrorAction Ignore) -match 'Step 1/') -and -not (Test-Path $(Agent.TempDirectory)\image-build.exit)) { Start-Sleep 1 }
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: start WS2019 image build"
         - powershell: |
             .\build\windows\tests\Test-MicrosoftSignature.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Test: Microsoft signature verification guards"
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
+            curl.exe -fsSLo go.zip "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            # tar.exe extracts the 15k-file zip ~3.5x faster than Expand-Archive, but can't create directories at a drive root.
+            New-Item -ItemType Directory -Force C:\go | Out-Null
+            tar.exe -xf go.zip -C C:\
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go\bin"
             & "C:\go\bin\go.exe" version
           displayName: "Build: install golang $(GOLANG_VERSION)"
           retryCountOnTaskFailure: 3
         - powershell: |
             ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
+            New-Item -ItemType Directory -Force $(Build.ArtifactStagingDirectory)/fpSigning | Out-Null
+            Copy-Item otelcollector.exe, ../main/main.exe, ../prometheus-ui/prometheusui.exe $(Build.ArtifactStagingDirectory)/fpSigning
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector and promconfigvalidator"
+          displayName: "Build: build Go binaries and stage first-party binaries"
         - powershell: |
             $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
+            curl.exe -fsSLo go-fluentbit.zip "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip"
+            if ($LASTEXITCODE) { throw "Go download failed" }
+            New-Item -ItemType Directory -Force C:\go-fluentbit | Out-Null
+            tar.exe -xf go-fluentbit.zip -C C:\go-fluentbit
+            if ($LASTEXITCODE) { throw "Go extraction failed" }
             Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
             & "C:\go-fluentbit\go\bin\go.exe" version
           displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
           retryCountOnTaskFailure: 3
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
         - powershell: |
             ./makefile_windows.ps1
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
           displayName: "Build: build fluent-bit plugin"
+          condition: and(succeeded(), ne(variables.GOLANG_VERSION, variables.FLUENTBIT_GOLANG_VERSION))
+        # WS2022's agent usually starts minutes later, so it only signs these. They stay out of the staging directory,
+        # whose windows-signed artifact WS2022 downloads over its own signed copies.
         - powershell: |
-            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            New-Item -ItemType Directory -Force $(Agent.TempDirectory)/ossGoUnsigned | Out-Null
+            Copy-Item prom-config-validator-builder/promconfigvalidator.exe, fluent-bit/src/out_appinsights.so $(Agent.TempDirectory)/ossGoUnsigned
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: build WS2019 image"
-          retryCountOnTaskFailure: 2
-        - task: PowerShell@2
-          displayName: Extract files to sign
+          displayName: "Build: stage host-built OSS binaries"
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish unsigned OSS binaries for WS2022 signing'
           inputs:
-            targetType: 'inline'
-            script: |
-              echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
-              echo "Creating fist party directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
-              cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract prometheusui"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
-              echo "Extract main"
-              docker cp signingContainer:C:\opt\microsoft\main.exe .
-              echo "Extract OtelCollector"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
-              echo "Creating OSS directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
-              cd $(Build.ArtifactStagingDirectory)/ossSigning
-              echo "Extract fluent-bit"
-              docker cp signingContainer:C:\opt\fluent-bit .
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
-              echo "Extract promconfigvalidator"
-              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
-              echo "Removing container"
-              docker rm signingContainer
-              echo "List ArtifactStagingDirectory"
-              ls $(Build.ArtifactStagingDirectory)
-              ls .       
-        - script: dir $(Build.ArtifactStagingDirectory)
-          displayName: 'List files in Staging Directory'
+            path: $(Agent.TempDirectory)/ossGoUnsigned
+            artifact: windows-oss-unsigned-$(System.JobAttempt)
         - task: EsrpCodeSigning@6
           inputs:
             ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1847,64 +1900,81 @@ extends:
             MaxConcurrency: '50'
             MaxRetryAttempts: '5'
           displayName: 'EsrpCodeSigning for first party binaries'
-        - task: EsrpCodeSigning@6
-          inputs:
-            ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-            UseMSIAuthentication: true
-            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-            AuthAKVName: 'ESRPPrometheusKVProd'
-            AuthCertName: 'ESRPContainerImageSignCert'
-            AuthSignCertName: 'ESRPReqPrometheusProdCert'
-            FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
-            Pattern: '*.dll,*.exe,*.so'
-            signConfigType: 'inlineSignParams'
-            inlineOperation: |
-              [
-                      {
-                          "KeyCode" : "CP-231522",
-                          "OperationCode" : "SigntoolSign",
-                          "Parameters" : {
-                              "OpusName" : "Microsoft",
-                              "OpusInfo" : "http://www.microsoft.com",
-                              "Append" : "/as",
-                              "FileDigest" : "/fd \"SHA256\"",
-                              "PageHash" : "/NPH",
-                              "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-                          },
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      },
-                      {
-                          "KeyCode" : "CP-231522",
-                          "OperationCode" : "SigntoolVerify",
-                          "Parameters" : {},
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      }
-                  ]
-            SessionTimeout: '60'
-            MaxConcurrency: '50'
-            MaxRetryAttempts: '5'
-          displayName: 'EsrpCodeSigning for OSS binaries'
+        - powershell: |
+            Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
+            function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
+            if ((Get-ExitCode) -ne '0') {
+              Get-Content $(Agent.TempDirectory)\image-build.log -ErrorAction Ignore
+              Write-Host 'Background image build failed; rebuilding'
+              cmd /c $(Agent.TempDirectory)\image-build.cmd
+            }
+            Get-Content $(Agent.TempDirectory)\image-build.log
+            if ((Get-ExitCode) -ne '0') { throw 'WS2019 image build failed' }
+          workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+          displayName: "Build: wait for WS2019 image build"
+          retryCountOnTaskFailure: 1
         - task: PowerShell@2
-          displayName: Replace files in origin Image
+          displayName: Extract files to sign
           inputs:
             targetType: 'inline'
             script: |
-              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
-              echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-              docker rm pushContainer
+              echo "Creating docker container"
+              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+              echo "Creating OSS directory"
+              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+              cd $(Build.ArtifactStagingDirectory)/ossSigning
+              echo "Extract fluent-bit"
+              docker cp signingContainer:C:\opt\fluent-bit .
+              Remove-Item fluent-bit\bin\out_appinsights.so
+              echo "Removing container"
+              docker rm signingContainer
+              echo "List ArtifactStagingDirectory"
+              ls $(Build.ArtifactStagingDirectory)
+              ls .
+        - script: dir $(Build.ArtifactStagingDirectory)
+          displayName: 'List files in Staging Directory'
+        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
+          parameters:
+            folderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
+            displayName: 'EsrpCodeSigning for OSS binaries'
+        - powershell: ./.pipelines/tests/windows-tag-gate-test.ps1
+          displayName: "Build: test Windows tag gate"
+        # The Windows jobs don't depend on the tag job; WS2022 pushes only after downloading the artifact below, so this
+        # keeps both Windows images out of ACR unless the tag job succeeded, as the Linux jobs' tag wait does.
+        - powershell: |
+            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
+            while ($true) {
+              $tag = (Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Job' -and $_.identifier -eq 'Build.Image_Tags_and_Ev2_Artifacts.__default' }
+              if ($tag.state -eq 'completed') { break }
+              Start-Sleep 5
+            }
+            if ($tag.result -notin 'succeeded', 'succeededWithIssues') { throw 'The tag job did not succeed' }
+          displayName: "Build: wait for the tag job"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        # The WS2022 job ships these rather than signing its own build of the same source (~5m of ESRP on its critical path).
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish signed binaries for the WS2022 image'
+          inputs:
+            path: $(Build.ArtifactStagingDirectory)
+            artifact: windows-signed-$(System.JobAttempt)
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2022_Prometheus_Collector windows-oss-go WINDOWS_OSS_GO_ARTIFACT
+          displayName: "Build: wait for WS2022 signed OSS binaries"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2022 signed OSS binaries"
+          inputs:
+            buildType: current
+            artifactName: $(WINDOWS_OSS_GO_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)/ossGoSigning
+        - powershell: ./.pipelines/replace-signed-windows-binaries.ps1 '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)' '$(Build.ArtifactStagingDirectory)'
+          displayName: Replace files in origin Image
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
           displayName: "Build: push image to dev ACR"
       - job: Windows2022_Prometheus_Collector
@@ -1913,179 +1983,102 @@ extends:
           name: Azure-Pipelines-CI-Test-EO
           image: ci-1es-managed-windows-2022
           os: windows
+        dependsOn: Agent_Request_Gate
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
         variables:
-          WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-          WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         steps:
+        - checkout: self
+          fetchDepth: 1
+          fetchTags: false
+        - bash: |
+            source .pipelines/image-tag.sh
+            echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME]$WINDOWS_FULL_IMAGE_NAME"
+            echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION]$WINDOWS_2022_BASE_IMAGE_VERSION"
+          displayName: "Build: set image name"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        # The host's cached ltsc2022 base can be months stale; pull starts before the seed setup and docker build --pull joins it.
+        - powershell: Start-Process docker -ArgumentList 'pull','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)' -WindowStyle Hidden
+          displayName: "Build: start WS2022 base image pull"
+        # docker push re-uploads recompressed base layers (~2.5m) unless this repo already holds MCR's original blobs; seed them untagged.
         - powershell: |
-            .\build\windows\tests\Test-MicrosoftSignature.ps1
+            curl.exe -fsSLo $(Agent.TempDirectory)\oras.zip https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip
+            Expand-Archive $(Agent.TempDirectory)\oras.zip $(Agent.TempDirectory)\oras -Force
+            docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Start-Process $(Agent.TempDirectory)\oras\oras.exe -ArgumentList 'cp','mcr.microsoft.com/windows/servercore:$(WINDOWS_2022_BASE_IMAGE_VERSION)','$(ACR_REGISTRY)$(ACR_REPOSITORY)' -WindowStyle Hidden -RedirectStandardOutput $(Agent.TempDirectory)\seed.log -RedirectStandardError $(Agent.TempDirectory)\seed.err
+          displayName: "Build: start WS2022 base layer registry seed"
+          continueOnError: true
+        # The image build needs only the host-built binaries' paths: their signed copies replace them before push.
+        - powershell: |
+            New-Item -ItemType File -Force opentelemetry-collector-builder/otelcollector.exe, prom-config-validator-builder/promconfigvalidator.exe, prometheus-ui/prometheusui.exe, fluent-bit/src/out_appinsights.so, main/main.exe | Out-Null
+            Set-Content $(Agent.TempDirectory)\image-build.cmd "docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) > $(Agent.TempDirectory)\image-build.log 2>&1`r`n> $(Agent.TempDirectory)\image-build.exit echo %ERRORLEVEL%"
+            (Start-Process cmd.exe -ArgumentList '/c', '$(Agent.TempDirectory)\image-build.cmd' -WorkingDirectory $PWD -WindowStyle Hidden -PassThru).Id | Set-Content $(Agent.TempDirectory)\image-build.pid
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Test: Microsoft signature verification guards"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
+          displayName: "Build: start WS2022 image build"
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2019_Prometheus_Collector windows-oss-unsigned WINDOWS_OSS_UNSIGNED_ARTIFACT
+          displayName: "Build: wait for WS2019 unsigned OSS binaries"
           retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2019 unsigned OSS binaries"
+          inputs:
+            buildType: current
+            artifactName: $(WINDOWS_OSS_UNSIGNED_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)/ossGoSigning
+        # Signing these here runs in parallel with the WS2019 first-party signing, which would otherwise wait ~3m for them.
+        - template: /.pipelines/azure-template-esrp-oss-sign.yml@self
+          parameters:
+            folderPath: '$(Build.ArtifactStagingDirectory)/ossGoSigning'
+            displayName: 'EsrpCodeSigning for host-built OSS binaries'
+        - task: 1ES.PublishPipelineArtifact@1
+          displayName: 'Publish signed OSS binaries for the WS2019 image'
+          inputs:
+            path: $(Build.ArtifactStagingDirectory)/ossGoSigning
+            artifact: windows-oss-go-$(System.JobAttempt)
         - powershell: |
-            ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-          displayName: "Build: build otelcollector and promconfigvalidator"
-        - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(FLUENTBIT_GOLANG_VERSION).windows-amd64.zip" -OutFile "go-fluentbit.zip"
-            Expand-Archive -Path "go-fluentbit.zip" -DestinationPath "C:\go-fluentbit" -Force
-            Write-Host "##vso[task.prependpath]C:\go-fluentbit\go\bin"
-            & "C:\go-fluentbit\go\bin\go.exe" version
-          displayName: "Build: install fluent-bit golang $(FLUENTBIT_GOLANG_VERSION)"
-          retryCountOnTaskFailure: 3
-        - powershell: |
-            ./makefile_windows.ps1
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/
-          displayName: "Build: build fluent-bit plugin"
-        - powershell: |
-            docker build . --pull --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            Wait-Process -Id (Get-Content $(Agent.TempDirectory)\image-build.pid) -ErrorAction Ignore
+            function Get-ExitCode { (Get-Content $(Agent.TempDirectory)\image-build.exit -ErrorAction Ignore | Out-String).Trim() }
+            if ((Get-ExitCode) -ne '0') {
+              Get-Content $(Agent.TempDirectory)\image-build.log -ErrorAction Ignore
+              Write-Host 'Background image build failed; rebuilding'
+              cmd /c $(Agent.TempDirectory)\image-build.cmd
+            }
+            Get-Content $(Agent.TempDirectory)\image-build.log
+            if ((Get-ExitCode) -ne '0') { throw 'WS2022 image build failed' }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-          displayName: "Build: build WS2022 image"
-          retryCountOnTaskFailure: 2
-        - task: PowerShell@2
-          displayName: Extract files to sign
+          displayName: "Build: wait for WS2022 image build"
+          retryCountOnTaskFailure: 1
+        - powershell: ./.pipelines/wait-for-artifact.ps1 Windows2019_Prometheus_Collector windows-signed WINDOWS_SIGNED_ARTIFACT
+          displayName: "Build: wait for WS2019 signed binaries"
+          retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        - task: DownloadPipelineArtifact@2
+          displayName: "Build: download WS2019 signed binaries"
           inputs:
-            targetType: 'inline'
-            script: |
-              echo "Creating docker container"
-              docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
-              echo "Creating fist party directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
-              cd $(Build.ArtifactStagingDirectory)/fpSigning
-              echo "Extract prometheusui"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\prometheusui.exe .
-              echo "Extract main"
-              docker cp signingContainer:C:\opt\microsoft\main.exe .
-              echo "Extract OtelCollector"
-              docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
-              echo "Creating OSS directory"
-              mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
-              cd $(Build.ArtifactStagingDirectory)/ossSigning
-              echo "Extract fluent-bit"
-              docker cp signingContainer:C:\opt\fluent-bit .
-              echo "Extract Ruby"
-              docker cp signingContainer:C:\ruby26 .
-              echo "Extract promconfigvalidator"
-              docker cp signingContainer:C:\opt\promconfigvalidator.exe .
-              echo "Removing container"
-              docker rm signingContainer
-              echo "List ArtifactStagingDirectory"
-              ls $(Build.ArtifactStagingDirectory)
-              ls .       
-        - script: dir $(Build.ArtifactStagingDirectory)
-          displayName: 'List files in Staging Directory'
-        - task: EsrpCodeSigning@6
-          inputs:
-            ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-            UseMSIAuthentication: true
-            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-            AuthAKVName: 'ESRPPrometheusKVProd'
-            AuthCertName: 'ESRPContainerImageSignCert'
-            AuthSignCertName: 'ESRPReqPrometheusProdCert'
-            FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
-            Pattern: '*.dll,*.exe,*.so,*.ps1'
-            signConfigType: 'inlineSignParams'
-            inlineOperation: |
-              [
-                      {
-                          "KeyCode" : "CP-230012",
-                          "OperationCode" : "SigntoolSign",
-                          "Parameters" : {
-                              "OpusName" : "Microsoft",
-                              "OpusInfo" : "http://www.microsoft.com",
-                              "FileDigest" : "/fd \"SHA256\"",
-                              "PageHash" : "/NPH",
-                              "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-                          },
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      },
-                      {
-                          "KeyCode" : "CP-230012",
-                          "OperationCode" : "SigntoolVerify",
-                          "Parameters" : {},
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      }
-                  ]
-            SessionTimeout: '60'
-            MaxConcurrency: '50'
-            MaxRetryAttempts: '5'
-          displayName: 'EsrpCodeSigning for first party binaries'
-        - task: EsrpCodeSigning@6
-          inputs:
-            ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-            UseMSIAuthentication: true
-            AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a'
-            AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-            EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-            AuthAKVName: 'ESRPPrometheusKVProd'
-            AuthCertName: 'ESRPContainerImageSignCert'
-            AuthSignCertName: 'ESRPReqPrometheusProdCert'
-            FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
-            Pattern: '*.dll,*.exe,*.so'
-            signConfigType: 'inlineSignParams'
-            inlineOperation: |
-              [
-                      {
-                          "KeyCode" : "CP-231522",
-                          "OperationCode" : "SigntoolSign",
-                          "Parameters" : {
-                              "OpusName" : "Microsoft",
-                              "OpusInfo" : "http://www.microsoft.com",
-                              "Append" : "/as",
-                              "FileDigest" : "/fd \"SHA256\"",
-                              "PageHash" : "/NPH",
-                              "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-                          },
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      },
-                      {
-                          "KeyCode" : "CP-231522",
-                          "OperationCode" : "SigntoolVerify",
-                          "Parameters" : {},
-                          "ToolName" : "sign",
-                          "ToolVersion" : "1.0"
-                      }
-                  ]
-            SessionTimeout: '60'
-            MaxConcurrency: '50'
-            MaxRetryAttempts: '5'
-          displayName: 'EsrpCodeSigning for OSS binaries'
-        - task: PowerShell@2
+            buildType: current
+            artifactName: $(WINDOWS_SIGNED_ARTIFACT)
+            targetPath: $(Build.ArtifactStagingDirectory)
+        # Both images run the same setup.ps1, so the signed fluent-bit set must match this image's file for file.
+        - powershell: |
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+            docker cp signingContainer:C:\opt\fluent-bit $(Agent.TempDirectory)
+            docker rm signingContainer
+            $image = Get-ChildItem -Recurse -File -Name $(Agent.TempDirectory)\fluent-bit | Where-Object { $_ -ne 'bin\out_appinsights.so' }
+            $signed = Get-ChildItem -Recurse -File -Name $(Build.ArtifactStagingDirectory)\ossSigning\fluent-bit
+            if (-not $image -or (Compare-Object $image $signed)) { throw 'WS2022 fluent-bit files differ from the WS2019 signed set' }
+          workingDirectory: $(Build.ArtifactStagingDirectory)
+          displayName: "Build: verify WS2019 signed binaries cover the WS2022 image"
+        - powershell: ./.pipelines/replace-signed-windows-binaries.ps1 '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)' '$(Build.ArtifactStagingDirectory)'
           displayName: Replace files in origin Image
-          inputs:
-            targetType: 'inline'
-            script: |
-              docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
-              echo "Copy Signed binaries/folders back to docker image"
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/prometheusui.exe pushContainer:C:\opt\microsoft\otelcollector\prometheusui.exe
-              docker cp $(Build.ArtifactStagingDirectory)/fpSigning/main.exe pushContainer:C:\opt\microsoft\main.exe
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-              docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-              docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-              docker rm pushContainer
         - powershell: |
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+            Get-Content $(Agent.TempDirectory)\seed.log, $(Agent.TempDirectory)\seed.err -ErrorAction Ignore
             docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            if ($LASTEXITCODE -ne 0) { throw "Windows2022 push failed: $LASTEXITCODE" }
           displayName: "Build: push image to dev ACR"
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
@@ -2094,10 +2087,8 @@ extends:
           image: ci-1es-managed-windows-2022
           os: windows
         timeoutInMinutes: 120
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Windows2019_Prometheus_Collector
-        - Windows2022_Prometheus_Collector
+        # The Windows image jobs are awaited in a step, not dependsOn, so this job gets its agent while they build.
+        dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           WINDOWS_IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
@@ -2113,25 +2104,41 @@ extends:
             targetPath: '$(Build.ArtifactStagingDirectory)/windows'
             artifactName: windows-drop
         steps:
+        - checkout: self
+          fetchDepth: 1
+          fetchTags: false
+        # Host-only check of setup.ps1: run it here, idle until the image jobs finish, not on their critical paths.
+        - powershell: ./.pipelines/tests/windows-vcredist-test.ps1
+          displayName: "Build: test Windows runtime setup"
         - powershell: |
-            $ErrorActionPreference = "Stop"
-            Invoke-WebRequest -Uri "https://go.dev/dl/go$(GOLANG_VERSION).windows-amd64.zip" -OutFile "go.zip"
-            Expand-Archive -Path "go.zip" -DestinationPath "C:\" -Force
-            Write-Host "##vso[task.prependpath]C:\go\bin"
-            & "C:\go\bin\go.exe" version
-          displayName: "Build: install golang $(GOLANG_VERSION)"
+            $url = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$env:BUILD_BUILDID/timeline?api-version=7.1"
+            # Proceed once both images are pushed: the jobs' remaining CG/post-job steps take ~0.5m, and a later failure still fails the build.
+            $ids = 'Build.Windows2019_Prometheus_Collector.__default', 'Build.Windows2022_Prometheus_Collector.__default'
+            while ($true) {
+              $records = (Invoke-RestMethod $url -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records
+              $jobs = @($records | Where-Object { $_.type -eq 'Job' -and $ids -contains $_.identifier })
+              if ($jobs | Where-Object { $_.state -eq 'completed' -and $_.result -notin 'succeeded', 'succeededWithIssues' }) { throw 'A Windows image job did not succeed' }
+              $pushed = @($records | Where-Object { $_.type -eq 'Task' -and $_.name -eq 'Build: push image to dev ACR' -and $_.result -eq 'succeeded' -and $jobs.id -contains $_.parentId })
+              if ($jobs.Count -eq $ids.Count -and $pushed.Count -eq $ids.Count) { break }
+              Write-Host ($jobs | ForEach-Object { "$($_.identifier)=$($_.state)" })
+              Start-Sleep 5
+            }
+          displayName: "Build: wait for Windows images"
           retryCountOnTaskFailure: 3
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - bash: |
             set -euo pipefail
             printf '%s' "$ACR_PASSWORD" | docker login containerinsightsprod.azurecr.io -u "$ACR_USERNAME" --password-stdin
             for base_version in "$(WINDOWS_2019_BASE_IMAGE_VERSION)" "$(WINDOWS_2022_BASE_IMAGE_VERSION)"; do
               acr_image="$(WINDOWS_FULL_IMAGE_NAME)-$base_version"
               mcr_image="$(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$base_version"
-              if docker pull "$acr_image"; then
+              # Registry check only: manifest create/sign/oras read the registry, not local images.
+              if docker manifest inspect "$acr_image" > /dev/null; then
                 continue
               fi
 
-              echo "Failed to pull $acr_image. Waiting for $mcr_image."
+              echo "$acr_image not found. Waiting for $mcr_image."
               restored=0
               for attempt in {1..20}; do
                 if docker pull "$mcr_image"; then
@@ -2239,61 +2246,6 @@ extends:
             DisableRemediation: false
             AcceptableOutdatedSignatureInHours: 48
             TreatAcceptableOutdatedSignatureAs: Warning
-      - job: Aks_Arc_Helm_Chart
-        displayName: "Package: Aks Arc helm chart"
-        pool:
-          name: Azure-Pipelines-CI-Test-EO
-          image: ci-1es-managed-ubuntu-2204
-          os: linux
-        dependsOn:
-        - Image_Tags_and_Ev2_Artifacts
-        - Linux_Prometheus_Collector
-        variables:
-          HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-          IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-          IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-          AKS_ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.AKS_ARC_HELM_FULL_IMAGE_NAME'] ]
-          INCLUDE_DEPENDENT_CHARTS: true
-          skipComponentGovernanceDetection: true
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            displayName: 'Ev2: publish helm chart artifacts'
-            condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)/aks-arc-chart'
-            artifactName: aks-arc-drop
-        steps:
-        - task: HelmInstaller@1
-          displayName: 'Build: install Helm version'
-          inputs:
-            helmVersionToInstall: $(HELM_VERSION)
-        - bash: |
-            export HELM_CHART_NAME=$AKS_ARC_HELM_CHART_NAME
-            envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-            helm version
-          displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
-        - bash: |
-            helm dep update
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-          displayName: "Build: update helm dependencies"
-        - bash: |
-            helm package ./azure-monitor-metrics-addon/
-            # Also package the SAME chart contents under <ver>-arc so the
-            # Arc extension central rollout pipeline can pull a distinct
-            # OCI tag from the same artifact. Chart.yaml version is
-            # overridden at package time so the embedded version matches
-            # the OCI tag.
-            helm package --version $(HELM_SEMVER)-arc ./azure-monitor-metrics-addon/
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: package helm chart (aks + arc-tagged variant)"
-        - bash: |
-            helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-            helm push $(AKS_ARC_HELM_CHART_NAME)-$(HELM_SEMVER)-arc.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-            mkdir -p $(Build.ArtifactStagingDirectory)/aks-arc-chart
-            echo {\"image.name\":\"$(AKS_ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/aks-arc-chart/metadata.json
-          workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-          displayName: "Build: push helm chart to dev ACR (aks + arc tags)"
       - job: Tag_Github_Commit
         displayName: "CI/CD: Tag commit with semver"
         pool:
@@ -2302,7 +2254,7 @@ extends:
           os: linux
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
-        - Aks_Arc_Helm_Chart
+        - DevClusterHelmChartFiles
         - Linux_Prometheus_Collector
         - WindowsMultiArch_Prometheus_Collector
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
@@ -2323,6 +2275,8 @@ extends:
     - stage: Deploy
       lockBehavior: sequential
       dependsOn: Build
+      # Every Deploy job is gated on these; skipping the stage otherwise avoids queueing on the environment's exclusive lock.
+      condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true), eq(variables.IS_OTEL_UPGRADE_BRANCH, true)))
       jobs:
       - deployment: Deploy_Chart_ARC
         templateContext:
