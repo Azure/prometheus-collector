@@ -298,25 +298,94 @@ extends:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             set -euo pipefail
-            # Keep the release pinned until all required image manifests are available in MCR.
-            RETINA_VERSION=v1.3.2
-            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo "$RETINA_VERSION"
-            CHART_PULL=$(helm pull oci://ghcr.io/microsoft/retina/charts/retina --version "$RETINA_VERSION" --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart 2>&1)
-            echo "$CHART_PULL"
-            grep -Fx "version: $RETINA_VERSION" "$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/Chart.yaml"
-            echo "$CHART_PULL" | grep -Fx 'Digest: sha256:4a18c973512f492c99ea5b5729911d273e9ec040026e8baabdfaed69083007ab'
-            for image in retina-agent retina-init retina-operator; do
-              curl -fsS -o /dev/null \
-                -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json' \
-                "https://mcr.microsoft.com/v2/containernetworking/${image}/manifests/${RETINA_VERSION}"
-              echo "Verified ${image}:${RETINA_VERSION} in MCR"
+            ghcr_manifest() {
+              local token
+              token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/$1:pull" | jq -r '.token') || return 1
+              curl -sfL -H "Authorization: Bearer $token" \
+                -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json' \
+                "https://ghcr.io/v2/microsoft/retina/$1/manifests/$2"
+            }
+            ghcr_manifest_digest() {
+              local token
+              token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/$1:pull" | jq -r '.token') || return 1
+              curl -sfL -D - -o /dev/null -H "Authorization: Bearer $token" \
+                -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json' \
+                "https://ghcr.io/v2/microsoft/retina/$1/manifests/$2" \
+                | awk 'BEGIN { IGNORECASE = 1 } /^Docker-Content-Digest:/ { gsub("\r", "", $2); print $2; exit }'
+            }
+            RETINA_VERSION=
+            for candidate in $(curl -sfL https://api.github.com/repos/microsoft/retina/releases | jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' | head -n 5); do
+              if ghcr_manifest retina-agent "$candidate" | jq -e 'any(.manifests[]?; .platform.os == "linux") and any(.manifests[]?; .platform.os == "windows")' > /dev/null \
+                && ghcr_manifest retina-init "$candidate" > /dev/null \
+                && ghcr_manifest retina-operator "$candidate" > /dev/null \
+                && ghcr_manifest charts/retina "$candidate" > /dev/null; then
+                RETINA_VERSION="${candidate#v}"
+                break
+              fi
+              echo "##vso[task.logissue type=warning]Skipping Retina $candidate: its images or chart are not published to ghcr.io"
             done
+            if [[ -z "$RETINA_VERSION" ]]; then
+              echo "##vso[task.logissue type=error]None of the latest Retina releases have their images and chart published to ghcr.io"
+              exit 1
+            fi
+            RETINA_TAG="v$RETINA_VERSION"
+            echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+            echo "Resolved latest supported Retina release: $RETINA_TAG"
+            CHART_PULL=$(helm pull oci://ghcr.io/microsoft/retina/charts/retina --version "$RETINA_TAG" --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart 2>&1)
+            echo "$CHART_PULL"
+            grep -Fx "version: $RETINA_TAG" "$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/Chart.yaml"
+            CHART_DIGEST=$(printf '%s\n' "$CHART_PULL" | sed -nE 's/^Digest: (sha256:[0-9a-f]{64})$/\1/p')
+            EXPECTED_CHART_DIGEST=$(ghcr_manifest_digest charts/retina "$RETINA_TAG")
+            if [[ ! "$CHART_DIGEST" =~ ^sha256:[0-9a-f]{64}$ || "$CHART_DIGEST" != "$EXPECTED_CHART_DIGEST" ]]; then
+              echo "Retina chart OCI digest did not match the GHCR manifest for $RETINA_TAG"
+              exit 1
+            fi
+            echo "Verified Retina chart digest: $CHART_DIGEST"
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
-          displayName: "CI/CD: Download Retina Chart and verify MCR images"
+          displayName: "CI/CD: Resolve latest Retina release and download chart"
           retryCountOnTaskFailure: 5
           name: setup
+        - task: AzureCLI@2
+          displayName: "CI/CD: Import Retina images from GHCR to ACR"
+          condition: and(succeeded(), eq(variables.IS_PR, false))
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              set -euo pipefail
+              RETINA_TAG="v$(RETINA_VERSION)"
+              ACR_REPOSITORY_PATH="$(ACR_REPOSITORY)"
+              ACR_REPOSITORY_PATH="${ACR_REPOSITORY_PATH#/}"
+              ACR_REPOSITORIES=$(az acr repository list --name containerinsightsprod --output tsv)
+              for image in retina-agent retina-init retina-operator; do
+                repository="${ACR_REPOSITORY_PATH}/${image}"
+                if grep -Fxq "$repository" <<<"$ACR_REPOSITORIES"; then
+                  existing_tags=$(az acr repository show-tags --name containerinsightsprod --repository "$repository" --output tsv)
+                  if grep -Fxq "$RETINA_TAG" <<<"$existing_tags"; then
+                    echo "Skipping existing ACR image ${repository}:${RETINA_TAG}"
+                    continue
+                  fi
+                fi
+                az acr import --name containerinsightsprod \
+                  --source "ghcr.io/microsoft/retina/${image}:${RETINA_TAG}" \
+                  --image "${repository}:${RETINA_TAG}"
+              done
+              ACR_REPOSITORIES=$(az acr repository list --name containerinsightsprod --output tsv)
+              for image in retina-agent retina-init retina-operator; do
+                repository="${ACR_REPOSITORY_PATH}/${image}"
+                if ! grep -Fxq "$repository" <<<"$ACR_REPOSITORIES"; then
+                  echo "ACR repository missing after Retina import: $repository" >&2
+                  exit 1
+                fi
+                tags=$(az acr repository show-tags --name containerinsightsprod --repository "$repository" --output tsv)
+                if ! grep -Fxq "$RETINA_TAG" <<<"$tags"; then
+                  echo "ACR tag missing after Retina import: ${repository}:${RETINA_TAG}" >&2
+                  exit 1
+                fi
+                echo "Verified ACR image ${repository}:${RETINA_TAG}"
+              done
         - task: CopyFiles@2
           displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
           inputs:
@@ -2499,7 +2568,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2676,7 +2745,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2761,7 +2830,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
