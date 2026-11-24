@@ -1716,12 +1716,15 @@ def render_workflow(source, workflow, sha, image, label_filter=None, expectation
             values = {"GOTOOLCHAIN": "auto", "GOFLAGS": "-mod=readonly"}
             if suite == "./operator":
                 values["EXPECT_OPERATOR_HTTPS"] = "true"
+            if suite == "./querymetrics":
+                values["SCENARIO_PROBE_IMAGE"] = image
             values.update(expectations or {})
             env[:] = [item for item in env if item["name"] not in values]
             env.extend({"name": name, "value": value} for name, value in values.items())
             if suite == "./querymetrics":
                 pod_fields = {"SCENARIO_POD_NAME": "metadata.name",
-                              "SCENARIO_POD_NAMESPACE": "metadata.namespace"}
+                              "SCENARIO_POD_NAMESPACE": "metadata.namespace",
+                              "SCENARIO_POD_UID": "metadata.uid"}
                 env[:] = [item for item in env if item["name"] not in pod_fields]
                 env.extend({"name": name, "valueFrom": {"fieldRef": {"fieldPath": field}}}
                            for name, field in pod_fields.items())

@@ -9,6 +9,8 @@ from types import SimpleNamespace
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import yaml
+
 from filter_evidence import stage
 import scan_qualys
 from scan_trivy import compare, main, scan_published_image
@@ -158,14 +160,32 @@ def test_candidate_workflow_rendering():
     query_source = (testkube / "testkube-test-crs.yaml").read_text(encoding="utf-8")
     query = render(query_source, "querymetrics", sha, image, "managed-acns", {"EXPECTED_CLUSTER": "cluster"})
     query_env = query["spec"]["steps"][0]["container"]["env"]
-    for name, field in (("SCENARIO_POD_NAME", "metadata.name"), ("SCENARIO_POD_NAMESPACE", "metadata.namespace")):
+    for name, field in (("SCENARIO_POD_NAME", "metadata.name"), ("SCENARIO_POD_NAMESPACE", "metadata.namespace"),
+                        ("SCENARIO_POD_UID", "metadata.uid")):
         assert {"name": name, "valueFrom": {"fieldRef": {"fieldPath": field}}} in query_env
+    assert {"name": "SCENARIO_PROBE_IMAGE", "value": image} in query_env
     try:
         render(source, "missing-workflow", sha, image)
     except ValueError:
         pass
     else:
         raise AssertionError("A missing TestWorkflow was accepted")
+
+
+def test_pipeline_evidence_jobs_use_build_jobs():
+    template = Path(__file__).parent / "templates" / "azure-template-e2e-stages.yml"
+    stages = yaml.safe_load(template.read_text(encoding="utf-8"))["stages"]
+    scan = next(stage for stage in stages if stage.get("stage") == "VulnerabilityScan")
+    scenarios = next(value[0] for stage in stages for key, value in stage.items()
+                     if key.startswith("${{ each scenario"))
+    lock, scenario = scenarios["jobs"]
+    for job in (scan["jobs"][0], scenario):
+        assert job["templateContext"]["outputs"]
+        assert job["templateContext"].get("type", "buildJob") in ("buildJob", "agentJob")
+    assert scenarios["lockBehavior"] == "sequential"
+    assert lock["templateContext"] == {"type": "releaseJob", "isProduction": False}
+    assert lock["environment"] == "Prometheus-Collector"
+    assert scenario["dependsOn"] == lock["deployment"]
 
 
 if __name__ == "__main__":
@@ -176,3 +196,4 @@ if __name__ == "__main__":
         test_stage_redacts_credential_fields(tmp_path)
         test_qualys_passes_token_over_stdin(tmp_path)
         test_candidate_workflow_rendering()
+        test_pipeline_evidence_jobs_use_build_jobs()

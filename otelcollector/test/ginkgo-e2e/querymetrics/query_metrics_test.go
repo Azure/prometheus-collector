@@ -1,6 +1,7 @@
 package querymetrics
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -8,12 +9,17 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/model"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	// "github.com/prometheus/common/model"
 
@@ -161,9 +167,11 @@ var _ = Describe("Scenario cluster metrics", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nodePods).NotTo(BeEmpty(), "ACNS basic metrics require Linux collector nodes")
 		podName, podNamespace := os.Getenv("SCENARIO_POD_NAME"), os.Getenv("SCENARIO_POD_NAMESPACE")
+		podUID, probeImage := os.Getenv("SCENARIO_POD_UID"), os.Getenv("SCENARIO_PROBE_IMAGE")
 		Expect(podName).NotTo(BeEmpty(), "workflow pod name is required for ACNS attribution")
 		Expect(podNamespace).NotTo(BeEmpty(), "workflow pod namespace is required for ACNS attribution")
-		probeSource := podNamespace + "/" + podName
+		Expect(podUID).NotTo(BeEmpty(), "workflow pod UID is required for ACNS probe cleanup")
+		Expect(probeImage).NotTo(BeEmpty(), "workflow runner image is required for ACNS probing")
 
 		client := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: nil}}
 		nodeJob, nodeMetric := "networkobservability-retina", "networkobservability_forward_bytes"
@@ -178,47 +186,133 @@ var _ = Describe("Scenario cluster metrics", func() {
 		} {
 			query := utils.MetricQuery(target.metric, target.job, expectedCluster)
 			source := ""
-			if target.job == "networkobservability-hubble" {
-				source = probeSource
-			}
-			if source != "" {
-				warmupStarted := time.Now()
+			var baseline map[model.Fingerprint]model.SampleValue
+			started := time.Now()
+			if target.job == nodeJob {
+				baselineStarted := time.Now()
 				Eventually(func(g Gomega) {
+					notBefore := time.Now().Add(-time.Minute)
+					if notBefore.Before(baselineStarted) {
+						notBefore = baselineStarted
+					}
+					samples := utils.FreshSamples(g, PrometheusQueryClient, query, notBefore)
+					g.Expect(samples).NotTo(BeEmpty())
+					baseline = acnsCounterSnapshot(samples, "")
+				}, 8*time.Minute, 15*time.Second).Should(Succeed())
+				started = time.Now()
+			} else {
+				id := make([]byte, 8)
+				_, err := rand.Read(id)
+				Expect(err).NotTo(HaveOccurred())
+				probeJob := "acns-dns-" + hex.EncodeToString(id)
+				pattern := regexp.QuoteMeta(podNamespace+"/"+probeJob+"-") + ".*"
+				selector := fmt.Sprintf(`%s{job=%q,cluster=%q,source=~%q}`,
+					target.metric, target.job, expectedCluster, pattern)
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, selector)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(warnings).To(BeEmpty())
+				before, ok := result.(model.Vector)
+				Expect(ok).To(BeTrue())
+				Expect(before).To(BeEmpty(), "new ACNS DNS probe must not have existing metrics")
+
+				zero, deadline, ttl, automount := int32(0), int64(1200), int32(900), false
+				job := &batchv1.Job{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: probeJob, Namespace: podNamespace,
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "v1", Kind: "Pod", Name: podName, UID: types.UID(podUID),
+						}},
+					},
+					Spec: batchv1.JobSpec{
+						BackoffLimit: &zero, ActiveDeadlineSeconds: &deadline, TTLSecondsAfterFinished: &ttl,
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"azure.workload.identity/use": "true"}},
+							Spec: corev1.PodSpec{
+								ServiceAccountName: "testkube-api-server-tests-job", AutomountServiceAccountToken: &automount,
+								RestartPolicy: corev1.RestartPolicyNever,
+								NodeSelector:  map[string]string{"kubernetes.io/os": "linux", "kubernetes.io/arch": "amd64"},
+								Containers: []corev1.Container{{
+									Name: "dns", Image: probeImage,
+									Command: []string{"/bin/sh", "-ec",
+										`printf '%s' "$PROBE" > /tmp/probe.go; go run /tmp/probe.go; : > /tmp/acns-ready; while [ ! -f /tmp/acns-stop ]; do sleep 2; done`},
+									ReadinessProbe: &corev1.Probe{
+										ProbeHandler:  corev1.ProbeHandler{Exec: &corev1.ExecAction{Command: []string{"/bin/sh", "-c", "test -f /tmp/acns-ready"}}},
+										PeriodSeconds: 2,
+									},
+									Env: []corev1.EnvVar{
+										{Name: "GOTOOLCHAIN", Value: "local"},
+										{Name: "GO111MODULE", Value: "off"},
+										{Name: "GOPROXY", Value: "off"},
+										{Name: "CGO_ENABLED", Value: "0"},
+										{Name: "PROBE", Value: `package main
+import ("fmt"; "net"; "os")
+func main() {
+	if _, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}`},
+									},
+								}},
+							},
+						},
+					},
+				}
+				started = time.Now()
+				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+				created, err := K8sClient.BatchV1().Jobs(podNamespace).Create(ctx, job, metav1.CreateOptions{})
+				cancel()
+				Expect(err).NotTo(HaveOccurred())
+				var probePod string
+				Eventually(func(g Gomega) {
+					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					defer cancel()
+					pods, err := K8sClient.CoreV1().Pods(podNamespace).List(ctx, metav1.ListOptions{
+						LabelSelector: "batch.kubernetes.io/controller-uid=" + string(created.UID),
+					})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(pods.Items).To(HaveLen(1), "ACNS DNS job must own one probe pod")
+					probePod = pods.Items[0].Name
+				}, 8*time.Minute, 5*time.Second).Should(Succeed())
+				DeferCleanup(func() {
+					_, stderr, err := utils.ExecCmd(K8sClient, Cfg, probePod, "dns", podNamespace,
+						[]string{"/bin/sh", "-c", ": > /tmp/acns-stop"})
+					Expect(err).NotTo(HaveOccurred(), "failed to stop ACNS DNS probe: %s", stderr)
+					Eventually(func(g Gomega) {
+						ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+						defer cancel()
+						pod, err := K8sClient.CoreV1().Pods(podNamespace).Get(ctx, probePod, metav1.GetOptions{})
+						g.Expect(err).NotTo(HaveOccurred())
+						g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded), "ACNS DNS probe did not stop cleanly")
+					}, 2*time.Minute, 5*time.Second).Should(Succeed())
+				})
+				Eventually(func(g Gomega) {
+					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					defer cancel()
+					pod, err := K8sClient.CoreV1().Pods(podNamespace).Get(ctx, probePod, metav1.GetOptions{})
+					g.Expect(err).NotTo(HaveOccurred())
+					ready := false
+					for _, condition := range pod.Status.Conditions {
+						ready = ready || (condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue)
+					}
+					g.Expect(ready).To(BeTrue(), "ACNS DNS probe has not completed its lookup")
+				}, 8*time.Minute, 5*time.Second).Should(Succeed())
+				source = podNamespace + "/" + probePod
+				query = fmt.Sprintf(`%s{job=%q,cluster=%q,source=%q}`,
+					target.metric, target.job, expectedCluster, source)
+			}
+			Eventually(func(g Gomega) {
+				if target.job == nodeJob {
 					_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
 					g.Expect(err).NotTo(HaveOccurred())
-					samples := utils.FreshSamples(g, PrometheusQueryClient, query, warmupStarted)
-					g.Expect(acnsCounterSnapshot(samples, source)).NotTo(BeEmpty())
-				}, 8*time.Minute, 15*time.Second).Should(Succeed())
-			}
-			var baseline map[model.Fingerprint]model.SampleValue
-			baselineStarted := time.Now()
-			Eventually(func(g Gomega) {
-				notBefore := time.Now().Add(-time.Minute)
-				if notBefore.Before(baselineStarted) {
-					notBefore = baselineStarted
+					response, err := client.Get("http://prometheus-reference-service.default.svc.cluster.local:2112/metrics")
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(response.StatusCode).To(Equal(http.StatusOK))
+					_, copyErr := io.Copy(io.Discard, response.Body)
+					closeErr := response.Body.Close()
+					g.Expect(copyErr).NotTo(HaveOccurred())
+					g.Expect(closeErr).NotTo(HaveOccurred())
 				}
-				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
-					utils.FreshMetricQuery(query, notBefore))
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(warnings).To(BeEmpty())
-				samples, ok := result.(model.Vector)
-				g.Expect(ok).To(BeTrue())
-				g.Expect(samples).NotTo(BeEmpty())
-				snapshot := acnsCounterSnapshot(samples, source)
-				g.Expect(snapshot).NotTo(BeEmpty(), "no pre-probe %s counter for %q", target.metric, source)
-				baseline = snapshot
-			}, 8*time.Minute, 15*time.Second).Should(Succeed())
-			started := time.Now()
-			Eventually(func(g Gomega) {
-				_, err := net.LookupHost("prometheus-reference-service.default.svc.cluster.local")
-				g.Expect(err).NotTo(HaveOccurred())
-				response, err := client.Get("http://prometheus-reference-service.default.svc.cluster.local:2112/metrics")
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(response.StatusCode).To(Equal(http.StatusOK))
-				_, copyErr := io.Copy(io.Discard, response.Body)
-				closeErr := response.Body.Close()
-				g.Expect(copyErr).NotTo(HaveOccurred())
-				g.Expect(closeErr).NotTo(HaveOccurred())
 				warnings, result, err := utils.InstantQuery(PrometheusQueryClient,
 					utils.FreshMetricQuery(utils.MetricQuery("up", target.job, expectedCluster), started))
 				g.Expect(err).NotTo(HaveOccurred())
@@ -248,7 +342,7 @@ var _ = Describe("Scenario cluster metrics", func() {
 				observedTraffic := false
 				for fingerprint, value := range acnsCounterSnapshot(samples, source) {
 					before, existed := baseline[fingerprint]
-					observedTraffic = observedTraffic || (existed && value > before)
+					observedTraffic = observedTraffic || (source != "" && value > 0) || (existed && value > before)
 				}
 				g.Expect(observedTraffic).To(BeTrue(), "managed %s counter must exceed the fresh pre-probe snapshot", target.metric)
 				fmt.Fprintf(GinkgoWriter, "Managed ACNS evidence: job=%s metric=%s source=%q freshSamples=%d positiveIncrease=%t\n",

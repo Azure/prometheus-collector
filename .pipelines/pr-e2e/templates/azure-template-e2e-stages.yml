@@ -49,8 +49,6 @@ stages:
   - job: Scan
     timeoutInMinutes: 240
     templateContext:
-      type: releaseJob
-      isProduction: false
       inputs:
       - input: pipelineArtifact
         artifactName: $(producerTrivyArtifact)
@@ -154,14 +152,27 @@ stages:
     - TestRunnerImage
     condition: and(not(canceled()), eq(dependencies.Build.result, 'Succeeded'), eq(dependencies.TestRunnerImage.result, 'Succeeded'), eq(variables.IS_SRE_BRANCH, true))
     jobs:
-    - deployment: ScenarioTestkube
-      displayName: Test scenario ${{ scenario }}
+    - deployment: LockScenarioEnvironment
+      displayName: Acquire scenario environment lock
       environment: Prometheus-Collector
-      timeoutInMinutes: 1680
-      cancelTimeoutInMinutes: 60
       templateContext:
         type: releaseJob
         isProduction: false
+      pool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-ubuntu-2204
+        os: linux
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - bash: echo "Scenario environment locked for this stage."
+    - job: ScenarioTestkube
+      displayName: Test scenario ${{ scenario }}
+      dependsOn: LockScenarioEnvironment
+      timeoutInMinutes: 1680
+      cancelTimeoutInMinutes: 60
+      templateContext:
         outputs:
         - output: pipelineArtifact
           displayName: Retain TestKube and resource evidence
@@ -184,12 +195,9 @@ stages:
         name: Azure-Pipelines-CI-Test-EO
         image: ci-1es-managed-ubuntu-2204
         os: linux
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-            - template: /.pipelines/pr-e2e/templates/azure-template-scenario.yml@self
-              parameters:
-                scenario: ${{ scenario }}
-                scenarios: ${{ parameters.scenarios }}
-                azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+      steps:
+      - template: /.pipelines/pr-e2e/templates/azure-template-scenario.yml@self
+        parameters:
+          scenario: ${{ scenario }}
+          scenarios: ${{ parameters.scenarios }}
+          azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
