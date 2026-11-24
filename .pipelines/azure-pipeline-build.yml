@@ -297,36 +297,19 @@ extends:
           inputs:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
-            # Use the newest stable retina release whose images and chart are all published to ghcr.io.
-            # A GitHub release can exist without its images (e.g. v1.3.1, whose image release job failed),
-            # which leaves the dev clusters' retina pods in ImagePullBackOff.
-            ghcr_manifest() {
-              local token
-              token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/$1:pull" | jq -r '.token') || return 1
-              curl -sfL -H "Authorization: Bearer $token" \
-                -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json" \
-                "https://ghcr.io/v2/microsoft/retina/$1/manifests/$2"
-            }
-            RETINA_VERSION=""
-            for candidate in $(curl -sfL https://api.github.com/repos/microsoft/retina/releases | jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' | head -n 5); do
-              # The Windows daemonset uses the same retina-agent tag, so its index must have both Linux and Windows images
-              if ghcr_manifest retina-agent "$candidate" | jq -e 'any(.manifests[]?; .platform.os == "linux") and any(.manifests[]?; .platform.os == "windows")' > /dev/null \
-                && ghcr_manifest retina-init "$candidate" > /dev/null \
-                && ghcr_manifest retina-operator "$candidate" > /dev/null \
-                && ghcr_manifest charts/retina "$candidate" > /dev/null; then
-                RETINA_VERSION=$candidate
-                break
-              fi
-              echo "##vso[task.logissue type=warning]Skipping retina $candidate: its images or chart are not published to ghcr.io"
-            done
-            if [ -z "$RETINA_VERSION" ]; then
-              echo "##vso[task.logissue type=error]None of the latest retina releases have their images and chart published to ghcr.io"
-              exit 1
-            fi
+            set -euo pipefail
+            # ponytail: pin this release because the MCR image digests below are version-specific.
+            RETINA_VERSION=v1.3.2
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
-            echo $RETINA_VERSION 
-            helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+            echo "$RETINA_VERSION"
+            CHART_PULL=$(helm pull oci://ghcr.io/microsoft/retina/charts/retina --version "$RETINA_VERSION" --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart 2>&1)
+            echo "$CHART_PULL"
+            grep -Fx "version: $RETINA_VERSION" "$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/Chart.yaml"
+            echo "$CHART_PULL" | grep -Fx 'Digest: sha256:4a18c973512f492c99ea5b5729911d273e9ec040026e8baabdfaed69083007ab'
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+            python3 $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/pin-images.py --self-test
+            python3 $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/prepare-images.py --chart $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina --version "$RETINA_VERSION" --output $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/retina-image-pins.json
+            cp $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/pin-images.py $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
           displayName: "CI/CD: Download Retina Chart"
           retryCountOnTaskFailure: 5
@@ -2513,7 +2496,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2690,7 +2673,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2775,7 +2758,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
