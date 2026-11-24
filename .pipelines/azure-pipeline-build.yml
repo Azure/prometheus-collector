@@ -345,6 +345,14 @@ extends:
             Contents: |
               azure-monitor-metrics-addon/**
             TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart'
+        - task: CopyFiles@2
+          displayName: "CI/CD: Copy reference app manifests"
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/internal/referenceapp'
+            Contents: |
+              prometheus-reference-app.yaml
+              win-prometheus-reference-app.yaml
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/helm-chart/reference-app'
 
       - job: TestKubeTestFiles
         displayName: "CI/CD: Export TestKube test files for Deploy stage"

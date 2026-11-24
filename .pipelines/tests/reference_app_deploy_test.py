@@ -10,7 +10,7 @@ import yaml
 
 root = Path(__file__).resolve().parents[2]
 template = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".pipelines/azure-template-deploy-reference-apps.yml"
-script = yaml.safe_load(template.read_text(encoding="utf-8"))["steps"][1]["inputs"]["inlineScript"]
+script = yaml.safe_load(template.read_text(encoding="utf-8"))["steps"][0]["inputs"]["inlineScript"]
 repository = "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"
 images = {name: f"{repository}@sha256:{digit * 64}" for name, digit in (
     ("REFAPP_GO", "1"), ("REFAPP_PYTHON", "2"), ("REFAPP_WIN_GO", "3"), ("REFAPP_WIN_PYTHON", "4")
@@ -18,10 +18,16 @@ images = {name: f"{repository}@sha256:{digit * 64}" for name, digit in (
 
 with tempfile.TemporaryDirectory() as temp:
     directory = Path(temp)
+    manifests = directory / "reference-app"
+    manifests.mkdir()
+    for name in ("prometheus-reference-app.yaml", "win-prometheus-reference-app.yaml"):
+        shutil.copy(root / "internal/referenceapp" / name, manifests / name)
     bash = os.environ.get("BASH") or shutil.which("bash")
     assert bash
     temp_unix = subprocess.check_output([bash, "-c", "pwd"], cwd=directory, text=True).strip()
-    script = script.replace("$(Agent.TempDirectory)", temp_unix).replace("$(System.JobId)", "refapp-test")
+    script = (script.replace("$(Agent.TempDirectory)", temp_unix)
+              .replace("$(Pipeline.Workspace)", temp_unix)
+              .replace("$(System.JobId)", "refapp-test"))
     script = """az() { :; }
 curl() { :; }
 kubectl() {

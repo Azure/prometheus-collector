@@ -5,7 +5,6 @@ parameters:
   type: string
 
 steps:
-- checkout: self
 - task: AzureCLI@2
   displayName: "Apply reference apps: ${{ parameters.clusterName }}"
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
@@ -48,7 +47,7 @@ steps:
       linux_manifest=$(sed -E \
         -e "s|^([[:space:]]*image:) .*-ref-app-golang.*|\\1 $go_image|" \
         -e "s|^([[:space:]]*image:) .*-ref-app-python.*|\\1 $python_image|" \
-        internal/referenceapp/prometheus-reference-app.yaml)
+        "$(Pipeline.Workspace)/reference-app/prometheus-reference-app.yaml")
       grep -Fq "image: $go_image" <<< "$linux_manifest"
       grep -Fq "image: $python_image" <<< "$linux_manifest"
       kubectl apply -f - <<< "$linux_manifest"
@@ -56,7 +55,7 @@ steps:
         windows_manifest=$(sed -E \
           -e "s|^([[:space:]]*image:) .*win-ref-app-golang.*|\\1 $win_go_image|" \
           -e "s|^([[:space:]]*image:) .*win-ref-app-python.*|\\1 $win_python_image|" \
-          internal/referenceapp/win-prometheus-reference-app.yaml)
+          "$(Pipeline.Workspace)/reference-app/win-prometheus-reference-app.yaml")
         grep -Fq "image: $win_go_image" <<< "$windows_manifest"
         grep -Fq "image: $win_python_image" <<< "$windows_manifest"
         kubectl apply -f - <<< "$windows_manifest"
