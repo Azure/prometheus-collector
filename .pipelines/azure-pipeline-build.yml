@@ -298,7 +298,7 @@ extends:
             helmVersionToInstall: $(HELM_VERSION)
         - bash: |
             set -euo pipefail
-            # ponytail: pin this release because the MCR image digests below are version-specific.
+            # Keep the release pinned until all required image manifests are available in MCR.
             RETINA_VERSION=v1.3.2
             echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
             echo "$RETINA_VERSION"
@@ -306,12 +306,15 @@ extends:
             echo "$CHART_PULL"
             grep -Fx "version: $RETINA_VERSION" "$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/Chart.yaml"
             echo "$CHART_PULL" | grep -Fx 'Digest: sha256:4a18c973512f492c99ea5b5729911d273e9ec040026e8baabdfaed69083007ab'
+            for image in retina-agent retina-init retina-operator; do
+              curl -fsS -o /dev/null \
+                -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+                "https://mcr.microsoft.com/v2/containernetworking/${image}/manifests/${RETINA_VERSION}"
+              echo "Verified ${image}:${RETINA_VERSION} in MCR"
+            done
             mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
-            python3 $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/pin-images.py --self-test
-            python3 $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/prepare-images.py --chart $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina --version "$RETINA_VERSION" --output $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/retina-image-pins.json
-            cp $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/pin-images.py $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/
             echo "##vso[task.setvariable variable=RETINA_VERSION;isOutput=true]$RETINA_VERSION"
-          displayName: "CI/CD: Download Retina Chart"
+          displayName: "CI/CD: Download Retina Chart and verify MCR images"
           retryCountOnTaskFailure: 5
           name: setup
         - task: CopyFiles@2
@@ -2496,7 +2499,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2673,7 +2676,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2758,7 +2761,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --post-renderer /usr/bin/python3 --post-renderer-args $(Pipeline.Workspace)/retina/pin-images.py --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=mcr.microsoft.com/containernetworking/retina-agent --set image.initRepository=mcr.microsoft.com/containernetworking/retina-init --set operator.repository=mcr.microsoft.com/containernetworking/retina-operator --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
