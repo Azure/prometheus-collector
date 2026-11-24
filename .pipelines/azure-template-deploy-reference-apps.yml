@@ -1,0 +1,70 @@
+parameters:
+- name: resourceGroup
+  type: string
+- name: clusterName
+  type: string
+
+steps:
+- checkout: self
+- task: AzureCLI@2
+  displayName: "Apply reference apps: ${{ parameters.clusterName }}"
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  inputs:
+    azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -euo pipefail
+      export KUBECONFIG="$(Agent.TempDirectory)/refapp-$(System.JobId).kubeconfig"
+      trap 'rm -f "$KUBECONFIG"' EXIT
+      az aks get-credentials --subscription 9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb \
+        --resource-group "$REFAPP_RESOURCE_GROUP" --name "$REFAPP_CLUSTER_NAME" --file "$KUBECONFIG"
+
+      repository="mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"
+      for value in "$REFAPP_GO" "$REFAPP_PYTHON" "$REFAPP_WIN_GO" "$REFAPP_WIN_PYTHON"; do
+        [[ "$value" =~ ^${repository}@sha256:[0-9a-f]{64}$ ]] || {
+          echo "Missing or invalid same-build reference app image: $value" >&2
+          exit 1
+        }
+      done
+      go_image="$REFAPP_GO"
+      python_image="$REFAPP_PYTHON"
+      win_go_image="$REFAPP_WIN_GO"
+      win_python_image="$REFAPP_WIN_PYTHON"
+      for image in "$go_image" "$python_image" "$win_go_image" "$win_python_image"; do
+        digest="${image##*@}"
+        for attempt in {1..40}; do
+          if curl -fsSL -o /dev/null -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+            "https://mcr.microsoft.com/v2/azuremonitor/containerinsights/cidev/prometheus-collector/images/manifests/$digest"; then
+            break
+          fi
+          if [ "$attempt" -eq 40 ]; then
+            echo "Same-build reference app image not published: $image" >&2
+            exit 1
+          fi
+          sleep 30
+        done
+      done
+      linux_manifest=$(sed -E \
+        -e "s|^([[:space:]]*image:) .*-ref-app-golang.*|\\1 $go_image|" \
+        -e "s|^([[:space:]]*image:) .*-ref-app-python.*|\\1 $python_image|" \
+        internal/referenceapp/prometheus-reference-app.yaml)
+      grep -Fq "image: $go_image" <<< "$linux_manifest"
+      grep -Fq "image: $python_image" <<< "$linux_manifest"
+      kubectl apply -f - <<< "$linux_manifest"
+      if [ -n "$(kubectl get nodes -l kubernetes.io/os=windows -o name)" ]; then
+        windows_manifest=$(sed -E \
+          -e "s|^([[:space:]]*image:) .*win-ref-app-golang.*|\\1 $win_go_image|" \
+          -e "s|^([[:space:]]*image:) .*win-ref-app-python.*|\\1 $win_python_image|" \
+          internal/referenceapp/win-prometheus-reference-app.yaml)
+        grep -Fq "image: $win_go_image" <<< "$windows_manifest"
+        grep -Fq "image: $win_python_image" <<< "$windows_manifest"
+        kubectl apply -f - <<< "$windows_manifest"
+      fi
+  env:
+    REFAPP_RESOURCE_GROUP: ${{ parameters.resourceGroup }}
+    REFAPP_CLUSTER_NAME: ${{ parameters.clusterName }}
+    REFAPP_GO: $(REFAPP_GO)
+    REFAPP_PYTHON: $(REFAPP_PYTHON)
+    REFAPP_WIN_GO: $(REFAPP_WIN_GO)
+    REFAPP_WIN_PYTHON: $(REFAPP_WIN_PYTHON)
