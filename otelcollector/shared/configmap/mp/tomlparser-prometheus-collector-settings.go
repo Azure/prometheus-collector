@@ -88,6 +88,14 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 			cp.DenyFSAccessThroughSMs = strings.ToLower(strings.TrimSpace(value)) == "true"
 			log.Printf("Configmap setting deny_fs_access_through_sms: %t\n", cp.DenyFSAccessThroughSMs)
 		}
+		if value, ok := settings["deny_arbitrary_fs_access"]; ok {
+			cp.DenyArbitraryFSAccess = strings.EqualFold(strings.TrimSpace(value), "true")
+			log.Printf("Configmap setting deny_arbitrary_fs_access: %t\n", cp.DenyArbitraryFSAccess)
+		}
+		if value, ok := settings["restrict_prometheus_config_providers"]; ok {
+			cp.RestrictPrometheusConfigProviders = strings.EqualFold(strings.TrimSpace(value), "true")
+			log.Printf("Configmap setting restrict_prometheus_config_providers: %t\n", cp.RestrictPrometheusConfigProviders)
+		}
 	}
 
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
@@ -131,6 +139,8 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	if configParser.DenyFSAccessThroughSMs {
 		file.WriteString("AZMON_DENY_FS_ACCESS_THROUGH_SMS=true\n")
 	}
+	file.WriteString(fmt.Sprintf("AZMON_DENY_ARBITRARY_FS_ACCESS=%t\n", configParser.DenyArbitraryFSAccess))
+	file.WriteString(fmt.Sprintf("AZMON_RESTRICT_PROMETHEUS_CONFIG_PROVIDERS=%t\n", configParser.RestrictPrometheusConfigProviders))
 	return nil
 }
 

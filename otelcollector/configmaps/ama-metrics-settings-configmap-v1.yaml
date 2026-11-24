@@ -13,6 +13,10 @@ data:
     secrets_access_namespaces = ""
     # Set to true to drop ServiceMonitor/PodMonitor scrape configs that read local files (bearerTokenFile, ca/cert/key files)
     deny_fs_access_through_sms = false
+    # Set to true to drop custom scrape jobs that read credentials from the collector filesystem.
+    deny_arbitrary_fs_access = false
+    # Set to true to prevent file/env provider expansion in tenant Prometheus receiver config.
+    restrict_prometheus_config_providers = false
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false
