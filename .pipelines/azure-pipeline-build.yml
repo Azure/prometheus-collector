@@ -17,6 +17,8 @@ variables:
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
+  RETINA_ACR_NAME: 'ciosstestimageacrmirror'
+  RETINA_ACR_REPOSITORY: 'firstparty/retina'
   MCR_REGISTRY: 'mcr.microsoft.com'
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
@@ -365,35 +367,47 @@ extends:
             inlineScript: |
               set -euo pipefail
               RETINA_TAG="v$(RETINA_VERSION)"
-              ACR_REPOSITORY_PATH="$(ACR_REPOSITORY)"
-              ACR_REPOSITORY_PATH="${ACR_REPOSITORY_PATH#/}"
-              ACR_REPOSITORIES=$(az acr repository list --name containerinsightsprod --output tsv)
+              ACR_NAME="$(RETINA_ACR_NAME)"
+              ACR_REPOSITORY_PATH="$(RETINA_ACR_REPOSITORY)"
+              ACR_REPOSITORIES=$(az acr repository list --name "$ACR_NAME" --output tsv)
+              ghcr_manifest_digest() {
+                local image="$1" token
+                token=$(curl -sfL "https://ghcr.io/token?scope=repository:microsoft/retina/${image}:pull" | jq -er '.token')
+                curl -sfL -D - -o /dev/null \
+                  -H "Authorization: Bearer $token" \
+                  -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json' \
+                  "https://ghcr.io/v2/microsoft/retina/${image}/manifests/${RETINA_TAG}" \
+                  | awk 'BEGIN { IGNORECASE = 1 } /^Docker-Content-Digest:/ { gsub("\r", "", $2); print $2; exit }'
+              }
               for image in retina-agent retina-init retina-operator; do
                 repository="${ACR_REPOSITORY_PATH}/${image}"
-                if grep -Fxq "$repository" <<<"$ACR_REPOSITORIES"; then
-                  existing_tags=$(az acr repository show-tags --name containerinsightsprod --repository "$repository" --output tsv)
-                  if grep -Fxq "$RETINA_TAG" <<<"$existing_tags"; then
-                    echo "Skipping existing ACR image ${repository}:${RETINA_TAG}"
-                    continue
-                  fi
+                source_digest=$(ghcr_manifest_digest "$image")
+                if [[ ! "$source_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+                  echo "Could not resolve GHCR digest for ${image}:${RETINA_TAG}" >&2
+                  exit 1
                 fi
-                az acr import --name containerinsightsprod \
+                existing_tags=
+                if grep -Fxq "$repository" <<<"$ACR_REPOSITORIES"; then
+                  existing_tags=$(az acr repository show-tags --name "$ACR_NAME" --repository "$repository" --output tsv)
+                fi
+                if grep -Fxq "$RETINA_TAG" <<<"$existing_tags"; then
+                  destination_digest=$(az acr repository show --name "$ACR_NAME" --image "${repository}:${RETINA_TAG}" --query digest --output tsv)
+                  if [[ "$destination_digest" != "$source_digest" ]]; then
+                    echo "Refusing to overwrite mismatched ACR image ${repository}:${RETINA_TAG}: source ${source_digest}, destination ${destination_digest}" >&2
+                    exit 1
+                  fi
+                  echo "Skipping matching ACR image ${repository}:${RETINA_TAG} (${destination_digest})"
+                  continue
+                fi
+                az acr import --name "$ACR_NAME" \
                   --source "ghcr.io/microsoft/retina/${image}:${RETINA_TAG}" \
                   --image "${repository}:${RETINA_TAG}"
-              done
-              ACR_REPOSITORIES=$(az acr repository list --name containerinsightsprod --output tsv)
-              for image in retina-agent retina-init retina-operator; do
-                repository="${ACR_REPOSITORY_PATH}/${image}"
-                if ! grep -Fxq "$repository" <<<"$ACR_REPOSITORIES"; then
-                  echo "ACR repository missing after Retina import: $repository" >&2
+                destination_digest=$(az acr repository show --name "$ACR_NAME" --image "${repository}:${RETINA_TAG}" --query digest --output tsv)
+                if [[ "$destination_digest" != "$source_digest" ]]; then
+                  echo "ACR digest mismatch after import for ${repository}:${RETINA_TAG}: source ${source_digest}, destination ${destination_digest}" >&2
                   exit 1
                 fi
-                tags=$(az acr repository show-tags --name containerinsightsprod --repository "$repository" --output tsv)
-                if ! grep -Fxq "$RETINA_TAG" <<<"$tags"; then
-                  echo "ACR tag missing after Retina import: ${repository}:${RETINA_TAG}" >&2
-                  exit 1
-                fi
-                echo "Verified ACR image ${repository}:${RETINA_TAG}"
+                echo "Verified ACR image ${repository}:${RETINA_TAG} (${destination_digest})"
               done
         - task: CopyFiles@2
           displayName: "CI/CD: Copy Retina Chart files to artifact staging directory"
@@ -2577,7 +2591,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-agent --set image.initRepository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-init --set operator.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_Test_Cluster
         displayName: "Deploy/Validate: AKS tests cluster"
@@ -2754,7 +2768,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-agent --set image.initRepository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-init --set operator.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule $(HELM_DRY_RUN_FLAG)
 
       - deployment: Deploy_AKS_Chart_OTel_Upgrade_Cluster
         displayName: "Deploy: AKS OTel Upgrade cluster"
@@ -2839,7 +2853,7 @@ extends:
                   chartPath: '$(Pipeline.Workspace)/retina'
                   releaseName: 'retina'
                   waitForExecution: false
-                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-agent --set image.initRepository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-init --set operator.repository=$(ACR_REGISTRY)$(ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
+                  arguments: --install --values $(Pipeline.Workspace)/retina/values.yaml --skip-crds --version v$(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-agent --set image.initRepository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-init --set operator.repository=$(RETINA_ACR_NAME).azurecr.io/$(RETINA_ACR_REPOSITORY)/retina-operator --set image.tag=v$(RETINA_VERSION) --set operator.tag=v$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
       - deployment: Testkube
         displayName: "Test: AKS testkube tests"
