@@ -2,6 +2,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 IMAGE_LINE = re.compile(r"""(?m)^(\s*(?:-\s+)?image:\s*)(["']?)([^\s"'#]+)\2(\s*)$""")
 
@@ -16,7 +17,10 @@ def pin(manifest, pins):
         )
         if replaced != count:
             raise ValueError(f"Expected {count} references to {source}, found {replaced}")
-    remaining = [match[3] for match in IMAGE_LINE.finditer(manifest) if match[3].startswith("ghcr.io/")]
+    remaining = [
+        match[3] for match in IMAGE_LINE.finditer(manifest)
+        if urlsplit("//" + match[3]).hostname == "ghcr.io"
+    ]
     if remaining:
         raise ValueError(f"Unpinned GHCR chart images: {', '.join(remaining)}")
     return manifest
