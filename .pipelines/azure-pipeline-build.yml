@@ -506,7 +506,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
           displayName: "Build: Set values in payload.json for signing"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
@@ -688,7 +688,7 @@ extends:
           workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
           displayName: "Build the payload json file"
           condition: succeeded()
-        - task: EsrpCodeSigning@5
+        - task: EsrpCodeSigning@6
           displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
           inputs:
             ConnectedServiceName: "ESRPServiceConnectionPrometheus"
