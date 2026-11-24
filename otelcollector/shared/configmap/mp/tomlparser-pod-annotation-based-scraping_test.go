@@ -1,183 +1,78 @@
 package configmapsettings
 
 import (
-	"bufio"
-	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"testing"
 )
 
-var _ = Describe("ConfigMapSettings", func() {
-	Describe("parseConfigMapForPodAnnotations", func() {
-		AfterEach(func() {
-			cleanupEnvVars()
-		})
+func podAnnotationSections(regex string) map[string]map[string]string {
+	return map[string]map[string]string{"pod-annotation-based-scraping": {"podannotationnamespaceregex": regex}}
+}
 
-		Context("when the config map file exists", func() {
-			BeforeEach(func() {
-				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
-
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
-				podAnnotationEnvVarPath = fmt.Sprintf("%s_out", configMapMountPathForPodAnnotation)
-
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
-
-			AfterEach(func() {
-				Expect(os.Remove(configMapMountPathForPodAnnotation)).To(Succeed())
-			})
-
-			It("should print the configmap namespace regex", func() {
-				capturedOutput := captureOutput(func() {
-					err := configurePodAnnotationSettings()
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				Expect(capturedOutput).To(ContainSubstring("Using configmap namespace regex for podannotations: ^namespace-regex|namespace-regex-2$"))
-			})
-
-			It("should write the config to the output file", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).NotTo(HaveOccurred())
-
-				content, err := os.ReadFile(podAnnotationEnvVarPath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='^namespace-regex|namespace-regex-2$'\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"))
-			})
-		})
-
-		Context("when the config map file does not exist", func() {
-			BeforeEach(func() {
-				configMapMountPathForPodAnnotation = "/path/to/nonexistent/file"
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
-
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("configmap section not mounted, using defaults"))
-			})
-		})
-
-		Context("when the out file does not exist", func() {
-			BeforeEach(func() {
-				// Create a temporary file with the desired content
-				fileContent := `podannotationnamespaceregex = "^namespace-regex|namespace-regex-2$"`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
-
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
-				podAnnotationEnvVarPath = "/path/to/nonexistent/file"
-
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
-
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("error opening file"))
-			})
-		})
-
-		Context("when the config map file contains an invalid namespace regex", func() {
-			BeforeEach(func() {
-				// Create a temporary file with an invalid regex
-				fileContent := `podannotationnamespaceregex = "invalid-regex("`
-				file, err := os.CreateTemp("", "configmap")
-				Expect(err).NotTo(HaveOccurred())
-				defer file.Close()
-
-				_, err = file.WriteString(fileContent)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Set the configMapMountPathForPodAnnotation to the temporary file path
-				configMapMountPathForPodAnnotation = file.Name()
-
-				setEnvVars(map[string]string {
-					"AZMON_OPERATOR_ENABLED": "true",
-					"CONTAINER_TYPE": "ConfigReaderSidecar",
-					"CONTROLLER_TYPE": "ReplicaSet",
-					"OS_TYPE": "linux",
-					"MODE": "advanced",
-					"KUBE_STATE_NAME": "ama-metrics-ksm",
-					"POD_NAMESPACE": "kube-system",
-					"MAC": "true",
-				})
-			})
-
-			AfterEach(func() {
-				Expect(os.Remove(configMapMountPathForPodAnnotation)).To(Succeed())
-			})
-
-			It("should return an error", func() {
-				err := configurePodAnnotationSettings()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid namespace regex for podannotations"))
-			})
-		})
-	})
-})
-
-// Helper function to capture the output of fmt.Printf
-func captureOutput(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf strings.Builder
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		buf.WriteString(scanner.Text())
-		buf.WriteString("\n")
+func TestConfigurePodAnnotationSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		sections map[string]map[string]string
+		wantErr  string
+		wantFile string
+	}{
+		{name: "unmounted", wantErr: "configmap section not mounted"},
+		{name: "absent", sections: map[string]map[string]string{}, wantErr: "configuration not found"},
+		{name: "empty", sections: podAnnotationSections(""), wantErr: "does not have a value"},
+		{name: "invalid", sections: podAnnotationSections("["), wantErr: "Invalid namespace regex for pod annotations: ["},
+		{name: "anchored", sections: podAnnotationSections("^ama-settings-included$"), wantFile: "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=^ama-settings-included$\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"},
+		{name: "alternation", sections: podAnnotationSections("^(ama-settings-included|ama-settings-excluded)$"), wantFile: "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=^(ama-settings-included|ama-settings-excluded)$\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"},
+		{name: "wildcard", sections: podAnnotationSections(".*"), wantFile: "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=.*\nAZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=true\n"},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original := podAnnotationEnvVarPath
+			t.Cleanup(func() { podAnnotationEnvVarPath = original })
+			podAnnotationEnvVarPath = filepath.Join(t.TempDir(), "pod-annotation-env")
 
-	return buf.String()
+			var output strings.Builder
+			originalOutput := log.Writer()
+			log.SetOutput(&output)
+			t.Cleanup(func() { log.SetOutput(originalOutput) })
+
+			err := configurePodAnnotationSettings(tt.sections)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantErr)
+				}
+				if _, statErr := os.Stat(podAnnotationEnvVarPath); !os.IsNotExist(statErr) {
+					t.Fatalf("pod annotation env file was written for a rejected regex")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantLog := "Using configmap namespace regex for pod annotations: " + tt.sections["pod-annotation-based-scraping"]["podannotationnamespaceregex"]
+			if !strings.Contains(output.String(), wantLog) {
+				t.Fatalf("log = %q, want %q", output.String(), wantLog)
+			}
+			got, err := os.ReadFile(podAnnotationEnvVarPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.wantFile {
+				t.Fatalf("env file = %q, want %q", got, tt.wantFile)
+			}
+		})
+	}
+}
+
+func TestConfigurePodAnnotationSettingsUnwritableOutput(t *testing.T) {
+	original := podAnnotationEnvVarPath
+	t.Cleanup(func() { podAnnotationEnvVarPath = original })
+	podAnnotationEnvVarPath = filepath.Join(t.TempDir(), "missing", "pod-annotation-env")
+
+	err := configurePodAnnotationSettings(podAnnotationSections(".*"))
+	if err == nil || !strings.Contains(err.Error(), "error opening file") {
+		t.Fatalf("error = %v, want error opening file", err)
+	}
 }

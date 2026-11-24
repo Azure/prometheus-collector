@@ -121,7 +121,7 @@ scrape_configs:
   - role: service
   metric_relabel_configs:
   - action: keep
-    regex: '|hubble.*'
+    regex: '|hubble_dns_queries_total|hubble_dns_responses_total|hubble_drop_total|hubble_tcp_flags_total'
     source_labels:
     - __name__
   relabel_configs:
@@ -152,6 +152,11 @@ scrape_configs:
 - job_name: networkobservability-cilium
   kubernetes_sd_configs:
   - role: service
+  metric_relabel_configs:
+  - action: keep
+    regex: '|cilium_drop.*|cilium_forward.*'
+    source_labels:
+    - __name__
   relabel_configs:
   - action: keep
     regex: kube-system;network-observability;cilium

@@ -1,0 +1,195 @@
+parameters:
+- name: scenarios
+  type: string
+  default: default,acns,otlp,acns-cilium,operator-secret-watch,proxy-custom-ca,ampls-proxy,ampls,proxy
+
+stages:
+- stage: TestRunnerImage
+  displayName: Copy latest TestKube runner to ACR
+  dependsOn: Build
+  condition: and(not(canceled()), eq(dependencies.Build.result, 'Succeeded'), eq(variables.IS_SRE_BRANCH, true))
+  jobs:
+  - job: ImportRunner
+    templateContext:
+      type: releaseJob
+      isProduction: false
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    steps:
+    - task: AzureCLI@2
+      name: resolveRunner
+      displayName: Import latest Ginkgo runner and resolve its digest
+      inputs:
+        azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          [[ "$GOLANG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid Go version: $GOLANG_VERSION" >&2; exit 1; }
+          runner_tag="${GOLANG_VERSION%.*}-azurelinux3.0"
+          acr_name="${TEST_RUNNER_ACR_REGISTRY%%.*}"
+          runner_repository="${TEST_RUNNER_ACR_REPOSITORY#/}"
+          az acr import --name "$acr_name" --source "mcr.microsoft.com/oss/go/microsoft/golang:$runner_tag" \
+            --image "$runner_repository:$runner_tag" --force
+          digest="$(az acr repository show --name "$acr_name" --image "$runner_repository:$runner_tag" --query digest -o tsv)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Invalid test runner digest: $digest" >&2; exit 1; }
+          echo "##vso[task.setvariable variable=image;isOutput=true]$TEST_RUNNER_ACR_REGISTRY/$runner_repository@$digest"
+      env:
+        TEST_RUNNER_ACR_REGISTRY: $(TEST_RUNNER_ACR_REGISTRY)
+        TEST_RUNNER_ACR_REPOSITORY: $(TEST_RUNNER_ACR_REPOSITORY)
+        GOLANG_VERSION: $(GOLANG_VERSION)
+
+- stage: VulnerabilityScan
+  displayName: Compare build and baseline vulnerabilities
+  dependsOn: Build
+  condition: and(not(canceled()), eq(dependencies.Build.result, 'Succeeded'), eq(variables.IS_SRE_BRANCH, true))
+  jobs:
+  - job: Scan
+    timeoutInMinutes: 240
+    templateContext:
+      type: releaseJob
+      isProduction: false
+      inputs:
+      - input: pipelineArtifact
+        artifactName: $(producerTrivyArtifact)
+        targetPath: $(producerTrivyScan)
+      outputs:
+      - output: pipelineArtifact
+        displayName: Retain vulnerability comparison
+        condition: always()
+        targetPath: $(scanPublication)
+        artifactName: vulnerability-scan-$(Build.BuildId)-$(System.JobId)
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    variables:
+      producerTrivyArtifact: $[ stageDependencies.Build.Linux_Prometheus_Collector.outputs['sreTrivy.artifactName'] ]
+      producerTrivyScan: $(Agent.TempDirectory)/producer-trivy-$(Build.BuildId)-$(System.JobId)
+      baselineCollectorImage: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:195b238b026fcf7cfef5fddf66d4ea8b305ad093d99171b3079089a665030324
+      scanEvidence: $(Agent.TempDirectory)/vulnerability-scan-$(Build.BuildId)-$(System.JobId)
+      scanTools: $(Agent.TempDirectory)/vulnerability-scan-tools-$(Build.BuildId)-$(System.JobId)
+      scanPublication: $(Build.ArtifactStagingDirectory)/vulnerability-scan-$(Build.BuildId)-$(System.JobId)
+    steps:
+    - checkout: self
+      clean: true
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - bash: |
+        set -euo pipefail
+        [[ ! -e "$SCAN_EVIDENCE" && ! -e "$SCAN_TOOLS" ]] || { echo "Scan paths must be new" >&2; exit 1; }
+        mkdir -p "$SCAN_EVIDENCE" "$SCAN_TOOLS"
+        version="$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$PRODUCER_TRIVY_SCAN/trivy/metadata.json")"
+        [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid producer Trivy version" >&2; exit 1; }
+        cd "$SCAN_TOOLS"
+        archive="trivy_${version}_Linux-64bit.tar.gz"
+        checksums="trivy_${version}_checksums.txt"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/aquasecurity/trivy/releases/download/v${version}/${archive}" -o "$archive"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/aquasecurity/trivy/releases/download/v${version}/${checksums}" -o "$checksums"
+        checksum="$(grep -E "[[:space:]]${archive}$" "$checksums" || true)"
+        [[ -n "$checksum" ]] || { echo "Trivy release checksum is missing" >&2; exit 1; }
+        printf '%s\n' "$checksum" | sha256sum --check
+        tar -xzf "$archive" trivy
+        rm "$archive" "$checksums"
+        chmod +x trivy
+        installed="$("$SCAN_TOOLS/trivy" --version --format json | "$PYTHON" -c 'import json,sys; print(json.load(sys.stdin)["Version"])')"
+        [[ "$installed" == "$version" ]] || { echo "Installed Trivy version does not match producer scan" >&2; exit 1; }
+        PYTHONPATH="$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/build:$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan" \
+          PATH="$SCAN_TOOLS:$PATH" "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan/scan_trivy.py" \
+          --baseline-image "$BASELINE_IMAGE" \
+          --platform linux/amd64 \
+          --producer-scan "$PRODUCER_TRIVY_SCAN" --output "$SCAN_EVIDENCE/scans"
+      displayName: Compare build and baseline with a shared Trivy DB
+      env:
+        PRODUCER_TRIVY_SCAN: $(producerTrivyScan)
+        PYTHON: python3
+        SCAN_EVIDENCE: $(scanEvidence)
+        SCAN_TOOLS: $(scanTools)
+        BASELINE_IMAGE: $(baselineCollectorImage)
+    - bash: |
+        set -euo pipefail
+        PYTHONPATH="$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/build" \
+          "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/scan/scan_qualys.py" \
+          --baseline-image "$BASELINE_IMAGE" \
+          --producer-scan "$PRODUCER_TRIVY_SCAN" --output "$SCAN_EVIDENCE/qualys"
+      displayName: Compare build and baseline Qualys QIDs
+      condition: succeededOrFailed()
+      env:
+        PRODUCER_TRIVY_SCAN: $(producerTrivyScan)
+        PYTHON: python3
+        SCAN_EVIDENCE: $(scanEvidence)
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        BASELINE_IMAGE: $(baselineCollectorImage)
+    - bash: |
+        set -euo pipefail
+        mkdir -p "$SCAN_EVIDENCE/publication-input"
+        if [[ -d "$SCAN_EVIDENCE/scans" ]]; then
+          mv "$SCAN_EVIDENCE/scans" "$SCAN_EVIDENCE/publication-input/"
+        fi
+        if [[ -d "$SCAN_EVIDENCE/qualys" ]]; then
+          mv "$SCAN_EVIDENCE/qualys" "$SCAN_EVIDENCE/publication-input/"
+        fi
+        printf 'Vulnerability scan job status: %s\n' "$AGENT_JOBSTATUS" \
+          > "$SCAN_EVIDENCE/publication-input/scan-status.txt"
+        "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/build/filter_evidence.py" \
+          --evidence "$SCAN_EVIDENCE/publication-input" --output "$SCAN_PUBLICATION"
+      displayName: Always stage filtered scan evidence
+      condition: always()
+      env:
+        SCAN_EVIDENCE: $(scanEvidence)
+        SCAN_PUBLICATION: $(scanPublication)
+        PYTHON: python3
+
+- ${{ each scenario in split(parameters.scenarios, ',') }}:
+  - stage: Scenario_${{ replace(scenario, '-', '_') }}
+    displayName: Scenario ${{ scenario }}
+    lockBehavior: sequential
+    dependsOn:
+    - Build
+    - TestRunnerImage
+    condition: and(not(canceled()), eq(dependencies.Build.result, 'Succeeded'), eq(dependencies.TestRunnerImage.result, 'Succeeded'), eq(variables.IS_SRE_BRANCH, true))
+    jobs:
+    - deployment: ScenarioTestkube
+      displayName: Test scenario ${{ scenario }}
+      environment: Prometheus-Collector
+      timeoutInMinutes: 1680
+      cancelTimeoutInMinutes: 60
+      templateContext:
+        type: releaseJob
+        isProduction: false
+        outputs:
+        - output: pipelineArtifact
+          displayName: Retain TestKube and resource evidence
+          condition: always()
+          targetPath: $(scenarioPublication)
+          artifactName: scenario-e2e-$(scenarioAttempt)
+      variables:
+        IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+        IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+        IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+        IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+        testRunnerImage: $[ stageDependencies.TestRunnerImage.ImportRunner.outputs['resolveRunner.image'] ]
+        skipComponentGovernanceDetection: true
+        scenarioAttempt: $(Build.BuildId)-${{ scenario }}-$(System.StageAttempt)-$(System.JobAttempt)
+        scenarioEvidence: $(Agent.TempDirectory)/scenario-evidence-$(scenarioAttempt)
+        scenarioTools: $(Agent.TempDirectory)/scenario-tools-$(scenarioAttempt)
+        scenarioPython: $(Agent.TempDirectory)/scenario-python-$(scenarioAttempt)
+        scenarioPublication: $(Build.ArtifactStagingDirectory)/scenario-$(scenarioAttempt)
+      pool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-ubuntu-2204
+        os: linux
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - template: /.pipelines/pr-e2e/templates/azure-template-scenario.yml@self
+              parameters:
+                scenario: ${{ scenario }}
+                scenarios: ${{ parameters.scenarios }}
+                azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)

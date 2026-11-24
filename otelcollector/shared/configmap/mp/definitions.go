@@ -1,6 +1,7 @@
 package configmapsettings
 
 var (
+	configMapSettingsDir                         = "/etc/config/settings"
 	schemaVersionFile                            = "/etc/config/settings/schema-version"
 	configVersionFile                            = "/etc/config/settings/config-version"
 	configMapDebugMountPath                      = "/etc/config/settings/debug-mode"

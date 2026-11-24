@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: candidate-ksm-allowlist
+  annotations:
+    settings-test: included
+    not-allowed: excluded
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowlist-probe
+  namespace: candidate-ksm-allowlist
+  labels:
+    app: included
+    not-allowed: excluded
+spec:
+  nodeSelector:
+    kubernetes.io/os: linux
+  containers:
+  - name: pause
+    image: mcr.microsoft.com/oss/kubernetes/pause:3.9

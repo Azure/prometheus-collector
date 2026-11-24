@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v2
+  config-version: empty
+  prometheus-collector-settings: |-
+    operator_enabled = true
+    secrets_access_namespaces = ""

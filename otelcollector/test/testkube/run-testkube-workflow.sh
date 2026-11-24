@@ -10,28 +10,39 @@
 # $6 - Sleep duration in seconds (optional, defaults to 360)
 # $7 - Target environment name (e.g., ARC, AKS, OTel)
 
-if [ $# -lt 4 ]; then
-    echo "Usage: $0 <AMW_QUERY_ENDPOINT> <AZURE_CLIENT_ID> <SOURCE_TEMPLATE> <TARGET_OUTPUT> [APPLY_SETTINGS_CONFIGMAP] [SLEEP_DURATION] [TARGET_ENV]"
-    exit 0
+RUN_EXISTING_WORKFLOW=false
+if [[ "${1:-}" == "--run-existing" ]]; then
+    if [ $# -ne 3 ]; then
+        echo "Usage: $0 --run-existing <WORKFLOW_NAME> <EXECUTION_EVIDENCE_DIRECTORY>" >&2
+        exit 2
+    fi
+    RUN_EXISTING_WORKFLOW=true
+    RUN_WORKFLOW_NAME="$2"
+    RUN_EXECUTION_DIRECTORY="$3"
+    RESULTS_FILE=""
+else
+    if [ $# -lt 4 ]; then
+        echo "Usage: $0 <AMW_QUERY_ENDPOINT> <AZURE_CLIENT_ID> <SOURCE_TEMPLATE> <TARGET_OUTPUT> [APPLY_SETTINGS_CONFIGMAP] [SLEEP_DURATION] [TARGET_ENV]"
+        exit 0
+    fi
+
+    AMW_QUERY_ENDPOINT="$1"
+    AZURE_CLIENT_ID="$2"
+    SOURCE_TEMPLATE="$3"
+    TARGET_OUTPUT="$4"
+    APPLY_SETTINGS_CONFIGMAP="${5:-true}"
+    SLEEP_DURATION="${6:-360}"
+    TARGET_ENV="${7:-Unknown}"
+    BRANCH_NAME="${8:-main}"
+
+    RESULTS_FILE="${BUILD_ARTIFACTSTAGINGDIRECTORY}/testkube-results-${TARGET_ENV}.json"
 fi
-
-AMW_QUERY_ENDPOINT="$1"
-AZURE_CLIENT_ID="$2"
-SOURCE_TEMPLATE="$3"
-TARGET_OUTPUT="$4"
-APPLY_SETTINGS_CONFIGMAP="${5:-true}"
-SLEEP_DURATION="${6:-360}"
-TARGET_ENV="${7:-Unknown}"
-BRANCH_NAME="${8:-main}"
-
-# Define shared results file  
-RESULTS_FILE="${BUILD_ARTIFACTSTAGINGDIRECTORY}/testkube-results-${TARGET_ENV}.json"
 
 # Function to initialize or update results file
 init_results_file() {
     # Create the artifact staging directory if it doesn't exist
     mkdir -p "$(dirname "$RESULTS_FILE")"
-    
+
     if [ ! -f "$RESULTS_FILE" ]; then
         echo '{"environment": "'$TARGET_ENV'", "start_time": "'$(date -u '+%Y-%m-%d %H:%M:%S UTC')'", "status": "running"}' > "$RESULTS_FILE"
     fi
@@ -59,6 +70,102 @@ fail_setup() {
     add_result "$TARGET_ENV" "failed" "$1" ""
     exit 1
 }
+
+run_testworkflow() {
+    local workflow="$1"
+    local evidence_directory="$2"
+    local submission execution_id case_directory="" execution="" status=""
+
+    if ! submission=$(kubectl testkube run testworkflow "$workflow" --output json); then
+        echo "Error: Failed to submit TestWorkflow $workflow" >&2
+        return 1
+    fi
+    if ! execution_id=$(jq -er '.id | select(type == "string" and test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' <<< "$submission"); then
+        echo "Error: TestKube submission returned no valid execution ID for $workflow" >&2
+        return 1
+    fi
+
+    if [[ -n "$evidence_directory" ]]; then
+        mkdir -p "$evidence_directory" || {
+            echo "Error: Could not create TestKube evidence directory $evidence_directory" >&2
+            return 1
+        }
+        case_directory="$evidence_directory/$execution_id"
+        mkdir "$case_directory" || {
+            echo "Error: Could not create TestKube execution directory $case_directory" >&2
+            return 1
+        }
+        printf '%s\n' "$submission" > "$case_directory/submission.json" || {
+            echo "Error: Could not save TestKube submission evidence for $execution_id" >&2
+            return 1
+        }
+    fi
+
+    kubectl testkube watch testworkflowexecution "$execution_id" || \
+        echo "Warning: TestKube watch failed; checking execution $execution_id directly" >&2
+
+    for attempt in {1..13}; do
+        if ! execution=$(kubectl testkube get testworkflowexecution "$execution_id" --output json); then
+            status=""
+        elif ! jq -e --arg id "$execution_id" --arg workflow "$workflow" \
+            'type == "object" and .id == $id and .workflow.name == $workflow and
+             (.result.status | type == "string")' <<< "$execution" > /dev/null; then
+            echo "Error: TestKube returned mismatched execution evidence for $execution_id" >&2
+            return 1
+        else
+            status=$(jq -r '.result.status' <<< "$execution")
+            case "$status" in
+                passed|failed|aborted|timeout|canceled|cancelled|skipped)
+                    break
+                    ;;
+                queued|running)
+                    ;;
+                *)
+                    echo "Error: Unknown TestKube execution status '$status' for $execution_id" >&2
+                    return 1
+                    ;;
+            esac
+        fi
+
+        if [[ "$attempt" -lt 13 ]]; then
+            sleep 5
+        fi
+    done
+
+    if [[ -n "$case_directory" && -n "$execution" ]]; then
+        printf '%s\n' "$execution" > "$case_directory/execution.json" || {
+            echo "Error: Could not save TestKube execution evidence for $execution_id" >&2
+            return 1
+        }
+    fi
+    if [[ -z "$status" || ! "$status" =~ ^(passed|failed|aborted|timeout|canceled|cancelled|skipped)$ ]]; then
+        echo "Error: TestWorkflow $workflow did not reach a terminal status" >&2
+        return 1
+    fi
+
+    if [[ -n "$case_directory" ]]; then
+        local artifact_directory="$case_directory/artifacts"
+        mkdir "$artifact_directory" || {
+            echo "Error: Could not create TestKube artifact directory for $execution_id" >&2
+            return 1
+        }
+        if ! kubectl testkube download artifacts "$execution_id" --download-dir "$artifact_directory" --format folder; then
+            echo "Error: Could not download TestKube artifacts for $execution_id" >&2
+            return 1
+        fi
+    fi
+
+    echo "TestWorkflow $workflow completed with status $status (execution $execution_id)"
+}
+
+if [[ "$RUN_EXISTING_WORKFLOW" == true ]]; then
+    if [[ ! "$RUN_WORKFLOW_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+        echo "Error: Invalid TestWorkflow name: $RUN_WORKFLOW_NAME" >&2
+        exit 2
+    fi
+    run_testworkflow "$RUN_WORKFLOW_NAME" "$RUN_EXECUTION_DIRECTORY"
+    exit $?
+fi
 
 echo "================================================="
 echo "Starting TestKube deployment and testing workflow"

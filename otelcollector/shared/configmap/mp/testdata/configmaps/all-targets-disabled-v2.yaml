@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v2
+  config-version: all-off-v2
+  cluster-metrics: |-
+    default-targets-scrape-enabled: |-
+      kubelet = false
+      coredns = false
+      cadvisor = false
+      kubeproxy = false
+      apiserver = false
+      kubestate = false
+      nodeexporter = false
+      windowsexporter = false
+      windowskubeproxy = false
+      kappiebasic = false
+      networkobservabilityRetina = false
+      networkobservabilityHubble = false
+      networkobservabilityCilium = false
+      acstor-capacity-provisioner = false
+      acstor-metrics-exporter = false
+      local-csi-driver = false
+      dcgmexporter = false
+      ztunnel = false
+      istio-cni = false
+      controlplane-istio = false
+      prometheuscollectorhealth = false
+    pod-annotation-based-scraping: |-
+      podannotationnamespaceregex = ""
+    minimal-ingestion-profile: |-
+      enabled = true
+  controlplane-metrics: |-
+    default-targets-scrape-enabled: |-
+      apiserver = false
+      cluster-autoscaler = false
+      node-auto-provisioning = false
+      kube-scheduler = false
+      kube-controller-manager = false
+      etcd = false
+      istio = false

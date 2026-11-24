@@ -1,0 +1,198 @@
+parameters:
+- name: azureSubscription
+  type: string
+- name: scenarios
+  type: string
+- name: scenario
+  type: string
+
+steps:
+- checkout: self
+  clean: true
+
+- bash: |
+    set -euo pipefail
+    python3 - "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/matrix.json" \
+      "$SCENARIOS" "$SCENARIO" <<'PY'
+    import json
+    import sys
+
+    with open(sys.argv[1], encoding="utf-8") as matrix_file:
+        rows = json.load(matrix_file)["scenarios"]
+    scenarios = sys.argv[2].split(",")
+    runnable = {row["id"] for row in rows if not row.get("blockedReason")}
+    if len(scenarios) != len(runnable) or set(scenarios) != runnable:
+        raise SystemExit("Pipeline scenarios must list each runnable matrix scenario exactly once")
+    if sys.argv[3] not in runnable:
+        raise SystemExit("Selected scenario is not runnable")
+    PY
+  displayName: "Validate runnable scenario selection"
+  env:
+    SCENARIO: ${{ parameters.scenario }}
+    SCENARIOS: ${{ parameters.scenarios }}
+
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.11'
+  displayName: "Select scenario harness Python"
+
+- bash: |
+    set -euo pipefail
+    # The managed host image lacks unzip for HelmInstaller, and az/Bicep for AzureCLI tasks and the harness.
+    echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99ama-metrics-lock-timeout >/dev/null
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
+    command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
+    az bicep install
+    # AzureCLI tasks use their own AZURE_CONFIG_DIR, so they can only find Bicep on PATH.
+    sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
+    bicep --version
+    echo "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true"
+    if ! command -v kubectl; then
+      curl --fail --silent --show-error --location --retry 3 \
+        https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl -o "$AGENT_TEMPDIRECTORY/kubectl"
+      echo "29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634  $AGENT_TEMPDIRECTORY/kubectl" | sha256sum --check
+      sudo install -m 0755 "$AGENT_TEMPDIRECTORY/kubectl" /usr/local/bin/kubectl
+    fi
+    for tool in unzip az kubectl jq envsubst; do command -v "$tool"; done
+  displayName: "Install scenario host prerequisites"
+
+- task: HelmInstaller@1
+  inputs:
+    helmVersionToInstall: '3.19.0'
+  displayName: "Install pinned harness Helm"
+
+- bash: |
+    set -euo pipefail
+    python3 -m venv "$SCENARIO_PYTHON"
+    "$SCENARIO_PYTHON/bin/python" -m pip install \
+      -r "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/requirements.txt"
+    mkdir "$SCENARIO_TOOLS"
+    cd "$SCENARIO_TOOLS"
+    curl --fail --silent --show-error --location --retry 3 \
+      https://github.com/kubeshop/testkube/releases/download/2.15.0/testkube_2.15.0_Linux_x86_64.tar.gz -o testkube.tar.gz
+    echo "8ec7af98d2b7c21a6f3e9f55c5bba49a59ab7f104a737e68fa5729158e37ce32  testkube.tar.gz" | sha256sum --check
+    tar -xzf testkube.tar.gz kubectl-testkube
+    rm testkube.tar.gz
+    chmod +x kubectl-testkube
+    echo "##vso[task.prependpath]$SCENARIO_TOOLS"
+    for tool in az kubectl helm bash jq envsubst; do command -v "$tool"; done
+    ./kubectl-testkube run testworkflow --help > /dev/null
+    az bicep version
+  workingDirectory: $(Build.SourcesDirectory)
+  displayName: "Prepare scoped pinned CLI and verify harness prerequisites"
+  env:
+    SCENARIO_PYTHON: $(scenarioPython)
+    SCENARIO_TOOLS: $(scenarioTools)
+
+- task: AzureCLI@2
+  displayName: "Run authenticated scenario through existing TestKube harness"
+  timeoutInMinutes: 1560
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -euo pipefail
+      subscription="$(az account show --query id -o tsv)"
+      [[ -n "$subscription" ]] || { echo "Azure service connection has no active subscription" >&2; exit 1; }
+      max_run_seconds=28800
+      if [[ "$SCENARIO" == default ]]; then max_run_seconds=86400; fi
+      SCENARIO_RUN_ID="$("$PYTHON" -c 'import uuid; print(uuid.uuid4())')"
+      publish_bootstrap() {
+        local proof="$SCENARIO_EVIDENCE/rbac-bootstrap.json"
+        local public="$SCENARIO_EVIDENCE/rbac-bootstrap-public.json"
+        while true; do
+          if [[ -f "$proof" && -f "$SCENARIO_EVIDENCE/rbac-bootstrap.ps1" ]] && jq -e \
+            --rawfile script "$SCENARIO_EVIDENCE/rbac-bootstrap.ps1" \
+            --arg buildId "$BUILD_BUILDID" --arg sourceSha "$BUILD_SOURCEVERSION" \
+            --arg scenario "$SCENARIO" --arg runId "$SCENARIO_RUN_ID" \
+            'select((.status == "waiting" or .status == "granted") and (.scope | type == "string") and (.principalId | type == "string")) |
+             {scope, principalId, roleDefinitionId, allowedRoleDefinitionIds, condition, status, script: $script,
+              buildId: $buildId, sourceSha: $sourceSha, scenario: $scenario, runId: $runId}' \
+            "$proof" > "$public.tmp" 2>/dev/null; then
+            mv "$public.tmp" "$public"
+            echo "##vso[artifact.upload containerfolder=scenario-rbac-bootstrap-$(Build.BuildId)-$SCENARIO-$(System.StageAttempt)-$(System.JobAttempt);artifactname=scenario-rbac-bootstrap-$(Build.BuildId)-$SCENARIO-$(System.StageAttempt)-$(System.JobAttempt)]$public"
+            return
+          fi
+          sleep 2
+        done
+      }
+      publish_bootstrap &
+      bootstrap_watcher=$!
+      stop_bootstrap_watcher() {
+        kill "$bootstrap_watcher" 2>/dev/null || true
+        wait "$bootstrap_watcher" 2>/dev/null || true
+        rm -f -- "$SCENARIO_EVIDENCE/kubeconfig"
+      }
+      trap stop_bootstrap_watcher EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" run \
+        --scenario "$SCENARIO" --run-id "$SCENARIO_RUN_ID" \
+        --subscription "$subscription" \
+        --testkube-version 2.15.0 \
+        --max-run-seconds "$max_run_seconds" \
+        --tools-bin "$SCENARIO_TOOLS" --evidence "$SCENARIO_EVIDENCE"
+  env:
+    IMAGE_TAG: $(IMAGE_TAG)
+    IMAGE_TAG_WINDOWS: $(IMAGE_TAG_WINDOWS)
+    IMAGE_TAG_TARGET_ALLOCATOR: $(IMAGE_TAG_TARGET_ALLOCATOR)
+    IMAGE_TAG_CONFIG_READER: $(IMAGE_TAG_CONFIG_READER)
+    SCENARIO: ${{ parameters.scenario }}
+    SCENARIO_EVIDENCE: $(scenarioEvidence)
+    SCENARIO_TOOLS: $(scenarioTools)
+    TEST_RUNNER_IMAGE: $(testRunnerImage)
+    PYTHON: $(scenarioPython)/bin/python
+
+- task: AzureCLI@2
+  displayName: "Always revoke temporary private API ingress and SSH key"
+  condition: always()
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -euo pipefail
+      [[ -f "$SCENARIO_EVIDENCE/ownership.json" ]] || exit 0
+      subscription="$(az account show --query id -o tsv)"
+      [[ -n "$subscription" ]] || { echo "Azure service connection has no active subscription" >&2; exit 1; }
+      "$PYTHON" -B "$BUILD_SOURCESDIRECTORY/otelcollector/test/scenarios/run-scenario.py" close-private-api \
+        --scenario "$SCENARIO" --subscription "$subscription" --evidence "$SCENARIO_EVIDENCE"
+  env:
+    SCENARIO_EVIDENCE: $(scenarioEvidence)
+    SCENARIO: ${{ parameters.scenario }}
+    PYTHON: $(scenarioPython)/bin/python
+
+- bash: |
+    set -euo pipefail
+    rm -f -- "$SCENARIO_EVIDENCE/kubeconfig"
+  displayName: "Always remove private scenario kubeconfig"
+  condition: always()
+  env:
+    SCENARIO_EVIDENCE: $(scenarioEvidence)
+
+- bash: |
+    set -euo pipefail
+    rm -f "$SCENARIO_EVIDENCE/kubeconfig"
+    python3 -B "$BUILD_SOURCESDIRECTORY/.pipelines/pr-e2e/build/filter_evidence.py" \
+      --evidence "$SCENARIO_EVIDENCE" --output "$SCENARIO_PUBLICATION"
+  displayName: "Always stage credential-filtered source/build/execution evidence"
+  condition: always()
+  env:
+    SCENARIO_EVIDENCE: $(scenarioEvidence)
+    SCENARIO_PUBLICATION: $(scenarioPublication)
+
+- task: PublishTestResults@2
+  displayName: "Always publish actual TestKube JUnit"
+  condition: always()
+  inputs:
+    testResultsFormat: JUnit
+    searchFolder: $(scenarioPublication)
+    testResultsFiles: |
+      */configprocessing/testkube-executions/**/artifacts/**/junit.xml
+      */alias-ingestion/testkube-executions/**/artifacts/**/junit.xml
+      health/**/artifacts/**/junit.xml
+    failTaskOnFailedTests: true
+    failTaskOnMissingResultsFile: true
+    testRunTitle: Scenario ${{ parameters.scenario }} build $(Build.BuildId) source $(Build.SourceVersion)

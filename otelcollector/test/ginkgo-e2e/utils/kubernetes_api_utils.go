@@ -1,26 +1,29 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"io"
-	"strings"
-	"time"
-
+	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"io"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/client-go/rest"
-
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-
-	"bytes"
-	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 )
 
 /*
@@ -576,4 +579,196 @@ func GetRole(clientset *kubernetes.Clientset, namespace string, name string) (*r
  */
 func GetRoleBinding(clientset *kubernetes.Clientset, namespace string, name string) (*rbacv1.RoleBinding, error) {
 	return clientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+var K8sClient *kubernetes.Clientset
+
+var Cfg *rest.Config
+
+func TransitionFixture(parts ...string) []byte {
+	path := filepath.Join(append([]string{"..", "..", "scenarios", "settings"}, parts...)...)
+	data, err := os.ReadFile(path)
+	Expect(err).NotTo(HaveOccurred(), "fixture must come from this verified test-source checkout: %s", path)
+	return data
+}
+
+func ReplaceSettings(data map[string]string) {
+	cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+		"ama-metrics-settings-configmap", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	cm.Data = maps.Clone(data)
+	_, err = K8sClient.CoreV1().ConfigMaps("kube-system").Update(context.Background(), cm, metav1.UpdateOptions{})
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func SettingsPhase(variant, file string) time.Time {
+	var cm corev1.ConfigMap
+	Expect(yaml.Unmarshal(TransitionFixture(variant, file), &cm)).To(Succeed())
+	Expect(cm.Name).To(Equal("ama-metrics-settings-configmap"))
+	Expect(cm.Namespace).To(Equal("kube-system"))
+	started := time.Now()
+	ReplaceSettings(cm.Data)
+	AddReportEntry("settings-phase-"+file, started.UTC().Format(time.RFC3339Nano))
+	return started
+}
+
+func SettingsChanged(variant, file string) bool {
+	var desired corev1.ConfigMap
+	Expect(yaml.Unmarshal(TransitionFixture(variant, file), &desired)).To(Succeed())
+	current, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+		"ama-metrics-settings-configmap", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	return !maps.Equal(current.Data, desired.Data)
+}
+
+// Run 132116 observed collector restarts 60-90 seconds after a config-reader restart.
+const CollectorSettleQuietPeriod = 3 * time.Minute
+
+var settledContainers = []struct {
+	label, container string
+	reloads          bool // restarts on every settings change
+}{
+	{"ama-metrics", "prometheus-collector", true},
+	{"ama-metrics-operator-targets", "config-reader", true},
+	{"ama-metrics-operator-targets", "targetallocator", false},
+}
+
+func ValidateContainerSettled(pod corev1.Pod, container string, since, now time.Time, quiet time.Duration) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name != container {
+			continue
+		}
+		if !status.Ready || status.State.Running == nil {
+			return fmt.Errorf("%s/%s is not ready and running", pod.Name, container)
+		}
+		startedAt := status.State.Running.StartedAt.Time
+		if !since.IsZero() && startedAt.Before(since.Truncate(time.Second)) {
+			return fmt.Errorf("%s/%s has not reloaded since the settings change at %s", pod.Name, container,
+				since.UTC().Format(time.RFC3339))
+		}
+		if running := now.Sub(startedAt); running < quiet {
+			return fmt.Errorf("%s/%s restarted %s ago; waiting for %s without a restart", pod.Name, container,
+				running.Round(time.Second), quiet)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s has no %s container status", pod.Name, container)
+}
+
+func WaitForCollectorsSettled(since time.Time) {
+	Eventually(func(g Gomega) {
+		now := time.Now()
+		for _, source := range settledContainers {
+			pods, err := GetPodsWithLabel(K8sClient, "kube-system", "rsName", source.label)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(pods).NotTo(BeEmpty(), "no %s pods", source.label)
+			reloadSince := time.Time{}
+			if source.reloads {
+				reloadSince = since
+			}
+			for _, pod := range pods {
+				g.Expect(ValidateContainerSettled(pod, source.container, reloadSince, now, CollectorSettleQuietPeriod)).To(Succeed())
+			}
+		}
+	}, 21*time.Minute, 15*time.Second).Should(Succeed())
+	AddReportEntry("collectors-settled", time.Now().UTC().Format(time.RFC3339Nano))
+}
+
+func RestoreSettingsAfterTransition() {
+	cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+		"ama-metrics-settings-configmap", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	original := maps.Clone(cm.Data)
+	DeferCleanup(func() { ReplaceSettings(original) })
+}
+
+func FallbackCluster(cluster, mac string) (string, error) {
+	if strings.TrimSpace(mac) == "true" {
+		parts := strings.Split(strings.TrimSpace(cluster), "/")
+		cluster = parts[len(parts)-1]
+	}
+	if strings.TrimSpace(cluster) == "" {
+		return "", fmt.Errorf("collector CLUSTER must independently establish the non-alias identity")
+	}
+	return cluster, nil
+}
+
+func TransitionCluster() string {
+	pods, err := GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics")
+	Expect(err).NotTo(HaveOccurred())
+	var cluster, mac string
+	for _, container := range pods[0].Spec.Containers {
+		if container.Name != "prometheus-collector" {
+			continue
+		}
+		for _, variable := range container.Env {
+			switch variable.Name {
+			case "CLUSTER":
+				cluster = variable.Value
+			case "MAC":
+				mac = variable.Value
+			}
+		}
+	}
+	result, err := FallbackCluster(cluster, mac)
+	Expect(err).NotTo(HaveOccurred())
+	return result
+}
+
+func ValidateAnnotationReload(pod corev1.Pod, logs string, version string, after time.Time) error {
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.Name == "prometheus-collector" && status.Ready && status.State.Running != nil &&
+			(after.IsZero() || !status.State.Running.StartedAt.Time.Before(after.Truncate(time.Second))) {
+			for _, line := range strings.Split(logs, "\n") {
+				line = strings.ReplaceAll(strings.ReplaceAll(line, "\x1b[0;36m", ""), "\x1b[0m", "")
+				if strings.TrimSpace(line) == "AZMON_AGENT_CFG_FILE_VERSION="+version {
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("%s has not started with settings version %s", pod.Name, version)
+}
+
+func ReplaceAuthSecret(data map[string][]byte) {
+	secret, err := K8sClient.CoreV1().Secrets("ama-settings-auth").Get(context.Background(),
+		"settings-auth-creds", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	secret.Data = data
+	_, err = K8sClient.CoreV1().Secrets("ama-settings-auth").Update(context.Background(), secret, metav1.UpdateOptions{})
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func RecoverAuthSecret() time.Time {
+	var secret corev1.Secret
+	Expect(yaml.Unmarshal(TransitionFixture("auth-recovered.yaml"), &secret)).To(Succeed())
+	Expect(secret.Name).To(Equal("settings-auth-creds"))
+	Expect(secret.Namespace).To(Equal("ama-settings-auth"))
+	data := map[string][]byte{}
+	for key, value := range secret.StringData {
+		data[key] = []byte(value)
+	}
+	started := time.Now()
+	ReplaceAuthSecret(data)
+	return started
+}
+
+func CollectorRestarts() map[string]int32 {
+	result := map[string]int32{}
+	for _, selector := range []struct{ namespace, key, value string }{
+		{"kube-system", "rsName", "ama-metrics"}, {"kube-system", "rsName", "ama-metrics-operator-targets"},
+		{"ama-settings-auth", "app", "ama-settings-auth-target"},
+	} {
+		pods, err := GetPodsWithLabel(K8sClient, selector.namespace, selector.key, selector.value)
+		Expect(err).NotTo(HaveOccurred())
+		for _, pod := range pods {
+			Expect(pod.UID).NotTo(BeEmpty())
+			Expect(pod.Status.ContainerStatuses).To(HaveLen(len(pod.Spec.Containers)))
+			for _, status := range pod.Status.ContainerStatuses {
+				result[string(pod.UID)+"/"+status.Name] = status.RestartCount
+			}
+		}
+	}
+	Expect(result).NotTo(BeEmpty())
+	return result
 }

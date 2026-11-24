@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+data:
+  schema-version: v1
+  config-version: controls
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    default_metric_account_name = "settings-test"
+    operator_enabled = true
+    https_config = true
+    secrets_access_namespaces = "kube-system"
+    deny_fs_access_through_sms = true
+  debug-mode: |-
+    enabled = true
+  default-scrape-settings-enabled: |-
+    prometheuscollectorhealth = true
+  opentelemetry-metrics: |-
+    enabled = false
+  ksm-config: |-
+    resources:
+      pods: {}
+      namespaces: {}
+    labels_allow_list:
+      pods:
+        - app
+    annotations_allow_list:
+      namespaces:
+        - settings-test

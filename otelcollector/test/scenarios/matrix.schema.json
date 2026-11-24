@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ama-metrics reusable cluster scenario matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "buildImages", "scenarios"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "buildImages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containerRoles", "tagSources", "requiredByPlatform", "requiredOnEveryNode",
+                   "requiredInCluster"],
+      "properties": {
+        "containerRoles": {
+          "type": "object", "minProperties": 1,
+          "propertyNames": {"pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "additionalProperties": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+        },
+        "tagSources": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["component", "environment"],
+            "properties": {
+              "component": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+              "environment": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+              "truncateTo": {"type": "integer", "minimum": 1, "maximum": 128}
+            }
+          }
+        },
+        "requiredByPlatform": {
+          "type": "object", "additionalProperties": false,
+          "required": ["linux"],
+          "properties": {
+            "linux": {"$ref": "#/$defs/names"},
+            "windows": {"$ref": "#/$defs/names"}
+          }
+        },
+        "requiredOnEveryNode": {
+          "type": "object", "additionalProperties": false,
+          "required": ["linux"],
+          "properties": {
+            "linux": {"$ref": "#/$defs/names"},
+            "windows": {"$ref": "#/$defs/names"}
+          }
+        },
+        "requiredInCluster": {"$ref": "#/$defs/names"}
+      }
+    },
+    "scenarios": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "location", "cluster", "clusterFeatures", "settingsVariants", "platforms", "ginkgoLabels", "tier"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+          "location": {"type": "string", "pattern": "^[a-z0-9]+$"},
+          "cluster": {"type": "string", "pattern": "^clusters/[a-z0-9-]+\\.bicepparam$"},
+          "clusterFeatures": {"$ref": "#/$defs/names"},
+          "settingsVariants": {
+            "oneOf": [
+              {"const": ["*"]},
+              {"$ref": "#/$defs/settingsNames"}
+            ]
+          },
+          "platforms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["linux", "windows"]}},
+          "ginkgoLabels": {"$ref": "#/$defs/names"},
+          "tier": {"enum": ["pr", "nightly", "weekly"]},
+          "blockedReason": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "names": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "settingsNames": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "not": {"const": "*"}}
+    }
+  }
+}

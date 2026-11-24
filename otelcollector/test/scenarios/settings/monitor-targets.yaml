@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: settings-monitor-target
+  namespace: ama-settings-included
+  labels:
+    app: ama-settings-monitor-target
+spec:
+  selector:
+    app: ama-settings-annotation-target
+  ports:
+    - name: metrics
+      port: 2112
+      targetPort: metrics
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: settings-alias
+  namespace: ama-settings-included
+spec:
+  selector:
+    matchLabels:
+      app: ama-settings-annotation-target
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: weather_.*
+          action: keep
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: settings-alias
+  namespace: ama-settings-included
+spec:
+  selector:
+    matchLabels:
+      app: ama-settings-monitor-target
+  endpoints:
+    - port: metrics
+      interval: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: weather_.*
+          action: keep

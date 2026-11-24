@@ -1,8 +1,12 @@
 package configprocessing
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"prometheus-collector/otelcollector/test/utils"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,6 +15,10 @@ import (
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
+	authv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 )
 
@@ -1354,5 +1362,435 @@ var _ = Describe("deny_fs_access_through_sms setting", Label(utils.ConfigProcess
 				[]string{"cat", "/ta-configuration/targetallocator.yaml"})
 			return stdout, err
 		}, 5*time.Minute, 15*time.Second).Should(ContainSubstring("deny_fs_access_through_sms: true"))
+	})
+})
+
+var _ = Describe("Customer ConfigMap annotation selection",
+	Label("config-processing-customer-settings-v1", "config-processing-customer-settings-v2"), func() {
+		It("discovers the included annotated pod but never scrapes the excluded pod", func() {
+			Eventually(func(g Gomega) {
+				for _, ns := range []string{"ama-settings-included", "ama-settings-excluded"} {
+					pod, err := K8sClient.CoreV1().Pods(ns).Get(context.Background(), "annotation-target", metav1.GetOptions{})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(string(pod.Status.Phase)).To(Equal("Running"), ns)
+					g.Expect(pod.Status.PodIP).NotTo(BeEmpty(), ns)
+				}
+				responses, err := utils.QueryCollectorPromUI("/api/v1/targets")
+				g.Expect(err).NotTo(HaveOccurred())
+				included, excluded := false, false
+				for _, response := range responses {
+					var result struct {
+						ActiveTargets []struct {
+							ScrapePool string            `json:"scrapePool"`
+							Labels     map[string]string `json:"labels"`
+							Health     string            `json:"health"`
+							LastScrape time.Time         `json:"lastScrape"`
+						} `json:"activeTargets"`
+					}
+					g.Expect(json.Unmarshal(response.Data, &result)).To(Succeed())
+					for _, target := range result.ActiveTargets {
+						if target.ScrapePool != "kubernetes-pods" || target.Labels["kubernetes_pod_name"] != "annotation-target" {
+							continue
+						}
+						switch target.Labels["kubernetes_namespace"] {
+						case "ama-settings-included":
+							included = included || target.Health == "up"
+							g.Expect(target.LastScrape).To(BeTemporally(">", time.Now().Add(-5*time.Minute)))
+						case "ama-settings-excluded":
+							excluded = true
+						}
+					}
+				}
+				g.Expect(included).To(BeTrue(), "included annotation target must be discovered and healthy")
+				g.Expect(excluded).To(BeFalse(), "excluded annotation target must not be scraped")
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		})
+	})
+
+var _ = Describe("Invalid custom scrape configuration with default targets disabled",
+	Label(utils.ConfigProcessingNoDefaultTargetsInvalidCustomConfig), func() {
+		It("falls back to empty_job and reports the validation failure", func() {
+			type source struct {
+				key, value string
+				linux      bool
+			}
+			sources := []source{
+				{"rsName", "ama-metrics", true},
+				{"dsName", "ama-metrics-node", true},
+			}
+			if os.Getenv("EXPECT_WINDOWS_EXPORTER") == "true" {
+				sources = append(sources, source{"dsName", "ama-metrics-win-node", false})
+			}
+			Eventually(func(g Gomega) {
+				for _, source := range sources {
+					pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", source.key, source.value)
+					g.Expect(err).NotTo(HaveOccurred())
+					responses := make([]*utils.APIResponse, len(pods))
+					for i := range responses {
+						responses[i] = &utils.APIResponse{}
+					}
+					g.Expect(utils.QueryPromUIFromPods(K8sClient, Cfg, "kube-system", source.key, source.value,
+						"prometheus-collector", "/api/v1/status/config", source.linux, true, responses)).To(Succeed())
+					for _, response := range responses {
+						var result v1.ConfigResult
+						g.Expect(json.Unmarshal(response.Data, &result)).To(Succeed())
+						cfg, err := config.Load(result.YAML, nil)
+						g.Expect(err).NotTo(HaveOccurred())
+						var jobs []string
+						for _, job := range cfg.ScrapeConfigs {
+							jobs = append(jobs, job.JobName)
+						}
+						g.Expect(jobs).To(ConsistOf("empty_job"), source.value)
+					}
+				}
+				pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", "ama-metrics-operator-targets")
+				g.Expect(err).NotTo(HaveOccurred())
+				for _, pod := range pods {
+					logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pod.Name, &corev1.PodLogOptions{
+						Container: "config-reader",
+					}).DoRaw(context.Background())
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(string(logs)).To(ContainSubstring("Prometheus custom config validation failed"), pod.Name)
+				}
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+		})
+	})
+
+var _ = Describe("Monitor filesystem access enforcement", Label("config-processing-scenario-deny-fs-access"), func() {
+	BeforeEach(func() {
+		Expect(os.Getenv("SCENARIO_RUN_ID")).To(MatchRegexp(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`))
+	})
+	It("drops ServiceMonitor file references while retaining a file-free control", func() {
+		denied := []string{}
+		for _, endpoint := range []map[string]interface{}{
+			{"port": "ba-metrics", "bearerTokenFile": "/ama-e2e-nonexistent/token"},
+			{"port": "ba-metrics", "tlsConfig": map[string]interface{}{"caFile": "/ama-e2e-nonexistent/ca"}},
+			{"port": "ba-metrics", "tlsConfig": map[string]interface{}{
+				"certFile": "/ama-e2e-nonexistent/cert", "keyFile": "/ama-e2e-nonexistent/key"}},
+		} {
+			denied = append(denied, createMonitor("servicemonitors", "default", endpoint))
+		}
+		allowed := createMonitor("servicemonitors", "default", map[string]interface{}{"port": "ba-metrics"})
+		expectMonitorJobs([]string{allowed}, denied)
+	})
+
+	It("rejects unsupported PodMonitor file references at strict CRD admission", func() {
+		client := utils.MonitorClient("podmonitors", "default")
+		monitor, err := client.Create(context.Background(),
+			utils.MonitorObject("podmonitors", "default", map[string]interface{}{
+				"port": "ba-metrics", "bearerTokenFile": "/ama-e2e-nonexistent/token",
+			}, scenarioRunLabels()), metav1.CreateOptions{FieldValidation: "Strict"})
+		if err == nil {
+			DeferCleanup(func() {
+				Expect(client.Delete(context.Background(), monitor.GetName(), metav1.DeleteOptions{})).To(Succeed())
+			})
+		}
+		Expect(apierrors.IsBadRequest(err) || apierrors.IsInvalid(err)).To(BeTrue(), "PodMonitor schema must reject, not silently prune, unsupported local-file fields: %v", err)
+		Expect(err.Error()).To(ContainSubstring("bearerTokenFile"))
+	})
+})
+
+var _ = Describe("Monitor secret namespace enforcement", func() {
+	It("does not watch secret updates with an empty namespace allowlist, but watches an allowlisted namespace",
+		Label("config-processing-empty-secret-namespaces"), func() {
+			version, err := K8sClient.Discovery().ServerVersion()
+			Expect(err).NotTo(HaveOccurred())
+			parsed, err := utilversion.ParseSemantic(version.GitVersion)
+			Expect(err).NotTo(HaveOccurred())
+			if !parsed.AtLeast(utilversion.MustParseSemantic("v1.37.0")) {
+				Skip("scoped secret watching is supported on Kubernetes 1.37+; use the current auto-upgrading lane")
+			}
+			namespace := "ama-secret-watch-test"
+			secretName := "settings-auth-creds"
+			for _, verb := range []string{"get", "list", "watch"} {
+				review, err := K8sClient.AuthorizationV1().SubjectAccessReviews().Create(context.Background(),
+					&authv1.SubjectAccessReview{Spec: authv1.SubjectAccessReviewSpec{
+						User:   "system:serviceaccount:kube-system:ama-metrics-serviceaccount",
+						Groups: []string{"system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"},
+						ResourceAttributes: &authv1.ResourceAttributes{
+							Namespace: namespace, Verb: verb, Resource: "secrets", Name: secretName,
+						},
+					}}, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(review.Status.Allowed).To(BeTrue(), "unexpected %s secret RBAC in %s", verb, namespace)
+			}
+			cm, err := K8sClient.CoreV1().ConfigMaps("kube-system").Get(context.Background(),
+				"ama-metrics-settings-configmap", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			match := regexp.MustCompile(`(?m)^\s*secrets_access_namespaces\s*=\s*"([^"]*)"`).
+				FindStringSubmatch(cm.Data["prometheus-collector-settings"])
+			namespaces := ""
+			if len(match) > 1 {
+				namespaces = strings.TrimSpace(match[1])
+			}
+			Expect(namespaces).To(BeEmpty(), "empty-allowlist fixture required")
+			secret, err := K8sClient.CoreV1().Secrets(namespace).Create(context.Background(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: secretName},
+				StringData: map[string]string{"username": "synthetic-user", "password": "synthetic-not-a-credential"},
+			}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			allowed := []string{}
+			secretJobs := []string{}
+			for _, resource := range []string{"servicemonitors", "podmonitors"} {
+				secretJob := createMonitor(resource, namespace, map[string]interface{}{
+					"port": "ba-metrics", "path": "/httpsmetrics", "basicAuth": map[string]interface{}{
+						"username": map[string]interface{}{"name": secret.Name, "key": "username"},
+						"password": map[string]interface{}{"name": secret.Name, "key": "password"},
+					},
+				})
+				allowed = append(allowed, secretJob)
+				secretJobs = append(secretJobs, secretJob+"/0")
+				allowed = append(allowed, createMonitor(resource, namespace, map[string]interface{}{"port": "ba-metrics"}))
+			}
+			expectMonitorJobs(allowed, nil)
+			Eventually(func() error { return monitorTransitionState(secretJobs, "synthetic-user", false) },
+				5*time.Minute, 15*time.Second).Should(Succeed())
+			instance, err := utils.AllocatorInstance()
+			Expect(err).NotTo(HaveOccurred())
+			secret.StringData = nil
+			secret.Data = map[string][]byte{"username": []byte("synthetic-rotated"), "password": []byte("synthetic-not-a-credential")}
+			_, err = K8sClient.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Consistently(func() error {
+				current, err := utils.AllocatorInstance()
+				if err != nil {
+					return err
+				}
+				if current != instance {
+					return fmt.Errorf("target allocator restarted during watch observation")
+				}
+				return monitorTransitionState(secretJobs, "synthetic-user", false)
+			}, 5*time.Minute, 15*time.Second).Should(Succeed())
+
+			utils.RestoreSettingsAfterTransition()
+			cm.Data["prometheus-collector-settings"] = regexp.MustCompile(`(?m)^\s*secrets_access_namespaces\s*=.*\n?`).
+				ReplaceAllString(cm.Data["prometheus-collector-settings"], "")
+			cm.Data["prometheus-collector-settings"] += "\nsecrets_access_namespaces = \"" + namespace + "\"\n"
+			utils.ReplaceSettings(cm.Data)
+			Eventually(func() error {
+				current, err := utils.AllocatorInstance()
+				if err != nil {
+					return err
+				}
+				if current == instance {
+					return fmt.Errorf("target allocator has not reloaded the allowlist")
+				}
+				return monitorTransitionState(secretJobs, "synthetic-rotated", false)
+			}, 8*time.Minute, 15*time.Second).Should(Succeed())
+			instance, err = utils.AllocatorInstance()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(utils.AllocatorSecretWatchReady, 5*time.Minute, 15*time.Second).Should(Succeed())
+			secret, err = K8sClient.CoreV1().Secrets(namespace).Get(context.Background(), secret.Name, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			secret.Data["username"] = []byte("synthetic-allowed")
+			_, err = K8sClient.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				current, err := utils.AllocatorInstance()
+				if err != nil {
+					return err
+				}
+				if current != instance {
+					return fmt.Errorf("target allocator restarted during positive watch control")
+				}
+				return monitorTransitionState(secretJobs, "synthetic-allowed", false)
+			}, 5*time.Minute, 15*time.Second).Should(Succeed())
+		})
+})
+
+func scenarioRunLabels() map[string]interface{} {
+	runID := os.Getenv("SCENARIO_RUN_ID")
+	if runID == "" {
+		return nil
+	}
+	return map[string]interface{}{"ama-metrics.azure.com/scenario-run": runID}
+}
+
+func createMonitor(resource, namespace string, endpoint map[string]interface{}) string {
+	return utils.CreateMonitor(resource, namespace, endpoint, scenarioRunLabels())
+}
+
+var _ = Describe("Customer alias and annotation transitions", Serial, func() {
+	for _, variant := range []struct{ schema, label string }{
+		{"v1", utils.ConfigProcessingCustomerTransitionsV1},
+		{"v2", utils.ConfigProcessingCustomerTransitionsV2},
+	} {
+		schema := variant.schema
+		It("changes and clears alias, then updates and removes annotation namespace selection in "+schema,
+			Label(variant.label), func() {
+				utils.RestoreSettingsAfterTransition()
+				api, fallback := utils.TransitionAPI(), utils.TransitionCluster()
+				for _, phase := range []struct{ file, cluster, namespace string }{
+					{"initial.yaml", "Customer_Config_POC", "ama-settings-included"},
+					{"alias-updated.yaml", "Customer_Config_Updated", "ama-settings-included"},
+					{"alias-cleared.yaml", fallback, "ama-settings-included"},
+					{"namespace-updated.yaml", fallback, "ama-settings-excluded"},
+					{"namespace-invalid.yaml", fallback, ""},
+					{"namespace-removed.yaml", fallback, ""},
+				} {
+					changed := utils.SettingsChanged("customer-transitions-"+schema, phase.file)
+					started := utils.SettingsPhase("customer-transitions-"+schema, phase.file)
+					since := time.Time{}
+					if changed {
+						since = started
+					}
+					if phase.file == "namespace-invalid.yaml" {
+						expectInvalidAnnotationRegexReported(started)
+					}
+					utils.WaitForCollectorsSettled(since)
+					Eventually(func() error {
+						targets, err := utils.TransitionTargets()
+						if err != nil {
+							return err
+						}
+						return utils.ValidateTransitionTargets(targets, []string{
+							"podMonitor/ama-settings-included/settings-alias/0",
+							"serviceMonitor/ama-settings-included/settings-alias/0",
+						}, "up", started)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					for _, job := range []string{"ama-settings-included/settings-alias", "settings-monitor-target"} {
+						utils.ExpectTransitionMetric(api, "weather_temperature", job, phase.cluster, "", started)
+						utils.ExpectTransitionMetric(api, "up", job, phase.cluster, "", started)
+					}
+					utils.ExpectWindowsKubeProxy(api, phase.cluster, started)
+					expected := annotationExpectation{}
+					if phase.namespace != "" {
+						expected = annotationExpectation{Regex: "^" + phase.namespace + "$", Namespaces: []string{phase.namespace}}
+					}
+					expectAnnotationNamespaces(api, phase.cluster, expected, started)
+				}
+			})
+	}
+})
+
+// expectInvalidAnnotationRegexReported checks that an invalid annotation regex is reported after the
+// normal fresh-process reload of both the collector and the config-reader.
+func expectInvalidAnnotationRegexReported(started time.Time) {
+	Eventually(func(g Gomega) {
+		for _, source := range []struct{ label, container string }{
+			{"ama-metrics", "prometheus-collector"}, {"ama-metrics-operator-targets", "config-reader"},
+		} {
+			pods, err := utils.GetPodsWithLabel(K8sClient, "kube-system", "rsName", source.label)
+			g.Expect(err).NotTo(HaveOccurred())
+			for _, pod := range pods {
+				startedAt := time.Time{}
+				for _, status := range pod.Status.ContainerStatuses {
+					if status.Name == source.container && status.Ready && status.State.Running != nil {
+						startedAt = status.State.Running.StartedAt.Time
+					}
+				}
+				g.Expect(startedAt.After(started)).To(BeTrue(),
+					"%s/%s must reload through its normal fresh-process lifecycle", pod.Name, source.container)
+				logs, err := K8sClient.CoreV1().Pods("kube-system").GetLogs(pod.Name, &corev1.PodLogOptions{
+					Container: source.container, SinceTime: &metav1.Time{Time: started},
+				}).DoRaw(context.Background())
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(strings.Contains(string(logs), "Invalid namespace regex for pod annotations: [")).To(BeTrue(),
+					"%s/%s must report the invalid annotation regex", pod.Name, source.container)
+			}
+		}
+	}, 8*time.Minute, 15*time.Second).Should(Succeed())
+}
+
+var _ = Describe("Credential reload and allowlist transitions, not valid-password rotation", Serial, func() {
+	for _, variant := range []struct{ schema, label string }{
+		{"v1", utils.ConfigProcessingSecretTransitionsV1},
+		{"v2", utils.ConfigProcessingSecretTransitionsV2},
+	} {
+		schema := variant.schema
+		Describe(schema, Ordered, Label(variant.label), func() {
+			var api v1.API
+			var cluster string
+			jobs := []string{"podMonitor/ama-settings-auth/settings-auth/0", "serviceMonitor/ama-settings-auth/settings-auth/0"}
+			metrics := []string{"ama-settings-auth/settings-auth", "settings-auth-target"}
+			BeforeAll(func() {
+				utils.RestoreSettingsAfterTransition()
+				secret, err := K8sClient.CoreV1().Secrets("ama-settings-auth").Get(context.Background(),
+					"settings-auth-creds", metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				original := secret.DeepCopy().Data
+				DeferCleanup(func() { utils.ReplaceAuthSecret(original) })
+				api, cluster = utils.TransitionAPI(), utils.TransitionCluster()
+				AddReportEntry("true-credential-rotation", "deferred by user; only invalid-to-valid auth recovery is exercised")
+			})
+			It("reloads the dummy Secret from rejected credentials to authenticated fresh ingestion without a restart", func() {
+				utils.WaitForCollectorsSettled(time.Time{})
+				started, restarts := time.Now(), utils.CollectorRestarts()
+				Eventually(func() error {
+					return monitorTransitionState(jobs, "deliberately-invalid-test-user", false)
+				},
+					8*time.Minute, 15*time.Second).Should(Succeed())
+				Eventually(func() error {
+					targets, err := utils.TransitionTargets()
+					if err != nil {
+						return err
+					}
+					return utils.ValidateTransitionTargets(targets, jobs, "down", started)
+				}, 8*time.Minute, 15*time.Second).Should(Succeed())
+				expectAuthRecovered(api, cluster, jobs, metrics, utils.RecoverAuthSecret())
+				Expect(utils.CollectorRestarts()).To(Equal(restarts), "Secret reload must not restart collectors, allocator or endpoint")
+			})
+			It("stops watching Secret updates for empty and omitted allowlists, then resumes watching", func() {
+				version, err := K8sClient.Discovery().ServerVersion()
+				Expect(err).NotTo(HaveOccurred())
+				parsed, err := utilversion.ParseSemantic(version.GitVersion)
+				Expect(err).NotTo(HaveOccurred())
+				if !parsed.AtLeast(utilversion.MustParseSemantic("v1.37.0")) {
+					Skip("unsupported below Kubernetes1.37; auth recovery passed separately, scoped enforcement is not covered")
+				}
+				for _, phase := range []string{"empty.yaml", "omitted.yaml"} {
+					instance, err := utils.AllocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					settingsStarted := utils.SettingsPhase("secret-transitions-"+schema, phase)
+					Eventually(func() error {
+						current, err := utils.AllocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current == instance {
+							return fmt.Errorf("target allocator has not reloaded the settings")
+						}
+						return monitorTransitionState(jobs, "admin", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					utils.WaitForCollectorsSettled(settingsStarted)
+					instance, err = utils.AllocatorInstance()
+					Expect(err).NotTo(HaveOccurred())
+					utils.ReplaceAuthSecret(map[string][]byte{"username": []byte("deliberately-invalid-test-user"), "password": []byte("pwd")})
+					started := time.Now()
+					Consistently(func() error {
+						current, err := utils.AllocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current != instance {
+							return fmt.Errorf("target allocator restarted during watch observation")
+						}
+						return monitorTransitionState(jobs, "admin", false)
+					}, 5*time.Minute, 15*time.Second).Should(Succeed())
+					for _, job := range metrics {
+						utils.ExpectTransitionMetric(api, "my_metric", job, cluster, "", started)
+					}
+					utils.SettingsPhase("secret-transitions-"+schema, "allowed.yaml")
+					Eventually(func() error {
+						current, err := utils.AllocatorInstance()
+						if err != nil {
+							return err
+						}
+						if current == instance {
+							return fmt.Errorf("target allocator has not restored the allowlist")
+						}
+						return monitorTransitionState(jobs, "deliberately-invalid-test-user", false)
+					}, 8*time.Minute, 15*time.Second).Should(Succeed())
+					Eventually(utils.AllocatorSecretWatchReady, 5*time.Minute, 15*time.Second).Should(Succeed())
+					expectAuthRecovered(api, cluster, jobs, metrics, utils.RecoverAuthSecret())
+				}
+			})
+		})
+	}
+})
+
+var _ = Describe("Dedicated Windows kube-proxy ingestion", Label(utils.ConfigProcessingWindowsKubeProxy), func() {
+	It("observes the actual node endpoint and fresh healthy per-node AMW samples", func() {
+		utils.ExpectWindowsKubeProxy(utils.TransitionAPI(), utils.TransitionCluster(), time.Now())
 	})
 })

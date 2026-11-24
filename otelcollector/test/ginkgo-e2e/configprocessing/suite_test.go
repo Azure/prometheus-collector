@@ -28,6 +28,7 @@ var _ = BeforeSuite(func() {
 	var err error
 	K8sClient, Cfg, err = utils.SetupKubernetesClient()
 	Expect(err).NotTo(HaveOccurred())
+	utils.K8sClient, utils.Cfg = K8sClient, Cfg
 })
 
 var _ = AfterSuite(func() {

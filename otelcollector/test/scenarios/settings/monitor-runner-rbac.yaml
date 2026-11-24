@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ama-settings-runner
+  namespace: default
+rules:
+  - apiGroups: ["azmonitoring.coreos.com"]
+    resources: ["servicemonitors", "podmonitors"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ama-settings-runner
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: testkube-api-server-tests-job
+    namespace: testkube
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ama-settings-runner

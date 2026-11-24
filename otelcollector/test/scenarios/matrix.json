@@ -1,0 +1,118 @@
+{
+  "$schema": "./matrix.schema.json",
+  "schemaVersion": 1,
+  "buildImages": {
+    "containerRoles": {
+      "prometheus-collector": "collector",
+      "targetallocator": "targetallocator",
+      "config-reader": "cfg"
+    },
+    "tagSources": [
+      {"component": "collector", "environment": "IMAGE_TAG", "truncateTo": 128},
+      {"component": "collector", "environment": "IMAGE_TAG_WINDOWS"},
+      {"component": "targetallocator", "environment": "IMAGE_TAG_TARGET_ALLOCATOR"},
+      {"component": "cfg", "environment": "IMAGE_TAG_CONFIG_READER"}
+    ],
+    "requiredByPlatform": {
+      "linux": ["collector", "targetallocator", "cfg"],
+      "windows": ["collector"]
+    },
+    "requiredOnEveryNode": {
+      "linux": ["collector"],
+      "windows": ["collector"]
+    },
+    "requiredInCluster": ["targetallocator", "cfg"]
+  },
+  "scenarios": [
+    {
+      "id": "default",
+      "location": "centralus",
+      "cluster": "clusters/default.bicepparam",
+      "clusterFeatures": ["aks", "windows", "windows2025", "azure-linux", "arm64", "fips", "workload-identity", "operator"],
+      "settingsVariants": ["*"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "fips", "arm64", "network-profile", "mip-enabled"],
+      "tier": "pr"
+    },
+    {
+      "id": "operator-secret-watch",
+      "location": "eastus2",
+      "cluster": "clusters/linux.bicepparam",
+      "clusterFeatures": ["aks", "workload-identity", "operator", "secrets-watch-enforcement"],
+      "settingsVariants": ["secret-transitions-v1", "secret-transitions-v2", "empty-secret-namespaces-v1", "empty-secret-namespaces-v2", "omitted-secret-namespaces-v1", "omitted-secret-namespaces-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "mip-enabled"],
+      "tier": "weekly"
+    },
+    {
+      "id": "ampls",
+      "location": "centralus",
+      "cluster": "clusters/ampls.bicepparam",
+      "clusterFeatures": ["aks", "windows", "ampls", "private-query", "workload-identity", "operator"],
+      "settingsVariants": ["default", "customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "proxy",
+      "location": "westcentralus",
+      "cluster": "clusters/proxy.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "proxy-custom-ca",
+      "location": "westcentralus",
+      "cluster": "clusters/proxy-custom-ca.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "custom-ca", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "ampls-proxy",
+      "location": "westcentralus",
+      "cluster": "clusters/ampls-proxy.bicepparam",
+      "clusterFeatures": ["aks", "private-api", "http-proxy", "ampls", "private-query", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "cluster-network"],
+      "tier": "weekly"
+    },
+    {
+      "id": "acns",
+      "location": "eastus2",
+      "cluster": "clusters/acns.bicepparam",
+      "clusterFeatures": ["aks", "windows", "managed-acns", "workload-identity", "operator"],
+      "settingsVariants": [],
+      "platforms": ["linux", "windows"],
+      "ginkgoLabels": ["windows", "operator", "mdsd", "cluster-network", "managed-acns", "network-profile", "mip-enabled"],
+      "tier": "weekly"
+    },
+    {
+      "id": "acns-cilium",
+      "location": "eastus2",
+      "cluster": "clusters/acns-cilium.bicepparam",
+      "clusterFeatures": ["aks", "cilium", "managed-acns", "workload-identity", "operator"],
+      "settingsVariants": ["customer-settings-v1", "customer-settings-v2"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "mdsd", "cluster-network", "managed-acns-cilium"],
+      "tier": "weekly"
+    },
+    {
+      "id": "otlp",
+      "location": "centralus",
+      "cluster": "clusters/otlp.bicepparam",
+      "clusterFeatures": ["aks", "workload-identity", "operator", "otlp"],
+      "settingsVariants": ["*"],
+      "platforms": ["linux"],
+      "ginkgoLabels": ["operator", "cluster-network"],
+      "tier": "weekly"
+    }
+  ]
+}

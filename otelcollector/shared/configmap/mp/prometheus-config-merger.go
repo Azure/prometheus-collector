@@ -15,8 +15,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
+
 const (
-	configMapMountPath               = "/etc/config/settings/prometheus/prometheus-config"
 	replicasetControllerType         = "replicaset"
 	daemonsetControllerType          = "daemonset"
 	configReaderSidecarContainerType = "configreadersidecar"
