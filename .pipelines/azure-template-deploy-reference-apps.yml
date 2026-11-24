@@ -44,20 +44,26 @@ steps:
           sleep 30
         done
       done
+      check_images() {
+        local -a images
+        mapfile -t images < <(sed -nE 's/^[[:space:]]*image:[[:space:]]+([^[:space:]]+).*/\1/p' <<< "$1")
+        if [[ "$(printf '%s\n' "${images[@]}" | sort)" != "$(printf '%s\n' "$2" "$3" | sort)" ]]; then
+          echo "Reference app manifest contains missing or unexpected images" >&2
+          exit 1
+        fi
+      }
       linux_manifest=$(sed -E \
         -e "s|^([[:space:]]*image:) .*-ref-app-golang.*|\\1 $go_image|" \
         -e "s|^([[:space:]]*image:) .*-ref-app-python.*|\\1 $python_image|" \
         "$(Pipeline.Workspace)/reference-app/prometheus-reference-app.yaml")
-      grep -Fq "image: $go_image" <<< "$linux_manifest"
-      grep -Fq "image: $python_image" <<< "$linux_manifest"
+      check_images "$linux_manifest" "$go_image" "$python_image"
       kubectl apply -f - <<< "$linux_manifest"
       if [ -n "$(kubectl get nodes -l kubernetes.io/os=windows -o name)" ]; then
         windows_manifest=$(sed -E \
           -e "s|^([[:space:]]*image:) .*win-ref-app-golang.*|\\1 $win_go_image|" \
           -e "s|^([[:space:]]*image:) .*win-ref-app-python.*|\\1 $win_python_image|" \
           "$(Pipeline.Workspace)/reference-app/win-prometheus-reference-app.yaml")
-        grep -Fq "image: $win_go_image" <<< "$windows_manifest"
-        grep -Fq "image: $win_python_image" <<< "$windows_manifest"
+        check_images "$windows_manifest" "$win_go_image" "$win_python_image"
         kubectl apply -f - <<< "$windows_manifest"
       fi
   env:
