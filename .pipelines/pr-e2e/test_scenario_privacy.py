@@ -92,7 +92,7 @@ def test_image_audit_keeps_derived_evidence_without_logging_pod_environment():
     commands.evidence = Path("unused-evidence")
     commands.stages = []
     commands.deadline = None
-    host = runner["Host"](SimpleNamespace(evidence=commands.evidence, kubectl="kubectl"), {}, commands)
+    host = runner["Host"](SimpleNamespace(evidence=commands.evidence, kubectl="kubectl", run_id="test-run"), {}, commands)
     config = {
         "containerRoles": {"prometheus-collector": "collector"},
         "requiredOnEveryNode": {"linux": ["collector"]},
