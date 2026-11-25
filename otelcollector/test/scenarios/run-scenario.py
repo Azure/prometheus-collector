@@ -426,6 +426,9 @@ class Host:
         self.receipt_path = args.evidence / "ownership.json"
         self.receipt = None
         self.reused = False
+        self.network_probe_name = "scenario-network-probe-" + hashlib.sha256(
+            args.run_id.encode("utf-8")).hexdigest()[:16]
+        self.created_network_probe_monitor = False
         self.current_kubernetes_version = None
 
     def az(self, *args, **kwargs):
@@ -2819,7 +2822,7 @@ fi
 def network_probe_monitor(host, marker):
     monitor = {
         "apiVersion": "azmonitoring.coreos.com/v1", "kind": "ServiceMonitor",
-        "metadata": {"name": "scenario-network-probe", "namespace": "default"},
+        "metadata": {"name": host.network_probe_name, "namespace": "default"},
         "spec": {"selector": {"matchLabels": {"app": "prometheus-reference-app"}},
                  "endpoints": [{"port": "weather-app", "interval": "15s",
                                 "proxyFromEnvironment": True,
@@ -2828,9 +2831,18 @@ def network_probe_monitor(host, marker):
                                     {"action": "replace", "targetLabel": "scenario_run", "replacement": marker},
                                 ]}]},
     }
-    host.kube("apply", "-f", "-", data=yaml.safe_dump(monitor))
-    observed = host.kube("get", "servicemonitors.azmonitoring.coreos.com", "scenario-network-probe", "-n", "default",
-                         "-o", "json", json_output=True)
+    resource = "servicemonitors.azmonitoring.coreos.com"
+    existing = host.kube("get", resource, host.network_probe_name, "-n", "default",
+                         "--ignore-not-found", "-o", "name").strip()
+    if existing and not host.created_network_probe_monitor:
+        raise RuntimeError("Run-specific proxy-from-environment scrape monitor already exists; refusing to overwrite")
+    if host.created_network_probe_monitor:
+        host.kube("apply", "-f", "-", data=yaml.safe_dump(monitor))
+    else:
+        host.kube("create", "-f", "-", data=yaml.safe_dump(monitor))
+        host.created_network_probe_monitor = True
+    observed = host.kube("get", resource, host.network_probe_name, "-n", "default",
+                         "-o", "json", json_output=True, private=True)
     if observed["spec"] != monitor["spec"]:
         raise RuntimeError("Run-specific proxy-from-environment scrape monitor did not read back")
 
@@ -3437,7 +3449,7 @@ def verify_ca_recovery(host, outputs):
                 "curl", "--fail", "--silent", "--show-error", "--noproxy", "*", "--max-time", "30",
                 "http://localhost:9090/api/v1/targets", json_output=True, private=True)
             for target in targets.get("data", {}).get("activeTargets", []):
-                if "scenario-network-probe" in target.get("scrapePool", ""):
+                if host.network_probe_name in target.get("scrapePool", ""):
                     scrapes.append({"health": target["health"],
                                     "timestamp": datetime.fromisoformat(target["lastScrape"].replace("Z", "+00:00")).timestamp()})
             log = host.kube("exec", name, "-n", "kube-system", "-c", "prometheus-collector",
@@ -3854,9 +3866,16 @@ def cleanup_reference_apps(host):
     if "otlp" in host.scenario["clusterFeatures"]:
         host.kube("delete", "service", "candidate-otlp", "-n", "kube-system",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
-    if set(host.scenario["clusterFeatures"]) & {"private-api", "ampls"}:
-        host.kube("delete", "servicemonitors.azmonitoring.coreos.com", "scenario-network-probe", "-n", "default",
+    if (set(host.scenario["clusterFeatures"]) & {"private-api", "ampls"}
+            and host.created_network_probe_monitor):
+        resource = "servicemonitors.azmonitoring.coreos.com"
+        host.kube("delete", resource, host.network_probe_name, "-n", "default",
                   "--ignore-not-found", "--wait=true", "--timeout=5m")
+        remaining = host.kube("get", resource, host.network_probe_name, "-n", "default",
+                              "--ignore-not-found", "-o", "name").strip()
+        if remaining:
+            raise RuntimeError("Run-specific network probe monitor was not removed")
+        host.created_network_probe_monitor = False
 
 
 def install_windows_exporter(host):

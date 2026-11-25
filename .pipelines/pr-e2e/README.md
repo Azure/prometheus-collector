@@ -44,6 +44,8 @@ stage IDs and must match the runnable rows in `matrix.json`.
 4. `run-scenario.py` deploys the resolved images to test clusters and runs the
    Ginkgo suites through TestKube. Before those stages, the pipeline mirrors the
    latest Ginkgo runner into its ACR and passes its resolved digest to TestKube.
+   Network probe ServiceMonitors use per-run names; cleanup removes only the
+   monitor created by that execution.
    Published evidence excludes YAML and
    credential files and filters known secret patterns; it may not detect every
    secret.

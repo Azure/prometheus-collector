@@ -384,6 +384,72 @@ def test_retained_ampls_fixture_is_not_reinitialized():
         assert enabled == any("metrics.enabled=false" in call[-1] for call in calls)
 
 
+def test_network_probe_monitor_isolated_from_preexisting_resources():
+    script = Path(__file__).resolve().parents[2] / "otelcollector" / "test" / "scenarios" / "run-scenario.py"
+    module = runpy.run_path(str(script))
+    run_id = "133337-ampls-proxy-1-1"
+
+    class FakeHost:
+        def __init__(self, *existing):
+            self.args = SimpleNamespace(run_id=run_id)
+            self.scenario = {"platforms": [], "clusterFeatures": ["ampls"]}
+            self.network_probe_name = "scenario-network-probe-" + hashlib.sha256(
+                run_id.encode("utf-8")).hexdigest()[:16]
+            self.created_network_probe_monitor = False
+            self.existing = set(existing)
+            self.monitor = None
+            self.calls = []
+
+        def assert_owned(self):
+            pass
+
+        def kube(self, *args, data=None, **kwargs):
+            self.calls.append((args, data))
+            if args[0] == "get":
+                if "--ignore-not-found" in args:
+                    name = args[2]
+                    return (f"servicemonitor.azmonitoring.coreos.com/{name}"
+                            if name in self.existing else "")
+                return {"spec": self.monitor["spec"]}
+            if args[0] in {"create", "apply"}:
+                self.monitor = yaml.safe_load(data)
+                self.existing.add(self.network_probe_name)
+            elif args[0] == "delete" and "servicemonitors.azmonitoring.coreos.com" in args:
+                self.existing.discard(args[2])
+            return ""
+
+    legacy = FakeHost("scenario-network-probe")
+    module["network_probe_monitor"](legacy, run_id)
+    assert legacy.network_probe_name in legacy.existing
+    module["cleanup_reference_apps"](legacy)
+    assert legacy.existing == {"scenario-network-probe"}
+    legacy_deletes = [args for args, _ in legacy.calls
+                      if args[0] == "delete" and "servicemonitors.azmonitoring.coreos.com" in args]
+    assert len(legacy_deletes) == 1 and legacy.network_probe_name in legacy_deletes[0]
+
+    occupied = FakeHost("scenario-network-probe-" + hashlib.sha256(
+        run_id.encode("utf-8")).hexdigest()[:16])
+    try:
+        module["network_probe_monitor"](occupied, run_id)
+    except RuntimeError as error:
+        assert "refusing to overwrite" in str(error)
+    else:
+        raise AssertionError("An existing run-specific monitor was overwritten")
+    module["cleanup_reference_apps"](occupied)
+    assert not any(args[0] == "delete" and "servicemonitors.azmonitoring.coreos.com" in args
+                   for args, _ in occupied.calls)
+
+    owned = FakeHost()
+    module["network_probe_monitor"](owned, run_id)
+    assert owned.monitor["metadata"]["name"] == owned.network_probe_name
+    assert owned.created_network_probe_monitor
+    module["cleanup_reference_apps"](owned)
+    monitor_deletes = [args for args, _ in owned.calls
+                       if args[0] == "delete" and "servicemonitors.azmonitoring.coreos.com" in args]
+    assert len(monitor_deletes) == 1 and owned.network_probe_name in monitor_deletes[0]
+    assert not owned.created_network_probe_monitor
+
+
 def test_pipeline_evidence_jobs_use_build_jobs():
     template = Path(__file__).parent / "templates" / "azure-template-e2e-stages.yml"
     stages = yaml.safe_load(template.read_text(encoding="utf-8"))["stages"]
@@ -455,4 +521,5 @@ if __name__ == "__main__":
         test_comparison_logging_filters_secret_values(tmp_path)
         test_candidate_workflow_rendering()
         test_retained_ampls_fixture_is_not_reinitialized()
+        test_network_probe_monitor_isolated_from_preexisting_resources()
         test_pipeline_evidence_jobs_use_build_jobs()
