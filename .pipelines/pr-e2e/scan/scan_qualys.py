@@ -234,6 +234,14 @@ def run(baseline, producer_scan, directory):
         (directory / "comparison.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         return result
     finally:
+        attached = subprocess.run(
+            ["docker", "ps", "--all", "--quiet", "--filter", f"volume={volume}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.splitlines()
+        for container in (container.strip() for container in attached):
+            if container:
+                subprocess.run(["docker", "rm", "--force", container],
+                               stdout=subprocess.DEVNULL, check=True)
         subprocess.run(["docker", "volume", "rm", volume], stdout=subprocess.DEVNULL, check=True)
 
 

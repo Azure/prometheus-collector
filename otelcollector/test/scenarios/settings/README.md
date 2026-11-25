@@ -1,9 +1,12 @@
 # Customer settings variants
 
-Each folder is one settings variant containing its customer ConfigMaps and any
-monitor custom resources. `catalog.json` holds the variant metadata, including
-the Ginkgo labels and expected outcome; `coverage.json` maps each settings key
-to the variants that exercise it. Scenario rows in
+Each variant folder contains its customer ConfigMaps and any monitor custom
+resources. The folders are deliberate: catalog IDs select them as fixture roots,
+and different variants can use the same filename for different settings.
+`shared/` contains YAML resources reused across variants and Ginkgo transition
+tests. `catalog.json` holds the variant metadata, including the Ginkgo labels
+and platform and cluster-feature requirements; `coverage.json` maps each
+settings key to the variants that exercise it. Scenario rows in
 [`../matrix.json`](../matrix.json) choose which variants run on which cluster.
 Fixture paths in the catalog are relative to the matching variant folder.
 

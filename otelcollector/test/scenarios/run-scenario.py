@@ -2874,9 +2874,17 @@ def verify_proxy(host, outputs, started, phase="default", ampls_proof=None):
     if not bypass:
         raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
     endpoint = outputs["dceMetricsIngestionEndpoint"]
-    if ampls_proof is not None:
-        bypass.update(ip for addresses in ampls_proof["endpointAddresses"].values() for ip in addresses)
-        bypass.update(ampls_proof["hosts"].values())
+    if "ampls" in host.scenario["clusterFeatures"]:
+        if ampls_proof is not None:
+            bypass.update(ip for addresses in ampls_proof["endpointAddresses"].values() for ip in addresses)
+            hosts = ampls_proof["hosts"]
+        else:
+            hosts = {
+                "configuration": urlsplit(outputs["dceConfigurationEndpoint"]).hostname,
+                "ingestion": urlsplit(outputs["dceMetricsIngestionEndpoint"]).hostname,
+                "query": urlsplit(outputs["queryEndpoint"]).hostname,
+            }
+        bypass.update(host for host in hosts.values() if host)
         endpoint = "https://management.azure.com/metadata/endpoints?api-version=2020-06-01"
         host.kube("exec", "deployment/ama-metrics", "-n", "kube-system", "-c", "prometheus-collector",
                   "--", "curl", "--fail", "--silent", "--show-error", "--connect-timeout", "10",
@@ -2915,7 +2923,8 @@ def verify_proxy(host, outputs, started, phase="default", ampls_proof=None):
     result.update(phase=phase, directWebDenied=phase in {"default", "trusted-ca"},
                   scrapeProxyFromEnvironment=True,
                   bypassTargets=sorted(bypass), logSource="complete owned Squid access.log")
-    result["publicDependencyHostname" if ampls_proof is not None else "ingestionHostname"] = urlparse(endpoint).hostname
+    result["publicDependencyHostname" if "ampls" in host.scenario["clusterFeatures"]
+           else "ingestionHostname"] = urlparse(endpoint).hostname
     name = "proxy-proof.json" if phase == "default" else f"proxy-{phase}-proof.json"
     save(host.args.evidence / name, result)
     print(f"Collector {phase} proxy proof: " + json.dumps(result), flush=True)
@@ -3081,13 +3090,12 @@ def verify_ingestion(host, outputs, started):
 
 
 def initialize_ampls(host, outputs, enabled):
+    if host.reused:
+        return
     # AKS CLI disable deletes DCRs/DCRAs still owned by this private-link fixture.
     if enabled is True:
         host.az("resource", "update", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",
                 "--set", "properties.azureMonitorProfile.metrics.enabled=false")
-    # Retained fixtures keep these unless this run's addon handoff rewrote them; reasserting would hide drift.
-    if host.reused and enabled is not True:
-        return
     host.az("resource", "update", "--ids", outputs["dceId"], "--api-version", "2023-03-11",
             "--set", "properties.networkAcls.publicNetworkAccess=Disabled")
     for association, field, target in (
@@ -3974,7 +3982,8 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
         handoff = not resolved["existing"] or (managed_acns_cilium
             and ((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled") is True)
         enable_addon = not resolved["existing"]
-        if ampls or ("http-proxy" in features and "custom-ca" not in features):
+        if (ampls and not host.reused) or (
+                not ampls and "http-proxy" in features and "custom-ca" not in features):
             managed_enabled = bool(((state.get("azureMonitorProfile") or {}).get("metrics") or {}).get("enabled"))
             needs_token = not host.kube("get", "secret/aad-msi-auth-token", "-n", "kube-system",
                                        "--ignore-not-found", "-o", "name", private=True).strip()
@@ -3983,9 +3992,10 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
         if enable_addon:
             host.az("aks", "update", "--resource-group", group, "--name", cluster,
                     "--enable-azure-monitor-metrics", "--azure-monitor-workspace-resource-id", outputs["workspaceId"])
-        host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
-                  "-n", "kube-system", "--timeout=15m", private=True)
-        if ampls:
+        if not (ampls and host.reused):
+            host.kube("wait", "--for=create", "secret/aad-msi-auth-token",
+                      "-n", "kube-system", "--timeout=15m", private=True)
+        if ampls and not host.reused:
             initialize_ampls(host, outputs, handoff)
         elif handoff:
             if managed_acns_cilium:
@@ -4051,17 +4061,18 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
         if "windows" in scenario["platforms"] and ampls:
             install_windows_exporter(host)
         save(args.evidence / "images-before.json", audit_images(host, images, image_config))
-        if ampls:
+        if ampls and not host.reused:
             outcome["ampls"] = verify_ampls(host, outputs)
         if ampls_proxy:
-            warm = verify_me_configuration(host, outcome["ampls"], 0)
             proxy_started = time.time()
-            for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
-                host.kube("rollout", "restart", resource, "-n", "kube-system")
-                host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
-            for pod in warm["collectors"]:
-                host.kube("wait", "--for=delete", f"pod/{pod['pod']}", "-n", "kube-system", "--timeout=5m")
-            outcome["meConfiguration"] = verify_me_configuration(host, outcome["ampls"], proxy_started)
+            if not host.reused:
+                warm = verify_me_configuration(host, outcome["ampls"], 0)
+                for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
+                    host.kube("rollout", "restart", resource, "-n", "kube-system")
+                    host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=15m")
+                for pod in warm["collectors"]:
+                    host.kube("wait", "--for=delete", f"pod/{pod['pod']}", "-n", "kube-system", "--timeout=5m")
+                outcome["meConfiguration"] = verify_me_configuration(host, outcome["ampls"], proxy_started)
         if managed_acns_cilium:
             host.kube("apply", "-f", str(REPO / "internal/referenceapp/prometheus-reference-app.yaml"))
             host.kube("rollout", "status", "deployment/prometheus-reference-app", "--timeout=10m")
@@ -4115,7 +4126,8 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
         if ampls:
             print("AMPLS_PRIVATE_INGESTION " + json.dumps(outcome["ingestion"]), flush=True)
         if ampls_proxy:
-            outcome["proxy"] = verify_proxy(host, outputs, proxy_started, ampls_proof=outcome["ampls"])
+            outcome["proxy"] = verify_proxy(
+                host, outputs, proxy_started, ampls_proof=outcome.get("ampls"))
         if "custom-ca" in scenario["clusterFeatures"]:
             outcome["ca"] = verify_ca_recovery(host, outputs)
         save(args.evidence / "images-after.json", audit_images(host, images, image_config))

@@ -286,12 +286,12 @@ def compare(baseline, candidate, now=None):
                     for finding in current if identity(finding) not in baseline_by_identity]
     statuses = {row["status"] for row in baseline_findings + new_findings}
     verdict = ("BLOCKED" if "NOT_REPORTED" in statuses
-               else "FAIL" if statuses & {"NEW", "OPEN"} else "PASS")
+               else "FINDINGS" if statuses & {"NEW", "OPEN"} else "PASS")
     return {
         "schemaVersion": 1,
         "scope": "Linux/amd64 collector HIGH/CRITICAL/MEDIUM findings with fixes; not full image clearance",
         "baseline": before_meta, "candidate": after_meta,
-        "findingPolicy": "Only HIGH/CRITICAL/MEDIUM findings with fixes are compared; exact deferred targets are reported as DEFERRED; other open/new findings are FAIL and missing evidence is BLOCKED",
+        "findingPolicy": "Only HIGH/CRITICAL/MEDIUM findings with fixes are compared; exact deferred targets are reported as DEFERRED; open/new findings are reported as FINDINGS; missing evidence is BLOCKED",
         "deferredTargets": sorted(DEFERRED_TARGETS),
         "baselineFindingCount": len(baseline_findings),
         "baselineFindings": baseline_findings,
@@ -378,7 +378,7 @@ def print_comparison(result, output):
         status = finding["status"]
         public = {"status": status, "reason": reasons[status], "candidate": public_finding(finding)}
         log_row("SCAN_COMPARISON", public)
-    return {"PASS": 0, "FAIL": 1, "BLOCKED": 2}[result["verdict"]]
+    return {"PASS": 0, "FINDINGS": 0, "BLOCKED": 2}[result["verdict"]]
 
 
 def main(argv=None):

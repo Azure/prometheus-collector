@@ -10,8 +10,6 @@
   "variants": [
     {
       "id": "customer-transitions-v1",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-customer-settings-v1-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Sequential alias change/clear across monitor and Windows metrics, then annotation namespace update, invalid-regex fallback and removal, schema v1.",
@@ -29,19 +27,16 @@
         "initial.yaml"
       ],
       "customResources": [
-        "../annotation-targets.yaml",
-        "../monitor-targets.yaml"
+        "../shared/annotation-targets.yaml",
+        "../shared/monitor-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-customer-transitions-v1"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "customer-transitions-v2",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-customer-settings-v2-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Sequential alias change/clear across monitor and Windows metrics, then annotation namespace update, invalid-regex fallback and removal, schema v2.",
@@ -59,19 +54,16 @@
         "initial.yaml"
       ],
       "customResources": [
-        "../annotation-targets.yaml",
-        "../monitor-targets.yaml"
+        "../shared/annotation-targets.yaml",
+        "../shared/monitor-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-customer-transitions-v2"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "secret-transitions-v1",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v1 authenticated scrape recovery after credential reload, then allowlist empty/removal/restore; not two-valid-password rotation.",
@@ -87,18 +79,15 @@
         "allowed.yaml"
       ],
       "customResources": [
-        "../auth-targets.yaml"
+        "../shared/auth-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-secret-transitions-v1"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "secret-transitions-v2",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v2 authenticated scrape recovery after credential reload, then allowlist empty/removal/restore; not two-valid-password rotation.",
@@ -114,18 +103,15 @@
         "allowed.yaml"
       ],
       "customResources": [
-        "../auth-targets.yaml"
+        "../shared/auth-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-secret-transitions-v2"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "windows-kube-proxy",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-custom-node-configmap-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Fresh Windows kube-proxy ingestion per Windows node, not just generated job configuration.",
@@ -145,13 +131,10 @@
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-windows-kube-proxy-ingestion"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "default",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-default-targets-on-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Existing ConfigTests default targets enabled, schema v1.",
@@ -173,13 +156,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-no-config-maps"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "all-targets-enabled",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-all-targets-enabled-crs.yaml",
       "description": "Existing ConfigTests all target jobs enabled; asserts generated jobs, not availability of every optional exporter.",
       "platforms": [
@@ -200,13 +180,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-all-targets-enabled"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "custom-scrape",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-only-custom-configmap-crs.yaml",
       "description": "Existing ConfigTests replica custom scrape configuration with supported relabel actions.",
       "platforms": [
@@ -228,13 +205,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-only-config-map-all-actions"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "invalid-config",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-settings-error-crs.yaml",
       "description": "Existing ConfigTests invalid settings fallback, retaining the existing workflow's common checks. Does not add an error-log assertion.",
       "platforms": [
@@ -255,13 +229,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-settings-error"
-      ],
-      "expectedOutcome": "config-error"
+      ]
     },
     {
       "id": "windows",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-custom-node-configmap-crs.yaml",
       "description": "Existing custom-node ConfigTests including Windows node custom scrape configuration.",
       "platforms": [
@@ -285,13 +256,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-settings-node-config-map"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "customer-settings-v1",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-customer-settings-v1-crs.yaml",
       "description": "Assert effective normalized cluster alias, annotation namespace inclusion/exclusion, keep-list and non-default scrape interval, schema v1.",
       "platforms": [
@@ -304,18 +272,15 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../annotation-targets.yaml"
+        "../shared/annotation-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-customer-settings-v1"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "customer-settings-v2",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-customer-settings-v2-crs.yaml",
       "description": "Assert effective normalized cluster alias, annotation namespace inclusion/exclusion, keep-list and non-default scrape interval, schema v2.",
       "platforms": [
@@ -328,18 +293,15 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../annotation-targets.yaml"
+        "../shared/annotation-targets.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-customer-settings-v2"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "collector-controls",
-      "schedule": "weekly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-deny-fs-access-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Collector/operator and KSM inputs. Filesystem-denial and common health assertions do not prove every input's runtime behavior.",
@@ -358,20 +320,17 @@
       ],
       "customResources": [
         "allowlist-target.yaml",
-        "../monitor-runner-rbac.yaml"
+        "../shared/monitor-runner-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-common",
         "config-processing-deny-fs-access",
         "config-processing-scenario-deny-fs-access"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "collector-controls-v1",
-      "schedule": "weekly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-deny-fs-access-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v1 collector/operator and KSM inputs. Common health and filesystem-denial checks, not full runtime field assertions.",
@@ -389,20 +348,17 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../monitor-runner-rbac.yaml"
+        "../shared/monitor-runner-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-common",
         "config-processing-deny-fs-access",
         "config-processing-scenario-deny-fs-access"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "rs-targets-enabled",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-all-rs-targets-enabled-crs.yaml",
       "description": "Existing ConfigTests all-rs-targets-enabled scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -423,13 +379,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-rs-targets-enabled"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "ds-targets-enabled",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-all-ds-targets-enabled-crs.yaml",
       "description": "Existing ConfigTests all-ds-targets-enabled scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -450,13 +403,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-ds-targets-enabled"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "global-labels",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-global-settings-crs.yaml",
       "description": "Existing ConfigTests global-settings scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -478,13 +428,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-global-settings"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "custom-config-error",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-custom-configmap-error-crs.yaml",
       "description": "Existing ConfigTests custom-configmap-error scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -508,13 +455,10 @@
         "config-processing-common",
         "config-processing-common-with-error-config-maps",
         "config-processing-custom-config-map-error"
-      ],
-      "expectedOutcome": "config-error"
+      ]
     },
     {
       "id": "custom-config-error-no-default-targets",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-custom-configmap-error-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Invalid custom scrape config does not enable default targets when they are disabled.",
@@ -532,13 +476,10 @@
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-no-default-targets-invalid-custom-config"
-      ],
-      "expectedOutcome": "config-error"
+      ]
     },
     {
       "id": "global-labels-error",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-global-ext-labels-error-crs.yaml",
       "description": "Existing ConfigTests global-ext-labels-error scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -560,13 +501,10 @@
         "config-processing-common",
         "config-processing-common-with-error-config-maps",
         "config-processing-global-settings-error"
-      ],
-      "expectedOutcome": "config-error"
+      ]
     },
     {
       "id": "controlplane-istio",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-controlplane-istio-crs.yaml",
       "description": "Existing ConfigTests controlplane-istio scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -587,13 +525,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps",
         "config-processing-controlplane-istio-enabled"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "partial-v1",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-partial-no-pcs-v1-crs.yaml",
       "description": "Existing ConfigTests partial-no-pcs-v1 scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -613,13 +548,10 @@
       "ginkgoLabels": [
         "config-processing-common",
         "config-processing-partial-no-pcs-v1"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "partial-v2",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-partial-no-pcs-v2-crs.yaml",
       "description": "Existing ConfigTests partial-no-pcs-v2 scenario; reuses its exact workflow labels and fixtures.",
       "platforms": [
@@ -639,13 +571,10 @@
       "ginkgoLabels": [
         "config-processing-common",
         "config-processing-partial-no-pcs-v2"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "deny-filesystem-access",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-deny-fs-access-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Existing ConfigTests deny-fs-access scenario with monitor enforcement checks.",
@@ -661,19 +590,16 @@
         "../../../test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-deny-fs-access.yaml"
       ],
       "customResources": [
-        "../monitor-runner-rbac.yaml"
+        "../shared/monitor-runner-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-deny-fs-access",
         "config-processing-scenario-deny-fs-access"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "default-targets-v2",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-default-targets-on-v2-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Explicit schema-v2 default target switches with the same RS/Linux/Windows job assertions as schema v1.",
@@ -695,13 +621,10 @@
         "config-processing-common",
         "config-processing-common-with-config-maps-v2",
         "config-processing-no-config-maps"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "no-configmaps",
-      "schedule": "pr",
-      "surface": "configmap",
       "workflow": "testkube-config-test-no-configmaps-crs.yaml",
       "description": "Unconfigured baseline: reset all four customer ConfigMaps and reuse the existing no-configmaps workflow.",
       "platforms": [
@@ -720,13 +643,10 @@
         "config-processing-common",
         "config-processing-common-no-config-maps",
         "config-processing-no-config-maps"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "empty-secret-namespaces-v1",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v1 operator watch-nothing behavior with an explicitly empty secret namespace list.",
@@ -743,18 +663,15 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../secret-watch-rbac.yaml"
+        "../shared/secret-watch-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-empty-secret-namespaces"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "empty-secret-namespaces-v2",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v2 operator watch-nothing behavior with an explicitly empty secret namespace list.",
@@ -771,18 +688,15 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../secret-watch-rbac.yaml"
+        "../shared/secret-watch-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-empty-secret-namespaces"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "omitted-secret-namespaces-v1",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v1 operator watch-nothing behavior when secret namespaces are omitted, not allowlisted.",
@@ -799,18 +713,15 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../secret-watch-rbac.yaml"
+        "../shared/secret-watch-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-empty-secret-namespaces"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     },
     {
       "id": "omitted-secret-namespaces-v2",
-      "schedule": "nightly",
-      "surface": "configmap",
       "workflow": "testkube-config-test-basic-auth-smon-v2-crs.yaml",
       "overrideWorkflowLabels": true,
       "description": "Schema v2 operator watch-nothing behavior when secret namespaces are omitted, not allowlisted.",
@@ -827,13 +738,12 @@
         "settings.yaml"
       ],
       "customResources": [
-        "../secret-watch-rbac.yaml"
+        "../shared/secret-watch-rbac.yaml"
       ],
       "addonParams": {},
       "ginkgoLabels": [
         "config-processing-empty-secret-namespaces"
-      ],
-      "expectedOutcome": "healthy"
+      ]
     }
   ],
   "lifecycle": {

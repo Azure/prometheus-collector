@@ -115,17 +115,60 @@ def test_comparison_cli_uses_producer_scan(tmp_path):
     report.assert_called_once_with(result, output.resolve())
 
 
-def test_comparison_cli_fails_on_findings_and_blockers(tmp_path):
+def test_compare_reports_findings_but_blocks_incomplete_coverage():
+    metadata = {
+        "version": "0.76.2", "dbUpdatedAt": "2026-01-01T00:00:00+00:00",
+        "dbSha256": "a" * 64, "platform": "linux/amd64", "configuration": {},
+    }
+    data = {"Results": [{
+        "Target": "opt/example", "Class": "os-pkgs", "Type": "alpine",
+        "Packages": [{"Name": "example"}],
+    }]}
+    baseline_finding = {
+        "lane": "linux/amd64", "scanner": "trivy", "id": "CVE-2026-1000",
+        "package": "example", "path": "opt/example", "binaryTarget": None,
+        "severity": "HIGH", "fixAvailable": True,
+    }
+    new_finding = {**baseline_finding, "id": "CVE-2026-1001"}
+    baseline = (metadata, data, [baseline_finding])
+    candidate = (metadata, data, [baseline_finding, new_finding])
+    with patch("scan_trivy.load", side_effect=[baseline, candidate]):
+        result = compare(Path("baseline"), Path("candidate"))
+    assert result["verdict"] == "FINDINGS"
+    assert [row["status"] for row in result["baselineFindings"]] == ["OPEN"]
+    assert [finding["status"] for finding in result["newFindings"]] == ["NEW"]
+
+    incomplete_candidate = (metadata, {"Results": [{
+        "Target": "opt/example", "Class": "os-pkgs", "Type": "alpine", "Packages": [],
+    }]}, [])
+    with patch("scan_trivy.load", side_effect=[baseline, incomplete_candidate]):
+        result = compare(Path("baseline"), Path("candidate"))
+    assert result["verdict"] == "BLOCKED"
+    assert result["unresolvedFindings"][0]["status"] == "NOT_REPORTED"
+
+
+def test_comparison_cli_reports_findings_and_blocks_incomplete_evidence(tmp_path):
     args = ["--baseline-image", "baseline", "--producer-scan", str(tmp_path / "producer"),
             "--platform", "linux/amd64", "--output", str(tmp_path / "comparison")]
-    with patch("scan_trivy.run_comparison") as run, \
-            patch("scan_trivy.print_comparison", side_effect=lambda result, _: {
-                "PASS": 0, "FAIL": 1, "BLOCKED": 2,
-            }[result["verdict"]]):
-        run.return_value = {"verdict": "FAIL"}
-        assert main(args) == 1
-        run.return_value = {"verdict": "BLOCKED"}
-        assert main(args) == 2
+    for verdict, expected, status in (("FINDINGS", 0, "OPEN"), ("BLOCKED", 2, "NOT_REPORTED")):
+        result = {
+            "verdict": verdict, "scope": "Linux/amd64", "findingPolicy": "test",
+            "baseline": {"requestedRef": "baseline"}, "candidate": {"requestedRef": "candidate"},
+            "baselineFindings": [{
+                "status": status, "finding": {"id": "CVE-2026-1000", "package": "example",
+                                              "path": "opt/example", "severity": "HIGH"},
+                "candidateFinding": None,
+            }],
+            "newFindings": [],
+        }
+        with patch("scan_trivy.run_comparison", return_value=result), \
+                redirect_stdout(StringIO()) as output:
+            assert main(args) == expected
+        assert "SCAN_COMPARISON" in output.getvalue()
+        assert verdict in output.getvalue()
+        assert status in output.getvalue()
+
+    with patch("scan_trivy.run_comparison") as run:
         run.side_effect = ValueError("scan failed")
         try:
             main(args)
@@ -166,6 +209,42 @@ def test_qualys_passes_token_over_stdin(tmp_path):
     assert kwargs["stdout"] is subprocess.DEVNULL and kwargs["stderr"] is subprocess.DEVNULL
     assert any(command[:3] == ["docker", "image", "rm"] for command, _ in calls)
     report.assert_called_once_with(directory)
+
+
+def test_linux_qualys_removes_containers_holding_scan_volume_after_failure(tmp_path):
+    baseline = "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:" + "a" * 64
+    candidate = "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images@sha256:" + "b" * 64
+    producer_scan = tmp_path / "producer"
+    trivy = producer_scan / "trivy"
+    trivy.mkdir(parents=True)
+    (trivy / "metadata.json").write_text(json.dumps({
+        "platform": "linux/amd64", "requestedRef": candidate,
+    }))
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if command[:3] == ["docker", "ps", "--all"]:
+            return SimpleNamespace(returncode=0, stdout="attached-container\n")
+        return SimpleNamespace(returncode=0, stdout="")
+
+    with patch("scan_qualys.subprocess.run", side_effect=fake_run), \
+            patch("scan_qualys.scan", side_effect=ValueError("CoMET failed with exit code 255")):
+        try:
+            scan_qualys.run(baseline, producer_scan, tmp_path / "qualys")
+        except ValueError as error:
+            assert "exit code 255" in str(error)
+        else:
+            raise AssertionError("CoMET execution failure was accepted")
+
+    container_cleanup = calls.index(["docker", "rm", "--force", "attached-container"])
+    volume_cleanup = next(index for index, command in enumerate(calls)
+                          if command[:3] == ["docker", "volume", "rm"])
+    volume = calls[1][3]
+    assert calls[container_cleanup - 1] == [
+        "docker", "ps", "--all", "--quiet", "--filter", f"volume={volume}",
+    ]
+    assert container_cleanup < volume_cleanup
 
 
 def test_windows_qualys_scanner_uses_process_isolation_without_capturing_output(tmp_path):
@@ -326,7 +405,7 @@ def test_windows_qualys_cli_reports_findings_and_blocks_errors(tmp_path):
 
 def test_comparison_logging_filters_secret_values(tmp_path):
     result = {
-        "verdict": "FAIL", "scope": "test", "findingPolicy": "test",
+        "verdict": "FINDINGS", "scope": "test", "findingPolicy": "test",
         "baseline": {"requestedRef": "baseline"},
         "candidate": {"requestedRef": "candidate"},
         "baselineFindings": [{"status": "OPEN", "finding": {"path": "token=fixture-value",
@@ -336,7 +415,7 @@ def test_comparison_logging_filters_secret_values(tmp_path):
     }
     output = StringIO()
     with patch.dict(os.environ, {"EXAMPLE_SECRET": "example-secret-value"}), redirect_stdout(output):
-        print_comparison(result, tmp_path)
+        assert print_comparison(result, tmp_path) == 0
     assert "fixture-value" not in output.getvalue()
     assert "example-secret-value" not in output.getvalue()
     assert "[REDACTED]" in output.getvalue()
@@ -377,11 +456,13 @@ def test_retained_ampls_fixture_is_not_reinitialized():
     initialize = runpy.run_path(str(script))["initialize_ampls"]
     outputs = {key: "/" + key for key in ("clusterId", "dceId", "dcrId", "ruleAssociationId",
                                           "configurationAssociationId")}
-    for reused, enabled, expected in ((True, False, 0), (True, True, 4), (False, False, 3)):
+    for reused, enabled, expected in ((True, False, 0), (True, True, 0), (False, False, 3),
+                                      (False, True, 4)):
         calls = []
         initialize(SimpleNamespace(reused=reused, az=lambda *args: calls.append(args)), outputs, enabled)
         assert len(calls) == expected
-        assert enabled == any("metrics.enabled=false" in call[-1] for call in calls)
+        assert (enabled and not reused) == any(
+            "metrics.enabled=false" in call[-1] for call in calls)
 
 
 def test_network_probe_monitor_isolated_from_preexisting_resources():
@@ -450,6 +531,19 @@ def test_network_probe_monitor_isolated_from_preexisting_resources():
     assert not owned.created_network_probe_monitor
 
 
+def test_scenario_package_feed_auth_precedes_pip_install():
+    template = Path(__file__).parent / "templates" / "azure-template-scenario.yml"
+    steps = yaml.safe_load(template.read_text(encoding="utf-8"))["steps"]
+    auth_index = next(index for index, step in enumerate(steps)
+                      if step.get("task") == "PipAuthenticate@1")
+    auth = steps[auth_index]
+    assert auth["inputs"]["artifactFeeds"] == "github-private"
+    assert auth["inputs"]["onlyAddExtraIndex"] is False
+    install_index = next(index for index, step in enumerate(steps)
+                         if " -m pip install" in step.get("bash", ""))
+    assert auth_index < install_index
+
+
 def test_pipeline_evidence_jobs_use_build_jobs():
     template = Path(__file__).parent / "templates" / "azure-template-e2e-stages.yml"
     stages = yaml.safe_load(template.read_text(encoding="utf-8"))["stages"]
@@ -510,9 +604,11 @@ if __name__ == "__main__":
         tmp_path = Path(directory)
         test_published_image_scan_retains_the_selected_child(tmp_path)
         test_comparison_cli_uses_producer_scan(tmp_path)
-        test_comparison_cli_fails_on_findings_and_blockers(tmp_path)
+        test_compare_reports_findings_but_blocks_incomplete_coverage()
+        test_comparison_cli_reports_findings_and_blocks_incomplete_evidence(tmp_path)
         test_stage_redacts_credential_fields(tmp_path)
         test_qualys_passes_token_over_stdin(tmp_path)
+        test_linux_qualys_removes_containers_holding_scan_volume_after_failure(tmp_path)
         test_windows_qualys_scanner_uses_process_isolation_without_capturing_output(tmp_path)
         test_windows_qualys_compares_matching_image_children(tmp_path)
         test_windows_qualys_requires_immutable_manifest(tmp_path)
@@ -522,4 +618,5 @@ if __name__ == "__main__":
         test_candidate_workflow_rendering()
         test_retained_ampls_fixture_is_not_reinitialized()
         test_network_probe_monitor_isolated_from_preexisting_resources()
+        test_scenario_package_feed_auth_precedes_pip_install()
         test_pipeline_evidence_jobs_use_build_jobs()

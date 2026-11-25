@@ -64,6 +64,12 @@ steps:
     helmVersionToInstall: '3.19.0'
   displayName: "Install pinned harness Helm"
 
+- task: PipAuthenticate@1
+  inputs:
+    artifactFeeds: github-private
+    onlyAddExtraIndex: false
+  displayName: "Authenticate scenario package feed"
+
 - bash: |
     set -euo pipefail
     python3 -m venv "$SCENARIO_PYTHON"

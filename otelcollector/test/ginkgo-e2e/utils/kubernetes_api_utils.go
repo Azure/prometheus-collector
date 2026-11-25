@@ -741,7 +741,7 @@ func ReplaceAuthSecret(data map[string][]byte) {
 
 func RecoverAuthSecret() time.Time {
 	var secret corev1.Secret
-	Expect(yaml.Unmarshal(TransitionFixture("auth-recovered.yaml"), &secret)).To(Succeed())
+	Expect(yaml.Unmarshal(TransitionFixture("shared", "auth-recovered.yaml"), &secret)).To(Succeed())
 	Expect(secret.Name).To(Equal("settings-auth-creds"))
 	Expect(secret.Namespace).To(Equal("ama-settings-auth"))
 	data := map[string][]byte{}
