@@ -1348,6 +1348,22 @@ for fd in map(int, sys.argv[1:]):
         error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))' "$@"
 }}
+tunnel_sessions_status() {{
+  if id scenario-tunnel >/dev/null 2>&1; then
+    process_status=0
+    pgrep -u scenario-tunnel >/dev/null 2>&1 || process_status=$?
+    if [ "$process_status" -eq 0 ]; then return 0; fi
+    if [ "$process_status" -ne 1 ]; then return 2; fi
+  elif [ "$1" = required ]; then
+    if [ ! -e {root}/account-not-created ] || [ -e /home/scenario-tunnel ]; then return 2; fi
+    account_status=0
+    getent passwd scenario-tunnel >/dev/null 2>&1 || account_status=$?
+    if [ "$account_status" -ne 2 ]; then return 2; fi
+  fi
+  connections=$(ss -Htn state connected exclude time-wait '( sport = :22 )') || return 2
+  if [ -n "$connections" ]; then return 0; fi
+  return 1
+}}
 OWNER= UNTIL=0
 if [ -s {root}/lease ]; then read -r OWNER UNTIL < {root}/lease; fi
 case "$UNTIL" in ''|*[!0-9]*) echo 'Corrupt private API tunnel lease' >&2; exit 1;; esac
@@ -1369,6 +1385,12 @@ fi
 if [ -n "$OWNER" ] && [ "$OWNER" != '{run_id}' ]; then
   printf 'SCENARIO_RESULT={{"leaseOwner":"%s","leaseUntil":%s}}\\n' "$OWNER" "$UNTIL"; exit 0
 fi
+session_status=0
+tunnel_sessions_status optional || session_status=$?
+if [ "$session_status" -ne 1 ]; then
+  printf 'SCENARIO_RESULT={{"leaseOwner":"unsettled","leaseUntil":0}}\\n'; exit 0
+fi
+rm -f {root}/account-not-created
 printf '%s %s\\n' '{run_id}' '{int(claim_until)}' > {root}/lease.tmp
 mv {root}/lease.tmp {root}/lease
 flush_state 7 9
@@ -1398,6 +1420,12 @@ flush_state 7 8 9
 printf 'SCENARIO_RESULT={{"owned":true,"keyRemoved":true}}\\n'
 """)
     if result.get("owned") is False:
+        previous = host.args.evidence / "private-api-cleanup.json"
+        if previous.exists():
+            old_proof = load(previous)
+            if old_proof.get("status") == "PASS" and old_proof.get("runId") == run_id:
+                print("Private API cleanup: previous PASS for this run retained", flush=True)
+                return
         proof = {"status": "SKIPPED", "reason": "private API tunnel lease is not held by this run"}
         (host.args.evidence / "private-api-cleanup.json").write_text(json.dumps(proof) + "\n")
         print("Private API cleanup: " + json.dumps(proof), flush=True)
@@ -1420,13 +1448,29 @@ printf 'SCENARIO_RESULT={{"owned":true,"keyRemoved":true}}\\n'
    [ "$(cat /var/lib/scenario-tunnel/pending)" != '{operation}' ]; then
   printf 'SCENARIO_RESULT={{"released":false}}\\n'; exit 0
 fi
-rm -f /var/lib/scenario-tunnel/lease /var/lib/scenario-tunnel/pending
+attempt=0
+while [ "$attempt" -lt 18 ]; do
+  session_status=0
+  tunnel_sessions_status required || session_status=$?
+  if [ "$session_status" -ne 0 ]; then break; fi
+  attempt=$((attempt + 1))
+  if [ "$attempt" -lt 18 ]; then sleep 5; fi
+done
+if [ "$session_status" -ne 1 ]; then
+  rm -f /var/lib/scenario-tunnel/pending
+  flush_state 7 9
+  printf 'SCENARIO_RESULT={{"released":false,"sessionsUnsettled":true}}\\n'; exit 0
+fi
+rm -f /var/lib/scenario-tunnel/lease /var/lib/scenario-tunnel/pending /var/lib/scenario-tunnel/account-not-created
 flush_state 7 9
 printf 'SCENARIO_RESULT={{"released":true}}\\n'
 """)
+    if released.get("sessionsUnsettled") is True:
+        raise RuntimeError("Private API tunnel sessions are active or uninspectable; tunnel lease retained")
     if released.get("released") is not True:
         raise RuntimeError("Private API tunnel lease release was not confirmed")
-    proof = {"status": "PASS", "ingress": "Deny", "keyRemoved": True, "leaseReleased": True}
+    proof = {"status": "PASS", "runId": run_id, "ingress": "Deny", "keyRemoved": True, "leaseReleased": True,
+             "sessionsClosed": True}
     (host.args.evidence / "private-api-cleanup.json").write_text(json.dumps(proof) + "\n")
     print("Private API cleanup: " + json.dumps(proof), flush=True)
 
@@ -1498,10 +1542,23 @@ printf 'SCENARIO_RESULT={{"completed":true}}\\n'
             # Recovery runs in a later step without the run ID; it must release only this lease.
             (host.args.evidence / "private-api-lease.json").write_text(json.dumps({"runId": run_id}) + "\n")
             key_attempted = True
-            proof = vm_script(host, vm, "set -eu\n" + tunnel_lease(run_id, until.timestamp()) + f"""id scenario-tunnel >/dev/null 2>&1 || useradd --create-home --shell /bin/bash scenario-tunnel
-printf '%s\\n' 'Match User scenario-tunnel' '    AuthenticationMethods publickey' '    AllowTcpForwarding local' 'Match all' > /etc/ssh/sshd_config.d/00-scenario-tunnel.conf
+            proof = vm_script(host, vm, "set -eu\n" + tunnel_lease(run_id, until.timestamp()) + f"""if ! id scenario-tunnel >/dev/null 2>&1; then
+  if ! useradd --create-home --shell /bin/bash scenario-tunnel; then
+    account_status=0
+    getent passwd scenario-tunnel >/dev/null 2>&1 || account_status=$?
+    if [ "$account_status" -eq 2 ] && [ ! -e /home/scenario-tunnel ]; then
+      touch /var/lib/scenario-tunnel/account-not-created
+      flush_state 7 9
+    fi
+    echo 'Could not create private API tunnel account' >&2
+    exit 1
+  fi
+fi
+printf '%s\\n' 'Match User scenario-tunnel' '    AuthenticationMethods publickey' '    AllowTcpForwarding local' '    ClientAliveInterval 15' '    ClientAliveCountMax 3' 'Match all' > /etc/ssh/sshd_config.d/00-scenario-tunnel.conf
 sshd -t
 test "$(sshd -T -C user=scenario-tunnel,host=localhost,addr=127.0.0.1 | awk '$1 == "allowtcpforwarding" {{print $2}}')" = local
+test "$(sshd -T -C user=scenario-tunnel,host=localhost,addr=127.0.0.1 | awk '$1 == "clientaliveinterval" {{print $2}}')" = 15
+test "$(sshd -T -C user=scenario-tunnel,host=localhost,addr=127.0.0.1 | awk '$1 == "clientalivecountmax" {{print $2}}')" = 3
 systemctl reload ssh
 install -d -m 700 -o scenario-tunnel -g scenario-tunnel /home/scenario-tunnel/.ssh
 printf '%s\\n' 'expiry-time="{expires}",no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc,command="/bin/false",permitopen="{fqdn}:443" {public_key}' > /home/scenario-tunnel/.ssh/authorized_keys
@@ -1512,6 +1569,8 @@ KEY=$(cat /etc/ssh/ssh_host_ed25519_key.pub)
 printf 'SCENARIO_RESULT={{"privateIp":"%s","hostKey":"%s"}}\\n' "$IP" "$KEY"
 """)
             if "leaseOwner" in proof:
+                key_attempted = False
+                (host.args.evidence / "private-api-lease.json").unlink(missing_ok=True)
                 raise RuntimeError(f"Private API tunnel is leased by run {proof['leaseOwner']} until {proof['leaseUntil']}")
             private_ip = ipaddress.IPv4Address(proof["privateIp"])
             if not private_ip.is_private or not re.fullmatch(
@@ -1743,88 +1802,6 @@ def render_workflow(source, workflow, sha, image, label_filter=None, expectation
     return document
 
 
-def run_testkube_workflow(host, destination, workflow, template, target, env):
-    if (not re.fullmatch(r"[a-z0-9][a-z0-9-]*", workflow)
-            or not re.fullmatch(r"[A-Za-z0-9_-]+\.yaml", template)
-            or not re.fullmatch(r"[A-Za-z0-9_-]+\.yaml", target)):
-        raise ValueError("Invalid TestKube workflow name or filename")
-    test_dir = REPO / "otelcollector/test"
-    template_dir = (test_dir / "testkube/config-processing-test-crs"
-                    if template.startswith("testkube-config-test-") else test_dir / "testkube")
-    source = resource_path(template_dir, template, test_dir / "testkube")
-    output = test_dir / "testkube" / target
-    if output.exists():
-        raise ValueError("Refusing to overwrite an existing generated workflow")
-    expectations = {
-        name: env[name] for name in ("EXPECTED_CLUSTER", "AMW_QUERY_ENDPOINT", "AZURE_CLIENT_ID",
-                                     "EXPECT_OPERATOR_HTTPS", "EXPECT_WINDOWS_EXPORTER", "SCENARIO_RUN_ID")
-        if name in env
-    }
-    rendered = render_workflow(
-        source.read_text(encoding="utf-8"), workflow, env["TEST_SOURCE_SHA"],
-        env["TEST_RUNNER_IMAGE"], env.get("GINKGO_LABEL_FILTER"), expectations)
-    output.write_text(yaml.safe_dump_all([rendered], sort_keys=False), encoding="utf-8")
-    cwd = test_dir
-    result_path = destination / "testkube-results-ConfigTests.json"
-    save(result_path, {
-        "environment": "ConfigTests", "start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "running", "test_source_sha": env["TEST_SOURCE_SHA"],
-        "runner_image": env["TEST_RUNNER_IMAGE"], "executions": [],
-    })
-    (destination / "testkube-mutation-started").touch()
-    if (destination / "testkube-fenced").exists():
-        raise RuntimeError("TestKube launcher was fenced by settlement")
-    try:
-        host.kube("apply", "-f", "./testkube/api-server-permissions.yaml", cwd=cwd, env=env)
-        existing = host.kube("get", "-f", f"./testkube/{target}", "--ignore-not-found", "-o", "name",
-                             cwd=cwd, env=env)
-        for resource in existing.splitlines():
-            if resource:
-                host.kube("annotate", "--namespace", "testkube", resource,
-                          "kubectl.kubernetes.io/last-applied-configuration-", cwd=cwd, env=env)
-        host.kube("apply", "-f", f"./testkube/{target}", cwd=cwd, env=env)
-    except RuntimeError as error:
-        raise RuntimeError(f"Failed to apply TestKube workflow: {error}") from error
-    (destination / "testkube-mutation-settled").touch()
-    (destination / "testkube-submission-started").touch()
-    execution_root = destination / "testkube-executions" / "ConfigTests" / workflow
-    execution_root.mkdir(parents=True, exist_ok=True)
-    runner = test_dir / "testkube" / "run-testkube-workflow.sh"
-    host.commands.run(["bash", str(runner), "--run-existing", workflow, str(execution_root)],
-                      cwd=cwd, env=env, private=True)
-    submissions = list(execution_root.glob("*/submission.json"))
-    if len(submissions) != 1:
-        raise ValueError(f"Expected one TestKube submission record for {workflow}, found {len(submissions)}")
-    case_dir = submissions[0].parent
-    submission = load(submissions[0])
-    execution_id = submission.get("id") if isinstance(submission, dict) else None
-    if (not isinstance(execution_id, str)
-            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", execution_id)
-            or case_dir.name != execution_id):
-        raise ValueError("TestKube submission returned no valid execution ID")
-    execution_file = case_dir / "execution.json"
-    terminal = {"passed", "failed", "aborted", "timeout", "canceled", "cancelled", "skipped"}
-    execution = load(execution_file)
-    if (not isinstance(execution, dict) or execution.get("id") != execution_id
-            or not isinstance(execution.get("workflow"), dict)
-            or execution["workflow"].get("name") != workflow
-            or not isinstance(execution.get("result"), dict)):
-        raise ValueError("Execution evidence does not match the submitted TestKube workflow")
-    execution_status = execution["result"].get("status")
-    if execution_status not in terminal:
-        raise ValueError(f"TestKube execution did not reach a terminal status: {execution_status}")
-    record = {"workflow": workflow, "execution_id": execution_id, "status": execution_status}
-    artifact_dir = case_dir / "artifacts"
-    record["artifact_dir"] = str(artifact_dir.resolve())
-    if execution_status != "passed":
-        record["status"] = "failed"
-    save(case_dir / "record.json", record)
-    result = load(result_path)
-    result["executions"].append(record)
-    result["status"] = record["status"]
-    save(result_path, result)
-
-
 def acquire_workflow_hold(host):
     hold = host.kube("get", "configmap", "ama-e2e-workflow-hold", "-n", "kube-system",
                      "--ignore-not-found", "-o", "json", private=True)
@@ -1858,32 +1835,396 @@ def release_workflow_hold(host):
     patch_workflow_hold(host, hold, run_id, "")
 
 
+def terminal_execution(result, execution_id, workflow):
+    return (isinstance(result, dict) and isinstance(result.get("workflow"), dict)
+            and isinstance(result.get("result"), dict)
+            and result.get("id") == execution_id and result["workflow"].get("name") == workflow
+            and result["result"].get("status") in
+            ("passed", "failed", "aborted", "timeout", "canceled", "cancelled", "skipped"))
+
+
+def public_testkube_result(result):
+    statuses = {"pending", "queued", "running", "paused", "passed", "failed", "aborted",
+                "timeout", "canceled", "cancelled", "skipped", "unknown"}
+    reasons = set("""
+        image-pull-failed definition-invalid job-create-failed resource-create-failed start-failed
+        queue-limit-exceeded template-missing git-auth-failed git-clone-failed unschedulable config-missing
+        volume-mount-failed admission-denied initialization-timeout process-killed step-timeout
+        execution-timeout execution-stuck worker-resume-failed oom-killed evicted preempted node-shutdown
+        container-error deadline-exceeded job-deleted service-not-ready artifact-upload-failed git-unreachable
+        fail-fast exit-code child-workflow-failed queue-timeout queued-too-long transition-timeout
+        stop-not-confirmed abort-all superseded trigger-abort user-cancel force-cancel unknown
+    """.split())
+
+    def safe_step(step):
+        if not isinstance(step, dict):
+            return {}
+        safe = {}
+        status = step.get("status")
+        if isinstance(status, str) and status in statuses:
+            safe["status"] = status
+        reason = step.get("errorReason")
+        if isinstance(reason, str) and reason:
+            safe["errorReason"] = reason if reason in reasons else "other"
+        for field, lower, upper in (("exitCode", -1, 255), ("attempts", 0, 1000)):
+            value = step.get(field)
+            if type(value) is int and lower <= value <= upper:
+                safe[field] = value
+        return safe
+
+    public = {"status": result["status"]}
+    initialization = safe_step(result.get("initialization"))
+    if initialization:
+        public["initialization"] = initialization
+    step_indexes = {}
+    steps = result.get("steps")
+    if isinstance(steps, dict):
+        public_steps = []
+        for reference, step in steps.items():
+            safe = safe_step(step)
+            if safe:
+                step_indexes[reference] = len(public_steps)
+                public_steps.append(safe)
+        if public_steps:
+            public["steps"] = public_steps
+    details = result.get("statusDetails")
+    if isinstance(details, dict):
+        allowed = {
+            "type": {"init-failure", "execution-failure", "step-failure", "user-cancel", "unknown"},
+            "reason": reasons,
+            "actor": {"user", "control-plane", "trigger", "fail-fast", "runner", "quality-loop", "api", "system"},
+        }
+        safe_details = {}
+        for field, values in allowed.items():
+            value = details.get(field)
+            if isinstance(value, str) and value:
+                safe_details[field] = value if value in values else "other"
+        reference = details.get("step")
+        if isinstance(reference, str) and reference in step_indexes:
+            safe_details["stepIndex"] = step_indexes[reference]
+        if safe_details:
+            public["statusDetails"] = safe_details
+    return public
+
+
+def verify_evidence_path(base, path):
+    if not path.is_relative_to(base) or not path.resolve().is_relative_to(base.resolve()):
+        raise ValueError("TestKube evidence escaped its destination")
+    current = path
+    while True:
+        if current.is_symlink():
+            raise ValueError("TestKube evidence must not contain links")
+        if current == base:
+            break
+        current = current.parent
+
+
+@cache
+def test_report_sources(source):
+    root = source / "otelcollector/test/ginkgo-e2e"
+    texts, files = set(), {}
+    literal = r'("(?:\\.|[^"\\])*"|`[^`]*`)'
+    patterns = (
+        re.compile(r'\b(?:[FXP]?(?:Describe|Context|When|It|Specify|DescribeTable|Entry)|Label)\s*\(\s*' + literal),
+        re.compile(r'\bRunSpecs\s*\(\s*[^,\n]+,\s*' + literal),
+    )
+    for path in root.rglob("*.go"):
+        contents = path.read_text(encoding="utf-8")
+        files[path.relative_to(source).as_posix()] = len(contents.splitlines())
+        for pattern in patterns:
+            for match in pattern.findall(contents):
+                try:
+                    value = match[1:-1] if match.startswith("`") else json.loads(match)
+                except ValueError:
+                    continue
+                if value.isprintable() and len(value) <= 512:
+                    texts.add(value)
+    labels = ginkgo_labels(source) if (root / "utils/constants.go").is_file() else set()
+    return texts, labels, files
+
+
+def public_testkube_reports(private_artifacts, staged_artifacts):
+    reports = {"junit.xml": [], "ginkgo.json": []}
+    for path in private_artifacts.rglob("*"):
+        verify_evidence_path(private_artifacts, path)
+        if path.is_file() and path.name in reports:
+            reports[path.name].append(path)
+    if (any(len(paths) != 1 for paths in reports.values())
+            or reports["junit.xml"][0].parent != reports["ginkgo.json"][0].parent):
+        raise RuntimeError("Expected one JUnit report and one Ginkgo report")
+    try:
+        junit = ET.parse(reports["junit.xml"][0]).getroot()
+        suites = load(reports["ginkgo.json"][0])
+    except (OSError, UnicodeError, ET.ParseError, json.JSONDecodeError):
+        raise RuntimeError("Invalid JUnit or Ginkgo report") from None
+    if junit.tag not in {"testsuite", "testsuites"} or not isinstance(suites, list) or not suites:
+        raise RuntimeError("Invalid JUnit or Ginkgo report")
+
+    texts, labels, files = test_report_sources(REPO)
+
+    def location(value):
+        if not isinstance(value, dict):
+            return None
+        filename, line = value.get("FileName"), value.get("LineNumber")
+        if not isinstance(filename, str) or type(line) is not int:
+            return None
+        filename = filename.replace("\\", "/")
+        for name, lines in files.items():
+            if (filename == name or filename.endswith("/" + name)) and 0 < line <= lines:
+                return {"FileName": name, "LineNumber": line}
+        return None
+
+    def safe_labels(values):
+        if not isinstance(values, list):
+            return []
+        return [value for value in values if isinstance(value, str) and value in labels]
+
+    states = {"passed", "failed", "skipped", "pending", "aborted", "panicked", "interrupted", "timedout"}
+    failures = {"failed", "aborted", "panicked", "interrupted", "timedout"}
+    node_types = {"It", "BeforeSuite", "AfterSuite", "SynchronizedBeforeSuite", "SynchronizedAfterSuite",
+                  "ReportBeforeSuite", "ReportAfterSuite"}
+    cases = iter(junit.iter("testcase"))
+    output = ET.Element("testsuites")
+    sanitized = []
+    total = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+    reports_passed = True
+    ran_test = False
+    for suite_index, suite in enumerate(suites, 1):
+        if (not isinstance(suite, dict) or type(suite.get("SuiteSucceeded")) is not bool
+                or not isinstance(suite.get("SpecReports"), list)):
+            raise RuntimeError("Invalid Ginkgo suite")
+        name = suite.get("SuiteDescription")
+        name = name if isinstance(name, str) and name in texts else f"suite-{suite_index}"
+        safe_suite = {"SuiteDescription": name, "SuiteSucceeded": suite["SuiteSucceeded"], "SpecReports": []}
+        safe_suite["SuiteLabels"] = safe_labels(suite.get("SuiteLabels"))
+        xml_suite = ET.SubElement(output, "testsuite", {"name": name})
+        counts = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+        reports_passed &= suite["SuiteSucceeded"]
+        for index, spec in enumerate(suite["SpecReports"], 1):
+            case = next(cases, None)
+            if (case is None or not isinstance(spec, dict) or not isinstance(spec.get("State"), str)
+                    or spec["State"] not in states):
+                raise RuntimeError("JUnit and Ginkgo reports disagree")
+            state = spec["State"]
+            outcome = "failed" if state in failures else "skipped" if state in {"skipped", "pending"} else "passed"
+            tags = [child.tag for child in case if child.tag in {"failure", "error", "skipped"}]
+            actual = "failed" if any(tag in {"failure", "error"} for tag in tags) else "skipped" if tags else "passed"
+            if (outcome != actual or ("skipped" in tags and actual == "failed")
+                    or ("status" in case.attrib and case.get("status") != state)):
+                raise RuntimeError("JUnit and Ginkgo reports disagree")
+            node = spec.get("LeafNodeType")
+            node = node if isinstance(node, str) and node in node_types else "spec"
+            leaf = spec.get("LeafNodeText")
+            leaf = leaf if isinstance(leaf, str) and leaf in texts else f"spec-{index}"
+            if node != "It" and not spec.get("LeafNodeText"):
+                leaf = node
+            groups = spec.get("ContainerHierarchyTexts")
+            groups = groups if isinstance(groups, list) else []
+            groups = [value if isinstance(value, str) and value in texts else f"group-{i}"
+                      for i, value in enumerate(groups, 1)]
+            safe_spec = {"State": state, "LeafNodeType": node, "LeafNodeText": leaf,
+                         "ContainerHierarchyTexts": groups, "LeafNodeLabels": safe_labels(spec.get("LeafNodeLabels"))}
+            hierarchy_labels = spec.get("ContainerHierarchyLabels")
+            if isinstance(hierarchy_labels, list):
+                safe_spec["ContainerHierarchyLabels"] = [safe_labels(values) for values in hierarchy_labels]
+            leaf_location = location(spec.get("LeafNodeLocation"))
+            if leaf_location:
+                safe_spec["LeafNodeLocation"] = leaf_location
+            failure = spec.get("Failure")
+            failure_location = location(failure.get("Location")) if isinstance(failure, dict) else None
+            if state in failures and failure_location:
+                safe_spec["Failure"] = {"Location": failure_location}
+            duration = spec.get("RunTime")
+            if type(duration) is int and 0 <= duration <= 604800 * 10**9:
+                safe_spec["RunTime"] = duration
+            safe_suite["SpecReports"].append(safe_spec)
+
+            xml_case = ET.SubElement(xml_suite, "testcase", {
+                "name": " ".join([*groups, leaf]), "classname": name, "status": state,
+                "time": f"{safe_spec.get('RunTime', 0) / 10**9:.3f}",
+            })
+            if actual == "failed":
+                tag = "error" if "error" in tags else "failure"
+                message = "Test failed; diagnostic output omitted"
+                if failure_location:
+                    message = f"Test failed at {failure_location['FileName']}:{failure_location['LineNumber']}"
+                ET.SubElement(xml_case, tag, {"message": message, "type": state})
+                counts["errors" if tag == "error" else "failures"] += 1
+                reports_passed = False
+            elif actual == "skipped":
+                ET.SubElement(xml_case, "skipped")
+                counts["skipped"] += 1
+            ran_test |= node == "It" and state == "passed"
+            counts["tests"] += 1
+        safe_suite["Counts"] = dict(counts)
+        if not suite["SuiteSucceeded"] and not (counts["failures"] or counts["errors"]):
+            xml_case = ET.SubElement(xml_suite, "testcase", {
+                "name": "suite-level-failure", "classname": name, "status": "failed", "time": "0",
+            })
+            ET.SubElement(xml_case, "failure", {"message": "Ginkgo reported a suite-level failure"})
+            counts["tests"] += 1
+            counts["failures"] += 1
+            safe_suite["SuiteLevelFailure"] = True
+        xml_suite.attrib.update({key: str(value) for key, value in counts.items()})
+        for key, value in counts.items():
+            total[key] += value
+        sanitized.append(safe_suite)
+    if next(cases, None) is not None or not any(suite["SpecReports"] for suite in sanitized):
+        raise RuntimeError("JUnit and Ginkgo reports disagree")
+    output.attrib.update({key: str(value) for key, value in total.items()})
+    staged_artifacts.mkdir()
+    save(staged_artifacts / "ginkgo.json", sanitized)
+    (staged_artifacts / "junit.xml").write_text(ET.tostring(output, encoding="unicode"), encoding="utf-8")
+    return reports_passed and ran_test
+
+
+def publish_testkube_evidence(destination, workflow, host=None, env=None):
+    private_root = destination / ".azure" / "testkube-executions" / "ConfigTests" / workflow
+    verify_evidence_path(destination, private_root)
+    submissions = list(private_root.glob("*/submission.json"))
+    if len(submissions) != 1:
+        raise ValueError(f"Expected one TestKube submission record for {workflow}, found {len(submissions)}")
+    submission_path = submissions[0]
+    case_dir = submission_path.parent
+    execution_file = case_dir / "execution.json"
+    verify_evidence_path(destination, submission_path)
+    verify_evidence_path(destination, execution_file)
+    submission = load(submission_path)
+    execution_id = submission.get("id") if isinstance(submission, dict) else None
+    if (not isinstance(execution_id, str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", execution_id)
+            or case_dir.name != execution_id):
+        raise ValueError("TestKube submission returned no valid execution ID")
+    execution = load(execution_file)
+    if not terminal_execution(execution, execution_id, workflow):
+        raise ValueError("Execution evidence does not match the submitted terminal TestKube workflow")
+    status = execution["result"]["status"]
+    public_case = destination / "testkube-executions" / "ConfigTests" / workflow / execution_id
+    verify_evidence_path(destination, public_case)
+    public_artifacts = public_case / "artifacts"
+    public_execution = {
+        "id": execution_id, "workflow": {"name": workflow}, "result": public_testkube_result(execution["result"]),
+    }
+    record = {"workflow": workflow, "execution_id": execution_id,
+              "status": "passed" if status == "passed" else "failed",
+              "artifact_dir": str(public_artifacts.resolve())}
+    if public_case.exists():
+        for name, expected in (("submission.json", {"id": execution_id}),
+                               ("execution.json", public_execution), ("record.json", record)):
+            path = public_case / name
+            verify_evidence_path(destination, path)
+            if load(path) != expected:
+                raise ValueError("Existing TestKube execution evidence does not match the submission")
+        verify_evidence_path(destination, public_artifacts)
+        if public_artifacts.exists() and not public_artifacts.is_dir():
+            raise ValueError("TestKube artifacts must be a directory")
+        if public_artifacts.is_dir():
+            for path in public_artifacts.rglob("*"):
+                verify_evidence_path(public_artifacts, path)
+    artifact_error = None
+    reports_passed = False
+    artifacts_available = False
+    staging = case_dir / ("publication-" + str(uuid.uuid4()))
+    staged_artifacts = staging / "artifacts"
+    try:
+        try:
+            staging.mkdir()
+            private_artifacts = case_dir / "artifacts"
+            if host is not None:
+                # A timed-out launcher may still be writing its original download.
+                private_artifacts = case_dir / ("settled-artifacts-" + str(uuid.uuid4()))
+                private_artifacts.mkdir()
+                deadline = host.commands.deadline
+                host.commands.deadline = time.monotonic() + 300
+                try:
+                    host.commands.run([host.args.kubectl, "testkube", "download", "artifacts", execution_id,
+                                       "--download-dir", str(private_artifacts), "--format", "folder"],
+                                      env=env, private=True)
+                finally:
+                    host.commands.deadline = deadline
+            verify_evidence_path(destination, private_artifacts)
+            if not private_artifacts.is_dir():
+                raise RuntimeError("TestKube artifact directory is missing")
+            reports_passed = public_testkube_reports(private_artifacts, staged_artifacts)
+        except (OSError, RuntimeError) as failure:
+            artifact_error = failure
+        if public_artifacts.exists():
+            try:
+                public_artifacts.rename(case_dir / ("previous-artifacts-" + str(uuid.uuid4())))
+            except OSError as failure:
+                artifact_error = failure
+        if not public_case.exists():
+            metadata = case_dir / ("metadata-" + str(uuid.uuid4()))
+            metadata.mkdir()
+            try:
+                save(metadata / "submission.json", {"id": execution_id})
+                save(metadata / "execution.json", public_execution)
+                save(metadata / "record.json", record)
+                public_case.parent.mkdir(parents=True, exist_ok=True)
+                verify_evidence_path(destination, public_case)
+                metadata.rename(public_case)
+            finally:
+                if metadata.exists():
+                    shutil.rmtree(metadata)
+        if artifact_error is None:
+            try:
+                verify_evidence_path(destination, public_artifacts)
+                staged_artifacts.rename(public_artifacts)
+                artifacts_available = True
+            except OSError as failure:
+                artifact_error = failure
+    finally:
+        if staging.exists():
+            try:
+                shutil.rmtree(staging)
+            except OSError:
+                print("Private report staging cleanup failed; partial reports remain unpublished", flush=True)
+    result_path = destination / "testkube-results-ConfigTests.json"
+    verify_evidence_path(destination, result_path)
+    result = load(result_path)
+    result["executions"] = [record]
+    result["status"] = "passed" if record["status"] == "passed" and artifacts_available and reports_passed else "failed"
+    result["artifact_status"] = "available" if artifacts_available else "unavailable"
+    result_temp = result_path.with_name("." + result_path.name + "." + str(uuid.uuid4()))
+    try:
+        save(result_temp, result)
+        os.replace(result_temp, result_path)
+    finally:
+        result_temp.unlink(missing_ok=True)
+    if artifact_error is not None:
+        raise RuntimeError("TestKube reports unavailable; terminal execution metadata retained") from artifact_error
+    return record
+
+
 def settle_workflow(host, destination, workflow, env):
     # The launcher may outlive an interrupted Popen; fence it before trusting absent markers.
     (destination / "testkube-fenced").touch()
     if not (destination / "testkube-submission-started").exists():
         return (not (destination / "testkube-mutation-started").exists()
                 or (destination / "testkube-mutation-settled").exists())
-    submissions = list((destination / "testkube-executions" / "ConfigTests" / workflow).glob("*/submission.json"))
+    private_root = destination / ".azure" / "testkube-executions" / "ConfigTests" / workflow
+    try:
+        verify_evidence_path(destination, private_root)
+    except ValueError as failure:
+        print(f"Invalid execution evidence for {workflow}: {failure}", flush=True)
+        return False
+    submissions = list(private_root.glob("*/submission.json"))
     if len(submissions) != 1:
         print(f"Cannot establish whether {workflow} was submitted; refusing fixture restoration", flush=True)
         return False
     try:
-        execution_id = load(submissions[0])["id"]
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", execution_id):
+        submission = submissions[0]
+        verify_evidence_path(destination, submission)
+        execution_id = load(submission)["id"]
+        if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", execution_id)
+                or submission.parent.name != execution_id):
             raise ValueError("invalid execution ID")
-        execution_file = submissions[0].parent / "execution.json"
-
-        def terminal(result):
-            return (isinstance(result, dict) and isinstance(result.get("workflow"), dict)
-                    and isinstance(result.get("result"), dict)
-                    and result.get("id") == execution_id and result["workflow"].get("name") == workflow
-                    and result["result"].get("status") in
-                    ("passed", "failed", "aborted", "timeout", "canceled", "cancelled", "skipped"))
+        execution_file = submission.parent / "execution.json"
+        verify_evidence_path(destination, execution_file)
 
         if execution_file.exists():
             try:
-                if terminal(load(execution_file)):
+                if terminal_execution(load(execution_file), execution_id, workflow):
                     return True
             except (OSError, ValueError) as failure:
                 print(f"Invalid execution status for {execution_id}: {failure}; attempting abort", flush=True)
@@ -1892,15 +2233,16 @@ def settle_workflow(host, destination, workflow, env):
         try:
             try:
                 host.commands.run([host.args.kubectl, "testkube", "abort", "testworkflowexecution", execution_id],
-                                  env=env)
+                                  env=env, private=True)
             except RuntimeError as failure:
                 print(f"Unable to abort {execution_id}: {failure}; checking terminal status", flush=True)
             last_failure = None
             for attempt in range(13):
                 try:
                     result = host.commands.run([host.args.kubectl, "testkube", "get", "testworkflowexecution",
-                                                execution_id, "--output", "json"], env=env, json_output=True)
-                    if terminal(result):
+                                                execution_id, "--output", "json"], env=env, json_output=True,
+                                               private=True)
+                    if terminal_execution(result, execution_id, workflow):
                         save(execution_file, result)
                         return True
                 except (RuntimeError, ValueError, KeyError) as failure:
@@ -1943,8 +2285,57 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
     if generated.exists():
         raise ValueError("Refusing to overwrite an existing generated workflow")
     host.workflow_unsettled = True
+    published = False
     try:
-        run_testkube_workflow(host, destination, workflow, template, target, env)
+        if (not re.fullmatch(r"[a-z0-9][a-z0-9-]*", workflow)
+                or not re.fullmatch(r"[A-Za-z0-9_-]+\.yaml", template)
+                or not re.fullmatch(r"[A-Za-z0-9_-]+\.yaml", target)):
+            raise ValueError("Invalid TestKube workflow name or filename")
+        test_dir = REPO / "otelcollector/test"
+        template_dir = (test_dir / "testkube/config-processing-test-crs"
+                        if template.startswith("testkube-config-test-") else test_dir / "testkube")
+        source = resource_path(template_dir, template, test_dir / "testkube")
+        expectations = {
+            name: env[name] for name in ("EXPECTED_CLUSTER", "AMW_QUERY_ENDPOINT", "AZURE_CLIENT_ID",
+                                         "EXPECT_OPERATOR_HTTPS", "EXPECT_WINDOWS_EXPORTER", "SCENARIO_RUN_ID")
+            if name in env
+        }
+        rendered = render_workflow(
+            source.read_text(encoding="utf-8"), workflow, source_sha, runner_image,
+            expression, expectations)
+        generated.write_text(yaml.safe_dump_all([rendered], sort_keys=False), encoding="utf-8")
+        result_path = destination / "testkube-results-ConfigTests.json"
+        save(result_path, {
+            "environment": "ConfigTests", "start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "running", "test_source_sha": source_sha,
+            "runner_image": runner_image, "executions": [],
+        })
+        (destination / "testkube-mutation-started").touch()
+        if (destination / "testkube-fenced").exists():
+            raise RuntimeError("TestKube launcher was fenced by settlement")
+        cwd = test_dir
+        try:
+            host.kube("apply", "-f", "./testkube/api-server-permissions.yaml", cwd=cwd, env=env)
+            existing = host.kube("get", "-f", f"./testkube/{target}", "--ignore-not-found", "-o", "name",
+                                 cwd=cwd, env=env)
+            for resource in existing.splitlines():
+                if resource:
+                    host.kube("annotate", "--namespace", "testkube", resource,
+                              "kubectl.kubernetes.io/last-applied-configuration-", cwd=cwd, env=env)
+            host.kube("apply", "-f", f"./testkube/{target}", cwd=cwd, env=env)
+        except RuntimeError as error:
+            raise RuntimeError(f"Failed to apply TestKube workflow: {error}") from error
+        (destination / "testkube-mutation-settled").touch()
+        (destination / "testkube-submission-started").touch()
+        # TestKube responses can contain environment values; the publisher excludes .azure.
+        execution_root = destination / ".azure" / "testkube-executions" / "ConfigTests" / workflow
+        verify_evidence_path(destination, execution_root)
+        execution_root.mkdir(parents=True, exist_ok=True)
+        runner = test_dir / "testkube" / "run-testkube-workflow.sh"
+        host.commands.run(["bash", str(runner), "--run-existing", workflow, str(execution_root)],
+                          cwd=cwd, env=env, private=True)
+        publish_testkube_evidence(destination, workflow)
+        published = True
         result = workflow_result(destination, workflow, source_sha, runner_image)
         print("TestKube execution evidence: " + json.dumps(result), flush=True)
         return result
@@ -1957,6 +2348,8 @@ def run_suite(host, suite, destination, expression, template="testkube-test-crs.
             host.workflow_unsettled = not settle_workflow(host, destination, workflow, env)
             if host.workflow_unsettled:
                 raise RuntimeError(f"TestKube execution or setup mutation for {workflow} is not confirmed stopped")
+            if not published and (destination / "testkube-submission-started").exists():
+                publish_testkube_evidence(destination, workflow, host, env)
         finally:
             if generated.exists():
                 generated.unlink()
@@ -2340,7 +2733,8 @@ def verify_me_configuration(host, proof, started):
     if not re.fullmatch(r"dcr-[0-9a-f]{32}", immutable_id):
         raise RuntimeError("ME configuration proof requires the independently verified immutable DCR ID")
     try:
-        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                         json_output=True, private=True)["items"]
     except RuntimeError as failure:
         raise RuntimeError(f"AMPLS_ME_CONFIGURATION stage=pod-inventory: {failure}") from failure
     observed = []
@@ -2446,14 +2840,16 @@ def verify_proxy(host, outputs, started, phase="default", ampls_proof=None):
         raise ValueError("Unknown proxy proof phase")
     if ampls_proof is not None and phase != "default":
         raise ValueError("AMPLS public-dependency proof cannot replace a custom-CA phase")
-    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                     json_output=True, private=True)["items"]
     sources = set()
     for pod in pods:
         if not any(c["name"] == "prometheus-collector" for c in pod["spec"]["containers"]):
             continue
         environment = host.kube(
             "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
-            "--", "sh", "-c", 'printf "%s\\n%s\\n%s\\n" "$HTTP_PROXY" "$HTTPS_PROXY" "$NO_PROXY"')
+            "--", "sh", "-c", 'printf "%s\\n%s\\n%s\\n" "$HTTP_PROXY" "$HTTPS_PROXY" "$NO_PROXY"',
+            private=True)
         expected = [outputs["proxyEndpoint"], outputs["proxyEndpoint"], outputs["proxyNoProxyCsv"]]
         if environment.splitlines() != expected:
             raise RuntimeError("Running collector does not have the explicit proxy/NO_PROXY environment")
@@ -2461,7 +2857,7 @@ def verify_proxy(host, outputs, started, phase="default", ampls_proof=None):
     if not sources:
         raise RuntimeError("No running collector source addresses for proxy proof")
     references = host.kube("get", "pods", "-n", "default", "-l", "app=prometheus-reference-app",
-                           "-o", "json", json_output=True)["items"]
+                           "-o", "json", json_output=True, private=True)["items"]
     bypass = {pod["status"]["podIP"] for pod in references}
     if not bypass:
         raise RuntimeError("No reference scrape endpoint for NO_PROXY proof")
@@ -2517,9 +2913,10 @@ def verify_proxy(host, outputs, started, phase="default", ampls_proof=None):
 def audit_images(host, images, image_config):
     deadline = time.monotonic() + 60
     while True:
-        nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
+        nodes = host.kube("get", "nodes", "-o", "json", json_output=True, private=True)["items"]
         node_info = {n["metadata"]["name"]: n["status"]["nodeInfo"] for n in nodes}
-        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                         json_output=True, private=True)["items"]
         evidence = []
         found = set()
         pending = None
@@ -2676,6 +3073,9 @@ def initialize_ampls(host, outputs, enabled):
     if enabled is True:
         host.az("resource", "update", "--ids", outputs["clusterId"], "--api-version", "2024-10-01",
                 "--set", "properties.azureMonitorProfile.metrics.enabled=false")
+    # Retained fixtures keep these unless this run's addon handoff rewrote them; reasserting would hide drift.
+    if host.reused and enabled is not True:
+        return
     host.az("resource", "update", "--ids", outputs["dceId"], "--api-version", "2023-03-11",
             "--set", "properties.networkAcls.publicNetworkAccess=Disabled")
     for association, field, target in (
@@ -2762,7 +3162,8 @@ def verify_ampls_control_plane(host, outputs):
 
 
 def verify_ampls_private_dns(host, proof):
-    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+    pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                     json_output=True, private=True)["items"]
     selected = {}
     for pod in pods:
         labels = pod["metadata"].get("labels", {})
@@ -2906,7 +3307,7 @@ def verify_ca_recovery(host, outputs):
     marker = host.args.run_id + "-untrusted-ca"
     collectors = [
         pod for pod in host.kube("get", "pods", "-n", "kube-system", "-o", "json",
-                                 json_output=True)["items"]
+                                 json_output=True, private=True)["items"]
         if any(container["name"] == "prometheus-collector"
                for container in pod["spec"]["containers"])
     ]
@@ -2924,7 +3325,7 @@ def verify_ca_recovery(host, outputs):
         config_path = f"/usr/sbin/{config_file}"
         config = host.kube(
             "exec", pod["metadata"]["name"], "-n", "kube-system", "-c", "prometheus-collector",
-            "--", "cat", config_path)
+            "--", "cat", config_path, private=True)
         try:
             overrides = json.loads(config)
         except (TypeError, json.JSONDecodeError) as error:
@@ -2951,7 +3352,8 @@ def verify_ca_recovery(host, outputs):
     started = time.time()
     try:
         for resource in ("deployment/ama-metrics", "daemonset/ama-metrics-node"):
-            document = host.kube("get", resource, "-n", "kube-system", "-o", "json", json_output=True)
+            document = host.kube("get", resource, "-n", "kube-system", "-o", "json",
+                                 json_output=True, private=True)
             containers = document["spec"]["template"]["spec"]["containers"]
             index = next(i for i, container in enumerate(containers) if container["name"] == "prometheus-collector")
             mounts = containers[index].get("volumeMounts", [])
@@ -2976,7 +3378,7 @@ def verify_ca_recovery(host, outputs):
         trust_anchor = "/etc/pki/ca-trust/source/anchors/proxy-cert.crt"
         trust_bundle = "/etc/pki/tls/certs/ca-bundle.crt"
         untrusted_pods = host.kube(
-            "get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+            "get", "pods", "-n", "kube-system", "-o", "json", json_output=True, private=True)["items"]
         for pod in untrusted_pods:
             collector = next((container for container in pod["spec"]["containers"]
                               if container["name"] == "prometheus-collector"), None)
@@ -3023,7 +3425,8 @@ def verify_ca_recovery(host, outputs):
             if attempt < 2:
                 time.sleep(35)
         proxy_negative = verify_proxy(host, outputs, started, phase="untrusted-ca")
-        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json", json_output=True)["items"]
+        pods = host.kube("get", "pods", "-n", "kube-system", "-o", "json",
+                         json_output=True, private=True)["items"]
         scrapes, errors = [], 0
         for pod in pods:
             if not any(c["name"] == "prometheus-collector" for c in pod["spec"]["containers"]):
@@ -3053,7 +3456,8 @@ def verify_ca_recovery(host, outputs):
                     host.kube("patch", resource, "-n", "kube-system", "--type=json",
                               "-p", json.dumps([patch]), private=True)
                     host.kube("rollout", "status", resource, "-n", "kube-system", "--timeout=10m")
-                    document = host.kube("get", resource, "-n", "kube-system", "-o", "json", json_output=True)
+                    document = host.kube("get", resource, "-n", "kube-system", "-o", "json",
+                                         json_output=True, private=True)
                     index = int(patch["path"].split("/")[-2])
                     actual = document["spec"]["template"]["spec"]["containers"][index]["volumeMounts"]
                     if actual != patch["value"]:
@@ -3367,7 +3771,8 @@ def bootstrap_testkube(host, outputs, package, principal, principal_type, expect
     host.kube("annotate", "serviceaccount", "testkube-api-server-tests-job", "-n", "testkube",
               f"azure.workload.identity/client-id={identity['clientId']}", "--overwrite")
     host.kube("apply", "-f", str(REPO / "otelcollector/test/testkube/api-server-permissions.yaml"))
-    deployments = host.kube("get", "deployments", "-n", "testkube", "-o", "json", json_output=True)["items"]
+    deployments = host.kube("get", "deployments", "-n", "testkube", "-o", "json",
+                            json_output=True, private=True)["items"]
     if not deployments:
         raise RuntimeError("TestKube has no deployments")
     for deployment in deployments:
@@ -3544,7 +3949,7 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
             configure_ampls_cluster_proxy(host, outputs)
         host.kube("wait", "nodes", "--all", "--for=condition=Ready", "--timeout=20m")
         state = bootstrap_testkube(host, outputs, *testkube, expected_version=resolved["kubernetesVersion"])
-        nodes = host.kube("get", "nodes", "-o", "json", json_output=True)["items"]
+        nodes = host.kube("get", "nodes", "-o", "json", json_output=True, private=True)["items"]
         save(args.evidence / "pool-inventory.json",
              verify_pool_inventory(resolved["expectedPools"], state["agentPoolProfiles"], nodes))
         handoff = not resolved["existing"] or (managed_acns_cilium
@@ -3593,7 +3998,7 @@ def execute(args, scenario, variants, lifecycle, image_config, suites, commands)
                        "ama-metrics-operator-targets", "ama-metrics-ksm"}
             while True:
                 remaining = host.kube("get", "deployments,daemonsets", "-n", "kube-system",
-                                      "-o", "json", json_output=True)["items"]
+                                      "-o", "json", json_output=True, private=True)["items"]
                 if not any(resource["metadata"]["name"] in managed for resource in remaining):
                     break
                 if time.monotonic() >= deadline:

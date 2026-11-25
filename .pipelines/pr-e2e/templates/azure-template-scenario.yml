@@ -43,9 +43,11 @@ steps:
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends unzip jq gettext-base libicu70
     command -v az || curl --fail --silent --show-error --location --retry 3 https://aka.ms/InstallAzureCLIDeb | sudo bash
-    az bicep install
-    # AzureCLI tasks use their own AZURE_CONFIG_DIR, so they can only find Bicep on PATH.
-    sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
+    if ! command -v bicep >/dev/null; then
+      AZURE_BICEP_USE_BINARY_FROM_PATH=false az bicep install
+      # AzureCLI tasks use their own AZURE_CONFIG_DIR, so Bicep must be on PATH.
+      sudo install -m 0755 "${AZURE_CONFIG_DIR:-$HOME/.azure}/bin/bicep" /usr/local/bin/bicep
+    fi
     bicep --version
     echo "##vso[task.setvariable variable=AZURE_BICEP_USE_BINARY_FROM_PATH]true"
     if ! command -v kubectl; then
@@ -184,7 +186,7 @@ steps:
     SCENARIO_PUBLICATION: $(scenarioPublication)
 
 - task: PublishTestResults@2
-  displayName: "Always publish actual TestKube JUnit"
+  displayName: "Always publish sanitized TestKube JUnit"
   condition: always()
   inputs:
     testResultsFormat: JUnit

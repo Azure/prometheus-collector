@@ -26,16 +26,20 @@ stage IDs and must match the runnable rows in `matrix.json`.
 2. The SRE-only stages run after `Build` succeeds, using the same build ID and commit.
    Stage dependencies enforce Build success; no ADO API lookup or build receipt is
    needed. Cluster jobs use the existing Build-stage image-tag outputs and resolve
-   them to digests. Reused tags can resolve to images from a later build.
+   them to digests. Reused tags can resolve to images from a later build. Windows
+   CoMET uses each Windows producer job's immutable push digest as the child input.
 3. `scan_trivy.py` compares filtered build-image Trivy findings with the released
-   baseline using the same scanner version and DB. New findings fail the scan;
-   findings in collector binaries owned by the separate OpenTelemetry Collector
+   baseline using the same scanner version and DB. Open and new findings are
+   reported and fail the comparison; missing evidence and scanner errors also
+   block it. Scenario stages depend on `Build` and the runner import, not this
+   scan stage, so the findings do not prevent scenario execution.
+   Findings in collector binaries owned by the separate OpenTelemetry Collector
    upgrade are reported as deferred. `scan_qualys.py` runs
    CoMET on the same build image and baseline and compares Qualys XML QIDs. Open and
    new QIDs are reported; missing evaluations block, and closure requires an explicit
-   not-found QID. These scans cover Linux/amd64 only. The Windows CoMET pipeline
-   trial failed without producing reports, so Windows scanning remains blocked.
-   Neither scan proves full image clearance: ME and mdsd package inventory is not
+   not-found QID. Separate Windows CoMET jobs compare the WS2019 and WS2022 build
+   images with the corresponding released images. Trivy covers Linux/amd64 only.
+   Neither scanner proves full image clearance: ME and mdsd package inventory is not
    copied into the final image, and Qualys language coverage requires validation.
 4. `run-scenario.py` deploys the resolved images to test clusters and runs the
    Ginkgo suites through TestKube. Before those stages, the pipeline mirrors the

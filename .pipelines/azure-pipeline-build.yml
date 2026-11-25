@@ -1904,9 +1904,20 @@ extends:
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
               docker rm pushContainer
         - powershell: |
+            $ErrorActionPreference = "Stop"
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $pushOutput = docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) 2>&1
+            $pushExitCode = $LASTEXITCODE
+            $pushOutput | ForEach-Object { Write-Host $_ }
+            if ($pushExitCode -ne 0) { exit $pushExitCode }
+            $imageDigest = $pushOutput | ForEach-Object {
+              if ("$_" -match 'digest:\s*(sha256:[0-9a-f]{64})') { $Matches[1] }
+            } | Select-Object -Last 1
+            if (-not $imageDigest) { throw "Windows 2019 image push did not return an immutable digest" }
+            Write-Host "##vso[task.setvariable variable=imageDigest;isOutput=true]$imageDigest"
           displayName: "Build: push image to dev ACR"
+          name: pushWindows2019
       - job: Windows2022_Prometheus_Collector
         displayName: "Build: windows 2022 prometheus-collector image"
         pool:
@@ -2084,9 +2095,20 @@ extends:
               docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
               docker rm pushContainer
         - powershell: |
+            $ErrorActionPreference = "Stop"
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $pushOutput = docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) 2>&1
+            $pushExitCode = $LASTEXITCODE
+            $pushOutput | ForEach-Object { Write-Host $_ }
+            if ($pushExitCode -ne 0) { exit $pushExitCode }
+            $imageDigest = $pushOutput | ForEach-Object {
+              if ("$_" -match 'digest:\s*(sha256:[0-9a-f]{64})') { $Matches[1] }
+            } | Select-Object -Last 1
+            if (-not $imageDigest) { throw "Windows 2022 image push did not return an immutable digest" }
+            Write-Host "##vso[task.setvariable variable=imageDigest;isOutput=true]$imageDigest"
           displayName: "Build: push image to dev ACR"
+          name: pushWindows2022
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:
@@ -2103,6 +2125,8 @@ extends:
           WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
           WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
           WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+          WINDOWS_2019_IMAGE_DIGEST: $[ dependencies.Windows2019_Prometheus_Collector.outputs['pushWindows2019.imageDigest'] ]
+          WINDOWS_2022_IMAGE_DIGEST: $[ dependencies.Windows2022_Prometheus_Collector.outputs['pushWindows2022.imageDigest'] ]
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
         templateContext:
@@ -2158,10 +2182,27 @@ extends:
             New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
             @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
             docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-            docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-            docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $imageRepository = "$(WINDOWS_FULL_IMAGE_NAME)" -replace ':[^/:]+$', ''
+            $windows2019Digest = "$(WINDOWS_2019_IMAGE_DIGEST)"
+            $windows2022Digest = "$(WINDOWS_2022_IMAGE_DIGEST)"
+            if ($windows2019Digest -notmatch '^sha256:[0-9a-f]{64}$' -or
+                $windows2022Digest -notmatch '^sha256:[0-9a-f]{64}$') {
+              throw "Both Windows child image digests are required"
+            }
+            docker manifest create $(WINDOWS_FULL_IMAGE_NAME) `
+              "$imageRepository@$windows2019Digest" "$imageRepository@$windows2022Digest"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $digest = docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            Write-Output $digest
+            if ("$(IS_SRE_BRANCH)" -eq "True") {
+              if ($digest -notmatch '^sha256:[0-9a-f]{64}$') { throw "Windows manifest digest is missing" }
+              Write-Output "##vso[task.setvariable variable=digest;isOutput=true]$digest"
+            }
           workingDirectory: $(Build.SourcesDirectory)/otelcollector/
           displayName: "Build: Windows multi-arch manifest"
+          name: sreWindowsManifest
         - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
           condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
           displayName: "Ev2: generate image artifacts"

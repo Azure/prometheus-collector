@@ -143,6 +143,52 @@ stages:
         SCAN_PUBLICATION: $(scanPublication)
         PYTHON: python3
 
+  - job: WindowsQualys
+    displayName: Compare Windows Qualys QIDs
+    timeoutInMinutes: 240
+    strategy:
+      matrix:
+        WS2019:
+          windowsRelease: '2019'
+          baselineImage: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:5e7cd6c02b2a6b888fc0702fe943509bb1241b61cc8b65fc6f83e193abd71d06
+        WS2022:
+          windowsRelease: '2022'
+          baselineImage: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images@sha256:80bb7123ff66dd7d771a8078fcd89a0688ba9b1ce8c97aaa6fab3cec72915698
+    templateContext:
+      outputs:
+      - output: pipelineArtifact
+        displayName: Retain Windows Qualys comparison
+        condition: always()
+        targetPath: $(windowsPublication)
+        artifactName: vulnerability-windows-$(Build.BuildId)-$(System.JobId)
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-windows-2022
+      os: windows
+    variables:
+      WINDOWS_MANIFEST_DIGEST: $[ stageDependencies.Build.WindowsMultiArch_Prometheus_Collector.outputs['sreWindowsManifest.digest'] ]
+      windowsPublication: $(Build.ArtifactStagingDirectory)\windows-qualys-$(Build.BuildId)-$(System.JobId)
+    steps:
+    - checkout: self
+      clean: true
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - powershell: |
+        $ErrorActionPreference = 'Stop'
+        $env:PYTHONPATH = "$env:BUILD_SOURCESDIRECTORY\.pipelines\pr-e2e\build;$env:BUILD_SOURCESDIRECTORY\.pipelines\pr-e2e\scan"
+        python -B "$env:BUILD_SOURCESDIRECTORY\.pipelines\pr-e2e\scan\scan_qualys.py" `
+          --baseline-image "$env:BASELINE_IMAGE" --windows-manifest-digest "$env:WINDOWS_MANIFEST_DIGEST" `
+          --windows-release "$env:WINDOWS_RELEASE" --output "$env:SCAN_PUBLICATION"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      displayName: Scan baseline and build images with Windows CoMET
+      env:
+        BASELINE_IMAGE: $(baselineImage)
+        WINDOWS_MANIFEST_DIGEST: $(WINDOWS_MANIFEST_DIGEST)
+        WINDOWS_RELEASE: $(windowsRelease)
+        SCAN_PUBLICATION: $(windowsPublication)
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
 - ${{ each scenario in split(parameters.scenarios, ',') }}:
   - stage: Scenario_${{ replace(scenario, '-', '_') }}
     displayName: Scenario ${{ scenario }}

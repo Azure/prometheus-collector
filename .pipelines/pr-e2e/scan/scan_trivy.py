@@ -36,8 +36,8 @@ def registry_json(kind, reference):
 
 
 def resolve_tag(name, tag):
-    if not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}", tag):
-        raise ValueError("Expected a published image tag")
+    if not re.fullmatch(r"(?:[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}|sha256:[0-9a-f]{64})", tag):
+        raise ValueError("Expected a published image tag or manifest digest")
     for attempt in range(12):
         try:
             root, digest = registry_json("manifests", tag)
@@ -291,7 +291,7 @@ def compare(baseline, candidate, now=None):
         "schemaVersion": 1,
         "scope": "Linux/amd64 collector HIGH/CRITICAL/MEDIUM findings with fixes; not full image clearance",
         "baseline": before_meta, "candidate": after_meta,
-        "findingPolicy": "Only HIGH/CRITICAL/MEDIUM findings with fixes are compared; open and new findings in exact deferred targets are reported but not gated; other open/new findings and missing evidence block",
+        "findingPolicy": "Only HIGH/CRITICAL/MEDIUM findings with fixes are compared; exact deferred targets are reported as DEFERRED; other open/new findings are FAIL and missing evidence is BLOCKED",
         "deferredTargets": sorted(DEFERRED_TARGETS),
         "baselineFindingCount": len(baseline_findings),
         "baselineFindings": baseline_findings,
